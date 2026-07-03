@@ -1,5 +1,5 @@
 import React from 'react'
-import UserDashboard from './user/UserDashboard'
+import UserDashboard from './grahak/UserDashboard'
 const Dashboard = () => {
   return (
     <UserDashboard />

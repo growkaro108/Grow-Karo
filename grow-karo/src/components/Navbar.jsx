@@ -3,12 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { MoveRight, UserRoundKey } from "lucide-react";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="sticky top-1 z-50 rounded-3xl border border-slate-100 bg-white/95 backdrop-blur-md p-4 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+    <header className="sticky -top-1 z-50 rounded-3xl border border-slate-100 bg-white/95 backdrop-blur-md p-4 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
       <div className="flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 group">
@@ -17,7 +18,7 @@ export default function Navbar() {
           </div>
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-700">Grow-Karo</p>
-            <p className="text-xs text-slate-500">Secure investment platform</p>
+            <p className="text-xs text-slate-500">Trusted investment platform</p>
           </div>
         </Link>
 
@@ -32,14 +33,14 @@ export default function Navbar() {
 
         {/* Desktop CTA */}
         <div className="hidden md:flex items-center gap-5 text-sm">
-          <Link href="/login" className="font-medium text-slate-600 transition hover:text-slate-900">
-            Log In
+          <Link href="/auth" className="flex font-medium text-slate-600 transition hover:text-slate-900 align-middle border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50">
+            Log In <UserRoundKey className="ml-2 h-5 w-5" />
           </Link>
           <Link
-            href="/login?mode=signup"
+            href="/auth?mode=signup"
             className="inline-flex h-11 items-center justify-center rounded-full bg-slate-950 px-6 font-semibold text-white transition duration-300 hover:bg-blue-600 hover:shadow-lg hover:shadow-blue-500/20"
           >
-            Get Started
+            Get Started <MoveRight className="ml-2 h-4 w-4" />
           </Link>
         </div>
 
@@ -95,14 +96,14 @@ export default function Navbar() {
           <hr className="border-slate-50 my-1" />
           <div className="flex flex-col gap-2 px-3 pb-2">
             <Link
-              href="/login"
+              href="/auth"
               onClick={() => setIsOpen(false)}
               className="flex h-11 items-center justify-center rounded-full border border-slate-200 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
               Log In
             </Link>
             <Link
-              href="/login?mode=signup"
+              href="/auth?mode=signup"
               onClick={() => setIsOpen(false)}
               className="flex h-11 items-center justify-center rounded-full bg-slate-950 text-sm font-semibold text-white transition hover:bg-blue-600"
             >
