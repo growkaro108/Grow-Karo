@@ -3,14 +3,25 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { MoveRight, UserRoundKey } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { MoveRight, UserRoundKey, Menu, X, Home, LayoutDashboardIcon, NotebookPen, FileText } from "lucide-react";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Centralized route definition to eliminate redundancy
+  const navLinks = [
+    { href: "/", label: "Home",icon : Home },
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboardIcon },
+    { href: "/about", label: "About Us", icon: NotebookPen },
+    { href: "/solution", label: "Solutions", icon: FileText },
+  ];
 
   return (
     <header className="sticky -top-1 z-50 rounded-3xl border border-slate-100 bg-white/95 backdrop-blur-md p-4 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
       <div className="flex items-center justify-between">
+        
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 group">
           <div className="flex h-10 w-10 items-center justify-center rounded-full overflow-hidden bg-slate-100 border border-slate-200/60 shadow-sm transition group-hover:opacity-90">
@@ -22,13 +33,26 @@ export default function Navbar() {
           </div>
         </Link>
 
-
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
-          <Link href="/" className="transition hover:text-blue-600">Home</Link>
-          <Link href="/dashboard" className="transition hover:text-blue-600">Dashboard</Link>
-          <Link href="#trust" className="transition hover:text-blue-600">Security</Link>
-          <Link href="#insights" className="transition hover:text-blue-600">Solutions</Link>
+        <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`relative flex items-center gap-1 py-1 transition-colors hover:text-blue-600 ${
+                  isActive ? "text-blue-600 font-semibold" : "text-slate-600"
+                }`}
+              >
+               <span>{link.icon && <link.icon className="h-5 w-5 lg:h-4 lg:w-4" />}</span> <span className=" lg:block hidden">{link.label}</span>
+                {/* Active indicator bar */}
+                {isActive && (
+                  <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-blue-600 transition-all" />
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Desktop CTA */}
@@ -50,62 +74,46 @@ export default function Navbar() {
           className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 text-slate-600 transition hover:bg-slate-50 md:hidden"
           aria-label="Toggle navigation"
         >
-          {isOpen ? (
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          ) : (
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          )}
+          {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
 
       {/* Mobile Menu Dropdown */}
       {isOpen && (
-        <div className="mt-4 border-t border-slate-50 pt-4 flex flex-col gap-3 md:hidden">
-          <Link
-            href="#home"
-            onClick={() => setIsOpen(false)}
-            className="rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-blue-600"
-          >
-            Home
-          </Link>
-          <Link
-            href="#features"
-            onClick={() => setIsOpen(false)}
-            className="rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-blue-600"
-          >
-            How it Works
-          </Link>
-          <Link
-            href="#trust"
-            onClick={() => setIsOpen(false)}
-            className="rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-blue-600"
-          >
-            Security
-          </Link>
-          <Link
-            href="#insights"
-            onClick={() => setIsOpen(false)}
-            className="rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-blue-600"
-          >
-            Solutions
-          </Link>
-          <hr className="border-slate-50 my-1" />
-          <div className="flex flex-col gap-2 px-3 pb-2">
+        <div className="mt-4 border-t border-slate-50 pt-4 flex flex-col gap-1 md:hidden">
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setIsOpen(false)}
+                className={`flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
+                  isActive
+                    ? "bg-blue-50/60 text-blue-600 font-semibold"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"
+                }`}
+              >
+                <span>{link.label}</span>
+                {isActive && <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />}
+              </Link>
+            );
+          })}
+          
+          <hr className="border-slate-100 my-2 mx-2" />
+          
+          <div className="flex flex-col gap-2 px-2 pb-2">
             <Link
               href="/auth"
               onClick={() => setIsOpen(false)}
-              className="flex h-11 items-center justify-center rounded-full border border-slate-200 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              className="flex h-11 items-center justify-center rounded-xl border border-slate-200 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
               Log In
             </Link>
             <Link
               href="/auth?mode=signup"
               onClick={() => setIsOpen(false)}
-              className="flex h-11 items-center justify-center rounded-full bg-slate-950 text-sm font-semibold text-white transition hover:bg-blue-600"
+              className="flex h-11 items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white transition hover:bg-blue-600"
             >
               Get Started
             </Link>
@@ -115,5 +123,3 @@ export default function Navbar() {
     </header>
   );
 }
-
-
