@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Check, X } from "lucide-react";
 import Modal from "./Modal";
 import StatusBadge from "./StatusBadge";
-import { currency } from "../data";
+import { currency } from "../utils";
 
 export default function WithdrawalsTab({ withdrawals, onDecision }) {
   const [filter, setFilter] = useState("pending");
@@ -27,7 +27,7 @@ export default function WithdrawalsTab({ withdrawals, onDecision }) {
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60">
-        <table className="w-full min-w-[720px] text-left text-sm">
+        <table className="w-full min-w-180 text-left text-sm">
           <thead>
             <tr className="border-b border-slate-800 text-xs uppercase tracking-wide text-slate-500 font-body">
               <th className="px-5 py-3 font-medium">Request</th>

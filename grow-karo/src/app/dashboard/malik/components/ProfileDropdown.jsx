@@ -24,7 +24,7 @@ export default function ProfileDropdown() {
       
       {/* Admin User Context Header */}
       <div className="p-4 bg-slate-900/40 border-b border-slate-800 flex items-center space-x-3">
-        <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-teal-500 to-emerald-400 flex items-center justify-center font-bold text-slate-950 text-sm shadow-md shadow-teal-500/10">
+        <div className="h-10 w-10 rounded-xl bg-linear-to-tr from-teal-500 to-emerald-400 flex items-center justify-center font-bold text-slate-950 text-sm shadow-md shadow-teal-500/10">
           {adminUser.initials}
         </div>
         <div className="min-w-0 flex-1">

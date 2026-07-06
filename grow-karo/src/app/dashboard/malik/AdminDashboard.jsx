@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   Ticket,
   Settings2,
+  Contact,
 } from "lucide-react";
 import {
   Chart as ChartJS,
@@ -27,21 +28,18 @@ import OverviewTab from "./components/OverviewTab";
 // import FundraiserCodesTab from "./components/FundraiserCodesTab";
 // import Toast from "./components/Toast";
 import TabLoader from "./components/TabLoader";
-import {
-  INITIAL_WITHDRAWALS,
-  INITIAL_ISSUES,
-  INITIAL_CODES,
-  LIVE_EVENTS,
-  NAMES,
-} from "./data";
+import { fetchMalikDashboardData } from "./malikService";
 // import Settings from "./components/Settings";
 import dynamic from "next/dynamic";
+import RemitterDashboard from "../Remitter/RemitterDashboard";
+import AdminRemitterTrackersTab from "./components/Remitter";
+import ContactsComponent from "./components/Contact";
 const WithdrawalsTab = dynamic(() => import("./components/WithdrawalsTab"), {
   loading: () => <TabLoader />,
   ssr: false,
 });
 const FundraiserCodesTab = dynamic(
-  () => import("./components/FundraiserCodesTab"),
+  () => import("./components/Remitter"),
   {
     loading: () => <TabLoader />,
     ssr: false,
@@ -77,7 +75,8 @@ const NAV_ITEMS = [
   { id: "activity", label: "Activity Log", icon: Activity },
   { id: "withdrawals", label: "Withdrawals", icon: Wallet },
   { id: "issues", label: "User Issues", icon: AlertTriangle },
-  { id: "codes", label: "Fundraiser Codes", icon: Ticket },
+  { id: "codes", label: "Remitters", icon: Ticket },
+  { id: "contacts", label: "Contacts", icon: Contact },
   { id: "settings", label: "Settings", icon: Settings2 },
 ];
 
@@ -85,39 +84,86 @@ export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [toast, setToast] = useState(null);
 
-  const [withdrawals, setWithdrawals] = useState(INITIAL_WITHDRAWALS);
-  const [issues, setIssues] = useState(INITIAL_ISSUES);
-  const [codes, setCodes] = useState(INITIAL_CODES);
+  const [withdrawals, setWithdrawals] = useState([]);
+  const [issues, setIssues] = useState([]);
+  const [codes, setCodes] = useState([]);
+  const [inflowData, setInflowData] = useState([]);
+  const [eventTemplates, setEventTemplates] = useState([]);
+  const [names, setNames] = useState([]);
   const [feed, setFeed] = useState([]);
   const feedIdRef = useRef(1);
+  const eventTemplatesRef = useRef([]);
+  const namesRef = useRef([]);
 
   useEffect(() => {
-    const seed = Array.from({ length: 6 }).map(() => makeEvent());
-    setFeed(seed);
+    let active = true;
+
+    setInitialLoading(true);
+    fetchMalikDashboardData()
+      .then((data) => {
+        if (!active) return;
+        const withdrawalData = Array.isArray(data.withdrawals) ? data.withdrawals : [];
+        const issueData = Array.isArray(data.issues) ? data.issues : [];
+        const codeData = Array.isArray(data.codes) ? data.codes : [];
+        const inflowDataSet = Array.isArray(data.inflowData) ? data.inflowData : [];
+        const eventTemplateData = Array.isArray(data.eventTemplates) ? data.eventTemplates : [];
+        const namesData = Array.isArray(data.names) ? data.names : [];
+
+        setWithdrawals(withdrawalData);
+        setIssues(issueData);
+        setCodes(codeData);
+        setInflowData(inflowDataSet);
+        setEventTemplates(eventTemplateData);
+        setNames(namesData);
+
+        eventTemplatesRef.current = eventTemplateData;
+        namesRef.current = namesData;
+
+        const seed = Array.from({ length: 6 }).map(() => makeEvent(eventTemplateData, namesData));
+        setFeed(seed);
+      })
+      .catch((err) => {
+        console.error(err);
+      })
+      .finally(() => {
+        if (active) setInitialLoading(false);
+      });
+
     const interval = setInterval(() => {
-      setFeed((prev) => [makeEvent(), ...prev].slice(0, 24));
+      setFeed((prev) => [makeEvent(eventTemplatesRef.current, namesRef.current), ...prev].slice(0, 24));
     }, 4200);
-    return () => clearInterval(interval);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
   }, []);
 
-  function makeEvent() {
+  function makeEvent(eventTemplatesList = [], namesList = []) {
     const template =
-      LIVE_EVENTS[Math.floor(Math.random() * LIVE_EVENTS.length)];
+      eventTemplatesList.length > 0
+        ? eventTemplatesList[Math.floor(Math.random() * eventTemplatesList.length)]
+        : { type: "signup", text: "created a new account", amountRange: null };
     const amount = template.amountRange
       ? Math.floor(
           Math.random() * (template.amountRange[1] - template.amountRange[0]) +
             template.amountRange[0],
         )
       : null;
+    const name =
+      namesList.length > 0
+        ? namesList[Math.floor(Math.random() * namesList.length)]
+        : "User";
     feedIdRef.current += 1;
     return {
       id: feedIdRef.current,
       type: template.type,
       text: template.text,
       amount,
-      name: NAMES[Math.floor(Math.random() * NAMES.length)],
+      name,
       time: "just now",
     };
   }
@@ -193,7 +239,7 @@ export default function AdminPanel() {
     activity: "Activity Log",
     withdrawals: "Withdrawal Requests",
     issues: "User Issues",
-    codes: "Fundraiser Codes",
+    codes: "Remitters",
     settings: "Admin Settings",
   };
 
@@ -224,6 +270,7 @@ export default function AdminPanel() {
                   withdrawals={withdrawals}
                   issues={issues}
                   feed={feed}
+                  inflowData={inflowData}
                 />
               )}
               {activeTab === "activity" && <ActivityTab feed={feed} />}
@@ -237,12 +284,13 @@ export default function AdminPanel() {
                 <IssuesTab issues={issues} onResolve={handleResolveIssue} />
               )}
               {activeTab === "codes" && (
-                <FundraiserCodesTab
+                <AdminRemitterTrackersTab
                   codes={codes}
                   onGenerate={handleGenerateCode}
                   onCopy={handleCopyCode}
                 />
               )}
+              {activeTab === "contacts" && <ContactsComponent />}
               {activeTab === "settings" && <Settings />}
             </div>
           )}

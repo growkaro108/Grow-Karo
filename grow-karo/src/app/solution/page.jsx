@@ -10,7 +10,8 @@ import {
   FileText, 
   CheckCircle, 
   ArrowRight,
-  ShieldAlert
+  ShieldAlert,
+  HeadsetIcon
 } from "lucide-react";
 
 export default function SolutionsHelpCenter() {
@@ -72,7 +73,7 @@ export default function SolutionsHelpCenter() {
         {/* Modernized Header Group */}
         <div className="text-center space-y-3 max-w-2xl mx-auto">
           <div className="h-12 w-12 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center mx-auto shadow-md shadow-teal-500/5">
-            <LifeBuoy className="h-6 w-6 text-teal-600 animate-spin" style={{ animationDuration: '20s' }} />
+            <HeadsetIcon className="h-6 w-6 text-teal-600 animate-pulse" style={{ animationDuration: '20s' }} />
           </div>
           <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight sm:text-4xl">
             Resolution Matrix & Support Gateway
@@ -127,7 +128,7 @@ export default function SolutionsHelpCenter() {
                     
                     <div 
                       className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                        openFaq === faq.id ? "max-h-[300px] border-t border-slate-100 bg-slate-50/50" : "max-h-0"
+                        openFaq === faq.id ? "max-h-75 border-t border-slate-100 bg-slate-50/50" : "max-h-0"
                       }`}
                     >
                       <p className="p-4.5 text-[12px] text-slate-600 leading-relaxed font-normal">

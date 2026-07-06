@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Search, X, AlertTriangle, FunnelPlus } from "lucide-react";
 import StatusBadge from "./StatusBadge";
-import { currency } from "../data";
+
+
 
 /* ---------------------------------- */
 /* Activity Log tab (full ledger)      */
@@ -206,7 +207,7 @@ export default function ActivityTab({ feed }) {
                   {event.amount ? (
                     <span className="font-mono text-slate-200">
                       {" "}
-                      {currency(event.amount)}
+                      {event.amount}
                     </span>
                   ) : null}
                 </p>

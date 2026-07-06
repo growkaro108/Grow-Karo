@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -24,30 +24,14 @@ ChartJS.register(
   Filler
 );
 
-// Mock data representing the user's current holdings
-const INITIAL_HOLDINGS = [
-  { id: '1', ticker: 'AAPL', name: 'Apple Inc.', shares: 15, currentPrice: 180.50, totalValue: 2707.50 },
-  { id: '2', ticker: 'MSFT', name: 'Microsoft Corp.', shares: 8, currentPrice: 420.20, totalValue: 3361.60 }, // Top holding!
-  { id: '3', ticker: 'TSLA', name: 'Tesla Inc.', shares: 10, currentPrice: 175.00, totalValue: 1750.00 },
-  { id: '4', ticker: 'AMZN', name: 'Amazon.com Inc.', shares: 5, currentPrice: 185.10, totalValue: 925.50 },
-];
-
-// Mock historical data for Chart.js formatting
-const MOCK_GRAPH_DATA = {
-  MSFT: { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], prices: [410, 415, 412, 418, 420.20] },
-  AAPL: { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], prices: [175, 177, 176, 179, 180.50] },
-  TSLA: { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], prices: [185, 180, 172, 174, 175.00] },
-  AMZN: { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], prices: [180, 182, 181, 184, 185.10] }
-};
-
-export default function Portfolio() {
+export default function Portfolio({ holdings = [], graphDataMap = {} }) {
   // 1. Sort holdings descending to automatically discover the top holding
   const sortedHoldings = useMemo(() => {
-    return [...INITIAL_HOLDINGS].sort((a, b) => b.totalValue - a.totalValue);
-  }, []);
+    return [...holdings].sort((a, b) => b.totalValue - a.totalValue);
+  }, [holdings]);
 
   // 2. States for selected stock and loading indicators
-  const [selectedStock, setSelectedStock] = useState(sortedHoldings[0]);
+  const [selectedStock, setSelectedStock] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Handle dynamic stock swapping with fake DB delay
@@ -61,7 +45,7 @@ export default function Portfolio() {
     }, 1500); // 1500ms loader delay
   };
 
-  const stockData = MOCK_GRAPH_DATA[selectedStock.ticker] || { labels: [], prices: [] };
+  const stockData = selectedStock ? graphDataMap[selectedStock.ticker] || { labels: [], prices: [] } : { labels: [], prices: [] };
 
   // 3. Chart.js configuration datasets
   const chartData = {
@@ -69,7 +53,7 @@ export default function Portfolio() {
     datasets: [
       {
         fill: true,
-        label: `${selectedStock.ticker} Price`,
+        label: `${selectedStock?.ticker ?? "Asset"} Price`,
         data: stockData.prices,
         borderColor: '#4f46e5',
         backgroundColor: 'rgba(79, 70, 229, 0.05)',
@@ -87,7 +71,7 @@ export default function Portfolio() {
       legend: { display: false },
       tooltip: {
         callbacks: {
-          label: (context) => `Price: $${context.parsed.y.toFixed(2)}`,
+          label: (context) => `Price: ₹${context.parsed.y.toFixed(2)}`,
         },
       },
     },
@@ -102,6 +86,12 @@ export default function Portfolio() {
       },
     },
   };
+
+  useEffect(() => {
+    if (!selectedStock && sortedHoldings.length > 0) {
+      setSelectedStock(sortedHoldings[0]);
+    }
+  }, [sortedHoldings, selectedStock]);
 
   return (
     <div className="flex flex-col gap-6 p-6 bg-slate-50 min-h-screen font-sans">
@@ -121,8 +111,10 @@ export default function Portfolio() {
 
         <div className="flex justify-between items-center mb-5">
           <div>
-            <h3 className="text-lg font-semibold text-slate-800">{selectedStock.name} ({selectedStock.ticker}) Performance</h3>
-            <p className="text-sm text-slate-500 mt-1">Current Price: ${selectedStock.currentPrice.toFixed(2)}</p>
+            <h3 className="text-lg font-semibold text-slate-800">{selectedStock ? `${selectedStock.name} (${selectedStock.ticker}) Performance` : "Portfolio Performance"}</h3>
+            <p className="text-sm text-slate-500 mt-1">
+              Current Price: {selectedStock ? `₹${selectedStock.currentPrice.toFixed(2)}` : "N/A"}
+            </p>
           </div>
           <span className="bg-green-50 text-green-500 px-3 py-1 rounded-full text-xs font-medium">
             Live Chart <span className="animate-pulse text-green-400">•</span>
@@ -151,7 +143,13 @@ export default function Portfolio() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {sortedHoldings.map((stock) => {
+              {sortedHoldings.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="px-4 py-8 text-center text-sm text-slate-500">
+                    No holdings available.
+                  </td>
+                </tr>
+              ) : sortedHoldings.map((stock) => {
                 const isSelected = selectedStock.id === stock.id;
 
                 return (

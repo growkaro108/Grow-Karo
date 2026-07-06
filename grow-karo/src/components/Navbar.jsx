@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { MoveRight, UserRoundKey, Menu, X, Home, LayoutDashboardIcon, NotebookPen, FileText } from "lucide-react";
+import { MoveRight, UserRoundKey, Menu, X, Home, LayoutDashboardIcon, NotebookPen, Send } from "lucide-react";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,9 +13,11 @@ export default function Navbar() {
   // Centralized route definition to eliminate redundancy
   const navLinks = [
     { href: "/", label: "Home",icon : Home },
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboardIcon },
+    { href: "/dashboard", label: "Admin", icon: LayoutDashboardIcon },
+    // { href: "/user", label: "User", icon: LayoutDashboardIcon },
+    // { href: "/remitter", label: "Remitter", icon: LayoutDashboardIcon },
     { href: "/about", label: "About Us", icon: NotebookPen },
-    { href: "/solution", label: "Solutions", icon: FileText },
+    { href: "/solution", label: "Solutions", icon: Send  },
   ];
 
   return (

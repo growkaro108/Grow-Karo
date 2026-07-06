@@ -4,7 +4,7 @@ export default function PortfolioSnapshot() {
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-3">
           <p className="text-sm uppercase tracking-[0.25em] text-slate-300">Portfolio snapshot</p>
-          <p className="text-3xl font-semibold sm:text-4xl">$248,450</p>
+          <p className="text-3xl font-semibold sm:text-4xl">₹248,450</p>
           <p className="max-w-xl text-sm leading-6 text-slate-300 sm:text-base">Total portfolio value updated in real time with confidence-building insights and secure account aggregation.</p>
         </div>
         <div className="inline-flex rounded-3xl bg-slate-900/70 px-4 py-3 text-sm uppercase tracking-[0.2em] text-slate-200 shadow-sm sm:px-5 sm:py-4">

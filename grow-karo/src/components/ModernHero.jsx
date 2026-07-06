@@ -53,7 +53,7 @@ export default function ModernHero() {
           <div className="flex items-center justify-between rounded-[28px] bg-slate-800/80 p-4 shadow-[0_18px_36px_rgba(15,23,42,0.16)]">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Portfolio value</p>
-              <p className="mt-3 text-3xl font-semibold">$248,450</p>
+              <p className="mt-3 text-3xl font-semibold">₹248,450</p>
             </div>
             <span className="rounded-full bg-slate-950 px-3 py-2 text-xs uppercase tracking-[0.2em] text-slate-200">+12.4%</span>
           </div>

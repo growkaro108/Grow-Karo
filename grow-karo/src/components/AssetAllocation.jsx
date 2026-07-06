@@ -94,7 +94,7 @@ export default function AssetAllocation() {
         padding: 10,
         cornerRadius: 8,
         callbacks: {
-          label: (context) => ` ${context.dataset.label}: $${context.raw.toLocaleString()}`,
+          label: (context) => ` ${context.dataset.label}: ₹${context.raw.toLocaleString()}`,
         },
       },
     },
@@ -109,7 +109,7 @@ export default function AssetAllocation() {
         ticks: {
           color: "#94a3b8",
           font: { size: 10, weight: "600" },
-          callback: (value) => `$${value / 1000}k`,
+          callback: (value) => `₹${value / 1000}k`,
         },
         border: { display: false },
       },

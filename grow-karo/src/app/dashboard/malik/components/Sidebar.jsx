@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { id: "withdrawals", label: "Withdrawals", icon: () => null },
   { id: "issues", label: "User Issues", icon: () => null },
   { id: "codes", label: "Fundraiser Codes", icon: () => null },
+  { id: "contacts", label: "Team Contacts", icon: () => null },
   { id: "settings", label: "Settings", icon: () => null },
 ];
 

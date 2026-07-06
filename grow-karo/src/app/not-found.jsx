@@ -37,7 +37,7 @@ export default function NotFound() {
       {/* Visual Glitch Vector/Icon Array */}
       <div className="relative mb-6">
         <div className="absolute inset-0 bg-rose-500/10 blur-3xl rounded-full h-32 w-32 mx-auto animate-pulse" />
-        <div className="relative h-20 w-20 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800/80 flex items-center justify-center shadow-2xl shadow-black/50">
+        <div className="relative h-20 w-20 rounded-2xl bg-linear-to-b from-slate-900 to-slate-950 border border-slate-800/80 flex items-center justify-center shadow-2xl shadow-black/50">
           <AlertTriangle className="h-10 w-10 text-rose-500 animate-bounce" style={{ animationDuration: '3s' }} />
         </div>
         <span className="absolute -top-1 -right-1 flex h-3 w-3">
@@ -51,7 +51,7 @@ export default function NotFound() {
         <span className="text-xs font-mono font-bold tracking-widest text-rose-500 uppercase bg-rose-500/10 border border-rose-500/20 px-3 py-1 rounded-full">
           Error Code 404
         </span>
-        <h2 className="text-2xl font-black bg-gradient-to-r from-white via-slate-200 to-slate-500 bg-clip-text text-transparent tracking-tight pt-2">
+        <h2 className="text-2xl font-black bg-linear-to-r from-white via-slate-200 to-slate-500 bg-clip-text text-transparent tracking-tight pt-2">
           Route Resolution Failure
         </h2>
         <p className="text-xs text-slate-400 leading-relaxed max-w-sm mx-auto">
@@ -72,7 +72,7 @@ export default function NotFound() {
           </div>
         </div>
         
-        <div className="p-4 font-mono text-[11px] space-y-1.5 text-slate-400 min-h-[90px]">
+        <div className="p-4 font-mono text-[11px] space-y-1.5 text-slate-400 min-h-22.5">
           <p className="text-slate-600">&gt; await platform.resolveRoute(current_location)</p>
           <p className="text-rose-400/90 font-medium">🚨 [UNRESOLVED_DESCRIPTOR]: Link structurally compromised or expired.</p>
           {logs.map((log, idx) => (

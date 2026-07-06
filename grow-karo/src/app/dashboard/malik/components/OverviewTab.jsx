@@ -1,18 +1,18 @@
 import { Activity, AlertTriangle, Clock, Wallet } from "lucide-react";
 import { Line } from "react-chartjs-2";
 import StatCard from "./StatCard";
-import { INFLOW_DATA, currency } from "../data";
+import { currency } from "../utils";
 
-export default function OverviewTab({ withdrawals, issues, feed }) {
-  const pending = withdrawals.filter((w) => w.status === "pending");
-  const openIssues = issues.filter((i) => i.status !== "resolved");
+export default function OverviewTab({ withdrawals, issues, feed, inflowData = [] }) {
+  const pending = Array.isArray(withdrawals) ? withdrawals.filter((w) => w.status === "pending") : [];
+  const openIssues = Array.isArray(issues) ? issues.filter((i) => i.status !== "resolved") : [];
 
   const inflowChartData = {
-    labels: INFLOW_DATA.map((d) => d.day),
+    labels: inflowData.map((d) => d.day),
     datasets: [
       {
         label: "Inflow",
-        data: INFLOW_DATA.map((d) => d.amount),
+        data: inflowData.map((d) => d.amount),
         borderColor: "#10b981",
         borderWidth: 2,
         pointRadius: 0,
@@ -75,9 +75,9 @@ export default function OverviewTab({ withdrawals, issues, feed }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={Wallet} label="Total Invested (AUM)" value={currency(18420000)} delta="+4.2% this week" deltaPositive accent="bg-emerald-500/15 text-emerald-400" />
+        <StatCard icon={Wallet} label="Total Invested (AUM)" value={(18420000)} delta="+4.7% this week" deltaPositive accent="bg-emerald-500/15 text-emerald-400" />
         <StatCard icon={Activity} label="Active Users" value="6,204" delta="+312 this week" deltaPositive accent="bg-indigo-500/15 text-indigo-400" />
-        <StatCard icon={Clock} label="Pending Withdrawals" value={`${currency(pending.reduce((s, w) => s + w.amount, 0))}`} delta="Needs review" deltaPositive={false} accent="bg-amber-500/15 text-amber-400" />
+        <StatCard icon={Clock} label="Pending Withdrawals" value={`${currency(pending.reduce((s, w) => s + w.amount, 0))}`} delta="Needs approval" deltaPositive={false} accent="bg-amber-500/15 text-amber-400" />
         <StatCard icon={AlertTriangle} label="Open Issues" value={openIssues.length} delta="2 high priority" deltaPositive={false} accent="bg-rose-500/15 text-rose-400" />
       </div>
 

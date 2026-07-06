@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 
-export default function Transaction({ MOCK_TRANSACTIONS }) {
+export default function Transaction({ transactions = [] }) {
   // Filter & Search States
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -70,7 +70,7 @@ export default function Transaction({ MOCK_TRANSACTIONS }) {
 
   // Filter and Sort Logic
   const filteredTransactions = useMemo(() => {
-    return MOCK_TRANSACTIONS.filter((txn) => {
+    return transactions.filter((txn) => {
       // Search term filter
       const matchesSearch =
         txn.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -340,7 +340,7 @@ export default function Transaction({ MOCK_TRANSACTIONS }) {
         <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-xs text-slate-500">
           <div>
             Showing <b>{filteredTransactions.length}</b> of{" "}
-            <b>{MOCK_TRANSACTIONS.length}</b> entries
+            <b>{transactions.length}</b> entries
           </div>
         </div>
       </div>
