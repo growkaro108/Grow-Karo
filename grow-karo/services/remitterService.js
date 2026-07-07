@@ -1,6 +1,6 @@
 import { fetchRemitterDashboard } from '@/api/remitterApi';
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 const NETWORK_DELAY_MS = 1500;
 
 function delay(value) {
@@ -42,7 +42,8 @@ export async function fetchRemitterDashboardData(remitterId = 'me') {
     return delay(mockDashboardData);
   }
 
-  const response = await fetchRemitterDashboard(remitterId);
+  const apiResponse = await fetchRemitterDashboard(remitterId);
+  const response = apiResponse?.data ?? apiResponse;
   return {
     dashboardMetrics: response.dashboardMetrics ?? {},
     chartData: Array.isArray(response.chartData) ? response.chartData : [],

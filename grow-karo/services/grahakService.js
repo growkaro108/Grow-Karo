@@ -1,7 +1,7 @@
-import { fetchUserProfile, fetchUserTransactions } from '@/api/userApi';
+import { fetchUserProfile, fetchUserTransactions, userRegister } from '@/api/userApi';
 
-const USE_MOCK = true;
-const NETWORK_DELAY_MS = 1500;
+const USE_MOCK = false;
+const NETWORK_DELAY_MS = 1000;
 
 function delay(value) {
   return new Promise((resolve) => setTimeout(() => resolve(value), NETWORK_DELAY_MS));
@@ -32,13 +32,29 @@ const mockGrahakData = {
   },
 };
 
+//user signup
+export async function userSignup(payload) {
+  try {
+    const response = await userRegister(payload);
+    return {
+      success: true,
+      message: response?.message || response || "User signed up successfully",
+      userId: response?.userId
+    };
+  } catch (error) {
+    console.error("Signup failed:", error.payload || error.message);
+    throw new Error(error.payload?.message || error.message || "Signup failed. Please try again.");
+  }
+}
 export async function fetchGrahakDashboardData(userId = 'me') {
   if (USE_MOCK) {
     return delay(mockGrahakData);
   }
 
-  const profile = await fetchUserProfile(userId);
-  const transactions = await fetchUserTransactions(userId);
+  const profileResponse = await fetchUserProfile(userId);
+  const transactionsResponse = await fetchUserTransactions(userId);
+  const profile = profileResponse?.data ?? profileResponse;
+  const transactions = transactionsResponse?.data?.items ?? transactionsResponse?.items ?? transactionsResponse;
 
   return {
     balance: Number(profile?.balance ?? 0),
@@ -47,4 +63,7 @@ export async function fetchGrahakDashboardData(userId = 'me') {
     transactions: Array.isArray(transactions) ? transactions : [],
     graphDataMap: profile?.graphDataMap ?? {},
   };
+
+
+
 }

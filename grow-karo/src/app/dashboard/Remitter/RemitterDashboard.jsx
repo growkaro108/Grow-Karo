@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import Loader from '@/components/Loader';
 import SidebarNavigation from './components/SidebarNavigation';
 import DashboardView from './components/DashboardView';
-import { fetchRemitterDashboardData } from './remitterService';
+import { fetchRemitterDashboardData } from '../../../../services/remitterService';
 // import TransactionsView from './components/TransactionsView';
 // import RecipientsView from './components/RecipientsView';
 // import RequestsView from './components/RequestsView';

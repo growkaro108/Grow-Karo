@@ -1,7 +1,15 @@
 import { apiRequest } from "./apiClient";
 
+export async function userRegister(payload) {
+  const response = await apiRequest("/users/signup", {
+    method: "POST",
+    body: payload,
+  });
+  return response;
+}
+
 export async function loginUser(credentials) {
-  return apiRequest("/users/login", {
+  return await apiRequest("/users/login", {
     method: "POST",
     body: credentials,
   });

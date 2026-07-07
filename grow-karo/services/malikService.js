@@ -1,6 +1,6 @@
 import { fetchAdminDashboard } from '@/api/adminApi';
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 const NETWORK_DELAY_MS = 1500;
 
 function delay(value) {
@@ -68,7 +68,8 @@ export async function fetchMalikDashboardData() {
     return delay(mockMalikData);
   }
 
-  const response = await fetchAdminDashboard();
+  const apiResponse = await fetchAdminDashboard();
+  const response = apiResponse?.data ?? apiResponse;
 
   return {
     inflowData: Array.isArray(response?.inflowData) ? response.inflowData : [],

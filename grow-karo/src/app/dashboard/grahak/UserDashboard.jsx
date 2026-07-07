@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import dynamic from "next/dynamic";
 import Loader from "@/components/Loader";
-import { fetchGrahakDashboardData } from "./grahakService";
+import { fetchGrahakDashboardData } from "../../../../services/grahakService";
 
 const Overview = dynamic(() => import("./Overview"), {
   loading: () => <Loader />,

@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: backend
+  # 1. PostgreSQL Configuration
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:growkaro_db}
+    username: ${DB_USERNAME:growkaro}
+    password: ${DB_PASSWORD:growkaro123}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 30000
+      max-lifetime: 1800000
+
+  # 2. Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:} # Leave blank if your container doesn't use a password
+      timeout: 60000
+
+  # 3. Cache Configuration (For your @Cacheable annotations)
+  cache:
+    type: redis
+    redis:
+      time-to-live: 360000 # Cache expiry in milliseconds (e.g., 10 min)
+      cache-null-values: false
+
+  # 4. JPA / Hibernate Configuration
+  jpa:
+    hibernate:
+      ddl-auto: update   # auto-creates / updates tables from entities
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect

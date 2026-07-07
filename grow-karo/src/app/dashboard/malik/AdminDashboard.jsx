@@ -28,7 +28,7 @@ import OverviewTab from "./components/OverviewTab";
 // import FundraiserCodesTab from "./components/FundraiserCodesTab";
 // import Toast from "./components/Toast";
 import TabLoader from "./components/TabLoader";
-import { fetchMalikDashboardData } from "./malikService";
+import { fetchMalikDashboardData } from "../../../../services/malikService";
 // import Settings from "./components/Settings";
 import dynamic from "next/dynamic";
 import RemitterDashboard from "../Remitter/RemitterDashboard";
