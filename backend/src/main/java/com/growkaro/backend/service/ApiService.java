@@ -2,6 +2,7 @@ package com.growkaro.backend.service;
 
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,7 +56,8 @@ public class ApiService {
 
     @Cacheable(value = "support", key = "#root.methodName")
     public Map<String, Object> support() {
-        return response("ok", "Support center available", Map.of("email", "support@grow-karo.com", "phone", "+91-9000000000"));
+        return response("ok", "Support center available",
+                Map.of("email", "support@grow-karo.com", "phone", "+91-9000000000"));
     }
 
     @Cacheable(value = "search", key = "#query")
@@ -106,7 +108,8 @@ public class ApiService {
             issue.setDescription(payload.toString());
         }
 
-        return response("ok", "Contact request accepted", Map.of("issue", issueResult(supportIssueRepository.save(issue))));
+        return response("ok", "Contact request accepted",
+                Map.of("issue", issueResult(supportIssueRepository.save(issue))));
     }
 
     public Map<String, Object> response(String status, String message, Object data) {
@@ -141,5 +144,9 @@ public class ApiService {
             }
         }
         return null;
+    }
+
+    public String makePasswordHash(String password) {
+        return BCrypt.hashpw(password, BCrypt.gensalt(7));
     }
 }

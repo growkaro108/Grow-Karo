@@ -43,11 +43,21 @@ export async function userSignup(payload) {
     };
   } catch (error) {
     console.error("Signup failed:", error.payload || error.message);
-    throw new Error(error.payload?.message || error.message || "Signup failed. Please try again.");
+    const payloadMessage = typeof error.payload === "string" ? error.payload : error.payload?.message;
+    throw new Error(payloadMessage || error.message || "Signup failed. Please try again.");
   }
 }
+
+export async function sendEmailOtp(email=""){
+  try {
+    return "success";
+  } catch (error) {
+    return "failed";
+  }
+}
+
 export async function fetchGrahakDashboardData(userId = 'me') {
-  if (USE_MOCK) {
+  if (true) {
     return delay(mockGrahakData);
   }
 

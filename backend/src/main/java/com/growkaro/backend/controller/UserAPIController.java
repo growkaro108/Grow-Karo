@@ -7,33 +7,102 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.growkaro.backend.DRO.UserRegister;
-import com.growkaro.backend.entity.User;
 import com.growkaro.backend.service.UserAPIService;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/api/user")
 public class UserAPIController {
 
     private final UserAPIService userAPIService;
+    // private final EmailService emailService;
 
     // Senior Practice: Use constructor injection instead of field @Autowired
     public UserAPIController(UserAPIService userAPIService) {
         this.userAPIService = userAPIService;
+        // this.emailService = emailService;
     }
 
-    @PostMapping("/signup")
-    public ResponseEntity<String> signUp(@RequestBody UserRegister user) {
-        System.out.println("request from frontend" + user);
+    // @PostMapping("/getEmailOtp")
+    // public ResponseEntity<Boolean> sendEmailOTP(String email) {
+    // // 1. Validate email using regex
+    // String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
 
-        if (user == null) {
-            return ResponseEntity.badRequest().body("Invalid data");
+    // // Quick null check to prevent NullPointerException
+    // if (email == null || !email.matches(emailRegex)) {
+    // return ResponseEntity.badRequest().body(false);
+    // }
+
+    // emailService.sendOtp(email, "signup");
+
+    // return ResponseEntity.ok(true);
+    // }
+    // //verify email otp
+    // @GetMapping("/verifyEmailOtp")
+    // public ResponseEntity<Boolean> verifyEmailOTP(String email, String otp) {
+    // if (email == null || otp == null) {
+    // return ResponseEntity.badRequest().body(false);
+    // }
+
+    // boolean status = emailService.verifyOtp(email, otp);
+
+    // return status ? ResponseEntity.ok(true) :
+    // ResponseEntity.badRequest().body(false);
+    // }
+
+    @PostMapping("/signup")
+    public ResponseEntity<Map<String, Object>> signUp(@RequestBody Map<String, Object> payload) {
+        UserRegister user = toUserRegister(payload);
+
+        if (user.name() == null || user.email() == null || user.phone() == null || user.passwordHash() == null) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", "Name, email, phone and password are required"));
         }
+
         String result = userAPIService.userSignup(user);
         if (result.contains("success")) {
-            return ResponseEntity.ok("Account created Successfully");
-        } else {
-            return ResponseEntity.badRequest().body(result);
+            return ResponseEntity.ok(Map.of(
+                    "status", "ok",
+                    "message", "Account created successfully"));
         }
+        return ResponseEntity.badRequest().body(Map.of(
+                "status", "error",
+                "message", result));
+    }
+
+    private UserRegister toUserRegister(Map<String, Object> payload) {
+        String name = stringValue(payload.get("name"));
+        if (name == null) {
+            String firstName = stringValue(payload.get("firstName"));
+            String lastName = stringValue(payload.get("lastName"));
+            name = String.join(" ", firstName == null ? "" : firstName, lastName == null ? "" : lastName).trim();
+            if (name.isBlank()) {
+                name = null;
+            }
+        }
+
+        String passwordHash = stringValue(payload.get("passwordHash"));
+        if (passwordHash == null) {
+            passwordHash = stringValue(payload.get("password"));
+        }
+
+        return new UserRegister(
+                name,
+                stringValue(payload.get("email")),
+                stringValue(payload.get("phone")),
+                passwordHash,
+                stringValue(payload.get("bankName")),
+                stringValue(payload.get("accountHolderName")),
+                stringValue(payload.get("accountNumber")),
+                stringValue(payload.get("ifscCode")));
+    }
+
+    private String stringValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        String text = value.toString().trim();
+        return text.isEmpty() ? null : text;
     }
 
     @PostMapping("/login")
@@ -113,4 +182,13 @@ public class UserAPIController {
             @RequestBody Map<String, Boolean> settings) {
         return ResponseEntity.ok(userAPIService.updateNotificationSettings(userId, settings));
     }
+
+    // get all data of users dashboard overview section
+    // @GetMapping("/{userId}/dashboard/overview")
+    // public ResponseEntity<Map<String, Object>> userDashboard(
+    // @PathVariable String userId,
+    // @RequestParam(required = false, defaultValue = "1") String page) {
+    // return ResponseEntity.ok(userAPIService.userDashboard(userId, page));
+    // }
+
 }

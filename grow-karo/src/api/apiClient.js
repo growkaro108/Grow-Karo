@@ -3,7 +3,7 @@ import axios from "axios";
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
   process.env.NEXT_PUBLIC_BASE_URL?.trim() ||
-  "http://localhost:8080/api";
+  "http://localhost:9090/api";
 
 // --- Rate Limiter Setup ---
 // Adjust these values based on your API requirements
@@ -99,6 +99,8 @@ async function apiRequest(endpoint, options = {}) {
       if (body instanceof FormData) {
         // If Content-Type was mistakenly passed, delete it so the browser sets the boundary automatically
         delete requestHeaders['Content-Type'];
+      } else if (!requestHeaders['Content-Type']) {
+        requestHeaders['Content-Type'] = 'application/json';
       }
     }
 

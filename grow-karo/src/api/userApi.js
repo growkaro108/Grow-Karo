@@ -1,15 +1,29 @@
 import { apiRequest } from "./apiClient";
 
 export async function userRegister(payload) {
-  const response = await apiRequest("/users/signup", {
+  const response = await apiRequest("/user/signup", {
     method: "POST",
     body: payload,
   });
   return response;
 }
 
+export async function getEmailOtp(email){
+  return await apiRequest("/user/getEmailOtp",{
+    method: "POST",
+    body: "email"
+  })
+}
+
+export async function validateEmailOtp(email,otp){
+  return await apiRequest("/user/validateEmailOtp",{
+    method: "POST",
+    body: {"email": email, "otp": otp}
+  })
+}
+
 export async function loginUser(credentials) {
-  return await apiRequest("/users/login", {
+  return await apiRequest("/user/login", {
     method: "POST",
     body: credentials,
   });

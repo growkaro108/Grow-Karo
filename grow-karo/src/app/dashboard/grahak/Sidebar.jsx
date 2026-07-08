@@ -1,5 +1,6 @@
 "use client";
 
+import { LayoutDashboardIcon } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 
@@ -78,20 +79,14 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           {/* Logo Brand */}
           <div className="flex items-center gap-3 px-2 py-1">
             <div className="w-8 h-8 rounded-xl bg-linear-to-tr from-slate-950 to-slate-800 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-slate-950/20">
-              <Image
-                src="/shriram.jpg"
-                alt="Logo"
-                width={40}
-                height={40}
-                className="object-cover h-full w-full rounded-full shadow"
-              />
+             <LayoutDashboardIcon />
             </div>
             <div className="flex flex-col">
-              <span className="font-bold tracking-tight text-slate-900 leading-none text-base">
-                Shri Ram
+              <span className="font-bold tracking-tight text-slate-700 leading-none text-base">
+                Dashboard
               </span>
-              <span className="text-[10px] text-slate-400 font-medium tracking-wide mt-0.5">
-                Premium Invester
+              <span className="text-[10px] text-green-400 font-medium tracking-wide mt-0.5">
+                Premium Investor
               </span>
             </div>
           </div>

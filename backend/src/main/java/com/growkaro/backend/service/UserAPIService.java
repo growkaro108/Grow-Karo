@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
@@ -13,6 +14,7 @@ import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,17 +33,20 @@ public class UserAPIService {
 
     private static final int DEFAULT_PAGE_SIZE = 20;
 
+    private final ApiService apiService;
+
     private final RecipientService recipientService;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final NotificationRepository notificationRepository;
     private final WithdrawalRequestRepository withdrawalRequestRepository;
 
-    public UserAPIService(RecipientService recipientService,
+    public UserAPIService(ApiService apiService, RecipientService recipientService,
             UserRepository userRepository,
             TransactionRepository transactionRepository,
             NotificationRepository notificationRepository,
             WithdrawalRequestRepository withdrawalRequestRepository) {
+        this.apiService = apiService;
         this.recipientService = recipientService;
         this.userRepository = userRepository;
         this.transactionRepository = transactionRepository;
@@ -52,18 +57,28 @@ public class UserAPIService {
     @Transactional
     public String userSignup(UserRegister user) {
         try {
-            if (userRepository.existsByEmail(user.email()) || userRepository.existsByPhone(user.phone())) {
-                return "User already exists";
+            String email = stringValue(user.email());
+            String phone = stringValue(user.phone());
+            String name = stringValue(user.name());
+            String passwordHash = stringValue(user.passwordHash());
+
+            if (name == null || email == null || phone == null || passwordHash == null) {
+                return "Name, email, phone and password are required";
             }
+            // if (userRepository.existsByEmail(email) ||
+            // userRepository.existsByPhone(phone)) {
+            // return "User already exists";
+            // }
+
             User newUser = new User();
-            newUser.setName(user.name());
-            newUser.setEmail(user.email());
-            newUser.setPhone(user.phone());
-            newUser.setPasswordHash(user.passwordHash());
-            newUser.setBankName(user.bankName());
-            newUser.setAccountHolderName(user.accountHolderName());
-            newUser.setAccountNumber(user.accountNumber());
-            newUser.setIfscCode(user.ifscCode());
+            newUser.setName(name);
+            newUser.setEmail(email);
+            newUser.setPhone(phone);
+            newUser.setPasswordHash(apiService.makePasswordHash(passwordHash));
+            newUser.setBankName(stringValue(user.bankName()));
+            newUser.setAccountHolderName(stringValue(user.accountHolderName()));
+            newUser.setAccountNumber(stringValue(user.accountNumber()));
+            newUser.setIfscCode(stringValue(user.ifscCode()));
             userRepository.save(newUser);
             return "success";
         } catch (Exception e) {
@@ -81,23 +96,21 @@ public class UserAPIService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> login(Map<String, Object> credentials) {
-        String login = stringValue(credentials.get("email"));
-        if (login == null) {
-            login = stringValue(credentials.get("phone"));
-        }
+        String email = stringValue(credentials.get("email"));
         String password = stringValue(credentials.get("password"));
-        Optional<User> userOpt = login == null
-                ? Optional.empty()
-                : userRepository.findByEmailOrPhone(login, login);
 
-        if (userOpt.isEmpty() || password == null || !password.equals(userOpt.get().getPasswordHash())) {
+        Optional<User> userOpt = email == null
+                ? Optional.empty()
+                : userRepository.findByEmail(email);
+
+        if (userOpt.isEmpty() || password == null || !BCrypt.checkpw(password, userOpt.get().getPasswordHash())) {
             return response("error", "Invalid email/phone or password", Map.of());
         }
 
         User user = userOpt.get();
         return response("ok", "Login successful", Map.of(
                 "token", "local-dev-token",
-                "user", toUserProfile(user)));
+                "user", Map.of()));
     }
 
     @Cacheable(value = "userProfile", key = "#userId")
@@ -162,7 +175,8 @@ public class UserAPIService {
         }
 
         Page<Transaction> transactions = transactionRepository.findByUserId(userOpt.get().getId(), pageable(page));
-        return response("ok", "User transactions fetched", paginatedTransactions(transactions, "userId", userOpt.get().getId()));
+        return response("ok", "User transactions fetched",
+                paginatedTransactions(transactions, "userId", userOpt.get().getId()));
     }
 
     @Cacheable(value = "userRecipients", key = "#userId + ':' + (#page != null ? #page : '1')")
@@ -360,4 +374,12 @@ public class UserAPIService {
         String text = value.toString().trim();
         return text.isEmpty() ? null : text;
     }
+
+    // public Object userDashboard(String userId, String page) {
+    // User user=userRepository.findById(userId).orElse(null);
+    // if(user==null){
+    // return response("error", "Invalid request", Map.of("id", userId));
+    // }
+
+    // }
 }
