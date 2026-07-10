@@ -1,29 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { MoveRight, UserRoundKey, Menu, X, Home, LayoutDashboardIcon, NotebookPen, Send } from "lucide-react";
+import { MoveRight, UserRoundKey, Menu, X, Home, LayoutDashboardIcon, NotebookPen, Send, LogOut } from "lucide-react";
+import { userContext } from "@/context/UserContext";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
+  const { authUser, logout, getUserDataFromContext } = useContext(userContext);
+  useEffect(() => {
+    const getUser = async () => {
+      if (!authUser) {
+        await getUserDataFromContext();
+      }
+      // console.log("Welcome back, ", authUser?.name)
+    }
+    getUser();
+  }, [authUser, getUserDataFromContext]);
 
   // Centralized route definition to eliminate redundancy
   const navLinks = [
-    { href: "/", label: "Home",icon : Home },
-    { href: "/dashboard", label: "Admin", icon: LayoutDashboardIcon },
-    // { href: "/user", label: "User", icon: LayoutDashboardIcon },
-    // { href: "/remitter", label: "Remitter", icon: LayoutDashboardIcon },
-    { href: "/about", label: "About Us", icon: NotebookPen },
-    { href: "/solution", label: "Solutions", icon: Send  },
+    { href: "/", label: "Home", icon: Home },
+    { href: authUser ? "/dashboard" : "/about", label: authUser ? "Dashboard" : "About Us", icon: authUser ? LayoutDashboardIcon : NotebookPen },
+    { href: "/solution", label: "Solutions", icon: Send },
   ];
 
   return (
     <header className="sticky -top-1 z-50 rounded-3xl border border-slate-100 bg-white/95 backdrop-blur-md p-4 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
       <div className="flex items-center justify-between">
-        
+
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 group">
           <div className="flex h-10 w-10 items-center justify-center rounded-full overflow-hidden bg-slate-100 border border-slate-200/60 shadow-sm transition group-hover:opacity-90">
@@ -43,11 +51,10 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`relative flex items-center gap-1 py-1 transition-colors hover:text-blue-600 ${
-                  isActive ? "text-blue-600 font-semibold" : "text-slate-600"
-                }`}
+                className={`relative flex items-center gap-1 py-1 transition-colors hover:text-blue-600 ${isActive ? "text-blue-600 font-semibold" : "text-slate-600"
+                  }`}
               >
-               <span>{link.icon && <link.icon className="h-5 w-5 lg:h-4 lg:w-4" />}</span> <span className=" lg:block hidden">{link.label}</span>
+                <span>{link.icon && <link.icon className="h-5 w-5 lg:h-4 lg:w-4" />}</span> <span className=" lg:block hidden">{link.label}</span>
                 {/* Active indicator bar */}
                 {isActive && (
                   <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-blue-600 transition-all" />
@@ -58,17 +65,40 @@ export default function Navbar() {
         </nav>
 
         {/* Desktop CTA */}
-        <div className="hidden md:flex items-center gap-5 text-sm">
-          <Link href="/auth" className="flex font-medium text-slate-600 transition hover:text-slate-900 align-middle border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50">
-            Log In <UserRoundKey className="ml-2 h-5 w-5" />
-          </Link>
-          <Link
-            href="/auth?mode=signup"
-            className="inline-flex h-11 items-center justify-center rounded-full bg-slate-950 px-6 font-semibold text-white transition duration-300 hover:bg-blue-600 hover:shadow-lg hover:shadow-blue-500/20"
-          >
-            Get Started <MoveRight className="ml-2 h-4 w-4" />
-          </Link>
-        </div>
+        {authUser ? (
+          <div className="hidden md:flex items-center gap-3 text-sm">
+            <div className="flex items-center gap-2 border border-slate-200 px-3 py-2 rounded-lg">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-950 text-white text-xs font-semibold">
+                {authUser?.name?.charAt(0).toUpperCase()}
+              </div>
+              <span className="font-medium text-slate-700">
+                Hi, {authUser?.name?.split(" ")[0]}
+              </span>
+            </div>
+
+            <button
+              onClick={logout}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-slate-200 px-5 font-semibold text-slate-600 transition duration-300 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100"
+            >
+              Logout <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="hidden md:flex items-center gap-5 text-sm">
+            <Link
+              href="/auth"
+              className="flex font-medium text-slate-600 transition hover:text-slate-900 align-middle border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50"
+            >
+              Log In <UserRoundKey className="ml-2 h-5 w-5" />
+            </Link>
+            <Link
+              href="/auth?mode=signup"
+              className="inline-flex h-11 items-center justify-center rounded-full bg-slate-950 px-6 font-semibold text-white transition duration-300 hover:bg-blue-600 hover:shadow-lg hover:shadow-blue-500/20"
+            >
+              Get Started <MoveRight className="ml-2 h-4 w-4" />
+            </Link>
+          </div>
+        )}
 
         {/* Mobile Toggle Button */}
         <button
@@ -90,36 +120,59 @@ export default function Navbar() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setIsOpen(false)}
-                className={`flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
-                  isActive
-                    ? "bg-blue-50/60 text-blue-600 font-semibold"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"
-                }`}
+                className={`flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${isActive
+                  ? "bg-blue-50/60 text-blue-600 font-semibold"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"
+                  }`}
               >
                 <span>{link.label}</span>
                 {isActive && <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />}
               </Link>
             );
           })}
-          
+
           <hr className="border-slate-100 my-2 mx-2" />
-          
-          <div className="flex flex-col gap-2 px-2 pb-2">
-            <Link
-              href="/auth"
-              onClick={() => setIsOpen(false)}
-              className="flex h-11 items-center justify-center rounded-xl border border-slate-200 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            >
-              Log In
-            </Link>
-            <Link
-              href="/auth?mode=signup"
-              onClick={() => setIsOpen(false)}
-              className="flex h-11 items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white transition hover:bg-blue-600"
-            >
-              Get Started
-            </Link>
-          </div>
+
+          {authUser ? (
+            <div className="flex flex-col gap-2 px-2 pb-2">
+              <div className="flex items-center gap-3 h-11 px-3 rounded-xl border border-slate-200">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-950 text-white text-xs font-semibold">
+                  {authUser.name?.charAt(0).toUpperCase()}
+                </div>
+                <span className="text-sm font-medium text-slate-700">
+                  Hi, {authUser.name?.split(" ")[0]}
+                </span>
+              </div>
+
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  logout();
+                }}
+                className="flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 transition hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100"
+              >
+                Logout <LogOut className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2 px-2 pb-2">
+              <Link
+                href="/auth"
+                onClick={() => setIsOpen(false)}
+                className="flex h-11 items-center justify-center rounded-xl border border-slate-200 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                Log In
+              </Link>
+              <Link
+                href="/auth?mode=signup"
+                onClick={() => setIsOpen(false)}
+                className="flex h-11 items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white transition hover:bg-blue-600"
+              >
+                Get Started
+              </Link>
+            </div>
+          )}
+
         </div>
       )}
     </header>

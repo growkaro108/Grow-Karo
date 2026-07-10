@@ -8,17 +8,17 @@ export async function userRegister(payload) {
   return response;
 }
 
-export async function getEmailOtp(email){
-  return await apiRequest("/user/getEmailOtp",{
+export async function getEmailOtp(email) {
+  return await apiRequest(`/user/getEmailOtp/${email}`, {
     method: "POST",
-    body: "email"
+
   })
 }
 
-export async function validateEmailOtp(email,otp){
-  return await apiRequest("/user/validateEmailOtp",{
+export async function validateEmailOtp(email, otp) {
+  return await apiRequest("/user/validateEmailOtp", {
     method: "POST",
-    body: {"email": email, "otp": otp}
+    body: { "email": email, "otp": otp }
   })
 }
 

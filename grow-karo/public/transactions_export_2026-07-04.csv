@@ -1,7 +1,0 @@
-Transaction ID,Date,Description,Type,Amount ($),Status
-TXN-1001,2026-07-03,"Dividend Payout - AAPL",Credit,125.50,Completed
-TXN-1002,2026-07-02,"Deposit via Bank Transfer",Credit,5000.00,Completed
-TXN-1003,2026-06-28,"Equity Purchase - TSLA",Debit,1200.00,Completed
-TXN-1004,2026-06-25,"Withdrawal Request",Debit,450.00,Pending
-TXN-1005,2026-06-20,"Mutual Fund Investment",Debit,3000.00,Failed
-TXN-1006,2026-06-15,"Bonus Reward",Credit,50.00,Completed

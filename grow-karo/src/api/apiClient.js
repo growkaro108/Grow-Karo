@@ -114,7 +114,7 @@ async function apiRequest(endpoint, options = {}) {
     standardizedError.status = error.response?.status || null;
     standardizedError.payload = error.response?.data || null;
 
-    throw standardizedError;
+    return standardizedError;
   } finally {
     // Ensure the queue advances regardless of success or failure
     advanceQueue();

@@ -5,7 +5,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
@@ -19,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.growkaro.backend.DRO.UserRegister;
+import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.Notification;
 import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.entity.Transaction;
@@ -40,18 +40,21 @@ public class UserAPIService {
     private final TransactionRepository transactionRepository;
     private final NotificationRepository notificationRepository;
     private final WithdrawalRequestRepository withdrawalRequestRepository;
+    private final General general;
 
     public UserAPIService(ApiService apiService, RecipientService recipientService,
             UserRepository userRepository,
             TransactionRepository transactionRepository,
             NotificationRepository notificationRepository,
-            WithdrawalRequestRepository withdrawalRequestRepository) {
+            WithdrawalRequestRepository withdrawalRequestRepository,
+            General general) {
         this.apiService = apiService;
         this.recipientService = recipientService;
         this.userRepository = userRepository;
         this.transactionRepository = transactionRepository;
         this.notificationRepository = notificationRepository;
         this.withdrawalRequestRepository = withdrawalRequestRepository;
+        this.general = general;
     }
 
     @Transactional
@@ -86,31 +89,21 @@ public class UserAPIService {
         }
     }
 
-    private Map<String, Object> response(String status, String message, Object data) {
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("status", status);
-        response.put("message", message);
-        response.put("data", data != null ? data : Map.of());
-        return response;
-    }
-
     @Transactional(readOnly = true)
-    public Map<String, Object> login(Map<String, Object> credentials) {
-        String email = stringValue(credentials.get("email"));
-        String password = stringValue(credentials.get("password"));
+    public Map<String, Object> login(String email, String password) {
 
         Optional<User> userOpt = email == null
                 ? Optional.empty()
                 : userRepository.findByEmail(email);
 
         if (userOpt.isEmpty() || password == null || !BCrypt.checkpw(password, userOpt.get().getPasswordHash())) {
-            return response("error", "Invalid email/phone or password", Map.of());
+            return general.response("error", "Invalid email/phone or password", Map.of());
         }
 
         User user = userOpt.get();
-        return response("ok", "Login successful", Map.of(
+        return general.response("ok", "Login successful", Map.of(
                 "token", "local-dev-token",
-                "user", Map.of()));
+                "user", user));
     }
 
     @Cacheable(value = "userProfile", key = "#userId")
@@ -118,7 +111,7 @@ public class UserAPIService {
     public Map<String, Object> userProfile(String userId) {
         Optional<User> userOpt = resolveUser(userId);
         if (userOpt.isEmpty()) {
-            return response("error", "User not found", Map.of("id", userId));
+            return general.response("error", "User not found", Map.of("id", userId));
         }
 
         User user = userOpt.get();
@@ -131,7 +124,7 @@ public class UserAPIService {
         profile.put("portfolioValue", deposits);
         profile.put("holdings", List.of());
         profile.put("graphDataMap", Map.of());
-        return response("ok", "User profile fetched", profile);
+        return general.response("ok", "User profile fetched", profile);
     }
 
     @CachePut(value = "userProfile", key = "#userId")
@@ -139,12 +132,12 @@ public class UserAPIService {
     public Map<String, Object> updateUser(String userId, Map<String, Object> updates) {
         Optional<User> userOpt = resolveUser(userId);
         if (userOpt.isEmpty()) {
-            return response("error", "User not found", Map.of("id", userId));
+            return general.response("error", "User not found", Map.of("id", userId));
         }
 
         User user = userOpt.get();
         applyUserUpdates(user, updates);
-        return response("ok", "User updated successfully", toUserProfile(userRepository.save(user)));
+        return general.response("ok", "User updated successfully", toUserProfile(userRepository.save(user)));
     }
 
     @Caching(evict = {
@@ -157,13 +150,13 @@ public class UserAPIService {
     public Map<String, Object> deleteUser(String userId) {
         Optional<User> userOpt = resolveUser(userId);
         if (userOpt.isEmpty()) {
-            return response("error", "User not found", Map.of("id", userId));
+            return general.response("error", "User not found", Map.of("id", userId));
         }
 
         User user = userOpt.get();
         user.setActive(false);
         userRepository.save(user);
-        return response("ok", "User deactivated", Map.of("id", user.getId()));
+        return general.response("ok", "User deactivated", Map.of("id", user.getId()));
     }
 
     @Cacheable(value = "userTransactions", key = "#userId + ':' + (#page != null ? #page : '1')")
@@ -171,11 +164,11 @@ public class UserAPIService {
     public Map<String, Object> userTransactions(String userId, String page) {
         Optional<User> userOpt = resolveUser(userId);
         if (userOpt.isEmpty()) {
-            return response("error", "User not found", Map.of("id", userId));
+            return general.response("error", "User not found", Map.of("id", userId));
         }
 
         Page<Transaction> transactions = transactionRepository.findByUserId(userOpt.get().getId(), pageable(page));
-        return response("ok", "User transactions fetched",
+        return general.response("ok", "User transactions fetched",
                 paginatedTransactions(transactions, "userId", userOpt.get().getId()));
     }
 
@@ -184,11 +177,11 @@ public class UserAPIService {
     public Map<String, Object> userRecipients(String userId, String page) {
         Optional<User> userOpt = resolveUser(userId);
         if (userOpt.isEmpty()) {
-            return response("error", "User not found", Map.of("id", userId));
+            return general.response("error", "User not found", Map.of("id", userId));
         }
 
         Page<Recipient> recipients = recipientService.findByRecipientUserId(userOpt.get().getId(), parsePage(page));
-        return response("ok", "User recipients fetched",
+        return general.response("ok", "User recipients fetched",
                 recipientService.paginatedUserResponse(userOpt.get().getId(), recipients));
     }
 
@@ -197,7 +190,7 @@ public class UserAPIService {
     public Map<String, Object> userNotifications(String userId) {
         Optional<User> userOpt = resolveUser(userId);
         if (userOpt.isEmpty()) {
-            return response("error", "User not found", Map.of("id", userId));
+            return general.response("error", "User not found", Map.of("id", userId));
         }
 
         Page<Notification> notifications = notificationRepository.findByUserId(userOpt.get().getId(), pageable("1"));
@@ -205,22 +198,22 @@ public class UserAPIService {
         data.put("userId", userOpt.get().getId());
         data.put("unreadCount", notificationRepository.countByUserIdAndRead(userOpt.get().getId(), false));
         data.put("items", notifications.getContent().stream().map(this::toNotificationView).toList());
-        return response("ok", "User notifications fetched", data);
+        return general.response("ok", "User notifications fetched", data);
     }
 
     @Transactional
     public Map<String, Object> changePassword(String userId, String oldPassword, String newPassword) {
         Optional<User> userOpt = resolveUser(userId);
         if (userOpt.isEmpty()) {
-            return response("error", "User not found", Map.of("id", userId));
+            return general.response("error", "User not found", Map.of("id", userId));
         }
         User user = userOpt.get();
         if (!user.getPasswordHash().equals(oldPassword)) {
-            return response("error", "Old password is incorrect", Map.of("id", user.getId()));
+            return general.response("error", "Old password is incorrect", Map.of("id", user.getId()));
         }
         user.setPasswordHash(newPassword);
         userRepository.save(user);
-        return response("ok", "Password changed successfully", Map.of("id", user.getId()));
+        return general.response("ok", "Password changed successfully", Map.of("id", user.getId()));
     }
 
     @CachePut(value = "userProfile", key = "#userId")
@@ -228,9 +221,10 @@ public class UserAPIService {
     public Map<String, Object> updateProfilePicture(String userId, String imageUrl) {
         Optional<User> userOpt = resolveUser(userId);
         if (userOpt.isEmpty()) {
-            return response("error", "User not found", Map.of("id", userId));
+            return general.response("error", "User not found", Map.of("id", userId));
         }
-        return response("ok", "Profile picture updated", Map.of("id", userOpt.get().getId(), "avatarUrl", imageUrl));
+        return general.response("ok", "Profile picture updated",
+                Map.of("id", userOpt.get().getId(), "avatarUrl", imageUrl));
     }
 
     @CacheEvict(value = "userNotifications", key = "#userId")
@@ -238,17 +232,18 @@ public class UserAPIService {
     public Map<String, Object> markNotificationsAsRead(String userId, List<String> notificationIds) {
         Optional<User> userOpt = resolveUser(userId);
         if (userOpt.isEmpty()) {
-            return response("error", "User not found", Map.of("id", userId));
+            return general.response("error", "User not found", Map.of("id", userId));
         }
 
         int updated = notificationIds == null || notificationIds.isEmpty()
                 ? notificationRepository.markAllAsRead(userOpt.get().getId())
                 : notificationRepository.markAsRead(userOpt.get().getId(), notificationIds);
-        return response("ok", "Notifications marked as read", Map.of("updatedCount", updated));
+        return general.response("ok", "Notifications marked as read", Map.of("updatedCount", updated));
     }
 
     public Map<String, Object> updateNotificationSettings(String userId, Map<String, Boolean> settings) {
-        return response("ok", "Notification preferences updated", Map.of("userId", userId, "settings", settings));
+        return general.response("ok", "Notification preferences updated",
+                Map.of("userId", userId, "settings", settings));
     }
 
     private Optional<User> resolveUser(String userId) {
@@ -378,7 +373,7 @@ public class UserAPIService {
     // public Object userDashboard(String userId, String page) {
     // User user=userRepository.findById(userId).orElse(null);
     // if(user==null){
-    // return response("error", "Invalid request", Map.of("id", userId));
+    // return general.response("error", "Invalid request", Map.of("id", userId));
     // }
 
     // }

@@ -4,7 +4,7 @@ import { LayoutDashboardIcon } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 
-export default function Sidebar({ activeTab, setActiveTab }) {
+export default function Sidebar({ activeTab, setActiveTab, userEmail, name }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
@@ -79,7 +79,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           {/* Logo Brand */}
           <div className="flex items-center gap-3 px-2 py-1">
             <div className="w-8 h-8 rounded-xl bg-linear-to-tr from-slate-950 to-slate-800 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-slate-950/20">
-             <LayoutDashboardIcon />
+              <LayoutDashboardIcon />
             </div>
             <div className="flex flex-col">
               <span className="font-bold tracking-tight text-slate-700 leading-none text-base">
@@ -108,11 +108,10 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           group w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 relative 
           active:scale-[0.98] outline-none
           /* Visual states: Active tab stays anchored even when main content is focused */
-          ${
-            isActive
-              ? "bg-blue-700 text-white shadow-sm shadow-slate-900/10 pointer-events-none"
-              : "text-slate-600 hover:bg-slate-200/50 hover:text-slate-900"
-          }
+          ${isActive
+                      ? "bg-blue-700 text-white shadow-sm shadow-slate-900/10 pointer-events-none"
+                      : "text-slate-600 hover:bg-slate-200/50 hover:text-slate-900"
+                    }
         `}
                 >
                   <span
@@ -135,7 +134,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         {/* User Account Section Footer */}
         <div className="border-t border-slate-200/60 pt-4 px-2 flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-700 font-bold text-xs select-none border border-slate-300/40">
-            IN
+            {name?.slice(0, 2).toUpperCase()}
           </div>
           <div className="flex flex-col min-w-0">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">
@@ -145,7 +144,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               className="text-sm font-semibold text-slate-700 mt-1 truncate max-w-37.5"
               title="investor@growkaro.com"
             >
-              investor@growkaro.com
+              {userEmail ?? "investor@growkaro.com"}
             </p>
           </div>
         </div>

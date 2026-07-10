@@ -7,6 +7,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.growkaro.backend.DRO.UserRegister;
+import com.growkaro.backend.common.General;
+import com.growkaro.backend.service.EmailService;
+import com.growkaro.backend.service.RedisService;
 import com.growkaro.backend.service.UserAPIService;
 
 @RestController
@@ -14,44 +17,69 @@ import com.growkaro.backend.service.UserAPIService;
 public class UserAPIController {
 
     private final UserAPIService userAPIService;
-    // private final EmailService emailService;
+    private final EmailService emailService;
+    private final RedisService redisService;
+    private final General general;
 
-    // Senior Practice: Use constructor injection instead of field @Autowired
-    public UserAPIController(UserAPIService userAPIService) {
-        this.userAPIService = userAPIService;
-        // this.emailService = emailService;
+    private enum Remark {
+        SIGNUP("signup"),
+        LOGIN("login"),
+        FORGOT_PASSWORD("forgotPassword"),
+        RESET_PASSWORD("resetPassword");
+
+        private final String value;
+
+        Remark(String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
     }
 
-    // @PostMapping("/getEmailOtp")
-    // public ResponseEntity<Boolean> sendEmailOTP(String email) {
-    // // 1. Validate email using regex
-    // String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
+    // Senior Practice: Use constructor injection instead of field @Autowired
+    public UserAPIController(UserAPIService userAPIService, EmailService emailService, RedisService redisService,
+            General general) {
+        this.userAPIService = userAPIService;
+        this.emailService = emailService;
+        this.redisService = redisService;
+        this.general = general;
+    }
 
-    // // Quick null check to prevent NullPointerException
-    // if (email == null || !email.matches(emailRegex)) {
-    // return ResponseEntity.badRequest().body(false);
-    // }
+    @GetMapping("/test")
+    public boolean test() {
+        boolean status = false;
+        return status;
+    }
 
-    // emailService.sendOtp(email, "signup");
+    @PostMapping("/getEmailOtp/{email}")
+    public ResponseEntity<Boolean> sendEmailOTP(@PathVariable String email) {
+        System.out.println(email + "\n -------------");
+        if (email == null || !general.validateEmail(email)) {
+            return ResponseEntity.badRequest().body(false);
+        }
+        boolean response = emailService.sendOtp(email, Remark.SIGNUP.getValue());
+        return ResponseEntity.ok(response);
+    }
 
-    // return ResponseEntity.ok(true);
-    // }
-    // //verify email otp
-    // @GetMapping("/verifyEmailOtp")
-    // public ResponseEntity<Boolean> verifyEmailOTP(String email, String otp) {
-    // if (email == null || otp == null) {
-    // return ResponseEntity.badRequest().body(false);
-    // }
-
-    // boolean status = emailService.verifyOtp(email, otp);
-
-    // return status ? ResponseEntity.ok(true) :
-    // ResponseEntity.badRequest().body(false);
-    // }
+    // verify email otp
+    @PostMapping("/validateEmailOtp")
+    public ResponseEntity<Boolean> verifyEmailOTP(@RequestBody Map<String, String> payload) {
+        String email = payload.get("email");
+        String otp = payload.get("otp");
+        System.out.println(email + "\n" + otp + "\n--------");
+        if (email == null || !general.validateEmail(email) || otp == null || otp.length() != 6) {
+            return ResponseEntity.badRequest().body(false);
+        }
+        boolean status = redisService.verifyOtp(Remark.SIGNUP.getValue(), email, otp);
+        System.out.println("verify status:" + status);
+        return status ? ResponseEntity.ok(true) : ResponseEntity.badRequest().body(false);
+    }
 
     @PostMapping("/signup")
     public ResponseEntity<Map<String, Object>> signUp(@RequestBody Map<String, Object> payload) {
-        UserRegister user = toUserRegister(payload);
+        UserRegister user = general.toUserRegister(payload);
 
         if (user.name() == null || user.email() == null || user.phone() == null || user.passwordHash() == null) {
             return ResponseEntity.badRequest().body(Map.of(
@@ -70,44 +98,17 @@ public class UserAPIController {
                 "message", result));
     }
 
-    private UserRegister toUserRegister(Map<String, Object> payload) {
-        String name = stringValue(payload.get("name"));
-        if (name == null) {
-            String firstName = stringValue(payload.get("firstName"));
-            String lastName = stringValue(payload.get("lastName"));
-            name = String.join(" ", firstName == null ? "" : firstName, lastName == null ? "" : lastName).trim();
-            if (name.isBlank()) {
-                name = null;
-            }
-        }
-
-        String passwordHash = stringValue(payload.get("passwordHash"));
-        if (passwordHash == null) {
-            passwordHash = stringValue(payload.get("password"));
-        }
-
-        return new UserRegister(
-                name,
-                stringValue(payload.get("email")),
-                stringValue(payload.get("phone")),
-                passwordHash,
-                stringValue(payload.get("bankName")),
-                stringValue(payload.get("accountHolderName")),
-                stringValue(payload.get("accountNumber")),
-                stringValue(payload.get("ifscCode")));
-    }
-
-    private String stringValue(Object value) {
-        if (value == null) {
-            return null;
-        }
-        String text = value.toString().trim();
-        return text.isEmpty() ? null : text;
-    }
-
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, Object> credentials) {
-        return ResponseEntity.ok(userAPIService.login(credentials));
+        String email = general.stringValue(credentials.get("email"));
+        String password = general.stringValue(credentials.get("password"));
+
+        if (email == null || !general.validateEmail(email) || password == null || !general.validatePassword(password)) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", "Invalid cedential..."));
+        }
+        return ResponseEntity.ok(userAPIService.login(email, password));
     }
 
     @GetMapping("/{userId}")

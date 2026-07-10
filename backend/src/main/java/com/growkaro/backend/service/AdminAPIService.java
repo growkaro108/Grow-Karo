@@ -20,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.growkaro.backend.entity.FundraiserCode;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.SupportIssue;
-import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.WithdrawalRequest;
 import com.growkaro.backend.repository.FundraiserCodeRepository;
@@ -81,7 +80,8 @@ public class AdminAPIService {
                 "pendingRemitters", remitterRepository.countPending(),
                 "pendingWithdrawals", withdrawalRequestRepository.countByStatus(WithdrawalRequest.Status.PENDING),
                 "openIssues", supportIssueRepository.countOpenIssues(),
-                "successfulVolume", transactionRepository.sumSuccessfulAmountBetween(LocalDateTime.now().minusDays(30), LocalDateTime.now())));
+                "successfulVolume", transactionRepository.sumSuccessfulAmountBetween(LocalDateTime.now().minusDays(30),
+                        LocalDateTime.now())));
         data.put("inflowData", inflowData());
         data.put("withdrawals", withdrawals.getContent().stream().map(this::toWithdrawalView).toList());
         data.put("issues", issues.getContent().stream().map(this::toIssueView).toList());

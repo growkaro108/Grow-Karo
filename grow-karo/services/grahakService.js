@@ -1,4 +1,4 @@
-import { fetchUserProfile, fetchUserTransactions, userRegister } from '@/api/userApi';
+import { fetchUserProfile, fetchUserTransactions, getEmailOtp, userRegister, validateEmailOtp } from '@/api/userApi';
 
 const USE_MOCK = false;
 const NETWORK_DELAY_MS = 1000;
@@ -48,9 +48,20 @@ export async function userSignup(payload) {
   }
 }
 
-export async function sendEmailOtp(email=""){
+export async function sendEmailOtp(email = "") {
   try {
-    return "success";
+    const response = await getEmailOtp(email);
+    return response;
+  } catch (error) {
+    return "failed";
+  }
+}
+
+export async function verifyEmailOTP(email, otp) {
+  try {
+    console.log(email + "\n " + otp)
+    const response = await validateEmailOtp(email, otp);
+    return response;
   } catch (error) {
     return "failed";
   }

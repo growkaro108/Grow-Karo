@@ -3,7 +3,10 @@
 import { loginUser } from "@/api/userApi";
 import { EyeClosedIcon, EyeIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { use, useState } from "react";
+import { errorMessage, successMessage } from "./Message";
+import { userContext } from "@/context/UserContext";
+import { setSecureCookie } from "@/context/cookiesManagement";
 
 export default function AuthLogin({ onSwitch }) {
   const [email, setEmail] = useState("");
@@ -11,7 +14,8 @@ export default function AuthLogin({ onSwitch }) {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const router=useRouter();
+  const router = useRouter();
+  const { setAuthUser } = use(userContext);
 
   const validateEmail = (email) => {
     return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$/.test(email);
@@ -21,7 +25,7 @@ export default function AuthLogin({ onSwitch }) {
     e.preventDefault();
     setError("");
     setMessage("");
-    
+
     // Sanitization
     const sanitizedEmail = email.trim().toLowerCase();
     const sanitizedPassword = password.trim();
@@ -36,15 +40,33 @@ export default function AuthLogin({ onSwitch }) {
 
     // Authenticate credentials with service
     const response = await loginUser({ email: sanitizedEmail, password: sanitizedPassword });
-    console.log(response);
+    console.log("--------------")
 
-    if (response.status === "ok") {
-      setMessage("Signed in — redirecting...");
-      //redirect to user Dashboard
-      router.push("/dashboard");
+    try {
+      // console.log(response.data.user);
+      if (response.status === "ok") {
+        successMessage("Signed in successfully", "Congratulation !!");
+        const status = await setSecureCookie("authUser", response.data.user)
+        if (status.success) {
+          setAuthUser(response.data.user)
+          setMessage("Signed in — redirecting...");
+          //redirect to user Dashboard
+          router.push("/dashboard");
+        }
+        else {
+          setError(status.message)
+        }
 
-    } else {
-      setError("Invalid username or password");
+      }
+      else if (response.status === "error") {
+        errorMessage(response.error)
+      }
+      else {
+        errorMessage("Invalid username or password")
+      }
+    } catch (error) {
+      errorMessage("Something went wrong")
+      console.error(error)
     }
   };
 
@@ -64,7 +86,7 @@ export default function AuthLogin({ onSwitch }) {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="name@example.com"
+            placeholder="name@growkaro.com"
             className="w-full h-11 px-4 rounded-xl border border-slate-100 bg-slate-50 text-sm focus:outline-none focus:border-slate-300"
           />
         </div>

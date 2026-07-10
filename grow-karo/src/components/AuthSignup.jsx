@@ -1,26 +1,41 @@
 "use client";
 
-import { useState } from "react";
-import { Camera } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import {
   userSignup,
-  sendEmailOtp,      // ASSUMPTION: adjust to match your actual grahakService export
-  verifyEmailOtp,    // ASSUMPTION: adjust to match your actual grahakService export
+  sendEmailOtp,
+  verifyEmailOTP,
 } from "../../services/grahakService";
 
-export default function AuthSignup({ onSwitch }) {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    password: "",
-    confirmPassword: "",
-    bankName: "",
-    holderName: "",
-    accountNumber: "",
-    ifscCode: "",
-  });
+// Hoisted outside the component so they aren't recreated on every render.
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$/;
+const NAME_REGEX = /^[a-zA-Z\s'-]{2,50}$/;
+const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+const PASSWORD_REGEX =
+  /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).+$/;
 
+// NOTE: must match your backend's actual resend cooldown (RedisService used 60s earlier).
+const RESEND_COOLDOWN_SECONDS = 60;
+
+const INITIAL_FORM_DATA = {
+  name: "",
+  email: "",
+  phone: "",
+  password: "",
+  confirmPassword: "",
+  bankName: "",
+  holderName: "",
+  accountNumber: "",
+  ifscCode: "",
+};
+
+const validateEmail = (email) => EMAIL_REGEX.test(email);
+const validateName = (n) => NAME_REGEX.test(n);
+const validatePhone = (p) => /^\+?[1-9]\d{1,14}$/.test(p.replace(/[\s()+-]/g, ""));
+const validateIfsc = (i) => IFSC_REGEX.test(i);
+
+export default function AuthSignup({ onSwitch }) {
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA);
   const [showAccountDetails, setShowAccountDetails] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -35,14 +50,26 @@ export default function AuthSignup({ onSwitch }) {
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [otpError, setOtpError] = useState("");
   const [otpMessage, setOtpMessage] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
 
-  // Validation Rules
-  const validateEmail = (email) =>
-    /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$/.test(email);
-  const validateName = (n) => /^[a-zA-Z\s'-]{2,50}$/.test(n);
-  const validatePhone = (p) =>
-    /^\+?[1-9]\d{1,14}$/.test(p.replace(/[\s()+-]/g, ""));
-  const validateIfsc = (i) => /^[A-Z]{4}0[A-Z0-9]{6}$/.test(i);
+  const cooldownIntervalRef = useRef(null);
+
+  // Countdown ticker for the resend cooldown. Cleans up on unmount / re-trigger.
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+
+    cooldownIntervalRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(cooldownIntervalRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(cooldownIntervalRef.current);
+  }, [resendCooldown > 0]);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
@@ -50,17 +77,18 @@ export default function AuthSignup({ onSwitch }) {
       [field]: value,
     }));
 
-    // If the user edits their email after verifying, reset verification
     if (field === "email" && emailVerified) {
       setEmailVerified(false);
       setOtpSent(false);
       setOtp("");
       setOtpMessage("");
+      setResendCooldown(0);
     }
   };
 
-  // ---- Send OTP to the entered email ----
   const handleSendOtp = async () => {
+    if (sendingOtp || resendCooldown > 0) return;
+
     setOtpError("");
     setOtpMessage("");
 
@@ -72,8 +100,13 @@ export default function AuthSignup({ onSwitch }) {
     try {
       setSendingOtp(true);
       const response = await sendEmailOtp(sanitizedEmail);
-      setOtpSent(true);
-      setOtpMessage(response?.message || "OTP sent to your email.");
+      if (response) {
+        setOtpSent(true);
+        setOtpMessage(response?.message || "OTP sent to your email.");
+        setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      } else {
+        setOtpError(response?.message || "Failed to send OTP. Please try again.");
+      }
     } catch (err) {
       setOtpError(err.message || "Failed to send OTP. Please try again.");
     } finally {
@@ -81,7 +114,6 @@ export default function AuthSignup({ onSwitch }) {
     }
   };
 
-  // ---- Verify the OTP entered by the user ----
   const handleVerifyOtp = async () => {
     setOtpError("");
     setOtpMessage("");
@@ -93,12 +125,13 @@ export default function AuthSignup({ onSwitch }) {
 
     try {
       setVerifyingOtp(true);
-      const response = await verifyEmailOtp(sanitizedEmail, otp.trim());
-      if(response.ok){
-      setEmailVerified(true);
-      setOtpMessage(response?.message || "Email verified successfully.");}
-      else{
-        setOtpError("Please enter valid OTP...");
+      const response = await verifyEmailOTP(sanitizedEmail, otp.trim());
+
+      if (response) {
+        setEmailVerified(true);
+        setOtpMessage(response.message || "Email verified successfully.");
+      } else {
+        setOtpError(response?.message || "Please enter a valid OTP.");
       }
     } catch (err) {
       setOtpError(err.message || "Invalid or expired OTP. Please try again.");
@@ -132,7 +165,6 @@ export default function AuthSignup({ onSwitch }) {
     if (!validateEmail(sanitizedEmail))
       return setError("Enter a valid email address.");
 
-    // ---- New requirement: email must be verified before registering ----
     if (!emailVerified) {
       return setError("Please verify your email before creating an account.");
     }
@@ -140,10 +172,7 @@ export default function AuthSignup({ onSwitch }) {
     if (!validatePhone(sanitizedPhone))
       return setError("Enter a valid phone number.");
 
-    const passwordRegex =
-      /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).+$/;
-
-    if (!passwordRegex.test(password)) {
+    if (!PASSWORD_REGEX.test(password)) {
       return setError(
         "Password must contain at least one uppercase letter, lowercase letter, number, and special character.",
       );
@@ -194,20 +223,11 @@ export default function AuthSignup({ onSwitch }) {
 
       setMessage(response.message || "Registration successful! Redirecting...");
 
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        password: "",
-        confirmPassword: "",
-        bankName: "",
-        holderName: "",
-        accountNumber: "",
-        ifscCode: "",
-      });
+      setFormData(INITIAL_FORM_DATA);
       setOtp("");
       setOtpSent(false);
       setEmailVerified(false);
+      setResendCooldown(0);
 
       if (onSwitch) setTimeout(() => onSwitch("login"), 1000);
     } catch (err) {
@@ -216,6 +236,14 @@ export default function AuthSignup({ onSwitch }) {
       setLoading(false);
     }
   };
+
+  const sendOtpLabel = sendingOtp
+    ? "Sending..."
+    : resendCooldown > 0
+      ? `Resend in ${resendCooldown}s`
+      : otpSent
+        ? "Resend OTP"
+        : "Send OTP";
 
   return (
     <div className="w-full max-w-md rounded-3xl border border-slate-100 bg-white p-6 sm:p-8 shadow-[0_15px_50px_rgba(15,23,42,0.03)]">
@@ -241,34 +269,6 @@ export default function AuthSignup({ onSwitch }) {
         onSubmit={handleSubmit}
         className="grid grid-cols-1 sm:grid-cols-2 gap-3"
       >
-        {/* First Name */}
-        <div>
-          <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1">
-            First name
-          </label>
-          <input
-            value={formData.name}
-            onChange={(e) => handleInputChange("name", e.target.value)}
-            placeholder="John"
-            className="w-full h-11 px-4 rounded-xl border border-slate-100 bg-slate-50 text-sm focus:outline-none focus:border-slate-300"
-          />
-        </div>
-
-        {/* Phone Number */}
-        <div>
-          <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1">
-            Phone number
-          </label>
-          <input
-            type="tel"
-            value={formData.phone}
-            onChange={(e) => handleInputChange("phone", e.target.value)}
-            placeholder="+91 987-704-5670"
-            className="w-full h-11 px-4 rounded-xl border border-slate-100 bg-slate-50 text-sm focus:outline-none focus:border-slate-300"
-          />
-        </div>
-
-        {/* Email + verification */}
         <div className="col-span-1 sm:col-span-2">
           <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1">
             Email
@@ -279,17 +279,17 @@ export default function AuthSignup({ onSwitch }) {
               value={formData.email}
               disabled={emailVerified}
               onChange={(e) => handleInputChange("email", e.target.value)}
-              placeholder="name@example.com"
+              placeholder="name@growwkaro.com"
               className="flex-1 h-11 px-4 rounded-xl border border-slate-100 bg-slate-50 text-sm focus:outline-none focus:border-slate-300 disabled:text-emerald-600 disabled:bg-emerald-50 disabled:border-emerald-100"
             />
             {!emailVerified && (
               <button
                 type="button"
                 onClick={handleSendOtp}
-                disabled={sendingOtp}
+                disabled={sendingOtp || resendCooldown > 0}
                 className="h-11 px-4 rounded-xl bg-slate-900 text-white text-xs font-semibold whitespace-nowrap disabled:bg-slate-400"
               >
-                {sendingOtp ? "Sending..." : otpSent ? "Resend OTP" : "Send OTP"}
+                {sendOtpLabel}
               </button>
             )}
             {emailVerified && (
@@ -299,7 +299,6 @@ export default function AuthSignup({ onSwitch }) {
             )}
           </div>
 
-          {/* OTP input, shown once sent and not yet verified */}
           {otpSent && !emailVerified && (
             <div className="flex gap-2 mt-2">
               <input
@@ -329,7 +328,33 @@ export default function AuthSignup({ onSwitch }) {
           )}
         </div>
 
-        {/* Password */}
+        <div>
+          <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1">
+            First name
+          </label>
+          <input
+            value={formData.name}
+            onChange={(e) => handleInputChange("name", e.target.value)}
+            disabled={!emailVerified}
+            placeholder="John"
+            className="w-full h-11 px-4 rounded-xl border border-slate-100 bg-slate-50 text-sm focus:outline-none focus:border-slate-300"
+          />
+        </div>
+
+        <div>
+          <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1">
+            Phone number
+          </label>
+          <input
+            type="tel"
+            value={formData.phone}
+            onChange={(e) => handleInputChange("phone", e.target.value)}
+            disabled={!emailVerified}
+            placeholder="+91 987-704-5670"
+            className="w-full h-11 px-4 rounded-xl border border-slate-100 bg-slate-50 text-sm focus:outline-none focus:border-slate-300"
+          />
+        </div>
+
         <div>
           <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1">
             Password
@@ -338,12 +363,12 @@ export default function AuthSignup({ onSwitch }) {
             type={showPassword ? "text" : "password"}
             value={formData.password}
             onChange={(e) => handleInputChange("password", e.target.value)}
+            disabled={!emailVerified}
             placeholder="••••••••"
             className="w-full h-11 px-4 rounded-xl border border-slate-100 bg-slate-50 text-sm focus:outline-none focus:border-slate-300"
           />
         </div>
 
-        {/* Confirm Password */}
         <div>
           <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1">
             Confirm Password
@@ -354,6 +379,7 @@ export default function AuthSignup({ onSwitch }) {
             onChange={(e) =>
               handleInputChange("confirmPassword", e.target.value)
             }
+            disabled={!emailVerified}
             placeholder="••••••••"
             className="w-full h-11 px-4 rounded-xl border border-slate-100 bg-slate-50 text-sm focus:outline-none focus:border-slate-300"
           />
@@ -365,6 +391,7 @@ export default function AuthSignup({ onSwitch }) {
             id="showPassword"
             checked={showPassword}
             onChange={(e) => setShowPassword(e.target.checked)}
+            disabled={!emailVerified}
             className="w-4 h-4 rounded text-blue-600 border-slate-200 focus:ring-blue-500 cursor-pointer"
           />
           <label
@@ -381,6 +408,7 @@ export default function AuthSignup({ onSwitch }) {
             id="toggleAccount"
             checked={showAccountDetails}
             onChange={(e) => setShowAccountDetails(e.target.checked)}
+            disabled={!emailVerified}
             className="w-4 h-4 rounded text-blue-600 border-slate-200 focus:ring-blue-500 cursor-pointer"
           />
           <label
@@ -461,8 +489,8 @@ export default function AuthSignup({ onSwitch }) {
           {loading
             ? "Creating Account..."
             : !emailVerified
-            ? "Verify Email to Continue"
-            : "Create Account"}
+              ? "Verify Email to Continue"
+              : "Create Account"}
         </button>
       </form>
 

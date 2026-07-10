@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import Sidebar from "./Sidebar";
 import dynamic from "next/dynamic";
 import Loader from "@/components/Loader";
 import { fetchGrahakDashboardData } from "../../../../services/grahakService";
+import { userContext } from "@/context/UserContext";
 
 const Overview = dynamic(() => import("./Overview"), {
   loading: () => <Loader />,
@@ -31,6 +32,7 @@ export default function DashboardPage() {
   const [balance, setBalance] = useState(0);
   const [portfolioValue, setPortfolioValue] = useState(0);
   const [activeTab, setActiveTab] = useState("overview");
+  const { authUser } = use(userContext);
   const [dashboardData, setDashboardData] = useState({
     holdings: [],
     transactions: [],
@@ -41,7 +43,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
+    // setLoading(true);
 
     fetchGrahakDashboardData("me")
       .then((data) => {
@@ -77,7 +79,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950 flex flex-col lg:flex-row">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} userEmail={authUser?.email} name={authUser?.name} />
       <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex flex-col gap-8 grow">
         {(activeTab === "overview" || activeTab === "portfolio") && (
           <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-2 border-b border-slate-200">
@@ -116,7 +118,7 @@ export default function DashboardPage() {
             {error}
           </div>
         ) : (
-          <> 
+          <>
             {activeTab === "overview" && (
               <Overview
                 balance={balance}

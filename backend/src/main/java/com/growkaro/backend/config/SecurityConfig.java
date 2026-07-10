@@ -9,22 +9,24 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 public class SecurityConfig {
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable()) // Disable CSRF for simplicity in APIs
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/user/health",
-                                "/api/user/signup",
-                                "/api/user/getEmailOtp",
-                                "/api/user/login",
-                                "/api/user/dashboard")
-                        .permitAll() // Public endpoints
-                        .anyRequest().authenticated() // Everything else requires login
-                )
-                .httpBasic(Customizer.withDefaults()); // Uses the correct Spring Security Customizer
-        return http.build();
-    }
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+                http
+                                .csrf(csrf -> csrf.disable()) // Disable CSRF for simplicity in APIs
+                                .authorizeHttpRequests(auth -> auth
+                                                .requestMatchers(
+                                                                "/api/user/health",
+                                                                "/api/user/signup",
+                                                                "/api/user/getEmailOtp/{email}",
+                                                                "/api/user/validateEmailOtp",
+                                                                "/api/user/test",
+                                                                "/api/user/login",
+                                                                "/api/user/dashboard")
+                                                .permitAll() // Public endpoints
+                                                .anyRequest().authenticated() // Everything else requires login
+                                )
+                                .httpBasic(Customizer.withDefaults()); // Uses the correct Spring Security Customizer
+                return http.build();
+        }
 
 }
