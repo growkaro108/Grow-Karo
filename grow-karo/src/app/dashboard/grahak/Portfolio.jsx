@@ -37,12 +37,12 @@ export default function Portfolio({ holdings = [], graphDataMap = {} }) {
   // Handle dynamic stock swapping with fake DB delay
   const handleStockSelect = (stock) => {
     setIsLoading(true);
-    
+
     // Simulate fetching from database
     setTimeout(() => {
       setSelectedStock(stock);
       setIsLoading(false);
-    }, 1500); // 1500ms loader delay
+    }, 500); // 1500ms loader delay
   };
 
   const stockData = selectedStock ? graphDataMap[selectedStock.ticker] || { labels: [], prices: [] } : { labels: [], prices: [] };
@@ -95,10 +95,10 @@ export default function Portfolio({ holdings = [], graphDataMap = {} }) {
 
   return (
     <div className="flex flex-col gap-6 p-6 bg-slate-50 min-h-screen font-sans">
-      
+
       {/* GRAPH CARD */}
       <div className="p-6 bg-white rounded-xl shadow-sm border border-slate-100 relative overflow-hidden">
-        
+
         {/* DATABASE LOADER OVERLAY */}
         {isLoading && (
           <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] z-10 flex flex-col items-center justify-center gap-2 transition-all">
@@ -120,7 +120,7 @@ export default function Portfolio({ holdings = [], graphDataMap = {} }) {
             Live Chart <span className="animate-pulse text-green-400">•</span>
           </span>
         </div>
-        
+
         <div className="w-full h-65 relative">
           <Line data={chartData} options={chartOptions} />
         </div>
@@ -130,7 +130,7 @@ export default function Portfolio({ holdings = [], graphDataMap = {} }) {
       <div className="p-6 bg-white rounded-xl shadow-sm border border-slate-100">
         <h3 className="text-lg font-semibold text-slate-800">Your Stock Holdings</h3>
         <p className="text-sm text-slate-500 mt-1 mb-4">Click a row to switch the graph visualization</p>
-        
+
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead>
@@ -150,19 +150,18 @@ export default function Portfolio({ holdings = [], graphDataMap = {} }) {
                   </td>
                 </tr>
               ) : sortedHoldings.map((stock) => {
-                const isSelected = selectedStock.id === stock.id;
+                const isSelected = selectedStock?.id === stock.id;
 
                 return (
                   <tr
                     key={stock.id}
                     onClick={!isSelected && !isLoading ? () => handleStockSelect(stock) : undefined}
-                    className={`transition-colors duration-200 ${
-                      isSelected 
-                        ? 'bg-blue-50/60 cursor-not-allowed opacity-90' 
-                        : isLoading 
-                          ? 'cursor-wait opacity-50' 
-                          : 'cursor-pointer hover:bg-slate-50'
-                    }`}
+                    className={`transition-colors duration-200 ${isSelected
+                      ? 'bg-blue-50/60 cursor-not-allowed opacity-90'
+                      : isLoading
+                        ? 'cursor-wait opacity-50'
+                        : 'cursor-pointer hover:bg-slate-50'
+                      }`}
                   >
                     <td className="px-4 py-4">
                       <span className="block font-semibold text-slate-800">{stock.ticker}</span>

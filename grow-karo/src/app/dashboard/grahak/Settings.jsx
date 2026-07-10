@@ -1,9 +1,11 @@
+import { userContext } from "@/context/UserContext";
 import { PenLineIcon } from "lucide-react";
 import Image from "next/image";
-import React, { useState } from "react";
+import React, { use, useEffect, useState } from "react";
 
 export default function SettingsComponent() {
   const [activeTab, setActiveTab] = useState("profile");
+  const { authUser } = use(userContext);
 
   // State for all form fields
   const [profile, setProfile] = useState({
@@ -14,9 +16,9 @@ export default function SettingsComponent() {
 
   const [bankDetails, setBankDetails] = useState({
     bankName: "State Bank of India",
-    accountNumber: "5809765432431250",
-    ifscCode: "SBI0006765",
-    accountHolder: "Shri Ram",
+    accountNumber: "58XXXXXX32431250",
+    ifscCode: "SBI0XXXXX5",
+    accountHolder: "Ram Babu",
   });
 
   const [security, setSecurity] = useState({
@@ -58,6 +60,17 @@ export default function SettingsComponent() {
   const tabContentClass =
     "space-y-6 transition-all duration-500 ease-out opacity-100 translate-y-0 animate-[fadeIn_0.5s_ease-out]";
 
+  useEffect(() => {
+    if (authUser) {
+      setProfile({
+        ...profile,
+        name: authUser?.name || "",
+        email: authUser?.email || "",
+        phone: authUser?.phone || "",
+      });
+    }
+  }, [authUser]);
+
   return (
     <div className="p-6 max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-gray-100">
       {/* Dynamic Injecting Keyframe for Tailwind inline animation support */}
@@ -82,11 +95,10 @@ export default function SettingsComponent() {
             key={tab}
             type="button"
             onClick={() => setActiveTab(tab)}
-            className={`py-2 px-4 font-medium text-sm capitalize border-b-2 whitespace-nowrap transition-all duration-300 ${
-              activeTab === tab
-                ? "border-indigo-600 text-indigo-600 font-semibold"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
+            className={`py-2 px-4 font-medium text-sm capitalize border-b-2 whitespace-nowrap transition-all duration-300 ${activeTab === tab
+              ? "border-indigo-600 text-indigo-600 font-semibold"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
           >
             {tab}
           </button>
@@ -110,13 +122,13 @@ export default function SettingsComponent() {
                 />
                 {/* Pen Icon Overlay on Hover/Focus */}
                 <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                 <PenLineIcon className="w-5 h-5 text-white" />
+                  <PenLineIcon className="w-5 h-5 text-white" />
                 </div>
               </div>
 
               {/* Helper Action Buttons */}
               <div>
-                
+
                 <p className="text-xs text-gray-400 mt-0.5">
                   JPG or PNG. Max 2MB.
                 </p>
@@ -136,19 +148,8 @@ export default function SettingsComponent() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={profile.email}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 text-sm cursor-not-allowed"
-                  disabled
-                />
-              </div>
-              <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Phone Number
                 </label>
@@ -158,6 +159,18 @@ export default function SettingsComponent() {
                   value={profile.phone}
                   onChange={handleProfileChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={profile.email}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 text-sm cursor-not-allowed"
+                  disabled
                 />
               </div>
             </div>

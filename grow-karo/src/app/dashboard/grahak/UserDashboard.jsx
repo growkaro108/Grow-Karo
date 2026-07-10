@@ -3,28 +3,28 @@
 import { useState, useEffect, use } from "react";
 import Sidebar from "./Sidebar";
 import dynamic from "next/dynamic";
-import Loader from "@/components/Loader";
 import { fetchGrahakDashboardData } from "../../../../services/grahakService";
 import { userContext } from "@/context/UserContext";
+import TabLoader from "../malik/components/TabLoader";
 
 const Overview = dynamic(() => import("./Overview"), {
-  loading: () => <Loader />,
+  loading: () => <TabLoader />,
   ssr: false,
 });
 const WithDrawFormComponent = dynamic(() => import("./WithDrawFormComponent"), {
-  loading: () => <Loader />,
+  loading: () => <TabLoader />,
   ssr: false,
 });
 const Portfolio = dynamic(() => import("./Portfolio"), {
-  loading: () => <Loader />,
+  loading: () => <TabLoader />,
   ssr: false,
 });
 const Transactions = dynamic(() => import("./Transaction"), {
-  loading: () => <Loader />,
+  loading: () => <TabLoader />,
   ssr: false,
 });
 const Settings = dynamic(() => import("./Settings"), {
-  loading: () => <Loader />,
+  loading: () => <TabLoader />,
   ssr: false,
 });
 
@@ -111,7 +111,7 @@ export default function DashboardPage() {
 
         {loading ? (
           <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-8 flex items-center justify-center min-h-[60vh]">
-            <Loader />
+            <TabLoader />
           </div>
         ) : error ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50 text-rose-700 p-4 text-sm">

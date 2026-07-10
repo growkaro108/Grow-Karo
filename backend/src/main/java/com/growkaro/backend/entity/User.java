@@ -30,13 +30,9 @@ public class User {
     @Column(nullable = false)
     private String passwordHash;
 
-    private String bankName;
-
-    private String ifscCode;
-
-    private String accountNumber;
-
-    private String accountHolderName;
+    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JoinColumn(name = "bank_details_id")
+    private BankDetails bankDetails;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
