@@ -3,7 +3,9 @@ import { apiRequest } from "./apiClient";
 export async function healthCheck() {
   return apiRequest("/health");
 }
-
+export async function getAllPlans() {
+  return await apiRequest("/scheme/get");
+}
 export async function fetchPlatformConfig() {
   return apiRequest("/config");
 }

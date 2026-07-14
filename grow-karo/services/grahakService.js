@@ -1,4 +1,4 @@
-import { fetchUserProfile, fetchUserTransactions, getEmailOtp, userRegister, validateEmailOtp } from '@/api/userApi';
+import { enrollUser, fetchUserProfile, fetchUserTransactions, getEmailOtp, getEnrolledScheme, userRegister, validateEmailOtp } from '@/api/userApi';
 
 const USE_MOCK = false;
 const NETWORK_DELAY_MS = 1000;
@@ -36,11 +36,8 @@ const mockGrahakData = {
 export async function userSignup(payload) {
   try {
     const response = await userRegister(payload);
-    return {
-      success: true,
-      message: response?.message || response || "User signed up successfully",
-      userId: response?.userId
-    };
+    // Return the raw API response so callers can inspect response.status
+    return response;
   } catch (error) {
     console.error("Signup failed:", error.payload || error.message);
     const payloadMessage = typeof error.payload === "string" ? error.payload : error.payload?.message;
@@ -59,12 +56,17 @@ export async function sendEmailOtp(email = "") {
 
 export async function verifyEmailOTP(email, otp) {
   try {
-    console.log(email + "\n " + otp)
-    const response = await validateEmailOtp(email, otp);
-    return response;
+    return await validateEmailOtp(email, otp);
   } catch (error) {
     return "failed";
   }
+}
+
+export async function enrollInPlan(schemeId, userId) {
+  return await enrollUser(schemeId, userId);
+}
+export async function getAllUserScheme(userId) {
+  return await getEnrolledScheme(userId);
 }
 
 export async function fetchGrahakDashboardData(userId = 'me') {

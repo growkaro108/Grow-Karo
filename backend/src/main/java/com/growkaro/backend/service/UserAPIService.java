@@ -1,6 +1,8 @@
 package com.growkaro.backend.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +12,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -18,14 +21,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.growkaro.backend.DRO.UserRegister;
+import com.growkaro.backend.DTO.AuthUserData;
 import com.growkaro.backend.common.General;
+import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.Notification;
 import com.growkaro.backend.entity.Recipient;
+import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
+import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.repository.NotificationRepository;
+import com.growkaro.backend.repository.SchemeRepository;
 import com.growkaro.backend.repository.TransactionRepository;
 import com.growkaro.backend.repository.UserRepository;
+import com.growkaro.backend.repository.UserSchemeRepository;
 import com.growkaro.backend.repository.WithdrawalRequestRepository;
 
 @Service
@@ -40,13 +49,16 @@ public class UserAPIService {
     private final TransactionRepository transactionRepository;
     private final NotificationRepository notificationRepository;
     private final WithdrawalRequestRepository withdrawalRequestRepository;
+    private final SchemeRepository schemeRepository;
+    private final UserSchemeRepository userSchemeRepository;
     private final General general;
 
     public UserAPIService(ApiService apiService, RecipientService recipientService,
             UserRepository userRepository,
             TransactionRepository transactionRepository,
             NotificationRepository notificationRepository,
-            WithdrawalRequestRepository withdrawalRequestRepository,
+            WithdrawalRequestRepository withdrawalRequestRepository, SchemeRepository schemeRepository,
+            UserSchemeRepository userSchemeRepository,
             General general) {
         this.apiService = apiService;
         this.recipientService = recipientService;
@@ -54,39 +66,60 @@ public class UserAPIService {
         this.transactionRepository = transactionRepository;
         this.notificationRepository = notificationRepository;
         this.withdrawalRequestRepository = withdrawalRequestRepository;
+        this.schemeRepository = schemeRepository;
+        this.userSchemeRepository = userSchemeRepository;
         this.general = general;
     }
 
-    @Transactional
-    public String userSignup(UserRegister user) {
+    public boolean testApi() {
         try {
-            String email = stringValue(user.email());
-            String phone = stringValue(user.phone());
-            String name = stringValue(user.name());
-            String passwordHash = stringValue(user.passwordHash());
-
-            if (name == null || email == null || phone == null || passwordHash == null) {
-                return "Name, email, phone and password are required";
-            }
-            // if (userRepository.existsByEmail(email) ||
-            // userRepository.existsByPhone(phone)) {
-            // return "User already exists";
-            // }
-
-            User newUser = new User();
-            newUser.setName(name);
-            newUser.setEmail(email);
-            newUser.setPhone(phone);
-            newUser.setPasswordHash(apiService.makePasswordHash(passwordHash));
-            newUser.setBankName(stringValue(user.bankName()));
-            newUser.setAccountHolderName(stringValue(user.accountHolderName()));
-            newUser.setAccountNumber(stringValue(user.accountNumber()));
-            newUser.setIfscCode(stringValue(user.ifscCode()));
-            userRepository.save(newUser);
-            return "success";
+            return true;
         } catch (Exception e) {
-            return "Error registering user: " + e.getMessage();
+            return false;
         }
+    }
+
+    public boolean isUserExists(String email) {
+        return userRepository.existsByEmail(email);
+    }
+
+    @Transactional
+    public boolean userSignup(UserRegister user) {
+        String email = stringValue(user.email());
+        String phone = stringValue(user.phone());
+        String name = stringValue(user.name());
+        String passwordHash = stringValue(user.passwordHash());
+
+        if (name == null || email == null || phone == null || passwordHash == null) {
+            return false;
+        }
+
+        if (isUserExists(email)) {
+            return false;
+        }
+        User newUser = new User();
+        newUser.setName(name);
+        newUser.setEmail(email);
+        newUser.setPhone(phone);
+        newUser.setPasswordHash(apiService.makePasswordHash(passwordHash));
+
+        BankDetails bankDetails = new BankDetails();
+        bankDetails.setBankName(stringValue(user.bankName()));
+        bankDetails.setAccountHolderName(stringValue(user.accountHolderName()));
+        bankDetails.setAccountNumber(stringValue(user.accountNumber()));
+        bankDetails.setIfscCode(stringValue(user.ifscCode()));
+        bankDetails.setUser(newUser);
+        newUser.setBankDetails(bankDetails);
+
+        try {
+            userRepository.save(newUser);
+            return true;
+        } catch (DataIntegrityViolationException e) {
+            // Log full details server-side; never leak raw DB/exception text to the client
+            System.out.println("Signup failed due to data integrity violation for email=" + email + e);
+            return false;
+        }
+
     }
 
     @Transactional(readOnly = true)
@@ -101,9 +134,59 @@ public class UserAPIService {
         }
 
         User user = userOpt.get();
+        AuthUserData finalUser = general.toAuthUserData(user);
+        finalUser.setToken("local-dev-token");
+
         return general.response("ok", "Login successful", Map.of(
-                "token", "local-dev-token",
-                "user", user));
+                "user", finalUser));
+    }
+
+    public Map<String, Object> enrollScheme(String schemeId, String userId) {
+        try {
+            // Single database round-trip to fetch both entities
+            List<Object[]> results = schemeRepository.findSchemeAndUserByIds(schemeId, userId);
+
+            if (results.isEmpty()) {
+                // This means either the Scheme, the User, or BOTH do not exist
+                return general.response("error", "Scheme or User not found..", null);
+            }
+
+            Object[] row = results.get(0);
+            Scheme scheme = (Scheme) row[0];
+            User user = (User) row[1];
+            if (scheme == null || user == null)
+                return general.response("error", "something went wrong", null);
+
+            // Check if enrollment already exists
+            Optional<UserScheme> existingEnrollment = userSchemeRepository.findBySchemeAndUser(scheme, user);
+            if (existingEnrollment.isPresent()) {
+                return general.response("info", "User is already enrolled in this scheme..", null);
+            }
+
+            // Save new enrollment
+            UserScheme newUserScheme = new UserScheme();
+            newUserScheme.setScheme(scheme);
+            newUserScheme.setUser(user);
+            userSchemeRepository.save(newUserScheme);
+
+            return general.response("ok", "Scheme enrolled successfully", null);
+        } catch (Exception e) {
+            return general.response("error", "Scheme not enrolled: " + e.getMessage(), null);
+        }
+    }
+
+    public Map<String, Object> getMyScheme(String userId) {
+        try {
+            Optional<User> userOpt = resolveUser(userId);
+            if (userOpt.isEmpty()) {
+                return general.response("error", "User not found", Map.of("id", userId));
+            }
+            User user = userOpt.get();
+            List<String> userSchemesIds = userSchemeRepository.findAllJoinedSchemeId(user);
+            return general.response("success", "User schemes fetched", userSchemesIds);
+        } catch (Exception e) {
+            return general.response("error", "Failed to fetch user schemes: " + e.getMessage(), null);
+        }
     }
 
     @Cacheable(value = "userProfile", key = "#userId")
@@ -262,10 +345,10 @@ public class UserAPIService {
         data.put("name", user.getName());
         data.put("email", user.getEmail());
         data.put("phone", user.getPhone());
-        data.put("bankName", user.getBankName());
-        data.put("accountHolderName", user.getAccountHolderName());
-        data.put("accountNumber", user.getAccountNumber());
-        data.put("ifscCode", user.getIfscCode());
+        data.put("bankName", user.getBankDetails().getBankName());
+        data.put("accountHolderName", user.getBankDetails().getAccountHolderName());
+        data.put("accountNumber", user.getBankDetails().getAccountNumber());
+        data.put("ifscCode", user.getBankDetails().getIfscCode());
         data.put("role", user.getRole());
         data.put("active", user.isActive());
         data.put("emailVerified", user.isEmailVerified());
@@ -334,16 +417,16 @@ public class UserAPIService {
             user.setPhone(stringValue(updates.get("phone")));
         }
         if (updates.containsKey("bankName")) {
-            user.setBankName(stringValue(updates.get("bankName")));
+            user.getBankDetails().setBankName(stringValue(updates.get("bankName")));
         }
         if (updates.containsKey("accountHolderName")) {
-            user.setAccountHolderName(stringValue(updates.get("accountHolderName")));
+            user.getBankDetails().setAccountHolderName(stringValue(updates.get("accountHolderName")));
         }
         if (updates.containsKey("accountNumber")) {
-            user.setAccountNumber(stringValue(updates.get("accountNumber")));
+            user.getBankDetails().setAccountNumber(stringValue(updates.get("accountNumber")));
         }
         if (updates.containsKey("ifscCode")) {
-            user.setIfscCode(stringValue(updates.get("ifscCode")));
+            user.getBankDetails().setIfscCode(stringValue(updates.get("ifscCode")));
         }
     }
 
@@ -370,11 +453,4 @@ public class UserAPIService {
         return text.isEmpty() ? null : text;
     }
 
-    // public Object userDashboard(String userId, String page) {
-    // User user=userRepository.findById(userId).orElse(null);
-    // if(user==null){
-    // return general.response("error", "Invalid request", Map.of("id", userId));
-    // }
-
-    // }
 }

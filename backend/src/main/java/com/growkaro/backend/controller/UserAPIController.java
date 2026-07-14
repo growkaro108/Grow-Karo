@@ -3,6 +3,7 @@ package com.growkaro.backend.controller;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -48,54 +49,68 @@ public class UserAPIController {
     }
 
     @GetMapping("/test")
-    public boolean test() {
-        boolean status = false;
-        return status;
+    public Boolean test() {
+        return userAPIService.testApi();
     }
 
     @PostMapping("/getEmailOtp/{email}")
-    public ResponseEntity<Boolean> sendEmailOTP(@PathVariable String email) {
+    public ResponseEntity<Map<String, Object>> sendEmailOTP(@PathVariable String email) {
         System.out.println(email + "\n -------------");
         if (email == null || !general.validateEmail(email)) {
-            return ResponseEntity.badRequest().body(false);
+            return ResponseEntity.badRequest()
+                    .body(general.response("invalid", "Enter a valid email address.", null));
         }
+        if (userAPIService.isUserExists(email)) {
+            return ResponseEntity
+                    .status(HttpStatus.CONFLICT)
+                    .body(general.response("present", "Email already exists", null));
+        }
+
         boolean response = emailService.sendOtp(email, Remark.SIGNUP.getValue());
-        return ResponseEntity.ok(response);
+        return response ? ResponseEntity.ok(general.response("success", "Otp sent successfully", null))
+                : ResponseEntity.internalServerError().body(general.response("error", "Internal Server error", null));
     }
 
     // verify email otp
     @PostMapping("/validateEmailOtp")
-    public ResponseEntity<Boolean> verifyEmailOTP(@RequestBody Map<String, String> payload) {
+    public ResponseEntity<Map<String, Object>> verifyEmailOTP(@RequestBody Map<String, String> payload) {
         String email = payload.get("email");
         String otp = payload.get("otp");
         System.out.println(email + "\n" + otp + "\n--------");
         if (email == null || !general.validateEmail(email) || otp == null || otp.length() != 6) {
-            return ResponseEntity.badRequest().body(false);
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", "Invalid email or OTP"));
         }
         boolean status = redisService.verifyOtp(Remark.SIGNUP.getValue(), email, otp);
         System.out.println("verify status:" + status);
-        return status ? ResponseEntity.ok(true) : ResponseEntity.badRequest().body(false);
+        return status ? ResponseEntity.ok(Map.of(
+                "status", "ok",
+                "message", "Email verified successfully"))
+                : ResponseEntity.badRequest().body(Map.of(
+                        "status", "error",
+                        "message", "Invalid email or OTP"));
     }
 
     @PostMapping("/signup")
     public ResponseEntity<Map<String, Object>> signUp(@RequestBody Map<String, Object> payload) {
-        UserRegister user = general.toUserRegister(payload);
+        try {
+            UserRegister user = general.toUserRegister(payload);
+            System.out.println(user + "\n----------");
 
-        if (user.name() == null || user.email() == null || user.phone() == null || user.passwordHash() == null) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "status", "error",
-                    "message", "Name, email, phone and password are required"));
-        }
+            if (user.name() == null || user.email() == null || !general.validateEmail(user.email())
+                    || user.phone() == null
+                    || user.passwordHash() == null || !general.validatePassword(user.passwordHash())) {
+                return ResponseEntity.badRequest().body(general.response("error", "Invalid data", null));
+            }
 
-        String result = userAPIService.userSignup(user);
-        if (result.contains("success")) {
-            return ResponseEntity.ok(Map.of(
-                    "status", "ok",
-                    "message", "Account created successfully"));
+            boolean result = userAPIService.userSignup(user);
+            return result ? ResponseEntity.ok(general.response("ok", "Account created successfully", null))
+                    : ResponseEntity.badRequest().body(general.response("error", "Internal Server error", null));
+        } catch (Exception e) {
+            System.err.println("error in signup " + e.getMessage());
+            return ResponseEntity.badRequest().body(general.response("error", "Internal Server error", null));
         }
-        return ResponseEntity.badRequest().body(Map.of(
-                "status", "error",
-                "message", result));
     }
 
     @PostMapping("/login")
@@ -109,6 +124,25 @@ public class UserAPIController {
                     "message", "Invalid cedential..."));
         }
         return ResponseEntity.ok(userAPIService.login(email, password));
+    }
+
+    @PostMapping("/scheme/enroll/{schemeId}/{userId}")
+    public ResponseEntity<Map<String, Object>> enrollScheme(@PathVariable String schemeId,
+            @PathVariable String userId) {
+        try {
+            if (schemeId == null || userId == null) {
+                return ResponseEntity.badRequest().body(general.response("error", "Invalid data", null));
+            }
+            return ResponseEntity.ok(userAPIService.enrollScheme(schemeId, userId));
+        } catch (Exception e) {
+            System.err.println("error in enroll scheme " + e.getMessage());
+            return ResponseEntity.badRequest().body(general.response("error", "Internal Server error", null));
+        }
+    }
+
+    @PostMapping("/myscheme/{userId}")
+    public ResponseEntity<Map<String, Object>> getMyScheme(@PathVariable String userId) {
+        return ResponseEntity.ok(userAPIService.getMyScheme(userId));
     }
 
     @GetMapping("/{userId}")

@@ -9,6 +9,7 @@ import {
   Ticket,
   Settings2,
   Contact,
+  ScrollText,
 } from "lucide-react";
 import {
   Chart as ChartJS,
@@ -31,7 +32,6 @@ import TabLoader from "./components/TabLoader";
 import { fetchMalikDashboardData } from "../../../../services/malikService";
 // import Settings from "./components/Settings";
 import dynamic from "next/dynamic";
-import RemitterDashboard from "../Remitter/RemitterDashboard";
 import AdminRemitterTrackersTab from "./components/Remitter";
 import ContactsComponent from "./components/Contact";
 const WithdrawalsTab = dynamic(() => import("./components/WithdrawalsTab"), {
@@ -45,6 +45,10 @@ const FundraiserCodesTab = dynamic(
     ssr: false,
   },
 );
+const PlanTab = dynamic(() => import("./components/PlanTab"), {
+  loading: () => <TabLoader />,
+  ssr: false
+})
 const IssuesTab = dynamic(() => import("./components/IssuesTab"), {
   loading: () => <TabLoader />,
   ssr: false,
@@ -74,14 +78,15 @@ const NAV_ITEMS = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "activity", label: "Activity Log", icon: Activity },
   { id: "withdrawals", label: "Withdrawals", icon: Wallet },
-  { id: "issues", label: "User Issues", icon: AlertTriangle },
+  { id: "plans", label: "Plans", icon: ScrollText },
   { id: "codes", label: "Remitters", icon: Ticket },
+  { id: "issues", label: "User Issues", icon: AlertTriangle },
   { id: "contacts", label: "Contacts", icon: Contact },
   { id: "settings", label: "Settings", icon: Settings2 },
 ];
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("plans");
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -149,9 +154,9 @@ export default function AdminPanel() {
         : { type: "signup", text: "created a new account", amountRange: null };
     const amount = template.amountRange
       ? Math.floor(
-          Math.random() * (template.amountRange[1] - template.amountRange[0]) +
-            template.amountRange[0],
-        )
+        Math.random() * (template.amountRange[1] - template.amountRange[0]) +
+        template.amountRange[0],
+      )
       : null;
     const name =
       namesList.length > 0
@@ -280,6 +285,7 @@ export default function AdminPanel() {
                   onDecision={handleWithdrawalDecision}
                 />
               )}
+              {activeTab === "plans" && <PlanTab />}
               {activeTab === "issues" && (
                 <IssuesTab issues={issues} onResolve={handleResolveIssue} />
               )}

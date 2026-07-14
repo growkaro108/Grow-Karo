@@ -29,6 +29,17 @@ export async function loginUser(credentials) {
   });
 }
 
+export async function enrollUser(schemeId, userId) {
+  return await apiRequest(`/user/scheme/enroll/${schemeId}/${userId}`, {
+    method: "POST"
+  })
+}
+export async function getEnrolledScheme(userId) {
+  return await apiRequest(`/user/myscheme/${userId}`, {
+    method: "POST"
+  });
+}
+
 export async function fetchUserProfile(userId) {
   return apiRequest(`/users/${userId}`);
 }

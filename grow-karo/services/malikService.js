@@ -1,4 +1,4 @@
-import { fetchAdminDashboard } from '@/api/adminApi';
+import { createScheme, deleteScheme, fetchAdminDashboard, getAllScheme, updateScheme } from '@/api/adminApi';
 
 const USE_MOCK = false;
 const NETWORK_DELAY_MS = 1500;
@@ -62,6 +62,23 @@ const mockMalikData = {
     'Aditya Joshi',
   ],
 };
+
+
+export async function createPlan(payload) {
+  return await createScheme(payload);
+}
+export async function updatePlan(id, payload) {
+  return await updateScheme(id, payload);
+}
+export async function removePlan(id) {
+  return await deleteScheme(id);
+}
+export async function activatePlan(payload) {
+  return await activateScheme(payload);
+}
+export async function deactivatePlan(payload) {
+  return await deactivateScheme(payload);
+}
 
 export async function fetchMalikDashboardData() {
   if (USE_MOCK) {

@@ -7,7 +7,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -17,13 +16,17 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.growkaro.backend.DRO.ReceiveSchemeData;
+import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.FundraiserCode;
 import com.growkaro.backend.entity.Remitter;
+import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.SupportIssue;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.WithdrawalRequest;
 import com.growkaro.backend.repository.FundraiserCodeRepository;
 import com.growkaro.backend.repository.RemitterRepository;
+import com.growkaro.backend.repository.SchemeRepository;
 import com.growkaro.backend.repository.SupportIssueRepository;
 import com.growkaro.backend.repository.TransactionRepository;
 import com.growkaro.backend.repository.UserRepository;
@@ -40,27 +43,94 @@ public class AdminAPIService {
     private final WithdrawalRequestRepository withdrawalRequestRepository;
     private final SupportIssueRepository supportIssueRepository;
     private final FundraiserCodeRepository fundraiserCodeRepository;
+    private final SchemeRepository schemeRepository;
+    private final General general;
 
     public AdminAPIService(UserRepository userRepository,
             RemitterRepository remitterRepository,
             TransactionRepository transactionRepository,
             WithdrawalRequestRepository withdrawalRequestRepository,
             SupportIssueRepository supportIssueRepository,
-            FundraiserCodeRepository fundraiserCodeRepository) {
+            FundraiserCodeRepository fundraiserCodeRepository,
+            SchemeRepository schemeRepository,
+            General general) {
         this.userRepository = userRepository;
         this.remitterRepository = remitterRepository;
         this.transactionRepository = transactionRepository;
         this.withdrawalRequestRepository = withdrawalRequestRepository;
         this.supportIssueRepository = supportIssueRepository;
         this.fundraiserCodeRepository = fundraiserCodeRepository;
+        this.schemeRepository = schemeRepository;
+        this.general = general;
     }
 
-    public Map<String, Object> response(String status, String message, Object data) {
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("status", status);
-        response.put("message", message);
-        response.put("data", data != null ? data : Map.of());
-        return response;
+    // create a new scheme
+    @CacheEvict(value = "allSchemes", allEntries = true)
+    public Scheme createScheme(ReceiveSchemeData schemeData) {
+        Scheme scheme = general.toScheme(schemeData);
+        try {
+            return schemeRepository.save(scheme);
+        } catch (Exception e) {
+            throw new RuntimeException("Error in creating scheme", e);
+        }
+    }
+
+    // Retrive all of the schemes
+    // @Cacheable(value = "allSchemes")
+    public List<Scheme> getAllSchemes() {
+        return schemeRepository.findAll();
+    }
+
+    // Update the scheme
+    @CacheEvict(value = "allSchemes", allEntries = true)
+    public Scheme updateScheme(String id, ReceiveSchemeData receiveData) {
+        if (id == null || id.isBlank() || receiveData == null) {
+            return null;
+        }
+
+        try {
+            Scheme existingSchemeData = schemeRepository.findById(id).orElse(null);
+            if (existingSchemeData == null) {
+                return null;
+            }
+
+            general.applyIfChanged(receiveData.schemeName(), existingSchemeData.getSchemeName(),
+                    existingSchemeData::setSchemeName);
+            general.applyIfChanged(receiveData.schemeCategory(), existingSchemeData.getSchemeCategory(),
+                    existingSchemeData::setSchemeCategory);
+            general.applyIfChanged(receiveData.schemeDetails(), existingSchemeData.getSchemeDetails(),
+                    existingSchemeData::setSchemeDetails);
+            general.applyIfChanged(receiveData.payoutFrequency(), existingSchemeData.getPayoutFrequency(),
+                    existingSchemeData::setPayoutFrequency);
+            general.applyIfChanged(receiveData.tenure(), existingSchemeData.getTenure(), existingSchemeData::setTenure);
+            general.applyIfChanged(receiveData.maturityValue(), existingSchemeData.getMaturityValue(),
+                    existingSchemeData::setMaturityValue);
+            general.applyIfChanged(receiveData.profitPercentage(), existingSchemeData.getProfitPercentage(),
+                    existingSchemeData::setProfitPercentage);
+            general.applyIfChanged(receiveData.status(), existingSchemeData.getStatus(), existingSchemeData::setStatus);
+            general.applyIfChanged(receiveData.startDate(), existingSchemeData.getStartDate(),
+                    existingSchemeData::setStartDate);
+            general.applyIfChanged(receiveData.endDate(), existingSchemeData.getEndDate(),
+                    existingSchemeData::setEndDate);
+            general.applyIfChanged(receiveData.investmentAmount(), existingSchemeData.getInvestmentAmount(),
+                    existingSchemeData::setInvestmentAmount);
+            general.applyIfChanged(receiveData.maxInvestorsAllowed(), existingSchemeData.getMaxInvestorsAllowed(),
+                    existingSchemeData::setMaxInvestorsAllowed);
+
+            return schemeRepository.save(existingSchemeData);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    @CacheEvict(value = "allSchemes", allEntries = true)
+    public boolean removeScheme(String id) {
+        try {
+            schemeRepository.deleteById(id);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     @Cacheable(value = "adminDashboard", key = "#range ?: 'default'")
@@ -88,7 +158,7 @@ public class AdminAPIService {
         data.put("codes", codes.getContent().stream().map(this::toFundraiserCodeView).toList());
         data.put("eventTemplates", eventTemplates());
         data.put("names", users.getContent().stream().map(User::getName).toList());
-        return response("ok", "Admin dashboard data fetched", data);
+        return general.response("ok", "Admin dashboard data fetched", data);
     }
 
     @Cacheable(value = "withdrawals", key = "#status ?: 'default'")
@@ -101,7 +171,7 @@ public class AdminAPIService {
         Map<String, Object> data = paginatedMeta(page);
         data.put("status", status);
         data.put("items", page.getContent().stream().map(this::toWithdrawalView).toList());
-        return response("ok", "Withdrawal requests fetched", data);
+        return general.response("ok", "Withdrawal requests fetched", data);
     }
 
     @CacheEvict(value = { "adminDashboard", "withdrawals" }, allEntries = true)
@@ -109,7 +179,7 @@ public class AdminAPIService {
     public Map<String, Object> updateWithdrawal(String withdrawalId, Map<String, Object> payload) {
         Optional<WithdrawalRequest> withdrawalOpt = withdrawalRequestRepository.findById(withdrawalId);
         if (withdrawalOpt.isEmpty()) {
-            return response("error", "Withdrawal not found", Map.of("id", withdrawalId));
+            return general.response("error", "Withdrawal not found", Map.of("id", withdrawalId));
         }
 
         WithdrawalRequest withdrawal = withdrawalOpt.get();
@@ -120,7 +190,8 @@ public class AdminAPIService {
         if (payload.containsKey("proofUrl")) {
             withdrawal.setProofUrl(stringValue(payload.get("proofUrl")));
         }
-        return response("ok", "Withdrawal updated", toWithdrawalView(withdrawalRequestRepository.save(withdrawal)));
+        return general.response("ok", "Withdrawal updated",
+                toWithdrawalView(withdrawalRequestRepository.save(withdrawal)));
     }
 
     @Cacheable(value = "issues", key = "#status ?: 'default'")
@@ -133,7 +204,7 @@ public class AdminAPIService {
         Map<String, Object> data = paginatedMeta(page);
         data.put("status", status);
         data.put("items", page.getContent().stream().map(this::toIssueView).toList());
-        return response("ok", "Issues fetched", data);
+        return general.response("ok", "Issues fetched", data);
     }
 
     @CacheEvict(value = { "adminDashboard", "issues" }, allEntries = true)
@@ -141,13 +212,13 @@ public class AdminAPIService {
     public Map<String, Object> resolveIssue(String issueId) {
         Optional<SupportIssue> issueOpt = supportIssueRepository.findById(issueId);
         if (issueOpt.isEmpty()) {
-            return response("error", "Issue not found", Map.of("id", issueId));
+            return general.response("error", "Issue not found", Map.of("id", issueId));
         }
 
         SupportIssue issue = issueOpt.get();
         issue.setStatus(SupportIssue.Status.RESOLVED);
         issue.setResolvedAt(LocalDateTime.now());
-        return response("ok", "Issue resolved", toIssueView(supportIssueRepository.save(issue)));
+        return general.response("ok", "Issue resolved", toIssueView(supportIssueRepository.save(issue)));
     }
 
     @Cacheable(value = "remitters", key = "#page ?: 'default'")
@@ -156,7 +227,7 @@ public class AdminAPIService {
         Page<Remitter> remitters = remitterRepository.findAll(pageable(page));
         Map<String, Object> data = paginatedMeta(remitters);
         data.put("items", remitters.getContent().stream().map(this::toRemitterView).toList());
-        return response("ok", "Remitters fetched", data);
+        return general.response("ok", "Remitters fetched", data);
     }
 
     @CacheEvict(value = { "adminDashboard", "remitters" }, allEntries = true)
@@ -167,10 +238,10 @@ public class AdminAPIService {
         String name = firstString(payload, "remitterName", "name", "organizationName");
 
         if (email == null || phone == null || name == null) {
-            return response("error", "remitterName, remitterEmail, and remitterPhone are required", Map.of());
+            return general.response("error", "remitterName, remitterEmail, and remitterPhone are required", Map.of());
         }
         if (userRepository.existsByEmail(email) || userRepository.existsByPhone(phone)) {
-            return response("error", "Remitter user already exists", Map.of("email", email, "phone", phone));
+            return general.response("error", "Remitter user already exists", Map.of("email", email, "phone", phone));
         }
 
         User user = new User();
@@ -201,7 +272,7 @@ public class AdminAPIService {
             fundraiserCodeRepository.save(code);
         }
 
-        return response("ok", "Remitter created", toRemitterView(remitter));
+        return general.response("ok", "Remitter created", toRemitterView(remitter));
     }
 
     @Cacheable(value = "fundraiserCodes", key = "#page ?: 'default'")
@@ -210,7 +281,7 @@ public class AdminAPIService {
         Page<FundraiserCode> codes = fundraiserCodeRepository.findAll(pageable(page));
         Map<String, Object> data = paginatedMeta(codes);
         data.put("items", codes.getContent().stream().map(this::toFundraiserCodeView).toList());
-        return response("ok", "Fundraiser codes fetched", data);
+        return general.response("ok", "Fundraiser codes fetched", data);
     }
 
     @CacheEvict(value = { "adminDashboard", "fundraiserCodes" }, allEntries = true)
@@ -219,15 +290,15 @@ public class AdminAPIService {
         String codeValue = firstString(payload, "code", "trackerCode");
         String remitterId = firstString(payload, "remitterId");
         if (codeValue == null || remitterId == null) {
-            return response("error", "code and remitterId are required", Map.of());
+            return general.response("error", "code and remitterId are required", Map.of());
         }
         if (fundraiserCodeRepository.existsByCode(codeValue)) {
-            return response("error", "Fundraiser code already exists", Map.of("code", codeValue));
+            return general.response("error", "Fundraiser code already exists", Map.of("code", codeValue));
         }
 
         Optional<Remitter> remitterOpt = remitterRepository.findById(remitterId);
         if (remitterOpt.isEmpty()) {
-            return response("error", "Remitter not found", Map.of("remitterId", remitterId));
+            return general.response("error", "Remitter not found", Map.of("remitterId", remitterId));
         }
 
         FundraiserCode code = new FundraiserCode();
@@ -235,7 +306,8 @@ public class AdminAPIService {
         code.setCode(codeValue);
         code.setDescription(firstString(payload, "description"));
         code.setUsageLimit(intValue(payload.get("usageLimit"), 1));
-        return response("ok", "Fundraiser code created", toFundraiserCodeView(fundraiserCodeRepository.save(code)));
+        return general.response("ok", "Fundraiser code created",
+                toFundraiserCodeView(fundraiserCodeRepository.save(code)));
     }
 
     private List<Map<String, Object>> inflowData() {

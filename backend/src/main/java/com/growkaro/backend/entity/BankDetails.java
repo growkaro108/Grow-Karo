@@ -3,9 +3,11 @@ package com.growkaro.backend.entity;
 import jakarta.persistence.Entity;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.ToString;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.NoArgsConstructor;
 
@@ -25,4 +27,7 @@ public class BankDetails {
     private String accountNumber;
 
     private String accountHolderName;
+    @ToString.Exclude
+    @OneToOne(mappedBy = "bankDetails")
+    private User user;
 }

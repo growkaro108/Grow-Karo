@@ -40,7 +40,7 @@ export default function AuthLogin({ onSwitch }) {
 
     // Authenticate credentials with service
     const response = await loginUser({ email: sanitizedEmail, password: sanitizedPassword });
-    console.log("--------------")
+    console.log("--------------\n")
 
     try {
       // console.log(response.data.user);
@@ -50,7 +50,6 @@ export default function AuthLogin({ onSwitch }) {
         if (status.success) {
           setAuthUser(response.data.user)
           setMessage("Signed in — redirecting...");
-          //redirect to user Dashboard
           router.push("/dashboard");
         }
         else {
@@ -59,7 +58,7 @@ export default function AuthLogin({ onSwitch }) {
 
       }
       else if (response.status === "error") {
-        errorMessage(response.error)
+        errorMessage(response.message)
       }
       else {
         errorMessage("Invalid username or password")

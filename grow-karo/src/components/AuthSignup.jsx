@@ -6,6 +6,8 @@ import {
   sendEmailOtp,
   verifyEmailOTP,
 } from "../../services/grahakService";
+import { errorMessage } from "./Message";
+import { userSendOTPMessage, userSignUpMessage, userValidateOTPMessage } from "@/showMessage/grahakMessage";
 
 // Hoisted outside the component so they aren't recreated on every render.
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$/;
@@ -100,15 +102,13 @@ export default function AuthSignup({ onSwitch }) {
     try {
       setSendingOtp(true);
       const response = await sendEmailOtp(sanitizedEmail);
-      if (response) {
+      let status = userSendOTPMessage(response)
+      if (status) {
         setOtpSent(true);
-        setOtpMessage(response?.message || "OTP sent to your email.");
         setResendCooldown(RESEND_COOLDOWN_SECONDS);
-      } else {
-        setOtpError(response?.message || "Failed to send OTP. Please try again.");
       }
     } catch (err) {
-      setOtpError(err.message || "Failed to send OTP. Please try again.");
+      setOtpError(err.message || "Network error..");
     } finally {
       setSendingOtp(false);
     }
@@ -126,8 +126,8 @@ export default function AuthSignup({ onSwitch }) {
     try {
       setVerifyingOtp(true);
       const response = await verifyEmailOTP(sanitizedEmail, otp.trim());
-
-      if (response) {
+      let status = userValidateOTPMessage(response)
+      if (status) {
         setEmailVerified(true);
         setOtpMessage(response.message || "Email verified successfully.");
       } else {
@@ -212,7 +212,7 @@ export default function AuthSignup({ onSwitch }) {
         name: sanitizedName,
         email: sanitizedEmail,
         phone: sanitizedPhone,
-        password: password,
+        passwordHash: password,
         bankName: sanitizedBankName,
         accountHolderName: sanitizedHolderName,
         accountNumber: sanitizedAccountNumber,
@@ -220,9 +220,11 @@ export default function AuthSignup({ onSwitch }) {
       };
 
       const response = await userSignup(payload);
+      // console.log(response)
+      let message = userSignUpMessage(response);
 
+      if (!message) return;
       setMessage(response.message || "Registration successful! Redirecting...");
-
       setFormData(INITIAL_FORM_DATA);
       setOtp("");
       setOtpSent(false);

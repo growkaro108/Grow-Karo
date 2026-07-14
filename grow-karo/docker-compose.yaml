@@ -1,0 +1,90 @@
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: growkaro-postgres
+    environment:
+      POSTGRES_DB: growkaro_db
+      POSTGRES_USER: growkaro
+      POSTGRES_PASSWORD: growkaro123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U growkaro -d growkaro_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: secret
+    ports:
+      - "8081:80"
+    depends_on:
+      - postgres
+
+  redis:
+    image: redis:7-alpine
+    container_name: growkaro-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: growkaro-dozzle
+    ports:
+      - "9999:8080"
+    environment:
+      DOZZLE_LEVEL: info
+      DOZZLE_TAILSIZE: 300
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: growkaro-backend
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_started
+  #   environment:
+  #     SERVER_PORT: 4000
+  #     SPRING_PROFILES_ACTIVE: docker
+  #     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/growkaro_db
+  #     SPRING_DATASOURCE_USERNAME: growkaro
+  #     SPRING_DATASOURCE_PASSWORD: growkaro
+  #     SPRING_REDIS_HOST: redis
+  #     SPRING_REDIS_PORT: 6379
+  #   ports:
+  #     - "4000:4000"
+
+  # frontend:
+  #   build:
+  #     context: ./grow-karo
+  #     dockerfile: Dockerfile
+  #   container_name: growkaro-frontend
+  #   depends_on:
+  #     - backend
+  #   environment:
+  #     NEXT_PUBLIC_API_BASE_URL: http://localhost:4000/api
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./grow-karo:/app
+  #     - /app/node_modules
+
+volumes:
+  postgres-data:
+  redis-data:

@@ -48,3 +48,14 @@ export const confirmMessage = async (message, title = "Are you sure?", confirmBu
     });
     return result.isConfirmed;
 };
+
+export const toastMessage = (message, title = "Success", icon = "success", timer = 2000) => {
+    return Swal.fire({
+        position: "top-end",
+        icon: icon,
+        title: title,
+        text: message,
+        showConfirmButton: false,
+        timer: timer
+    });
+};

@@ -21,7 +21,13 @@ public class SecurityConfig {
                                                                 "/api/user/validateEmailOtp",
                                                                 "/api/user/test",
                                                                 "/api/user/login",
-                                                                "/api/user/dashboard")
+                                                                "/api/user/dashboard",
+                                                                "/api/user/scheme/enroll/{schemeId}/{userId}",
+                                                                "/api/user/myscheme/{userId}",
+                                                                "/api/scheme/get",
+                                                                "/api/admin/scheme/create",
+                                                                "/api/admin/scheme/update/{schemeId}",
+                                                                "/api/admin/scheme/delete/{id}")
                                                 .permitAll() // Public endpoints
                                                 .anyRequest().authenticated() // Everything else requires login
                                 )

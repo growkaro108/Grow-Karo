@@ -1,9 +1,13 @@
 package com.growkaro.backend.controller;
 
+import com.growkaro.backend.common.General;
+import com.growkaro.backend.entity.Scheme;
+import com.growkaro.backend.service.AdminAPIService;
 import com.growkaro.backend.service.ApiService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -11,14 +15,33 @@ import java.util.Map;
 public class ApiController {
 
     private final ApiService apiService;
+    private final AdminAPIService adminAPIService;
+    private final General general;
 
-    public ApiController(ApiService apiService) {
+    public ApiController(ApiService apiService, AdminAPIService adminAPIService, General general) {
         this.apiService = apiService;
+        this.adminAPIService = adminAPIService;
+        this.general = general;
     }
 
     @GetMapping("/health")
     public ResponseEntity<Map<String, Object>> health() {
         return ResponseEntity.ok(apiService.health());
+    }
+
+    @GetMapping("/scheme/get")
+    public ResponseEntity<Map<String, Object>> getAllScheme() {
+        System.out.println("scheme api hit");
+        try {
+            List<Scheme> allScheme = adminAPIService.getAllSchemes();
+            if (allScheme == null)
+                return ResponseEntity.internalServerError().build();
+            else
+                return ResponseEntity.ok(general.response("success", "Load successfully..", allScheme));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+
     }
 
     @GetMapping("/config")
@@ -41,5 +64,4 @@ public class ApiController {
         return ResponseEntity.ok(apiService.contact(payload));
     }
 
-   
 }

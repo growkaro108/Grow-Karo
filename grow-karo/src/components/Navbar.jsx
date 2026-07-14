@@ -4,7 +4,7 @@ import { useContext, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { MoveRight, UserRoundKey, Menu, X, Home, LayoutDashboardIcon, NotebookPen, Send, LogOut } from "lucide-react";
+import { MoveRight, UserRoundKey, Menu, X, Home, LayoutDashboardIcon, NotebookPen, Send, LogOut, ScrollText } from "lucide-react";
 import { userContext } from "@/context/UserContext";
 
 export default function Navbar() {
@@ -25,6 +25,7 @@ export default function Navbar() {
   const navLinks = [
     { href: "/", label: "Home", icon: Home },
     { href: authUser ? "/dashboard" : "/about", label: authUser ? "Dashboard" : "About Us", icon: authUser ? LayoutDashboardIcon : NotebookPen },
+    { href: "/plan", label: "Scheme", icon: ScrollText },
     { href: "/solution", label: "Solutions", icon: Send },
   ];
 
@@ -38,7 +39,7 @@ export default function Navbar() {
             <Image src="/logo.jpg" alt="Logo" width={40} height={40} className="object-cover h-full w-full" />
           </div>
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-700">Grow-Karo</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-700">Groww Karo</p>
             <p className="text-xs text-slate-500">Trusted investment platform</p>
           </div>
         </Link>

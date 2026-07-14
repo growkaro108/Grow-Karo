@@ -1,6 +1,6 @@
 'use client'
 import react, { createContext, useCallback, useMemo, useState } from "react";
-import { confirmMessage, infoMessage, successMessage } from "@/components/Message";
+import { confirmMessage, errorMessage, infoMessage, successMessage } from "@/components/Message";
 import { useRouter } from "next/navigation";
 import { deleteSecureCookie, getSecureCookie } from "./cookiesManagement";
 
@@ -23,7 +23,7 @@ export const UserProvider = ({ children }) => {
                         setAuthUser(null);
                         router.push("/auth");
                         router.refresh();
-                        console.log(authUser)
+                        // console.log(authUser)
                         successMessage("Logout successfully", "Logout")
                     } else {
                         errorMessage("Logout failed", "Logout")
@@ -44,7 +44,7 @@ export const UserProvider = ({ children }) => {
         if (authUser !== null) return authUser;
         try {
             const user = await getSecureCookie("authUser");
-            setAuthUser(user.data);
+            setAuthUser(user?.data);
         } catch (error) {
             console.error("Failed to get data", error)
             return null;
@@ -58,7 +58,7 @@ export const UserProvider = ({ children }) => {
         setIsLoading,
         logout,
         getUserDataFromContext
-    }), [authUser, getUserDataFromContext]);
+    }), [authUser, getUserDataFromContext, logout]);
     return <userContext.Provider value={contexValue}>
         {children}
     </userContext.Provider>

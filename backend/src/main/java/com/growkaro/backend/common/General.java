@@ -1,13 +1,17 @@
 package com.growkaro.backend.common;
 
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
-
 import org.springframework.stereotype.Component;
-
+import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DRO.UserRegister;
+import com.growkaro.backend.DTO.AuthUserData;
+import com.growkaro.backend.entity.Scheme;
+import com.growkaro.backend.entity.User;
 
 @Component
 public class General {
@@ -71,5 +75,41 @@ public class General {
         response.put("message", message);
         response.put("data", data != null ? data : Map.of());
         return response;
+    }
+
+    public AuthUserData toAuthUserData(User user) {
+        AuthUserData authUserData = new AuthUserData();
+        authUserData.setId(user.getId());
+        authUserData.setName(user.getName());
+        authUserData.setEmail(user.getEmail());
+        authUserData.setPhone(user.getPhone());
+        return authUserData;
+    }
+
+    public Scheme toScheme(ReceiveSchemeData schemeData) {
+        Scheme scheme = new Scheme();
+        scheme.setSchemeName(schemeData.schemeName());
+        scheme.setSchemeCategory(schemeData.schemeCategory());
+        scheme.setSchemeDetails(schemeData.schemeDetails());
+        scheme.setPayoutFrequency(schemeData.payoutFrequency());
+        scheme.setTenure(schemeData.tenure());
+        scheme.setStartDate(schemeData.startDate());
+        scheme.setEndDate(schemeData.endDate());
+        scheme.setStatus(schemeData.status());
+        scheme.setInvestmentAmount(schemeData.investmentAmount());
+        scheme.setProfitPercentage(schemeData.profitPercentage());
+        scheme.setMaturityValue(schemeData.maturityValue());
+        scheme.setMaxInvestorsAllowed(schemeData.maxInvestorsAllowed());
+        return scheme;
+    }
+
+    public <T> void applyIfChanged(T newValue, T oldValue, Consumer<T> setter) {
+        if (newValue != null && !newValue.equals(oldValue)) {
+            setter.accept(newValue);
+        }
+    }
+
+    public LocalDate calculateMaturityDate(LocalDate startDate, int tenure) {
+        return startDate.plusDays(tenure);
     }
 }
