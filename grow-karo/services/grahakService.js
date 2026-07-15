@@ -1,4 +1,4 @@
-import { enrollUser, fetchUserProfile, fetchUserTransactions, getEmailOtp, getEnrolledScheme, userRegister, validateEmailOtp } from '@/api/userApi';
+import { enrollUser, fetchUserProfile, fetchUserTransactions, getEmailOtp, getEnrolledScheme, getUsersSchemes, userRegister, userSchemeWithdraw, validateEmailOtp } from '@/api/userApi';
 
 const USE_MOCK = false;
 const NETWORK_DELAY_MS = 1000;
@@ -65,9 +65,23 @@ export async function verifyEmailOTP(email, otp) {
 export async function enrollInPlan(schemeId, userId) {
   return await enrollUser(schemeId, userId);
 }
-export async function getAllUserScheme(userId) {
+
+export async function getAllUserSchemeIds(userId) {
   return await getEnrolledScheme(userId);
 }
+
+export async function getAllUsersScheme(userId) {
+  return await getUsersSchemes(userId);
+}
+
+export async function withdrawUserScheme(userSchemeId) {
+  try {
+    return await userSchemeWithdraw(userSchemeId);
+  } catch (error) {
+    return "failed";
+  }
+}
+
 
 export async function fetchGrahakDashboardData(userId = 'me') {
   if (true) {

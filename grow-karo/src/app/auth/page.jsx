@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import AuthForm from "@/components/AuthForm";
-import Loader from "@/components/Loader";
+import Loader from "@/loader/Loader";
 import { userContext } from "@/context/UserContext";
 import { use, useEffect } from "react";
 

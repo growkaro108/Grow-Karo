@@ -1,52 +1,20 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, use } from 'react';
 import Image from 'next/image';
-import { ArrowLeft, ArrowUpRight, ShieldCheck } from 'lucide-react';
-
-// Plain inline SVG icons — no external icon library dependency,
-// so the component can't silently fail to render if a package is missing.
-const XIcon = (props) => (
-  <svg viewBox="0 0 24 24" width={props.size ?? 18} height={props.size ?? 18} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18" />
-    <line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
-
-const DownloadIcon = (props) => (
-  <svg viewBox="0 0 24 24" width={props.size ?? 16} height={props.size ?? 16} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-    <polyline points="7 10 12 15 17 10" />
-    <line x1="12" y1="15" x2="12" y2="3" />
-  </svg>
-);
-
-const ImageOffIcon = (props) => (
-  <svg viewBox="0 0 24 24" width={props.size ?? 16} height={props.size ?? 16} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="2" y1="2" x2="22" y2="22" />
-    <path d="M10.41 10.41a2 2 0 1 1-2.83-2.83" />
-    <line x1="13.5" y1="13.5" x2="6" y2="21" />
-    <path d="M21 15V5a2 2 0 0 0-2-2H9" />
-    <path d="M5 5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10" />
-  </svg>
-);
-
-const ArrowLeftIcon = (props) => (
-  <svg viewBox="0 0 24 24" width={props.size ?? 18} height={props.size ?? 18} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="19" y1="12" x2="5" y2="12" />
-    <polyline points="12 19 5 12 12 5" />
-  </svg>
-);
-
-const ExpandIcon = (props) => (
-  <svg viewBox="0 0 24 24" width={props.size ?? 14} height={props.size ?? 14} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="15 3 21 3 21 9" />
-    <polyline points="9 21 3 21 3 15" />
-    <line x1="21" y1="3" x2="14" y2="10" />
-    <line x1="3" y1="21" x2="10" y2="14" />
-  </svg>
-);
-
-// Fallback sample data — swap this out for the `holdings` prop in real usage
-
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  ShieldCheck,
+  X,
+  Download,
+  ImageOff,
+  Maximize2,
+  Trash2,
+  Loader2
+} from 'lucide-react';
+import { TableRowLoader } from '@/loader/TableRowLoader';
+import { getAllUsersScheme, withdrawUserScheme } from '../../../../services/grahakService';
+import { allRounderMessage, confirmMessage } from '@/components/Message';
+import { userContext } from '@/context/UserContext';
 
 const currency = (val) => {
   const n = parseFloat(val);
@@ -54,6 +22,7 @@ const currency = (val) => {
 };
 
 const formatDate = (val) => {
+  if (!val) return '—';
   const d = new Date(val);
   return Number.isNaN(d.getTime()) ? val : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 };
@@ -61,7 +30,6 @@ const formatDate = (val) => {
 const tableHeaderStyle = "px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap";
 const tableCellStyle = "px-4 py-4 text-sm text-slate-600 whitespace-nowrap";
 
-// Thumbnail used in the table — click opens the large lightbox (not the details page)
 function BondThumb({ src, alt, size = 40, onExpand }) {
   const [errored, setErrored] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -75,11 +43,8 @@ function BondThumb({ src, alt, size = 40, onExpand }) {
 
   if (errored || !src) {
     return (
-      <div
-        className="rounded-md bg-slate-100 flex items-center justify-center text-slate-400"
-        style={dim}
-      >
-        <ImageOffIcon size={Math.round(size * 0.4)} />
+      <div className="rounded-md bg-slate-100 flex items-center justify-center text-slate-400" style={dim}>
+        <ImageOff size={Math.round(size * 0.4)} />
       </div>
     );
   }
@@ -110,17 +75,18 @@ function BondThumb({ src, alt, size = 40, onExpand }) {
         className={`object-cover transition-opacity duration-300 ${loading ? 'opacity-0' : 'opacity-100'}`}
       />
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
-        <ExpandIcon size={Math.round(size * 0.35)} className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+        <Maximize2 size={Math.round(size * 0.35)} className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
       </div>
     </button>
   );
 }
 
-// Full-size image lightbox with a download action
 function ImageLightbox({ bond, onClose }) {
   const [downloading, setDownloading] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [imgLoading, setImgLoading] = useState(true);
+
+  const mainImage = bond.bondImageURL?.[0] || '';
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
@@ -131,27 +97,28 @@ function ImageLightbox({ bond, onClose }) {
   useEffect(() => {
     setImgError(false);
     setImgLoading(true);
-  }, [bond.bondimage]);
+  }, [mainImage]);
 
   const handleDownload = useCallback(async () => {
+    if (!mainImage) return;
     setDownloading(true);
     try {
-      const res = await fetch(bond.bondimage);
+      const res = await fetch(mainImage);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${bond.bondnumber}.png`;
+      a.download = `${bond.bondNumber || 'bond-image'}.png`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      window.open(bond.bondimage, '_blank', 'noopener,noreferrer');
+      window.open(mainImage, '_blank', 'noopener,noreferrer');
     } finally {
       setDownloading(false);
     }
-  }, [bond]);
+  }, [mainImage, bond.bondNumber]);
 
   return (
     <div
@@ -159,42 +126,35 @@ function ImageLightbox({ bond, onClose }) {
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label={`${bond.bondnumber} image preview`}
+      aria-label={`${bond.bondNumber || 'Bond'} image preview`}
     >
-      <div
-        className="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div>
-            <p className="text-sm font-semibold" style={{ color: '#1e293b' }}>{bond.bondnumber}</p>
-            <p className="text-xs" style={{ color: '#64748b' }}>{bond.plan}</p>
+            <p className="text-sm font-semibold" style={{ color: '#1e293b' }}>{bond.bondNumber || 'N/A'}</p>
+            <p className="text-xs" style={{ color: '#64748b' }}>{bond.schemeName}</p>
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Close preview"
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-          >
-            <XIcon size={18} />
+          <button onClick={onClose} aria-label="Close preview" className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+            <X size={18} />
           </button>
         </div>
 
-        <div className="p-6 flex items-center justify-center bg-slate-50 min-h-[280px]">
-          {imgError ? (
+        <div className="p-6 flex items-center justify-center bg-slate-50 min-h-70">
+          {imgError || !mainImage ? (
             <div className="flex flex-col items-center gap-2 text-slate-400">
-              <ImageOffIcon size={32} />
+              <ImageOff size={32} />
               <span className="text-xs">Image unavailable</span>
             </div>
           ) : (
-            <div className="relative w-full h-[320px] max-h-[50vh]">
+            <div className="relative w-full h-80 max-h-[50vh]">
               {imgLoading && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
                 </div>
               )}
               <Image
-                src={bond.bondimage}
-                alt={bond.bondnumber}
+                src={mainImage}
+                alt={bond.bondNumber || 'Bond Proof'}
                 fill
                 unoptimized
                 sizes="(max-width: 640px) 100vw, 500px"
@@ -210,18 +170,15 @@ function ImageLightbox({ bond, onClose }) {
         </div>
 
         <div className="flex justify-end gap-2 px-5 py-4 border-t border-slate-100">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-          >
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
             Close
           </button>
           <button
             onClick={handleDownload}
-            disabled={imgError || downloading}
+            disabled={imgError || !mainImage || downloading}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
           >
-            <DownloadIcon size={16} />
+            <Download size={16} />
             {downloading ? 'Downloading…' : 'Download'}
           </button>
         </div>
@@ -230,8 +187,6 @@ function ImageLightbox({ bond, onClose }) {
   );
 }
 
-
-// Refactored Field using a clean grid card layout
 function DetailField({ label, value, highlight = false }) {
   return (
     <div className="flex flex-col gap-1 rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 transition-all duration-200 hover:bg-slate-50 hover:shadow-sm">
@@ -245,84 +200,153 @@ function DetailField({ label, value, highlight = false }) {
   );
 }
 
-// Senior-Designed Detail View via pure Tailwind CSS
-function BondDetailsPage({ bond, onBack, onExpandImage }) {
+function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const mainImage = bond.bondImageURL?.[0] || '';
+
+  const handleWithdrawClick = async () => {
+    const confirmed = await confirmMessage("you want to withdraw this application?");
+    if (!confirmed) return;
+    else {
+      setIsWithdrawing(true);
+      await onWithdraw(bond.userSchemeId);
+      setIsWithdrawing(false);
+      allRounderMessage({
+        message: 'withdrawn successfully',
+        status: 'success',
+      })
+    }
+
+
+  };
+
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-in fade-in slide-in-from-bottom-3 duration-300 ease-out">
-
-      {/* Action Header bar */}
       <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-        <button
-          onClick={onBack}
-          className="group flex items-center gap-2 text-sm font-semibold text-indigo-600 transition-colors duration-200 hover:text-indigo-700"
-        >
+        <button onClick={onBack} className="group flex items-center gap-2 text-sm font-semibold text-indigo-600 transition-colors duration-200 hover:text-indigo-700">
           <ArrowLeft size={16} className="transition-transform duration-200 group-hover:-translate-x-0.5" />
           Back to holdings
         </button>
-        <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-          <ShieldCheck size={14} /> Active Asset
+        <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${bond.isApproved ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+          <ShieldCheck size={14} /> {bond.isApproved ? 'Active Asset' : 'Pending Approval'}
         </span>
       </div>
 
       <div className="p-6">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
-
-          {/* Enhanced Interactive Image Frame */}
-          <div
-            onClick={onExpandImage}
-            className="group relative h-28 w-28 flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border border-slate-200 shadow-sm transition-transform duration-300 hover:scale-[1.02] self-center sm:self-start"
-          >
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-indigo-950/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-              <ArrowUpRight size={20} className="text-white drop-shadow" />
-            </div>
-            <img
-              src={bond.bondimage}
-              alt={bond.bondnumber}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-            />
+        <div className="flex flex-col gap-6 md:flex-row md:items-start">
+          <div onClick={onExpandImage} className="group relative h-28 w-28 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-slate-200 shadow-sm transition-transform duration-300 hover:scale-[1.02] self-center sm:self-start bg-slate-100 flex items-center justify-center">
+            {mainImage ? (
+              <>
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-indigo-950/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                  <ArrowUpRight size={20} className="text-white drop-shadow" />
+                </div>
+                <img src={mainImage} alt={bond.bondNumber} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+              </>
+            ) : (
+              <ImageOff size={24} className="text-slate-400" />
+            )}
           </div>
 
-          {/* Typography Header & Details Grid */}
           <div className="flex-1 text-center sm:text-left">
-            <h3 className="text-xl font-bold tracking-tight text-slate-900">
-              {bond.bondnumber}
-            </h3>
-            <p className="mt-0.5 text-sm font-medium text-slate-400">
-              {bond.plan}
-            </p>
+            <h3 className="text-xl font-bold tracking-tight text-slate-900">{bond.bondNumber || 'Processing No.'}</h3>
+            <p className="mt-0.5 text-sm font-medium text-slate-400">{bond.schemeName}</p>
 
-            {/* Clean 4-Column Metric Grid */}
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <DetailField label="Invest Amount" value={currency(bond.investamount)} />
-              <DetailField label="Tenure" value={bond.tenure} />
-              <DetailField label="Payout Frequency" value={bond.payoutcycle} />
-              <DetailField label="Profit %" value={bond.profitpercentage != null ? `${bond.profitpercentage}%` : '—'} highlight={true} />
-              <DetailField label="Investment Date" value={formatDate(bond.investementdate)} />
-              <DetailField label="Maturity Date" value={formatDate(bond.maturitydate)} />
-              <DetailField label="Next Profit Date" value={formatDate(bond.profitdate)} />
-              <DetailField label="Per Annum Est." value={currency(bond.perannum)} />
+              <DetailField label="Invest Amount" value={currency(bond.investmentAmount)} />
+              <DetailField label="Paid Amount" value={currency(bond.paidAmount)} />
+              <DetailField label="Tenure" value={`${bond.tenure} Months`} />
+              <DetailField label="Profit %" value={bond.profitPercentage != null ? `${bond.profitPercentage}%` : '—'} highlight={true} />
+              <DetailField label="Payout Frequency" value={bond.payoutFrequency} />
+              <DetailField label="Enrollment Date" value={formatDate(bond.enrollmentDate)} />
+              <DetailField label="Request Date" value={formatDate(bond.requestDate)} />
+              <DetailField label="Maturity Value" value={currency(bond.maturityValue)} />
             </div>
           </div>
-
         </div>
+
+        {/* Dynamic Withdraw Actions Bar */}
+        {!bond.isApproved && (
+          <div className="mt-8 flex justify-end border-t border-slate-100 pt-6">
+            <button
+              onClick={handleWithdrawClick}
+              disabled={isWithdrawing}
+              className="flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition-all duration-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+            >
+              {isWithdrawing ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Trash2 size={16} />
+              )}
+              {isWithdrawing ? 'Withdrawing...' : 'Withdraw Request'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-export default function Portfolio({ holdings }) {
-  const [selectedBond, setSelectedBond] = useState(null); // drives the details page
-  const [lightboxBond, setLightboxBond] = useState(null); // drives the full-image overlay
+export default function Portfolio({ holdings = [] }) {
+  const [holding, setHolding] = useState(holdings);
+  const [loading, setLoading] = useState(false);
+  const [selectedBond, setSelectedBond] = useState(null);
+  const [lightboxBond, setLightboxBond] = useState(null);
+  const { authUser } = use(userContext);
 
   const sortedHoldings = useMemo(
-    () => [...holdings].sort((a, b) => parseFloat(b.investamount) - parseFloat(a.investamount)),
-    [holdings]
+    () => [...holding].sort((a, b) => parseFloat(b.investmentAmount || 0) - parseFloat(a.investmentAmount || 0)),
+    [holding]
   );
 
   const openDetails = useCallback((bond) => setSelectedBond(bond), []);
   const closeDetails = useCallback(() => setSelectedBond(null), []);
   const openLightbox = useCallback((bond) => setLightboxBond(bond), []);
   const closeLightbox = useCallback(() => setLightboxBond(null), []);
+
+  const userId = authUser?.id;
+
+  const fetchHoldings = useCallback(async () => {
+    if (!userId) return;
+    try {
+      setLoading(true);
+      const response = await getAllUsersScheme(userId);
+      allRounderMessage(response);
+      if (response.status === "success" && response.data) {
+        setHolding(response.data);
+      } else {
+        setHolding([]);
+      }
+    } catch (error) {
+      setHolding([]);
+      console.log("Error fetching holdings:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    fetchHoldings();
+  }, [fetchHoldings]);
+
+  // Handle asset withdrawal
+  const handleWithdrawRequest = useCallback(async (userSchemeId) => {
+    try {
+      // 1. TODO: Call your service API wrapper method here
+      // const response = await withdrawUserScheme(userSchemeId);
+      // console.table(response)
+      // Mocking a successful status return object wrapper example behavior:
+      const response = { status: "success", message: "Application withdrawn successfully" };
+      allRounderMessage(response);
+
+      if (response.status === "success") {
+        // 2. Refresh local data set views cleanly
+        await fetchHoldings();
+        setSelectedBond(null);
+      }
+    } catch (error) {
+      console.error("Failed to withdraw application:", error);
+    }
+  }, [fetchHoldings]);
 
   return (
     <div className="flex flex-col gap-6 p-6 bg-slate-50 min-h-screen font-sans">
@@ -331,6 +355,7 @@ export default function Portfolio({ holdings }) {
           bond={selectedBond}
           onBack={closeDetails}
           onExpandImage={() => openLightbox(selectedBond)}
+          onWithdraw={handleWithdrawRequest}
         />
       ) : (
         <div className="p-6 bg-white rounded-xl shadow-sm border border-slate-100">
@@ -343,39 +368,51 @@ export default function Portfolio({ holdings }) {
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr className="border-b-2 border-slate-100">
-                  <th className={tableHeaderStyle}>Bond Image</th>
+                  <th className={tableHeaderStyle}>Bond</th>
                   <th className={tableHeaderStyle}>Bond No.</th>
-                  <th className={tableHeaderStyle}>Plan</th>
+                  <th className={tableHeaderStyle}>Scheme Name</th>
                   <th className={tableHeaderStyle}>Invest Amount</th>
-                  <th className={tableHeaderStyle}>Maturity Date</th>
+                  <th className={tableHeaderStyle}>Payout Mode</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {sortedHoldings.length === 0 ? (
+                {loading ? (
+                  <TableRowLoader loading={"Joined Scheme.."} colSpan={5} />
+                ) : sortedHoldings.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-500">
                       No holdings available.
                     </td>
                   </tr>
-                ) : sortedHoldings.map((bond, index) => (
-                  <tr
-                    key={bond.bondnumber ?? index}
-                    onClick={() => openDetails(bond)}
-                    onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && openDetails(bond)}
-                    tabIndex={0}
-                    role="button"
-                    aria-label={`View details for bond ${bond.bondnumber}`}
-                    className="cursor-pointer hover:bg-slate-50 focus:bg-slate-50 outline-none transition-colors duration-150"
-                  >
-                    <td className={tableCellStyle} style={{ color: '#475569' }}>
-                      <BondThumb src={bond.bondimage} alt={bond.bondnumber} onExpand={() => openLightbox(bond)} />
-                    </td>
-                    <td className={`${tableCellStyle} font-semibold`} style={{ color: '#1e293b' }}>{bond.bondnumber}</td>
-                    <td className={tableCellStyle} style={{ color: '#475569' }}>{bond.plan}</td>
-                    <td className={`${tableCellStyle} font-semibold`} style={{ color: '#334155' }}>{currency(bond.investamount)}</td>
-                    <td className={tableCellStyle} style={{ color: '#475569' }}>{formatDate(bond.maturitydate)}</td>
-                  </tr>
-                ))}
+                ) : (
+                  sortedHoldings.map((bond, index) => (
+                    <tr
+                      key={bond.userSchemeId || index}
+                      onClick={() => openDetails(bond)}
+                      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && openDetails(bond)}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`View details for bond ${bond.bondNumber}`}
+                      className="cursor-pointer hover:bg-slate-50 focus:bg-slate-50 outline-none transition-colors duration-150"
+                    >
+                      <td className={tableCellStyle} style={{ color: '#475569' }}>
+                        <BondThumb
+                          src={bond.bondImageURL?.[0]}
+                          alt={bond.bondNumber || 'Proof'}
+                          onExpand={() => openLightbox(bond)}
+                        />
+                      </td>
+                      <td className={`${tableCellStyle} font-semibold`} style={{ color: '#1e293b' }}>
+                        {bond.bondNumber || 'Pending'}
+                      </td>
+                      <td className={tableCellStyle} style={{ color: '#475569' }}>{bond.schemeName}</td>
+                      <td className={`${tableCellStyle} font-semibold`} style={{ color: '#334155' }}>
+                        {currency(bond.investmentAmount)}
+                      </td>
+                      <td className={tableCellStyle} style={{ color: '#475569' }}>{bond.payoutFrequency}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

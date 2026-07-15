@@ -49,13 +49,22 @@ export const confirmMessage = async (message, title = "Are you sure?", confirmBu
     return result.isConfirmed;
 };
 
-export const toastMessage = (message, title = "Success", icon = "success", timer = 2000) => {
-    return Swal.fire({
-        position: "top-end",
-        icon: icon,
-        title: title,
-        text: message,
-        showConfirmButton: false,
-        timer: timer
+export const allRounderMessage = (response) => {
+    // Translate common API status variants to SweetAlert2 icon names
+    const iconMap = {
+        ok: 'success',
+        success: 'success',
+        error: 'error',
+        failed: 'error',
+        warning: 'warning',
+        info: 'info'
+    };
+
+    const alertIcon = iconMap[response?.status] || 'info';
+
+    Swal.fire({
+        title: response?.title || 'Notification',
+        text: response?.message || '',
+        icon: alertIcon, // Safely falls back to a valid icon
     });
 };

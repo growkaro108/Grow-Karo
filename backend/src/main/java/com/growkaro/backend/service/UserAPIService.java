@@ -1,8 +1,6 @@
 package com.growkaro.backend.service;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.DTO.AuthUserData;
+import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.Notification;
@@ -30,6 +29,7 @@ import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
+import com.growkaro.backend.entity.WithdrawalRequest;
 import com.growkaro.backend.repository.NotificationRepository;
 import com.growkaro.backend.repository.SchemeRepository;
 import com.growkaro.backend.repository.TransactionRepository;
@@ -81,6 +81,14 @@ public class UserAPIService {
 
     public boolean isUserExists(String email) {
         return userRepository.existsByEmail(email);
+    }
+
+    public boolean existByUserId(String id) {
+        return userRepository.existsById(id);
+    }
+
+    private boolean existUserSchemeId(String userSchemeId) {
+        return userSchemeRepository.existsById(userSchemeId);
     }
 
     @Transactional
@@ -169,7 +177,7 @@ public class UserAPIService {
             newUserScheme.setUser(user);
             userSchemeRepository.save(newUserScheme);
 
-            return general.response("ok", "Scheme enrolled successfully", null);
+            return general.response("success", "Scheme enrolled successfully", null);
         } catch (Exception e) {
             return general.response("error", "Scheme not enrolled: " + e.getMessage(), null);
         }
@@ -186,6 +194,66 @@ public class UserAPIService {
             return general.response("success", "User schemes fetched", userSchemesIds);
         } catch (Exception e) {
             return general.response("error", "Failed to fetch user schemes: " + e.getMessage(), null);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getUserPortfolio(String userId) {
+        try {
+            Boolean isPresent = existByUserId(userId);
+            if (!isPresent) {
+                return general.response("error", "User not found", null);
+            }
+
+            List<UserPortfolio> portfolios = userSchemeRepository.findByUserId(userId);
+            return general.response("success", "User portfolios fetched", portfolios);
+
+        } catch (Exception e) {
+            System.err.println(e.getLocalizedMessage());
+            return general.response("info", "Something went wrong", null);
+        }
+    }
+
+    public Map<String, Object> userSchemeWithdrawEnrollRequest(String userSchemeId, String userId) {
+        // 1. Validate data existence beforehand
+        if (!existByUserId(userId) || !existUserSchemeId(userSchemeId)) {
+            return general.response("error", "Invalid data", null);
+        }
+
+        try {
+            Optional<UserScheme> userSchemeOpt = userSchemeRepository.findById(userSchemeId);
+            if (userSchemeOpt.isEmpty()) {
+                return general.response("error", "Request record not found", null);
+            }
+
+            UserScheme userScheme = userSchemeOpt.get();
+
+            // 2. Security validation: Ensure user owns this application entry
+            if (!userScheme.getUser().getId().equals(userId)) {
+                return general.response("info", "User not enrolled in this scheme", null);
+            }
+
+            // 3. Status boundary check: Stop if already approved or active
+            if (Boolean.TRUE.equals(userScheme.getIsApproved())
+                    || userScheme.getStatus() != UserScheme.Status.PENDING) {
+                return general.response("info", "Cannot withdraw. This application is already approved or active.",
+                        null);
+            }
+
+            // 4. Atomic Database Transaction Call
+            int modifiedRows = userSchemeRepository.withdrawUserScheme(userSchemeId, userId);
+
+            if (modifiedRows > 0) {
+                return general.response("success", "Application withdrawn successfully", null);
+            } else {
+                // Fallback just in case a background thread updated state concurrently
+                return general.response("info", "Application cannot be withdrawn at this time.", null);
+            }
+
+        } catch (Exception e) {
+            // Log the actual exception internally so you can trace errors via logs
+            // logger.error("Error executing userSchemeWithdrawEnrollRequest", e);
+            return general.response("error", "Something went wrong while processing your cancellation request", null);
         }
     }
 

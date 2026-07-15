@@ -40,6 +40,16 @@ export async function getEnrolledScheme(userId) {
   });
 }
 
+export async function getUsersSchemes(userId) {
+  return await apiRequest(`/user/scheme/user/${userId}`);
+}
+
+export async function userSchemeWithdraw(userSchemeId) {
+  return await apiRequest(`/user/scheme/withdraw/${userSchemeId}`, {
+    method: "PUT"
+  })
+}
+
 export async function fetchUserProfile(userId) {
   return apiRequest(`/users/${userId}`);
 }

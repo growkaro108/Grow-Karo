@@ -5,7 +5,7 @@ import Sidebar from "./Sidebar";
 import dynamic from "next/dynamic";
 import { fetchGrahakDashboardData } from "../../../../services/grahakService";
 import { userContext } from "@/context/UserContext";
-import TabLoader from "../malik/components/TabLoader";
+import TabLoader from "@/loader/TabLoader";
 
 const Overview = dynamic(() => import("./Overview"), {
   loading: () => <TabLoader />,

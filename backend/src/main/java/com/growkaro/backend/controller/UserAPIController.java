@@ -39,7 +39,6 @@ public class UserAPIController {
         }
     }
 
-    // Senior Practice: Use constructor injection instead of field @Autowired
     public UserAPIController(UserAPIService userAPIService, EmailService emailService, RedisService redisService,
             General general) {
         this.userAPIService = userAPIService;
@@ -143,6 +142,25 @@ public class UserAPIController {
     @PostMapping("/myscheme/{userId}")
     public ResponseEntity<Map<String, Object>> getMyScheme(@PathVariable String userId) {
         return ResponseEntity.ok(userAPIService.getMyScheme(userId));
+    }
+
+    @GetMapping("/scheme/user/{userId}")
+    public ResponseEntity<Map<String, Object>> userScheme(@PathVariable String userId) {
+        return ResponseEntity.ok(userAPIService.getUserPortfolio(userId));
+    }
+
+    @PutMapping("/scheme/withdraw/{userSchemeId}/{userId}")
+    public ResponseEntity<Map<String, Object>> userSchemeWithdraw(@PathVariable String userSchemeId,
+            @PathVariable String userId) {
+        try {
+            if (userSchemeId.isBlank() || userId.isBlank()) {
+                return ResponseEntity.badRequest().body(general.response("error", "Invalid data", null));
+            }
+            return ResponseEntity.ok(userAPIService.userSchemeWithdrawEnrollRequest(userSchemeId, userId));
+        } catch (Exception e) {
+            System.err.println("error in user scheme withdraw " + e.getMessage());
+            return ResponseEntity.badRequest().body(general.response("error", "Internal Server error", null));
+        }
     }
 
     @GetMapping("/{userId}")

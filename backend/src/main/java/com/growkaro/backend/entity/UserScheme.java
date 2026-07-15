@@ -9,9 +9,13 @@ import lombok.ToString;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -19,6 +23,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
@@ -36,6 +41,13 @@ public class UserScheme {
     @Column(name = "user_scheme_id")
     private String userSchemeId;
 
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "user_scheme_bond_images", joinColumns = @JoinColumn(name = "user_scheme_id", referencedColumnName = "user_scheme_id"))
+    @Column(name = "image_url")
+    private List<String> bondImageURL = new ArrayList<>();
+
+    @Column(name = "request_date", nullable = false, updatable = false)
+    private LocalDate requestDate;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonBackReference(value = "user-schemes") // Breaks circular JSON serialization if User tracks UserSchemes
@@ -44,11 +56,16 @@ public class UserScheme {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "scheme_id", nullable = false)
     @JsonBackReference // CRITICAL: Pairs with @JsonManagedReference in Scheme to fix the Nesting Depth
-                       // Exception
     private Scheme scheme;
 
-    @Column(name = "enrollment_date", nullable = false)
-    private LocalDateTime enrollmentDate = LocalDateTime.now();
+    @Column(name = "is_approved", nullable = false)
+    private Boolean isApproved = false;
+
+    @Column(name = "status", nullable = false)
+    private Status status = Status.PENDING;
+
+    @Column(name = "enrollment_date", nullable = true)
+    private LocalDateTime enrollmentDate;
 
     @Column(name = "paid_amount", nullable = true)
     private Long paidAmount;
@@ -71,8 +88,21 @@ public class UserScheme {
     @Column(name = "bond_maturity_value", nullable = true)
     private Long bondMaturityValue;
 
-    // --- Safe Equals & HashCode Implementation ---
-    // Prevents Collection/Set issues with unsaved entities sharing 'null' UUIDs
+    public enum Status {
+        PENDING,
+        ACTIVE,
+        REJECTED,
+        CLOSED,
+        WITHDRAWN
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.requestDate == null) {
+            this.requestDate = LocalDate.now();
+        }
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o)

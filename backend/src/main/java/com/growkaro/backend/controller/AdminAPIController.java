@@ -1,6 +1,5 @@
 package com.growkaro.backend.controller;
 
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;

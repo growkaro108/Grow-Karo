@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import TabLoader from "@/app/dashboard/malik/components/TabLoader";
+import TabLoader from "@/loader/TabLoader";
 
 const AuthLogin = dynamic(() => import("./AuthLogin"), {
   loading: () => <TabLoader />,

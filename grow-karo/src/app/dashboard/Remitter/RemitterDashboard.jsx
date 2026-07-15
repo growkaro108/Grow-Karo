@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import Loader from '@/components/Loader';
+import Loader from '@/loader/Loader';
 import SidebarNavigation from './components/SidebarNavigation';
 import DashboardView from './components/DashboardView';
 import { fetchRemitterDashboardData } from '../../../../services/remitterService';
@@ -10,19 +10,19 @@ import { fetchRemitterDashboardData } from '../../../../services/remitterService
 // import RecipientsView from './components/RecipientsView';
 // import RequestsView from './components/RequestsView';
 // import SettingsView from './components/SettingsView';
-const TransactionsView=dynamic(() => import('./components/TransactionsView'), {
+const TransactionsView = dynamic(() => import('./components/TransactionsView'), {
   loading: () => <Loader />,
   ssr: false,
 });
-const RecipientsView=dynamic(() => import('./components/RecipientsView'), {
-  loading: () => <Loader />,
-    ssr: false,
-});
-const RequestsView=dynamic(() => import('./components/RequestsView'), {
+const RecipientsView = dynamic(() => import('./components/RecipientsView'), {
   loading: () => <Loader />,
   ssr: false,
 });
-const SettingsView=dynamic(() => import('./components/SettingsView'), {
+const RequestsView = dynamic(() => import('./components/RequestsView'), {
+  loading: () => <Loader />,
+  ssr: false,
+});
+const SettingsView = dynamic(() => import('./components/SettingsView'), {
   loading: () => <Loader />,
   ssr: false,
 });

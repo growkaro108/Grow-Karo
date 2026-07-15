@@ -4,7 +4,7 @@
 // import AssetAllocation from "@/components/AssetAllocation";
 // import SimplifiedInvesting from "@/components/SimplifiedInvesting";
 // import FooterSection from "@/components/FooterSection";
-import Loader from "@/components/Loader";
+import Loader from "@/loader/Loader";
 import dynamic from "next/dynamic";
 const HeroSection = dynamic(() => import("@/components/HeroSection"), {
   loading: () => <Loader />,
@@ -28,9 +28,9 @@ const SimplifiedInvesting = dynamic(
 const FooterSection = dynamic(() => import("@/components/FooterSection"), {
   loading: () => <Loader />,
   ssr: false,
-}); 
+});
 export default function Home() {
-  if(!HeroSection || !TrustSection || !AssetAllocation || !SimplifiedInvesting || !FooterSection){
+  if (!HeroSection || !TrustSection || !AssetAllocation || !SimplifiedInvesting || !FooterSection) {
     return <Loader />;
   }
   return (

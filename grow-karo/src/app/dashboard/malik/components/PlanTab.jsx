@@ -5,6 +5,7 @@ import { Pencil, Trash2, Plus, Search, X, Sparkles } from "lucide-react";
 import { createPlan, removePlan, updatePlan } from "../../../../../services/malikService";
 import { confirmMessage, errorMessage, successMessage } from "@/components/Message";
 import { getAllPlans } from "@/api/generalApi";
+import { TableRowLoader } from "@/loader/TableRowLoader";
 
 const PAYOUT_FREQUENCIES = ["21 Days", "Monthly", "Quarterly", "Half-Yearly", "Yearly"];
 
@@ -298,14 +299,7 @@ export default function PlansPage() {
                                     </td>
                                 </tr>
                             ) : isLoading ? (
-                                <tr>
-                                    <td colSpan={7} className="p-12 text-center text-slate-500 font-medium">
-                                        <div className="flex items-center justify-center gap-3">
-                                            <span className="w-5 h-5 border-b-2 border-cyan-500 animate-spin rounded-full"></span>
-                                            <span>Loading plans...</span>
-                                        </div>
-                                    </td>
-                                </tr>
+                                <TableRowLoader loading={"plans"} colSpan={7} />
                             ) : filtered.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="p-12 text-center text-slate-500 font-medium">

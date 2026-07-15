@@ -24,6 +24,8 @@ public class SecurityConfig {
                                                                 "/api/user/dashboard",
                                                                 "/api/user/scheme/enroll/{schemeId}/{userId}",
                                                                 "/api/user/myscheme/{userId}",
+                                                                "/api/user/scheme/user/{userId}",
+                                                                "/api/user/scheme/withdraw/{userSchemeId}/{userId}",
                                                                 "/api/scheme/get",
                                                                 "/api/admin/scheme/create",
                                                                 "/api/admin/scheme/update/{schemeId}",

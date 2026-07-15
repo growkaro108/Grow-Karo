@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import TabLoader from "../malik/components/TabLoader";
+import TabLoader from "../../../loader/TabLoader";
 
 //dynamic import for Overview component to avoid SSR issues with Chart.js
 const StockGraph = dynamic(() => import("./StockGraph"), {
@@ -67,8 +67,8 @@ const Overview = ({ balance, portfolioValue }) => {
 
               <span
                 className={`text-[11px] font-bold px-2 py-0.5 rounded-md inline-block mt-3 wrap-break-word max-w-full ${card.isPositiveBadge
-                    ? "text-emerald-600 bg-emerald-50"
-                    : "text-slate-500 bg-slate-50"
+                  ? "text-emerald-600 bg-emerald-50"
+                  : "text-slate-500 bg-slate-50"
                   }`}
               >
                 {card.badge}
