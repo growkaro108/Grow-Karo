@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.growkaro.backend.DRO.ApproveUserScheme;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.Scheme;
@@ -67,6 +69,28 @@ public class AdminAPIController {
     public ResponseEntity<Boolean> deleteScheme(@PathVariable String id) {
         boolean status = adminAPIService.removeScheme(id);
         return status ? ResponseEntity.ok(true) : ResponseEntity.internalServerError().build();
+    }
+
+    @GetMapping("/user-scheme/all-users")
+    public ResponseEntity<Map<String, Object>> getAllUsersRequests() {
+        return ResponseEntity.ok(adminAPIService.getAllUsersRequests());
+    }
+
+    @PutMapping("/user-scheme/approve")
+    public ResponseEntity<Map<String, Object>> approveUserScheme(@RequestBody ApproveUserScheme approveUserScheme) {
+        if (approveUserScheme.userSchemeId() == "" || approveUserScheme.userSchemeId() == null
+                || approveUserScheme.userId() == "" || approveUserScheme.userId() == null
+                || approveUserScheme.paidAmount() == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(adminAPIService.approveUserScheme(approveUserScheme.userSchemeId(),
+                approveUserScheme.userId(), approveUserScheme.paidAmount()));
+    }
+
+    @PutMapping("/user-scheme/reject/{userSchemeId}/{userId}")
+    public ResponseEntity<Map<String, Object>> rejectUserScheme(@PathVariable String userSchemeId,
+            @PathVariable String userId) {
+        return ResponseEntity.ok(adminAPIService.rejectUserScheme(userSchemeId, userId));
     }
 
     @GetMapping("/dashboard")

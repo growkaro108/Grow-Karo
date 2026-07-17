@@ -29,7 +29,10 @@ public class SecurityConfig {
                                                                 "/api/scheme/get",
                                                                 "/api/admin/scheme/create",
                                                                 "/api/admin/scheme/update/{schemeId}",
-                                                                "/api/admin/scheme/delete/{id}")
+                                                                "/api/admin/scheme/delete/{id}",
+                                                                "/api/admin/user-scheme/all-users",
+                                                                "/api/admin/user-scheme/approve",
+                                                                "/api/admin/user-scheme/reject/{userSchemeId}/{userId}")
                                                 .permitAll() // Public endpoints
                                                 .anyRequest().authenticated() // Everything else requires login
                                 )

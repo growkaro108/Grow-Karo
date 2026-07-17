@@ -48,6 +48,7 @@ public class UserScheme {
 
     @Column(name = "request_date", nullable = false, updatable = false)
     private LocalDate requestDate;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonBackReference(value = "user-schemes") // Breaks circular JSON serialization if User tracks UserSchemes
@@ -62,7 +63,7 @@ public class UserScheme {
     private Boolean isApproved = false;
 
     @Column(name = "status", nullable = false)
-    private Status status = Status.PENDING;
+    private UserSchemeStatus status = UserSchemeStatus.PENDING;
 
     @Column(name = "enrollment_date", nullable = true)
     private LocalDateTime enrollmentDate;
@@ -70,14 +71,16 @@ public class UserScheme {
     @Column(name = "paid_amount", nullable = true)
     private Long paidAmount;
 
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "user_scheme_payment_dates", joinColumns = @JoinColumn(name = "user_scheme_id", referencedColumnName = "user_scheme_id"))
+    @Column(name = "payment_date")
+    private List<LocalDate> paymentDates;
+
     @Column(name = "remaining_amount", nullable = true)
     private Long remainingAmount;
 
     @Column(name = "bond_number", nullable = true)
     private String bondNumber;
-
-    @Column(name = "bond_image")
-    private String bondImage;
 
     @Column(name = "bond_price", nullable = true)
     private Long bondPrice;
@@ -88,11 +91,10 @@ public class UserScheme {
     @Column(name = "bond_maturity_value", nullable = true)
     private Long bondMaturityValue;
 
-    public enum Status {
+    public enum UserSchemeStatus {
         PENDING,
         ACTIVE,
         REJECTED,
-        CLOSED,
         WITHDRAWN
     }
 

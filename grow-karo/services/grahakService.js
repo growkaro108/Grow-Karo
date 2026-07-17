@@ -74,9 +74,9 @@ export async function getAllUsersScheme(userId) {
   return await getUsersSchemes(userId);
 }
 
-export async function withdrawUserScheme(userSchemeId) {
+export async function withdrawUserScheme(userSchemeId, userId) {
   try {
-    return await userSchemeWithdraw(userSchemeId);
+    return await userSchemeWithdraw(userSchemeId, userId);
   } catch (error) {
     return "failed";
   }

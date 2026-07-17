@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -29,7 +31,7 @@ import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
-import com.growkaro.backend.entity.WithdrawalRequest;
+import com.growkaro.backend.entity.UserScheme.UserSchemeStatus;
 import com.growkaro.backend.repository.NotificationRepository;
 import com.growkaro.backend.repository.SchemeRepository;
 import com.growkaro.backend.repository.TransactionRepository;
@@ -40,10 +42,10 @@ import com.growkaro.backend.repository.WithdrawalRequestRepository;
 @Service
 public class UserAPIService {
 
+    private static final Logger log = LoggerFactory.getLogger(UserAPIService.class);
     private static final int DEFAULT_PAGE_SIZE = 20;
 
     private final ApiService apiService;
-
     private final RecipientService recipientService;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
@@ -72,11 +74,7 @@ public class UserAPIService {
     }
 
     public boolean testApi() {
-        try {
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
+        return true;
     }
 
     public boolean isUserExists(String email) {
@@ -87,7 +85,7 @@ public class UserAPIService {
         return userRepository.existsById(id);
     }
 
-    private boolean existUserSchemeId(String userSchemeId) {
+    public boolean existUserSchemeId(String userSchemeId) {
         return userSchemeRepository.existsById(userSchemeId);
     }
 
@@ -123,16 +121,13 @@ public class UserAPIService {
             userRepository.save(newUser);
             return true;
         } catch (DataIntegrityViolationException e) {
-            // Log full details server-side; never leak raw DB/exception text to the client
-            System.out.println("Signup failed due to data integrity violation for email=" + email + e);
+            log.warn("Signup failed due to data integrity violation for email={}", email, e);
             return false;
         }
-
     }
 
     @Transactional(readOnly = true)
     public Map<String, Object> login(String email, String password) {
-
         Optional<User> userOpt = email == null
                 ? Optional.empty()
                 : userRepository.findByEmail(email);
@@ -145,33 +140,29 @@ public class UserAPIService {
         AuthUserData finalUser = general.toAuthUserData(user);
         finalUser.setToken("local-dev-token");
 
-        return general.response("ok", "Login successful", Map.of(
-                "user", finalUser));
+        return general.response("ok", "Login successful", Map.of("user", finalUser));
     }
 
     public Map<String, Object> enrollScheme(String schemeId, String userId) {
         try {
-            // Single database round-trip to fetch both entities
             List<Object[]> results = schemeRepository.findSchemeAndUserByIds(schemeId, userId);
 
             if (results.isEmpty()) {
-                // This means either the Scheme, the User, or BOTH do not exist
-                return general.response("error", "Scheme or User not found..", null);
+                return general.response("error", "Scheme or User not found", null);
             }
 
             Object[] row = results.get(0);
             Scheme scheme = (Scheme) row[0];
             User user = (User) row[1];
-            if (scheme == null || user == null)
-                return general.response("error", "something went wrong", null);
-
-            // Check if enrollment already exists
-            Optional<UserScheme> existingEnrollment = userSchemeRepository.findBySchemeAndUser(scheme, user);
-            if (existingEnrollment.isPresent()) {
-                return general.response("info", "User is already enrolled in this scheme..", null);
+            if (scheme == null || user == null) {
+                return general.response("error", "Scheme or User not found", null);
             }
 
-            // Save new enrollment
+            Optional<UserScheme> existingEnrollment = userSchemeRepository.findBySchemeAndUser(scheme, user);
+            if (existingEnrollment.isPresent()) {
+                return general.response("info", "User is already enrolled in this scheme", null);
+            }
+
             UserScheme newUserScheme = new UserScheme();
             newUserScheme.setScheme(scheme);
             newUserScheme.setUser(user);
@@ -179,7 +170,8 @@ public class UserAPIService {
 
             return general.response("success", "Scheme enrolled successfully", null);
         } catch (Exception e) {
-            return general.response("error", "Scheme not enrolled: " + e.getMessage(), null);
+            log.error("Error enrolling scheme {} for user {}", schemeId, userId, e);
+            return general.response("error", "Scheme enrollment failed. Please try again.", null);
         }
     }
 
@@ -189,34 +181,39 @@ public class UserAPIService {
             if (userOpt.isEmpty()) {
                 return general.response("error", "User not found", Map.of("id", userId));
             }
-            User user = userOpt.get();
-            List<String> userSchemesIds = userSchemeRepository.findAllJoinedSchemeId(user);
+            List<String> userSchemesIds = userSchemeRepository.findAllJoinedSchemeId(userOpt.get());
             return general.response("success", "User schemes fetched", userSchemesIds);
         } catch (Exception e) {
-            return general.response("error", "Failed to fetch user schemes: " + e.getMessage(), null);
+            log.error("Failed to fetch schemes for user {}", userId, e);
+            return general.response("error", "Failed to fetch user schemes. Please try again.", null);
         }
     }
 
     @Transactional(readOnly = true)
     public Map<String, Object> getUserPortfolio(String userId) {
         try {
-            Boolean isPresent = existByUserId(userId);
-            if (!isPresent) {
+            if (!existByUserId(userId)) {
                 return general.response("error", "User not found", null);
             }
+            // filter with status not WITHDRAWN and REJECTED
+            List<UserPortfolio> portfolios = userSchemeRepository
+                    .findAllByUserIdWithSchemeDetails(userId)
+                    .stream()
+                    .filter(us -> us.getStatus() != UserSchemeStatus.WITHDRAWN
+                            && us.getStatus() != UserSchemeStatus.REJECTED)
+                    .map(general::toUserPortfolio)
+                    .toList();
 
-            List<UserPortfolio> portfolios = userSchemeRepository.findByUserId(userId);
             return general.response("success", "User portfolios fetched", portfolios);
-
         } catch (Exception e) {
-            System.err.println(e.getLocalizedMessage());
-            return general.response("info", "Something went wrong", null);
+            log.error("Failed to fetch portfolio for user {}", userId, e);
+            return general.response("error", "Something went wrong. Please try again.", null);
         }
     }
 
+    @Transactional
     public Map<String, Object> userSchemeWithdrawEnrollRequest(String userSchemeId, String userId) {
-        // 1. Validate data existence beforehand
-        if (!existByUserId(userId) || !existUserSchemeId(userSchemeId)) {
+        if (!existByUserId(userId)) {
             return general.response("error", "Invalid data", null);
         }
 
@@ -227,32 +224,25 @@ public class UserAPIService {
             }
 
             UserScheme userScheme = userSchemeOpt.get();
-
-            // 2. Security validation: Ensure user owns this application entry
             if (!userScheme.getUser().getId().equals(userId)) {
                 return general.response("info", "User not enrolled in this scheme", null);
             }
-
-            // 3. Status boundary check: Stop if already approved or active
-            if (Boolean.TRUE.equals(userScheme.getIsApproved())
-                    || userScheme.getStatus() != UserScheme.Status.PENDING) {
-                return general.response("info", "Cannot withdraw. This application is already approved or active.",
-                        null);
+            switch (userScheme.getStatus()) {
+                case ACTIVE:
+                    return general.response("info", "Application is already active and cannot be withdrawn", null);
+                case WITHDRAWN:
+                    return general.response("info", "Application has already been withdrawn", null);
+                case REJECTED:
+                    return general.response("info", "Application has already been rejected", null);
+                case PENDING:
+                    userScheme.setStatus(UserScheme.UserSchemeStatus.WITHDRAWN);
+                    userSchemeRepository.save(userScheme);
+                    return general.response("success", "Application withdrawn successfully", null);
+                default:
+                    return general.response("info", "Application cannot be withdrawn at this time", null);
             }
-
-            // 4. Atomic Database Transaction Call
-            int modifiedRows = userSchemeRepository.withdrawUserScheme(userSchemeId, userId);
-
-            if (modifiedRows > 0) {
-                return general.response("success", "Application withdrawn successfully", null);
-            } else {
-                // Fallback just in case a background thread updated state concurrently
-                return general.response("info", "Application cannot be withdrawn at this time.", null);
-            }
-
         } catch (Exception e) {
-            // Log the actual exception internally so you can trace errors via logs
-            // logger.error("Error executing userSchemeWithdrawEnrollRequest", e);
+            log.error("Error withdrawing userScheme {} for user {}", userSchemeId, userId, e);
             return general.response("error", "Something went wrong while processing your cancellation request", null);
         }
     }
@@ -352,30 +342,24 @@ public class UserAPIService {
         return general.response("ok", "User notifications fetched", data);
     }
 
+    @CacheEvict(value = "userProfile", key = "#userId")
     @Transactional
     public Map<String, Object> changePassword(String userId, String oldPassword, String newPassword) {
         Optional<User> userOpt = resolveUser(userId);
         if (userOpt.isEmpty()) {
             return general.response("error", "User not found", Map.of("id", userId));
         }
+        if (oldPassword == null || newPassword == null || !general.validatePassword(newPassword)) {
+            return general.response("error", "Invalid password data", null);
+        }
+
         User user = userOpt.get();
-        if (!user.getPasswordHash().equals(oldPassword)) {
+        if (!BCrypt.checkpw(oldPassword, user.getPasswordHash())) {
             return general.response("error", "Old password is incorrect", Map.of("id", user.getId()));
         }
-        user.setPasswordHash(newPassword);
+        user.setPasswordHash(apiService.makePasswordHash(newPassword));
         userRepository.save(user);
         return general.response("ok", "Password changed successfully", Map.of("id", user.getId()));
-    }
-
-    @CachePut(value = "userProfile", key = "#userId")
-    @Transactional
-    public Map<String, Object> updateProfilePicture(String userId, String imageUrl) {
-        Optional<User> userOpt = resolveUser(userId);
-        if (userOpt.isEmpty()) {
-            return general.response("error", "User not found", Map.of("id", userId));
-        }
-        return general.response("ok", "Profile picture updated",
-                Map.of("id", userOpt.get().getId(), "avatarUrl", imageUrl));
     }
 
     @CacheEvict(value = "userNotifications", key = "#userId")
@@ -393,6 +377,7 @@ public class UserAPIService {
     }
 
     public Map<String, Object> updateNotificationSettings(String userId, Map<String, Boolean> settings) {
+        // TODO: persist settings — currently just echoed back, not saved anywhere
         return general.response("ok", "Notification preferences updated",
                 Map.of("userId", userId, "settings", settings));
     }
@@ -400,9 +385,6 @@ public class UserAPIService {
     private Optional<User> resolveUser(String userId) {
         if (userId == null || userId.isBlank()) {
             return Optional.empty();
-        }
-        if ("me".equalsIgnoreCase(userId)) {
-            return userRepository.findByRole(User.Role.GRAHAK).stream().findFirst();
         }
         return userRepository.findById(userId);
     }
@@ -479,7 +461,11 @@ public class UserAPIService {
             user.setName(stringValue(updates.get("name")));
         }
         if (updates.containsKey("email")) {
-            user.setEmail(stringValue(updates.get("email")));
+            String newEmail = stringValue(updates.get("email"));
+            if (newEmail != null && !newEmail.equalsIgnoreCase(user.getEmail()) && isUserExists(newEmail)) {
+                throw new IllegalArgumentException("Email already in use");
+            }
+            user.setEmail(newEmail);
         }
         if (updates.containsKey("phone")) {
             user.setPhone(stringValue(updates.get("phone")));
@@ -520,5 +506,4 @@ public class UserAPIService {
         String text = value.toString().trim();
         return text.isEmpty() ? null : text;
     }
-
 }

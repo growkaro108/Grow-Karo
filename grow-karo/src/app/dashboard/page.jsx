@@ -24,8 +24,8 @@ const Dashboard = () => {
     return <Loader />;
   }
   return (
-    <UserDashboard />
-    // <AdminDashboard />
+    // <UserDashboard />
+    <AdminDashboard />
     // <RemitterDashboard />
   );
 };

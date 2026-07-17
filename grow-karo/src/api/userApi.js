@@ -44,8 +44,8 @@ export async function getUsersSchemes(userId) {
   return await apiRequest(`/user/scheme/user/${userId}`);
 }
 
-export async function userSchemeWithdraw(userSchemeId) {
-  return await apiRequest(`/user/scheme/withdraw/${userSchemeId}`, {
+export async function userSchemeWithdraw(userSchemeId, userId) {
+  return await apiRequest(`/user/scheme/withdraw/${userSchemeId}/${userId}`, {
     method: "PUT"
   })
 }

@@ -1,9 +1,12 @@
 package com.growkaro.backend.controller;
 
+import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.service.AdminAPIService;
 import com.growkaro.backend.service.ApiService;
+
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,7 +21,7 @@ public class ApiController {
     private final AdminAPIService adminAPIService;
     private final General general;
 
-    public ApiController(ApiService apiService, AdminAPIService adminAPIService, General general) {
+    public ApiController(ApiService apiService, @Lazy AdminAPIService adminAPIService, General general) {
         this.apiService = apiService;
         this.adminAPIService = adminAPIService;
         this.general = general;
@@ -33,7 +36,7 @@ public class ApiController {
     public ResponseEntity<Map<String, Object>> getAllScheme() {
         System.out.println("scheme api hit");
         try {
-            List<Scheme> allScheme = adminAPIService.getAllSchemes();
+            List<SchemeResponse> allScheme = adminAPIService.getAllSchemes();
             if (allScheme == null)
                 return ResponseEntity.internalServerError().build();
             else

@@ -10,6 +10,7 @@ import {
   Settings2,
   Contact,
   ScrollText,
+  ClipboardCheck,
 } from "lucide-react";
 import {
   Chart as ChartJS,
@@ -34,6 +35,7 @@ import { fetchMalikDashboardData } from "../../../../services/malikService";
 import dynamic from "next/dynamic";
 import AdminRemitterTrackersTab from "./components/Remitter";
 import ContactsComponent from "./components/Contact";
+// import SchemeApproval from "./components/SchemeApprovals";
 const WithdrawalsTab = dynamic(() => import("./components/WithdrawalsTab"), {
   loading: () => <TabLoader />,
   ssr: false,
@@ -46,6 +48,10 @@ const FundraiserCodesTab = dynamic(
   },
 );
 const PlanTab = dynamic(() => import("./components/PlanTab"), {
+  loading: () => <TabLoader />,
+  ssr: false
+})
+const SchemeApproval = dynamic(() => import("./components/SchemeApprovals"), {
   loading: () => <TabLoader />,
   ssr: false
 })
@@ -79,6 +85,7 @@ const NAV_ITEMS = [
   { id: "activity", label: "Activity Log", icon: Activity },
   { id: "withdrawals", label: "Withdrawals", icon: Wallet },
   { id: "plans", label: "Plans", icon: ScrollText },
+  { id: "approvals", label: "Approvals", icon: ClipboardCheck },
   { id: "codes", label: "Remitters", icon: Ticket },
   { id: "issues", label: "User Issues", icon: AlertTriangle },
   { id: "contacts", label: "Contacts", icon: Contact },
@@ -86,7 +93,7 @@ const NAV_ITEMS = [
 ];
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState("plans");
+  const [activeTab, setActiveTab] = useState("approvals");
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -286,6 +293,7 @@ export default function AdminPanel() {
                 />
               )}
               {activeTab === "plans" && <PlanTab />}
+              {activeTab === "approvals" && <SchemeApproval />}
               {activeTab === "issues" && (
                 <IssuesTab issues={issues} onResolve={handleResolveIssue} />
               )}

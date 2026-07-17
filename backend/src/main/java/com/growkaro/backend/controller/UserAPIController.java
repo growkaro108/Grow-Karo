@@ -3,12 +3,16 @@ package com.growkaro.backend.controller;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.common.General;
+import com.growkaro.backend.entity.UserScheme.UserSchemeStatus;
+import com.growkaro.backend.service.ApiService;
 import com.growkaro.backend.service.EmailService;
 import com.growkaro.backend.service.RedisService;
 import com.growkaro.backend.service.UserAPIService;
@@ -17,10 +21,13 @@ import com.growkaro.backend.service.UserAPIService;
 @RequestMapping("/api/user")
 public class UserAPIController {
 
+    private static final Logger log = LoggerFactory.getLogger(UserAPIController.class);
+
     private final UserAPIService userAPIService;
     private final EmailService emailService;
     private final RedisService redisService;
     private final General general;
+    private final ApiService apiService;
 
     private enum Remark {
         SIGNUP("signup"),
@@ -40,10 +47,11 @@ public class UserAPIController {
     }
 
     public UserAPIController(UserAPIService userAPIService, EmailService emailService, RedisService redisService,
-            General general) {
+            ApiService apiService, General general) {
         this.userAPIService = userAPIService;
         this.emailService = emailService;
         this.redisService = redisService;
+        this.apiService = apiService;
         this.general = general;
     }
 
@@ -54,48 +62,45 @@ public class UserAPIController {
 
     @PostMapping("/getEmailOtp/{email}")
     public ResponseEntity<Map<String, Object>> sendEmailOTP(@PathVariable String email) {
-        System.out.println(email + "\n -------------");
-        if (email == null || !general.validateEmail(email)) {
+        log.debug("OTP requested for email: {}", email);
+
+        if (!general.validateEmail(email)) {
             return ResponseEntity.badRequest()
                     .body(general.response("invalid", "Enter a valid email address.", null));
         }
         if (userAPIService.isUserExists(email)) {
-            return ResponseEntity
-                    .status(HttpStatus.CONFLICT)
+            return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(general.response("present", "Email already exists", null));
         }
 
-        boolean response = emailService.sendOtp(email, Remark.SIGNUP.getValue());
-        return response ? ResponseEntity.ok(general.response("success", "Otp sent successfully", null))
+        boolean sent = emailService.sendOtp(email, Remark.SIGNUP.getValue());
+        return sent
+                ? ResponseEntity.ok(general.response("success", "Otp sent successfully", null))
                 : ResponseEntity.internalServerError().body(general.response("error", "Internal Server error", null));
     }
 
-    // verify email otp
     @PostMapping("/validateEmailOtp")
     public ResponseEntity<Map<String, Object>> verifyEmailOTP(@RequestBody Map<String, String> payload) {
         String email = payload.get("email");
         String otp = payload.get("otp");
-        System.out.println(email + "\n" + otp + "\n--------");
+
         if (email == null || !general.validateEmail(email) || otp == null || otp.length() != 6) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "status", "error",
-                    "message", "Invalid email or OTP"));
+            return ResponseEntity.badRequest()
+                    .body(general.response("error", "Invalid email or OTP", null));
         }
-        boolean status = redisService.verifyOtp(Remark.SIGNUP.getValue(), email, otp);
-        System.out.println("verify status:" + status);
-        return status ? ResponseEntity.ok(Map.of(
-                "status", "ok",
-                "message", "Email verified successfully"))
-                : ResponseEntity.badRequest().body(Map.of(
-                        "status", "error",
-                        "message", "Invalid email or OTP"));
+
+        boolean verified = redisService.verifyOtp(Remark.SIGNUP.getValue(), email, otp);
+        log.debug("OTP verification result for {}: {}", email, verified);
+
+        return verified
+                ? ResponseEntity.ok(general.response("ok", "Email verified successfully", null))
+                : ResponseEntity.badRequest().body(general.response("error", "Invalid email or OTP", null));
     }
 
     @PostMapping("/signup")
     public ResponseEntity<Map<String, Object>> signUp(@RequestBody Map<String, Object> payload) {
         try {
             UserRegister user = general.toUserRegister(payload);
-            System.out.println(user + "\n----------");
 
             if (user.name() == null || user.email() == null || !general.validateEmail(user.email())
                     || user.phone() == null
@@ -104,11 +109,13 @@ public class UserAPIController {
             }
 
             boolean result = userAPIService.userSignup(user);
-            return result ? ResponseEntity.ok(general.response("ok", "Account created successfully", null))
-                    : ResponseEntity.badRequest().body(general.response("error", "Internal Server error", null));
+            return result
+                    ? ResponseEntity.ok(general.response("ok", "Account created successfully", null))
+                    : ResponseEntity.internalServerError()
+                            .body(general.response("error", "Internal Server error", null));
         } catch (Exception e) {
-            System.err.println("error in signup " + e.getMessage());
-            return ResponseEntity.badRequest().body(general.response("error", "Internal Server error", null));
+            log.error("Error during signup", e);
+            return ResponseEntity.internalServerError().body(general.response("error", "Internal Server error", null));
         }
     }
 
@@ -117,10 +124,9 @@ public class UserAPIController {
         String email = general.stringValue(credentials.get("email"));
         String password = general.stringValue(credentials.get("password"));
 
-        if (email == null || !general.validateEmail(email) || password == null || !general.validatePassword(password)) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "status", "error",
-                    "message", "Invalid cedential..."));
+        if (email == null || !general.validateEmail(email) || password == null || password.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(general.response("error", "Invalid credentials", null));
         }
         return ResponseEntity.ok(userAPIService.login(email, password));
     }
@@ -129,18 +135,18 @@ public class UserAPIController {
     public ResponseEntity<Map<String, Object>> enrollScheme(@PathVariable String schemeId,
             @PathVariable String userId) {
         try {
-            if (schemeId == null || userId == null) {
+            if (schemeId.isBlank() || userId.isBlank()) {
                 return ResponseEntity.badRequest().body(general.response("error", "Invalid data", null));
             }
             return ResponseEntity.ok(userAPIService.enrollScheme(schemeId, userId));
         } catch (Exception e) {
-            System.err.println("error in enroll scheme " + e.getMessage());
-            return ResponseEntity.badRequest().body(general.response("error", "Internal Server error", null));
+            log.error("Error enrolling scheme {} for user {}", schemeId, userId, e);
+            return ResponseEntity.internalServerError().body(general.response("error", "Internal Server error", null));
         }
     }
 
     @PostMapping("/myscheme/{userId}")
-    public ResponseEntity<Map<String, Object>> getMyScheme(@PathVariable String userId) {
+    public ResponseEntity<Map<String, Object>> getMySchemesIds(@PathVariable String userId) {
         return ResponseEntity.ok(userAPIService.getMyScheme(userId));
     }
 
@@ -156,10 +162,11 @@ public class UserAPIController {
             if (userSchemeId.isBlank() || userId.isBlank()) {
                 return ResponseEntity.badRequest().body(general.response("error", "Invalid data", null));
             }
-            return ResponseEntity.ok(userAPIService.userSchemeWithdrawEnrollRequest(userSchemeId, userId));
+            return ResponseEntity.ok(apiService.userSchemeStatusUpdate(userSchemeId, userId,
+                    UserSchemeStatus.WITHDRAWN, UserSchemeStatus.PENDING, null));
         } catch (Exception e) {
-            System.err.println("error in user scheme withdraw " + e.getMessage());
-            return ResponseEntity.badRequest().body(general.response("error", "Internal Server error", null));
+            log.error("Error withdrawing userScheme {} for user {}", userSchemeId, userId, e);
+            return ResponseEntity.internalServerError().body(general.response("error", "Internal Server error", null));
         }
     }
 
@@ -180,30 +187,17 @@ public class UserAPIController {
         return ResponseEntity.ok(userAPIService.deleteUser(userId));
     }
 
-    @GetMapping("/{userId}/transactions")
-    public ResponseEntity<Map<String, Object>> userTransactions(
-            @PathVariable String userId,
-            @RequestParam(required = false, defaultValue = "1") String page) {
-        return ResponseEntity.ok(userAPIService.userTransactions(userId, page));
-    }
-
-    @GetMapping("/{userId}/recipients")
-    public ResponseEntity<Map<String, Object>> userRecipients(
-            @PathVariable String userId,
-            @RequestParam(required = false, defaultValue = "1") String page) {
-        return ResponseEntity.ok(userAPIService.userRecipients(userId, page));
-    }
+    // @GetMapping("/{userId}/transactions")
+    // public ResponseEntity<Map<String, Object>> userTransactions(
+    // @PathVariable String userId,
+    // @RequestParam(required = false, defaultValue = "1") int page) {
+    // return ResponseEntity.ok(userAPIService.userTransactions(userId, page));
+    // }
 
     @GetMapping("/{userId}/notifications")
     public ResponseEntity<Map<String, Object>> userNotifications(@PathVariable String userId) {
         return ResponseEntity.ok(userAPIService.userNotifications(userId));
     }
-
-    /*
-     * ==========================================
-     * SENIOR ADDITIONS: New Frontend Endpoint Mappings
-     * ==========================================
-     */
 
     @PutMapping("/{userId}/password")
     public ResponseEntity<Map<String, Object>> changePassword(
@@ -211,15 +205,11 @@ public class UserAPIController {
             @RequestBody Map<String, String> passwordPayload) {
         String oldPassword = passwordPayload.get("oldPassword");
         String newPassword = passwordPayload.get("newPassword");
-        return ResponseEntity.ok(userAPIService.changePassword(userId, oldPassword, newPassword));
-    }
 
-    @PatchMapping("/{userId}/avatar")
-    public ResponseEntity<Map<String, Object>> updateProfilePicture(
-            @PathVariable String userId,
-            @RequestBody Map<String, String> payload) {
-        // Using PATCH for a partial resource updates like avatar URLs
-        return ResponseEntity.ok(userAPIService.updateProfilePicture(userId, payload.get("avatarUrl")));
+        if (oldPassword == null || newPassword == null || !general.validatePassword(newPassword)) {
+            return ResponseEntity.badRequest().body(general.response("error", "Invalid password data", null));
+        }
+        return ResponseEntity.ok(userAPIService.changePassword(userId, oldPassword, newPassword));
     }
 
     @PostMapping("/{userId}/notifications/read")
@@ -235,13 +225,4 @@ public class UserAPIController {
             @RequestBody Map<String, Boolean> settings) {
         return ResponseEntity.ok(userAPIService.updateNotificationSettings(userId, settings));
     }
-
-    // get all data of users dashboard overview section
-    // @GetMapping("/{userId}/dashboard/overview")
-    // public ResponseEntity<Map<String, Object>> userDashboard(
-    // @PathVariable String userId,
-    // @RequestParam(required = false, defaultValue = "1") String page) {
-    // return ResponseEntity.ok(userAPIService.userDashboard(userId, page));
-    // }
-
 }

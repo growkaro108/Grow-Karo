@@ -33,6 +33,29 @@ export async function deactivateScheme(payload) {
   });
 }
 
+export async function getAllUsersRequests() {
+  return await apiRequest(`${END_POINT}user-scheme/all-users`, {
+    method: "GET",
+  });
+}
+
+export async function approveUserSchemes(userSchemeId, userId, paidAmount) {
+  return await apiRequest(`${END_POINT}user-scheme/approve`, {
+    method: "PUT",
+    body: {
+      "userSchemeId": userSchemeId,
+      "userId": userId,
+      "paidAmount": paidAmount,
+    }
+  });
+}
+
+
+export async function rejectUserSchemes(userSchemeId, userId) {
+  return await apiRequest(`${END_POINT}user-scheme/reject/${userSchemeId}/${userId}`, {
+    method: "PUT",
+  });
+}
 export async function fetchAdminDashboard(params) {
   return await apiRequest(`${END_POINT}dashboard`, { params });
 }

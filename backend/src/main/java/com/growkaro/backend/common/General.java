@@ -10,8 +10,11 @@ import org.springframework.stereotype.Component;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.DTO.AuthUserData;
+import com.growkaro.backend.DTO.SchemeResponse;
+import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.User;
+import com.growkaro.backend.entity.UserScheme;
 
 @Component
 public class General {
@@ -101,6 +104,43 @@ public class General {
         scheme.setMaturityValue(schemeData.maturityValue());
         scheme.setMaxInvestorsAllowed(schemeData.maxInvestorsAllowed());
         return scheme;
+    }
+
+    public UserPortfolio toUserPortfolio(UserScheme us) {
+        Scheme scheme = us.getScheme();
+        return new UserPortfolio(
+                scheme.getSchemeId(),
+                scheme.getSchemeName(),
+                scheme.getInvestmentAmount(),
+                scheme.getTenure(),
+                scheme.getPayoutFrequency(),
+                scheme.getProfitPercentage(),
+                scheme.getMaturityValue(),
+                us.getEnrollmentDate(),
+                us.getBondImageURL(),
+                us.getBondNumber(),
+                us.getRequestDate(),
+                us.getUserSchemeId(),
+                us.getPaidAmount(),
+                us.getIsApproved(),
+                us.getStatus());
+    }
+
+    public SchemeResponse toSchemeResponse(Scheme scheme) {
+        return new SchemeResponse(
+                scheme.getSchemeId(),
+                scheme.getSchemeName(),
+                scheme.getSchemeCategory(),
+                scheme.getSchemeDetails(),
+                scheme.getPayoutFrequency(),
+                scheme.getTenure(),
+                scheme.getStartDate(),
+                scheme.getEndDate(),
+                scheme.getStatus(),
+                scheme.getInvestmentAmount(),
+                scheme.getProfitPercentage(),
+                scheme.getMaturityValue(),
+                scheme.getMaxInvestorsAllowed());
     }
 
     public <T> void applyIfChanged(T newValue, T oldValue, Consumer<T> setter) {

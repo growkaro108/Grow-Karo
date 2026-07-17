@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -17,19 +18,24 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.growkaro.backend.DRO.ReceiveSchemeData;
+import com.growkaro.backend.DTO.SchemeResponse;
+import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.FundraiserCode;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.SupportIssue;
 import com.growkaro.backend.entity.User;
+import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.entity.WithdrawalRequest;
+import com.growkaro.backend.entity.UserScheme.UserSchemeStatus;
 import com.growkaro.backend.repository.FundraiserCodeRepository;
 import com.growkaro.backend.repository.RemitterRepository;
 import com.growkaro.backend.repository.SchemeRepository;
 import com.growkaro.backend.repository.SupportIssueRepository;
 import com.growkaro.backend.repository.TransactionRepository;
 import com.growkaro.backend.repository.UserRepository;
+import com.growkaro.backend.repository.UserSchemeRepository;
 import com.growkaro.backend.repository.WithdrawalRequestRepository;
 
 @Service
@@ -44,6 +50,8 @@ public class AdminAPIService {
     private final SupportIssueRepository supportIssueRepository;
     private final FundraiserCodeRepository fundraiserCodeRepository;
     private final SchemeRepository schemeRepository;
+    private final UserSchemeRepository userSchemeRepository;
+    private final ApiService apiService;
     private final General general;
 
     public AdminAPIService(UserRepository userRepository,
@@ -52,7 +60,7 @@ public class AdminAPIService {
             WithdrawalRequestRepository withdrawalRequestRepository,
             SupportIssueRepository supportIssueRepository,
             FundraiserCodeRepository fundraiserCodeRepository,
-            SchemeRepository schemeRepository,
+            SchemeRepository schemeRepository, UserSchemeRepository userSchemeRepository, @Lazy ApiService apiService,
             General general) {
         this.userRepository = userRepository;
         this.remitterRepository = remitterRepository;
@@ -61,6 +69,8 @@ public class AdminAPIService {
         this.supportIssueRepository = supportIssueRepository;
         this.fundraiserCodeRepository = fundraiserCodeRepository;
         this.schemeRepository = schemeRepository;
+        this.userSchemeRepository = userSchemeRepository;
+        this.apiService = apiService;
         this.general = general;
     }
 
@@ -75,10 +85,12 @@ public class AdminAPIService {
         }
     }
 
-    // Retrive all of the schemes
-    // @Cacheable(value = "allSchemes")
-    public List<Scheme> getAllSchemes() {
-        return schemeRepository.findAll();
+    public List<SchemeResponse> getAllSchemes() {
+        return schemeRepository.findAll().stream()
+                // filter which is closed(status: false)
+                .filter(scheme -> Boolean.TRUE.equals(scheme.getStatus()))
+                .map(general::toSchemeResponse)
+                .toList();
     }
 
     // Update the scheme
@@ -130,6 +142,39 @@ public class AdminAPIService {
             return true;
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    public Map<String, Object> getAllUsersRequests() {
+        try {
+            List<UserRequest> userSchemes = userSchemeRepository.findAllWithUserAndScheme();
+            return general.response("success", "All user requests", userSchemes);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return general.response("error", "Error in getting user requests", null);
+        }
+    }
+
+    public Map<String, Object> approveUserScheme(String userSchemeId, String userId, Long paidAmount) {
+        try {
+            UserScheme userScheme = userSchemeRepository.findById(userSchemeId).orElse(null);
+            if (userScheme == null) {
+                return general.response("error", "User scheme not found", null);
+            }
+            userScheme.setStatus(UserScheme.UserSchemeStatus.ACTIVE);
+            return apiService.userSchemeStatusUpdate(userSchemeId, userId, UserSchemeStatus.ACTIVE,
+                    UserSchemeStatus.PENDING, userScheme);
+        } catch (Exception e) {
+            return general.response("error", "Error in approving user scheme", null);
+        }
+    }
+
+    public Map<String, Object> rejectUserScheme(String userSchemeId, String userId) {
+        try {
+            return apiService.userSchemeStatusUpdate(userSchemeId, userId, UserSchemeStatus.REJECTED,
+                    UserSchemeStatus.PENDING, null);
+        } catch (Exception e) {
+            return general.response("error", "Error in rejecting user scheme", null);
         }
     }
 

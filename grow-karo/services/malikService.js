@@ -1,4 +1,4 @@
-import { createScheme, deleteScheme, fetchAdminDashboard, getAllScheme, updateScheme } from '@/api/adminApi';
+import { approveUserSchemes, createScheme, deleteScheme, fetchAdminDashboard, getAllScheme, getAllUsersRequests, updateScheme } from '@/api/adminApi';
 
 const USE_MOCK = false;
 const NETWORK_DELAY_MS = 1500;
@@ -78,6 +78,15 @@ export async function activatePlan(payload) {
 }
 export async function deactivatePlan(payload) {
   return await deactivateScheme(payload);
+}
+export async function getAllUserRequests() {
+  return await getAllUsersRequests();
+}
+export async function approveUserScheme(userSchemeId, userId, paidAmount) {
+  return await approveUserSchemes(userSchemeId, userId, paidAmount);
+}
+export async function rejectUserScheme(userSchemeId, userId) {
+  return await rejectUserSchemes(userSchemeId, userId);
 }
 
 export async function fetchMalikDashboardData() {

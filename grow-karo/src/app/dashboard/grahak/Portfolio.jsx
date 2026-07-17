@@ -18,7 +18,7 @@ import { userContext } from '@/context/UserContext';
 
 const currency = (val) => {
   const n = parseFloat(val);
-  return Number.isFinite(n) ? `₹${n.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—';
+  return Number.isFinite(n) ? `₹ ${n.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—';
 };
 
 const formatDate = (val) => {
@@ -211,10 +211,6 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
       setIsWithdrawing(true);
       await onWithdraw(bond.userSchemeId);
       setIsWithdrawing(false);
-      allRounderMessage({
-        message: 'withdrawn successfully',
-        status: 'success',
-      })
     }
 
 
@@ -254,7 +250,7 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
               <DetailField label="Invest Amount" value={currency(bond.investmentAmount)} />
               <DetailField label="Paid Amount" value={currency(bond.paidAmount)} />
-              <DetailField label="Tenure" value={`${bond.tenure} Months`} />
+              <DetailField label="Tenure" value={`${bond.tenure} Days`} />
               <DetailField label="Profit %" value={bond.profitPercentage != null ? `${bond.profitPercentage}%` : '—'} highlight={true} />
               <DetailField label="Payout Frequency" value={bond.payoutFrequency} />
               <DetailField label="Enrollment Date" value={formatDate(bond.enrollmentDate)} />
@@ -266,7 +262,9 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
 
         {/* Dynamic Withdraw Actions Bar */}
         {!bond.isApproved && (
-          <div className="mt-8 flex justify-end border-t border-slate-100 pt-6">
+          <div className="mt-8 flex justify-between items-center border-t border-slate-100 pt-6">
+            {/* //request how much long ago was it made */}
+            <p className="text-sm font-medium text-slate-400">Request on: {formatDate(bond.requestDate)}</p>
             <button
               onClick={handleWithdrawClick}
               disabled={isWithdrawing}
@@ -302,40 +300,47 @@ export default function Portfolio({ holdings = [] }) {
   const closeDetails = useCallback(() => setSelectedBond(null), []);
   const openLightbox = useCallback((bond) => setLightboxBond(bond), []);
   const closeLightbox = useCallback(() => setLightboxBond(null), []);
-
-  const userId = authUser?.id;
-
   const fetchHoldings = useCallback(async () => {
+    const userId = authUser?.id;
     if (!userId) return;
+
     try {
       setLoading(true);
       const response = await getAllUsersScheme(userId);
       allRounderMessage(response);
+      console.log(response)
+
       if (response.status === "success" && response.data) {
+
         setHolding(response.data);
       } else {
         setHolding([]);
       }
     } catch (error) {
       setHolding([]);
-      console.log("Error fetching holdings:", error);
+      console.error("Error fetching holdings:", error);
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [authUser?.id]); // Fixed dependency here
 
   useEffect(() => {
-    fetchHoldings();
-  }, [fetchHoldings]);
+    let isMounted = true;
 
+    // Only update state if the component hasn't unmounted or user hasn't switched mid-request
+    if (isMounted) {
+      fetchHoldings();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [fetchHoldings]);
   // Handle asset withdrawal
   const handleWithdrawRequest = useCallback(async (userSchemeId) => {
     try {
-      // 1. TODO: Call your service API wrapper method here
-      // const response = await withdrawUserScheme(userSchemeId);
-      // console.table(response)
-      // Mocking a successful status return object wrapper example behavior:
-      const response = { status: "success", message: "Application withdrawn successfully" };
+      const response = await withdrawUserScheme(userSchemeId, authUser?.id);
+      console.log(response)
       allRounderMessage(response);
 
       if (response.status === "success") {
@@ -346,7 +351,7 @@ export default function Portfolio({ holdings = [] }) {
     } catch (error) {
       console.error("Failed to withdraw application:", error);
     }
-  }, [fetchHoldings]);
+  }, [fetchHoldings, authUser?.id]);
 
   return (
     <div className="flex flex-col gap-6 p-6 bg-slate-50 min-h-screen font-sans">
