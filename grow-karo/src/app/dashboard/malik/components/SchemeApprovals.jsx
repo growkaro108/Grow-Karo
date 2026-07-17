@@ -98,9 +98,12 @@ export default function SchemeApproval() {
             setLoading(true);
             // const data = await mockFetchRequests();
             const response = await getAllUserRequests();
-            setRequests(response.data);
-            allRounderMessage(response)
-            console.log(response)
+            if (response.status !== "success") {
+                allRounderMessage(response)
+                console.log(response)
+            } else {
+                setRequests(response.data);
+            }
         } catch (error) {
             console.error("Error loading enrollment requests:", error);
             showToast("error", "Couldn't load requests. Try again.");
@@ -128,7 +131,7 @@ export default function SchemeApproval() {
         setPaidAmount("");
     };
 
-    const totalAmount = selectedRequest ? selectedRequest.capitalThreshold : 0;
+    const totalAmount = selectedRequest ? selectedRequest.investmentAmount : 0;
     const numericPaid = Number(paidAmount) || 0;
     const remainingAmount = selectedRequest ? Math.max(0, totalAmount - numericPaid) : 0;
     const isOverpaid = selectedRequest ? numericPaid > totalAmount : false;
@@ -139,20 +142,40 @@ export default function SchemeApproval() {
             showToast("error", "Enter a valid paid amount first.");
             return;
         }
+        if (!selectedRequest.userSchemeId) {
+            showToast("error", "User scheme ID not found.");
+            return;
+        }
+        if (isOverpaid) {
+            showToast("error", "Amount cannot be greater than total amount.");
+            return;
+        }
+
+        const payload = {
+            userSchemeId: selectedRequest.userSchemeId,
+            amount: numericPaid,
+        };
+        let response = null;
         try {
             setSubmitting(true);
-            // Replace with your actual API endpoint call:
-            const response = await approveUserScheme(selectedRequest.id,);
-            allRounderMessage(response);
-            // setRequests((prev) =>
-            //     prev.map((r) => (r.id === selectedRequest.id ? { ...r, status: "approved" } : r))
-            // );
-            // showToast("success", `${selectedRequest.name}'s enrollment was approved.`);
-            // setSelectedRequest(null);
+            // response = await approveUserScheme(payload);
+            // console.log(response);
+            // if (response?.status !== "success") {
+            //     return;
+            // }
+
+            setRequests((prev) =>
+                prev.map((r) =>
+                    r.userSchemeId === selectedRequest.userSchemeId ? { ...r, status: "approved" } : r
+                )
+            );
+            showToast("success", `${selectedRequest.name}'s enrollment was approved.`);
+            setSelectedRequest(null);
         } catch (error) {
             console.error("Approval action failed:", error);
             showToast("error", "Approval failed. Please try again.");
         } finally {
+            allRounderMessage(response);
             setSubmitting(false);
         }
     };
@@ -318,6 +341,12 @@ export default function SchemeApproval() {
                     {pendingCount > 0 && (
                         <span className="sea-pill-count">{pendingCount} awaiting review</span>
                     )}
+                    {/* //filter button */}
+                    <button className="sea-btn sea-btn-success hover:scale-105 transition-all duration-200 ease-in-out cursor-pointer " title="Filter By Statuses"
+                        onClick={() => setShowFilter(!showFilter)}>
+                        {/* <Filter size={15} /> */}
+                        <ListFilterPlus size={17} />
+                    </button>
                     <input
                         className="sea-search"
                         placeholder="Search name or scheme..."
@@ -325,12 +354,7 @@ export default function SchemeApproval() {
                         onChange={(e) => setQuery(e.target.value)}
                         aria-label="Search requests"
                     />
-                    {/* //filter button */}
-                    <button className="sea-btn sea-btn-success hover:scale-105 transition-all duration-200 ease-in-out cursor-pointer " title="Filter By Statuses"
-                        onClick={() => setShowFilter(!showFilter)}>
-                        {/* <Filter size={15} /> */}
-                        <ListFilterPlus size={17} />
-                    </button>
+
                 </div>
             </div>
 

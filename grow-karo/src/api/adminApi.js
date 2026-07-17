@@ -39,14 +39,10 @@ export async function getAllUsersRequests() {
   });
 }
 
-export async function approveUserSchemes(userSchemeId, userId, paidAmount) {
+export async function approveUserSchemes(payload) {
   return await apiRequest(`${END_POINT}user-scheme/approve`, {
     method: "PUT",
-    body: {
-      "userSchemeId": userSchemeId,
-      "userId": userId,
-      "paidAmount": paidAmount,
-    }
+    body: payload
   });
 }
 

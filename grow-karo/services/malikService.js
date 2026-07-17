@@ -82,8 +82,8 @@ export async function deactivatePlan(payload) {
 export async function getAllUserRequests() {
   return await getAllUsersRequests();
 }
-export async function approveUserScheme(userSchemeId, userId, paidAmount) {
-  return await approveUserSchemes(userSchemeId, userId, paidAmount);
+export async function approveUserScheme(payload) {
+  return await approveUserSchemes(payload);
 }
 export async function rejectUserScheme(userSchemeId, userId) {
   return await rejectUserSchemes(userSchemeId, userId);
