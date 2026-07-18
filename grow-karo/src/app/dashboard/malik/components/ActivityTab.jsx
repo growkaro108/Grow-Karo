@@ -1,8 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Search, X, AlertTriangle, FunnelPlus } from "lucide-react";
-import StatusBadge from "./StatusBadge";
-
-
+import { StatusBadge } from "./StatusBadge";
 
 /* ---------------------------------- */
 /* Activity Log tab (full ledger)      */
@@ -31,35 +29,139 @@ const TYPE_DOT = {
   referral: "bg-indigo-500",
 };
 
-export default function ActivityTab({ feed }) {
+// Maps backend ActivityType enum -> the short "type" used by this UI
+const BACKEND_TYPE_TO_UI_TYPE = {
+  WITHDRAWAL_REQUESTED: "withdrawal",
+  WITHDRAWAL_APPROVED: "withdrawal",
+  WITHDRAWAL_REJECTED: "withdrawal",
+  DEPOSIT_REQUESTED: "deposit",
+  DEPOSIT_COMPLETED: "deposit",
+  ACCOUNT_CREATED: "signup",
+  KYC_SUBMITTED: "kyc",
+  KYC_APPROVED: "kyc",
+  REFERRAL_CREATED: "referral",
+};
+
+// Maps whatever status string the backend metadata carries -> the UI's status vocabulary
+function normalizeStatus(rawStatus) {
+  if (!rawStatus) return undefined;
+  const s = rawStatus.toString().toLowerCase();
+  if (["completed", "approved", "success", "successful"].includes(s)) return "completed";
+  if (["pending", "requested"].includes(s)) return "pending";
+  if (["processing", "in_progress"].includes(s)) return "processing";
+  return s;
+}
+
+function formatTime(isoString) {
+  try {
+    return new Date(isoString).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
+
+// Converts a raw ActivityLog record (as sent by Spring Boot, over REST or SSE)
+// into the flat shape this component's UI expects.
+function mapBackendLog(log) {
+  let metadata = {};
+  if (log.metadata) {
+    try {
+      metadata = typeof log.metadata === "string" ? JSON.parse(log.metadata) : log.metadata;
+    } catch {
+      metadata = {};
+    }
+  }
+
+  return {
+    id: log.id,
+    name: log.actorName,
+    text: log.description?.replace(log.actorName, "").trim() || log.description,
+    type: BACKEND_TYPE_TO_UI_TYPE[log.type] ?? "signup",
+    status: normalizeStatus(metadata.status),
+    amount:
+      metadata.amount !== undefined
+        ? `₹${Number(metadata.amount).toLocaleString("en-IN")}`
+        : undefined,
+    time: formatTime(log.createdAt),
+    createdAt: log.createdAt,
+  };
+}
+
+const MAX_LIVE_EVENTS = 300; // cap in-memory feed so the tab doesn't grow unbounded over a long session
+
+export default function ActivityTab({
+  feed: initialFeed = [],
+  apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9090",
+  getToken = () => (typeof window !== "undefined" ? localStorage.getItem("token") : null),
+}) {
+  const [feed, setFeed] = useState(initialFeed);
+  const [connectionStatus, setConnectionStatus] = useState("connecting"); // connecting | live | reconnecting
   const [query, setQuery] = useState("");
   const [processFilter, setProcessFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
 
-  //work of this function is to filter the feed based on the query, processFilter and statusFilter.
-  //  If the query is empty, it will return all the events. If the processFilter is "all", it will return all the events.
-  //  If the statusFilter is "all", it will return all the events. Otherwise, 
-  // it will return only the events that match the query, processFilter and statusFilter.
-  const filtered = feed.filter((event) => {
-    const matchesQuery =
-      query.trim() === "" ||
-      event.name.toLowerCase().includes(query.trim().toLowerCase());
-    const matchesProcess =
-      processFilter === "all" || event.type === processFilter;
-    const matchesStatus =
-      statusFilter === "all" || event.status === statusFilter;
-    return matchesQuery && matchesProcess && matchesStatus;
-  });
+  const seenIds = useRef(new Set(initialFeed.map((e) => e.id)));
 
-  const hasActiveFilters =
-    query.trim() !== "" || processFilter !== "all" || statusFilter !== "all";
+  // --- Live stream subscription ---
+  useEffect(() => {
+    const token = getToken();
+    const url = `${apiBaseUrl}/api/admin/activity-logs/stream${token ? `?token=${encodeURIComponent(token)}` : ""
+      }`;
 
-  const clearFilters = () => {
+    const es = new EventSource(url);
+
+    es.onopen = () => setConnectionStatus("live");
+    es.onerror = () => setConnectionStatus("reconnecting"); // EventSource auto-retries on its own
+
+    es.addEventListener("activity", (e) => {
+      try {
+        if (e.data) {
+          const raw = JSON.parse(e.data);
+          const mapped = mapBackendLog(raw);
+
+          if (seenIds.current.has(mapped.id)) return; // dedupe against initial page / re-deliveries
+          seenIds.current.add(mapped.id);
+
+          setFeed((prev) => [mapped, ...prev].slice(0, MAX_LIVE_EVENTS));
+        } else {
+          console.log("No data received from server");
+        }
+      } catch {
+        // ignore malformed event, don't crash the stream handler
+      }
+    });
+
+    return () => es.close();
+  }, [apiBaseUrl, getToken]);
+
+  // --- Filtering (memoized so it only recomputes when inputs actually change) ---
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return feed.filter((event) => {
+      const matchesQuery = q === "" || event.name?.toLowerCase().includes(q);
+      const matchesProcess = processFilter === "all" || event.type === processFilter;
+      const matchesStatus = statusFilter === "all" || event.status === statusFilter;
+      return matchesQuery && matchesProcess && matchesStatus;
+    });
+  }, [feed, query, processFilter, statusFilter]);
+
+  const hasActiveFilters = query.trim() !== "" || processFilter !== "all" || statusFilter !== "all";
+
+  const clearFilters = useCallback(() => {
     setQuery("");
     setProcessFilter("all");
     setStatusFilter("all");
-  };
+  }, []);
+
+  const statusMeta = {
+    live: { dot: "bg-emerald-400 animate-pulse-dot", text: "text-emerald-400", label: "Streaming" },
+    connecting: { dot: "bg-slate-500", text: "text-slate-400", label: "Connecting…" },
+    reconnecting: { dot: "bg-amber-500 animate-pulse-dot", text: "text-amber-400", label: "Reconnecting…" },
+  }[connectionStatus];
 
   return (
     <div className="space-y-4">
@@ -102,11 +204,10 @@ export default function ActivityTab({ feed }) {
 
         {showFilters && (
           <div
-            className={`grid grid-cols-1 gap-4 sm:grid-cols-2 overflow-hidden transition-all duration-500 ease-in-out ${
-              showFilters
-                ? "max-h-75 opacity-100 mt-4 pointer-events-auto"
-                : "max-h-0 opacity-0 mt-0 pointer-events-none"
-            }`}
+            className={`grid grid-cols-1 gap-4 sm:grid-cols-2 overflow-hidden transition-all duration-500 ease-in-out ${showFilters
+              ? "max-h-75 opacity-100 mt-4 pointer-events-auto"
+              : "max-h-0 opacity-0 mt-0 pointer-events-none"
+              }`}
           >
             {/* Process Filters Column */}
             <div>
@@ -118,11 +219,10 @@ export default function ActivityTab({ feed }) {
                   <button
                     key={f.id}
                     onClick={() => setProcessFilter(f.id)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize font-body transition-colors ${
-                      processFilter === f.id
-                        ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30"
-                        : "bg-slate-800/60 text-slate-400 ring-1 ring-slate-800 hover:text-slate-200"
-                    }`}
+                    className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize font-body transition-colors ${processFilter === f.id
+                      ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30"
+                      : "bg-slate-800/60 text-slate-400 ring-1 ring-slate-800 hover:text-slate-200"
+                      }`}
                   >
                     {f.label}
                   </button>
@@ -140,11 +240,10 @@ export default function ActivityTab({ feed }) {
                   <button
                     key={f.id}
                     onClick={() => setStatusFilter(f.id)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize font-body transition-colors ${
-                      statusFilter === f.id
-                        ? "bg-indigo-500/15 text-indigo-400 ring-1 ring-indigo-500/30"
-                        : "bg-slate-800/60 text-slate-400 ring-1 ring-slate-800 hover:text-slate-200"
-                    }`}
+                    className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize font-body transition-colors ${statusFilter === f.id
+                      ? "bg-indigo-500/15 text-indigo-400 ring-1 ring-indigo-500/30"
+                      : "bg-slate-800/60 text-slate-400 ring-1 ring-slate-800 hover:text-slate-200"
+                      }`}
                   >
                     {f.label}
                   </button>
@@ -167,9 +266,9 @@ export default function ActivityTab({ feed }) {
                 : "Every deposit, withdrawal, signup and referral, in order"}
             </p>
           </div>
-          <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-body">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse-dot" />{" "}
-            Streaming
+          <span className={`flex items-center gap-1.5 text-xs font-body ${statusMeta.text}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${statusMeta.dot}`} />
+            {statusMeta.label}
           </span>
         </div>
 

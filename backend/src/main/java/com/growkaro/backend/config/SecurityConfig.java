@@ -15,7 +15,7 @@ public class SecurityConfig {
                                 .csrf(csrf -> csrf.disable()) // Disable CSRF for simplicity in APIs
                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers(
-                                                                "/api/user/health",
+                                                                "/api/health",
                                                                 "/api/user/signup",
                                                                 "/api/user/getEmailOtp/{email}",
                                                                 "/api/user/validateEmailOtp",
@@ -32,7 +32,8 @@ public class SecurityConfig {
                                                                 "/api/admin/scheme/delete/{id}",
                                                                 "/api/admin/user-scheme/all-users",
                                                                 "/api/admin/user-scheme/approve",
-                                                                "/api/admin/user-scheme/reject/{userSchemeId}/{userId}")
+                                                                "/api/admin/user-scheme/reject/{userSchemeId}",
+                                                                "/api/admin/activity-logs/**")
                                                 .permitAll() // Public endpoints
                                                 .anyRequest().authenticated() // Everything else requires login
                                 )

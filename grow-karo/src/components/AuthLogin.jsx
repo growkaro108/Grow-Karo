@@ -40,7 +40,7 @@ export default function AuthLogin({ onSwitch }) {
 
     // Authenticate credentials with service
     const response = await loginUser({ email: sanitizedEmail, password: sanitizedPassword });
-    console.log("--------------\n")
+    console.log("--------------\n" + response);
 
     try {
       // console.log(response.data.user);

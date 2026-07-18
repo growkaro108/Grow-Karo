@@ -77,20 +77,18 @@ public class AdminAPIController {
     }
 
     @PutMapping("/user-scheme/approve")
-    public ResponseEntity<Map<String, Object>> approveUserScheme(@RequestBody ApproveUserScheme approveUserScheme) {
+    public ResponseEntity<Map<String, Object>> activateUserScheme(@RequestBody ApproveUserScheme approveUserScheme) {
         if (approveUserScheme.userSchemeId() == "" || approveUserScheme.userSchemeId() == null
-                || approveUserScheme.userId() == "" || approveUserScheme.userId() == null
                 || approveUserScheme.paidAmount() == null) {
             return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.ok(adminAPIService.approveUserScheme(approveUserScheme.userSchemeId(),
-                approveUserScheme.userId(), approveUserScheme.paidAmount()));
+        return ResponseEntity.ok(
+                adminAPIService.activateUsersScheme(approveUserScheme.userSchemeId(), approveUserScheme.paidAmount()));
     }
 
-    @PutMapping("/user-scheme/reject/{userSchemeId}/{userId}")
-    public ResponseEntity<Map<String, Object>> rejectUserScheme(@PathVariable String userSchemeId,
-            @PathVariable String userId) {
-        return ResponseEntity.ok(adminAPIService.rejectUserScheme(userSchemeId, userId));
+    @PutMapping("/user-scheme/reject/{userSchemeId}")
+    public ResponseEntity<Map<String, Object>> rejectUserScheme(@PathVariable String userSchemeId) {
+        return ResponseEntity.ok(adminAPIService.rejectUserScheme(userSchemeId));
     }
 
     @GetMapping("/dashboard")
@@ -137,11 +135,6 @@ public class AdminAPIController {
     @PostMapping("/fundraiser-codes")
     public ResponseEntity<Map<String, Object>> createFundraiserCode(@RequestBody Map<String, Object> payload) {
         return ResponseEntity.ok(adminAPIService.createFundraiserCode(payload));
-    }
-
-    @GetMapping("/status")
-    public ResponseEntity<String> status() {
-        return ResponseEntity.ok("its working");
     }
 
 }

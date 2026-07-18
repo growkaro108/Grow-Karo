@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MessageSquare, ChevronDown } from "lucide-react";
-import StatusBadge from "./StatusBadge";
 import PriorityDot from "./PriorityDot";
+import { StatusBadge } from "./StatusBadge";
 
 export default function IssuesTab({ issues, onResolve }) {
   const [openId, setOpenId] = useState(issues[0]?.id ?? null);

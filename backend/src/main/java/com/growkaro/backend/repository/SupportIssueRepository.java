@@ -25,15 +25,16 @@ public interface SupportIssueRepository extends JpaRepository<SupportIssue, Stri
 
     Page<SupportIssue> findByPriority(SupportIssue.Priority priority, Pageable pageable);
 
-    Page<SupportIssue> findByStatusAndPriority(SupportIssue.Status status, SupportIssue.Priority priority, Pageable pageable);
+    Page<SupportIssue> findByStatusAndPriority(SupportIssue.Status status, SupportIssue.Priority priority,
+            Pageable pageable);
 
     List<SupportIssue> findByStatusOrderByPriorityDesc(SupportIssue.Status status);
 
     // ── Search ───────────────────────────────────────────────────────────────
 
     @Query("SELECT s FROM SupportIssue s WHERE " +
-           "LOWER(s.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(s.description) LIKE LOWER(CONCAT('%', :query, '%'))")
+            "LOWER(s.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "LOWER(s.description) LIKE LOWER(CONCAT('%', :query, '%'))")
     Page<SupportIssue> searchIssues(@Param("query") String query, Pageable pageable);
 
     // ── Dashboard stats ──────────────────────────────────────────────────────

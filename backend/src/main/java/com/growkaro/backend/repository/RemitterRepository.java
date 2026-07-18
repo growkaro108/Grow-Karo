@@ -41,9 +41,9 @@ public interface RemitterRepository extends JpaRepository<Remitter, String> {
     // ── Search ───────────────────────────────────────────────────────────────
 
     @Query("SELECT r FROM Remitter r WHERE " +
-           "LOWER(r.organizationName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "r.gstNumber LIKE CONCAT('%', :query, '%') OR " +
-           "r.panNumber LIKE CONCAT('%', :query, '%')")
+            "LOWER(r.organizationName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "r.gstNumber LIKE CONCAT('%', :query, '%') OR " +
+            "r.panNumber LIKE CONCAT('%', :query, '%')")
     Page<Remitter> searchRemitters(@Param("query") String query, Pageable pageable);
 
     // ── Dashboard stats ──────────────────────────────────────────────────────

@@ -95,7 +95,8 @@ public class RemitterAPIService {
             return response("error", "Remitter not found", Map.of("remitterId", remitterId));
         }
 
-        Page<Transaction> transactions = transactionRepository.findByRemitterId(remitterOpt.get().getId(), pageable(page));
+        Page<Transaction> transactions = transactionRepository.findByRemitterId(remitterOpt.get().getId(),
+                pageable(page));
         Map<String, Object> data = paginatedMeta(transactions);
         data.put("remitterId", remitterOpt.get().getId());
         data.put("items", transactions.getContent().stream().map(this::toTransactionView).toList());
@@ -141,7 +142,8 @@ public class RemitterAPIService {
         Optional<WithdrawalRequest> requestOpt = withdrawalRequestRepository.findById(requestId);
         if (remitterOpt.isEmpty() || requestOpt.isEmpty()
                 || !requestOpt.get().getRecipient().getRemitter().getId().equals(remitterOpt.get().getId())) {
-            return response("error", "Payment request not found", Map.of("remitterId", remitterId, "requestId", requestId));
+            return response("error", "Payment request not found",
+                    Map.of("remitterId", remitterId, "requestId", requestId));
         }
 
         WithdrawalRequest request = requestOpt.get();
@@ -172,15 +174,18 @@ public class RemitterAPIService {
             return response("error", "Remitter not found", Map.of("remitterId", remitterId));
         }
         try {
-            Optional<Recipient> updated = recipientService.updateForRemitter(remitterOpt.get().getId(), recipientId, payload);
+            Optional<Recipient> updated = recipientService.updateForRemitter(remitterOpt.get().getId(), recipientId,
+                    payload);
             if (updated.isEmpty()) {
                 return response("error", "Recipient not found",
                         Map.of("remitterId", remitterOpt.get().getId(), "recipientId", recipientId));
             }
             return response("ok", "Recipient updated",
-                    Map.of("remitterId", remitterOpt.get().getId(), "recipient", recipientService.toRemitterView(updated.get())));
+                    Map.of("remitterId", remitterOpt.get().getId(), "recipient",
+                            recipientService.toRemitterView(updated.get())));
         } catch (IllegalStateException | IllegalArgumentException ex) {
-            return response("error", ex.getMessage(), Map.of("remitterId", remitterOpt.get().getId(), "recipientId", recipientId));
+            return response("error", ex.getMessage(),
+                    Map.of("remitterId", remitterOpt.get().getId(), "recipientId", recipientId));
         }
     }
 
@@ -197,7 +202,8 @@ public class RemitterAPIService {
                 return response("error", "Recipient user not found", Map.of("remitterId", remitterOpt.get().getId()));
             }
             return response("ok", "Recipient created",
-                    Map.of("remitterId", remitterOpt.get().getId(), "recipient", recipientService.toRemitterView(created.get())));
+                    Map.of("remitterId", remitterOpt.get().getId(), "recipient",
+                            recipientService.toRemitterView(created.get())));
         } catch (IllegalStateException | IllegalArgumentException ex) {
             return response("error", ex.getMessage(), Map.of("remitterId", remitterOpt.get().getId()));
         }

@@ -29,6 +29,7 @@ export default function Plans({ initialPlans = EMPTY_ARRAY }) {
         const getAllSchemes = async () => {
             try {
                 const response = await getAllPlans();
+                //console.log(response);
                 if (response.status === 'success') {
                     if (isMounted) setPlans(response.data ?? []);
                 } else {

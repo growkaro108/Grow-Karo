@@ -131,6 +131,11 @@ public class UserAPIController {
         return ResponseEntity.ok(userAPIService.login(email, password));
     }
 
+    @GetMapping("/logout")
+    public ResponseEntity<Map<String, Object>> logout(@RequestHeader("Authorization") String token) {
+        return ResponseEntity.ok(userAPIService.logout());
+    }
+
     @PostMapping("/scheme/enroll/{schemeId}/{userId}")
     public ResponseEntity<Map<String, Object>> enrollScheme(@PathVariable String schemeId,
             @PathVariable String userId) {

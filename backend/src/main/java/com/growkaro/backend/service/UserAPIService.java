@@ -24,9 +24,9 @@ import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.DTO.AuthUserData;
 import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.common.General;
+import com.growkaro.backend.entity.ActivityType;
 import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.Notification;
-import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
@@ -46,30 +46,31 @@ public class UserAPIService {
     private static final int DEFAULT_PAGE_SIZE = 20;
 
     private final ApiService apiService;
-    private final RecipientService recipientService;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final NotificationRepository notificationRepository;
     private final WithdrawalRequestRepository withdrawalRequestRepository;
     private final SchemeRepository schemeRepository;
     private final UserSchemeRepository userSchemeRepository;
+    private final ActivityLogService activityLogService;
     private final General general;
 
-    public UserAPIService(ApiService apiService, RecipientService recipientService,
+    public UserAPIService(ApiService apiService,
             UserRepository userRepository,
             TransactionRepository transactionRepository,
             NotificationRepository notificationRepository,
             WithdrawalRequestRepository withdrawalRequestRepository, SchemeRepository schemeRepository,
             UserSchemeRepository userSchemeRepository,
+            ActivityLogService activityLogService,
             General general) {
         this.apiService = apiService;
-        this.recipientService = recipientService;
         this.userRepository = userRepository;
         this.transactionRepository = transactionRepository;
         this.notificationRepository = notificationRepository;
         this.withdrawalRequestRepository = withdrawalRequestRepository;
         this.schemeRepository = schemeRepository;
         this.userSchemeRepository = userSchemeRepository;
+        this.activityLogService = activityLogService;
         this.general = general;
     }
 
@@ -119,6 +120,12 @@ public class UserAPIService {
 
         try {
             userRepository.save(newUser);
+            activityLogService.log(
+                    newUser.getId(), newUser.getName(), "USER",
+                    ActivityType.ACCOUNT_CREATED,
+                    newUser.getName() + " created an account",
+                    "USER", newUser.getId(),
+                    Map.of("email", newUser.getEmail()));
             return true;
         } catch (DataIntegrityViolationException e) {
             log.warn("Signup failed due to data integrity violation for email={}", email, e);
@@ -126,7 +133,7 @@ public class UserAPIService {
         }
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Map<String, Object> login(String email, String password) {
         Optional<User> userOpt = email == null
                 ? Optional.empty()
@@ -139,8 +146,19 @@ public class UserAPIService {
         User user = userOpt.get();
         AuthUserData finalUser = general.toAuthUserData(user);
         finalUser.setToken("local-dev-token");
+        activityLogService.log(
+                user.getId(), user.getName(), "USER",
+                ActivityType.LOGIN,
+                user.getName() + " logged in",
+                "USER", user.getId(),
+                Map.of("email", user.getEmail()));
 
         return general.response("ok", "Login successful", Map.of("user", finalUser));
+    }
+
+    public Map<String, Object> logout() {
+
+        return general.response("ok", "Logout successful", Map.of());
     }
 
     public Map<String, Object> enrollScheme(String schemeId, String userId) {
@@ -167,6 +185,12 @@ public class UserAPIService {
             newUserScheme.setScheme(scheme);
             newUserScheme.setUser(user);
             userSchemeRepository.save(newUserScheme);
+            activityLogService.log(
+                    user.getId(), user.getName(), "USER",
+                    ActivityType.SCHEME_ENROLLED,
+                    user.getName() + " enrolled in scheme " + scheme.getSchemeName(),
+                    "USER", user.getId(),
+                    Map.of("schemeId", schemeId));
 
             return general.response("success", "Scheme enrolled successfully", null);
         } catch (Exception e) {
@@ -216,15 +240,17 @@ public class UserAPIService {
         if (!existByUserId(userId)) {
             return general.response("error", "Invalid data", null);
         }
-
+        User user = null;
+        UserScheme userScheme = null;
         try {
             Optional<UserScheme> userSchemeOpt = userSchemeRepository.findById(userSchemeId);
             if (userSchemeOpt.isEmpty()) {
                 return general.response("error", "Request record not found", null);
             }
 
-            UserScheme userScheme = userSchemeOpt.get();
-            if (!userScheme.getUser().getId().equals(userId)) {
+            userScheme = userSchemeOpt.get();
+            user = userScheme.getUser();
+            if (!user.getId().equals(userId)) {
                 return general.response("info", "User not enrolled in this scheme", null);
             }
             switch (userScheme.getStatus()) {
@@ -244,7 +270,18 @@ public class UserAPIService {
         } catch (Exception e) {
             log.error("Error withdrawing userScheme {} for user {}", userSchemeId, userId, e);
             return general.response("error", "Something went wrong while processing your cancellation request", null);
+        } finally {
+            if (user != null && userScheme != null) {
+                activityLogService.log(
+                        user.getId(), user.getName(), "USER",
+                        ActivityType.SCHEME_WITHDRAWAL,
+                        user.getName() + " withdrew from scheme " + userScheme.getScheme().getSchemeName(),
+                        "USER", user.getId(),
+                        Map.of("userSchemeId", userSchemeId));
+                return general.response("success", "Application withdrawn successfully", null);
+            }
         }
+
     }
 
     @Cacheable(value = "userProfile", key = "#userId")
@@ -311,19 +348,6 @@ public class UserAPIService {
         Page<Transaction> transactions = transactionRepository.findByUserId(userOpt.get().getId(), pageable(page));
         return general.response("ok", "User transactions fetched",
                 paginatedTransactions(transactions, "userId", userOpt.get().getId()));
-    }
-
-    @Cacheable(value = "userRecipients", key = "#userId + ':' + (#page != null ? #page : '1')")
-    @Transactional(readOnly = true)
-    public Map<String, Object> userRecipients(String userId, String page) {
-        Optional<User> userOpt = resolveUser(userId);
-        if (userOpt.isEmpty()) {
-            return general.response("error", "User not found", Map.of("id", userId));
-        }
-
-        Page<Recipient> recipients = recipientService.findByRecipientUserId(userOpt.get().getId(), parsePage(page));
-        return general.response("ok", "User recipients fetched",
-                recipientService.paginatedUserResponse(userOpt.get().getId(), recipients));
     }
 
     @Cacheable(value = "userNotifications", key = "#userId")

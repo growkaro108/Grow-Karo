@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   LayoutDashboard,
   Activity,
@@ -24,18 +24,12 @@ import {
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import OverviewTab from "./components/OverviewTab";
-// import ActivityTab from "./components/ActivityTab";
-// import WithdrawalsTab from "./components/WithdrawalsTab";
-// import IssuesTab from "./components/IssuesTab";
-// import FundraiserCodesTab from "./components/FundraiserCodesTab";
-// import Toast from "./components/Toast";
 import TabLoader from "../../../loader/TabLoader";
 import { fetchMalikDashboardData } from "../../../../services/malikService";
-// import Settings from "./components/Settings";
 import dynamic from "next/dynamic";
 import AdminRemitterTrackersTab from "./components/Remitter";
 import ContactsComponent from "./components/Contact";
-// import SchemeApproval from "./components/SchemeApprovals";
+
 const WithdrawalsTab = dynamic(() => import("./components/WithdrawalsTab"), {
   loading: () => <TabLoader />,
   ssr: false,
@@ -103,12 +97,6 @@ export default function AdminPanel() {
   const [issues, setIssues] = useState([]);
   const [codes, setCodes] = useState([]);
   const [inflowData, setInflowData] = useState([]);
-  const [eventTemplates, setEventTemplates] = useState([]);
-  const [names, setNames] = useState([]);
-  const [feed, setFeed] = useState([]);
-  const feedIdRef = useRef(1);
-  const eventTemplatesRef = useRef([]);
-  const namesRef = useRef([]);
 
   useEffect(() => {
     let active = true;
@@ -121,21 +109,11 @@ export default function AdminPanel() {
         const issueData = Array.isArray(data.issues) ? data.issues : [];
         const codeData = Array.isArray(data.codes) ? data.codes : [];
         const inflowDataSet = Array.isArray(data.inflowData) ? data.inflowData : [];
-        const eventTemplateData = Array.isArray(data.eventTemplates) ? data.eventTemplates : [];
-        const namesData = Array.isArray(data.names) ? data.names : [];
 
         setWithdrawals(withdrawalData);
         setIssues(issueData);
         setCodes(codeData);
         setInflowData(inflowDataSet);
-        setEventTemplates(eventTemplateData);
-        setNames(namesData);
-
-        eventTemplatesRef.current = eventTemplateData;
-        namesRef.current = namesData;
-
-        const seed = Array.from({ length: 6 }).map(() => makeEvent(eventTemplateData, namesData));
-        setFeed(seed);
       })
       .catch((err) => {
         console.error(err);
@@ -144,41 +122,10 @@ export default function AdminPanel() {
         if (active) setInitialLoading(false);
       });
 
-    const interval = setInterval(() => {
-      setFeed((prev) => [makeEvent(eventTemplatesRef.current, namesRef.current), ...prev].slice(0, 24));
-    }, 4200);
-
     return () => {
       active = false;
-      clearInterval(interval);
     };
   }, []);
-
-  function makeEvent(eventTemplatesList = [], namesList = []) {
-    const template =
-      eventTemplatesList.length > 0
-        ? eventTemplatesList[Math.floor(Math.random() * eventTemplatesList.length)]
-        : { type: "signup", text: "created a new account", amountRange: null };
-    const amount = template.amountRange
-      ? Math.floor(
-        Math.random() * (template.amountRange[1] - template.amountRange[0]) +
-        template.amountRange[0],
-      )
-      : null;
-    const name =
-      namesList.length > 0
-        ? namesList[Math.floor(Math.random() * namesList.length)]
-        : "User";
-    feedIdRef.current += 1;
-    return {
-      id: feedIdRef.current,
-      type: template.type,
-      text: template.text,
-      amount,
-      name,
-      time: "just now",
-    };
-  }
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -281,11 +228,10 @@ export default function AdminPanel() {
                 <OverviewTab
                   withdrawals={withdrawals}
                   issues={issues}
-                  feed={feed}
                   inflowData={inflowData}
                 />
               )}
-              {activeTab === "activity" && <ActivityTab feed={feed} />}
+              {activeTab === "activity" && <ActivityTab />}
               {activeTab === "withdrawals" && (
                 <WithdrawalsTab
                   withdrawals={withdrawals}

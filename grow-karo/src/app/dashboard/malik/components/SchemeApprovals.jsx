@@ -1,66 +1,22 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo, use } from "react";
 import { allRounderMessage } from "@/components/Message";
 import { ListFilterPlus } from "lucide-react";
-import { getAllUserRequests } from "../../../../../services/malikService";
+import { approveUserScheme, getAllUserRequests, rejectUserScheme } from "../../../../../services/malikService";
 
-// Mock API calls - replace these with your actual services/axios instances
-const mockFetchRequests = async () =>
-    new Promise((resolve) => {
-        setTimeout(() => {
-            resolve([
-                {
-                    id: "req_001",
-                    userName: "Fatima Sheikh",
-                    userEmail: "fatima@example.com",
-                    phone: "9812345670",
-                    schemeName: "Sarthi Deposit",
-                    capitalThreshold: 25999,
-                    status: "pending",
-                },
-                {
-                    id: "req_002",
-                    userName: "Marcus Vance",
-                    userEmail: "marcus@example.com",
-                    phone: "9874653470",
-                    schemeName: "Dhirghayu",
-                    capitalThreshold: 60000,
-                    status: "pending",
-                },
-                {
-                    id: "req_003",
-                    userName: "Ananya Rao",
-                    userEmail: "ananya@example.com",
-                    phone: "9900011223",
-                    schemeName: "Sarthi Deposit",
-                    capitalThreshold: 15000,
-                    status: "approved",
-                },
-                {
-                    id: "req_004",
-                    userName: "Devika Kulkarni",
-                    userEmail: "devika@example.com",
-                    phone: "9765432109",
-                    schemeName: "Dhirghayu",
-                    capitalThreshold: 40000,
-                    status: "withdrawn",
-                },
-            ]);
-        }, 900);
-    });
 
 const STATUS_STYLES = {
     pending: { label: "Pending", color: "var(--pending)", bg: "var(--pending-soft)" },
-    approved: { label: "Approved", color: "var(--success)", bg: "var(--success-soft)" },
+    active: { label: "Approved", color: "var(--success)", bg: "var(--success-soft)" },
     rejected: { label: "Rejected", color: "var(--danger)", bg: "var(--danger-soft)" },
     withdrawn: { label: "Withdrawn", color: "var(--text-muted)", bg: "rgba(140,150,172,0.14)" },
 };
 
 const FILTER_TABS = [
-    { key: "all", label: "All", color: "var(--gold)", bg: "var(--gold-soft)" },
     { key: "pending", label: "Pending", ...STATUS_STYLES.pending },
-    { key: "approved", label: "Approved", ...STATUS_STYLES.approved },
+    { key: "active", label: "Approved", ...STATUS_STYLES.active },
     { key: "rejected", label: "Rejected", ...STATUS_STYLES.rejected },
     { key: "withdrawn", label: "Withdraw request", ...STATUS_STYLES.withdrawn },
+    { key: "all", label: "All", color: "var(--gold)", bg: "var(--gold-soft)" },
 ];
 
 const currency = (n) => `\u20b9${Number(n || 0).toLocaleString("en-IN")}`;
@@ -77,13 +33,14 @@ export default function SchemeApproval() {
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [query, setQuery] = useState("");
-    const [statusFilter, setStatusFilter] = useState("all");
+    const [statusFilter, setStatusFilter] = useState("pending");
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [rejectTarget, setRejectTarget] = useState(null);
     const [paidAmount, setPaidAmount] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [toast, setToast] = useState(null);
     const [showFilter, setShowFilter] = useState(false)
+
     const inputRef = useRef(null);
     const toastTimer = useRef(null);
 
@@ -96,7 +53,6 @@ export default function SchemeApproval() {
     const loadRequests = useCallback(async () => {
         try {
             setLoading(true);
-            // const data = await mockFetchRequests();
             const response = await getAllUserRequests();
             if (response.status !== "success") {
                 allRounderMessage(response)
@@ -144,29 +100,34 @@ export default function SchemeApproval() {
         }
         if (!selectedRequest.userSchemeId) {
             showToast("error", "User scheme ID not found.");
+            allRounderMessage({
+                status: 'error',
+                message: 'User scheme ID not found.'
+            })
             return;
         }
         if (isOverpaid) {
             showToast("error", "Amount cannot be greater than total amount.");
+            allRounderMessage({ status: "error", message: "Amount cannot be greater than total amount." });
             return;
         }
 
         const payload = {
             userSchemeId: selectedRequest.userSchemeId,
-            amount: numericPaid,
+            paidAmount: numericPaid,
         };
         let response = null;
         try {
             setSubmitting(true);
-            // response = await approveUserScheme(payload);
-            // console.log(response);
-            // if (response?.status !== "success") {
-            //     return;
-            // }
+            response = await approveUserScheme(payload);
+            if (response?.status !== "success") {
+                console.log(response);
+                return;
+            }
 
             setRequests((prev) =>
                 prev.map((r) =>
-                    r.userSchemeId === selectedRequest.userSchemeId ? { ...r, status: "approved" } : r
+                    r.userSchemeId === selectedRequest.userSchemeId ? { ...r, status: "active" } : r
                 )
             );
             showToast("success", `${selectedRequest.name}'s enrollment was approved.`);
@@ -182,16 +143,23 @@ export default function SchemeApproval() {
 
     const handleConfirmReject = async () => {
         if (!rejectTarget) return;
+        let response = null;
         try {
-            // await rejectUserScheme(rejectTarget.id);
+            // console.log(rejectTarget.schemeName)
+            response = await rejectUserScheme(rejectTarget.userSchemeId);
+            if (response?.status !== "success") {
+                console.log(response);
+                return;
+            }
             setRequests((prev) =>
-                prev.map((r) => (r.id === rejectTarget.id ? { ...r, status: "rejected" } : r))
+                prev.map((r) => (r.userSchemeId === rejectTarget.userSchemeId ? { ...r, status: "rejected" } : r))
             );
-            showToast("success", `Request from ${rejectTarget.name} was rejected.`);
+            showToast("success", `Request from ${rejectTarget.schemeName} was rejected.`);
         } catch (error) {
             console.error("Rejection failed:", error);
             showToast("error", "Rejection failed. Please try again.");
         } finally {
+            allRounderMessage(response);
             setRejectTarget(null);
         }
     };
@@ -342,10 +310,10 @@ export default function SchemeApproval() {
                         <span className="sea-pill-count">{pendingCount} awaiting review</span>
                     )}
                     {/* //filter button */}
-                    <button className="sea-btn sea-btn-success hover:scale-105 transition-all duration-200 ease-in-out cursor-pointer " title="Filter By Statuses"
+                    <button className=" flex items-center gap-2 sea-btn sea-btn-success hover:scale-105 transition-all duration-200 ease-in-out cursor-pointer " title="Filter By Statuses"
                         onClick={() => setShowFilter(!showFilter)}>
                         {/* <Filter size={15} /> */}
-                        <ListFilterPlus size={17} />
+                        <ListFilterPlus size={17} /> <span className="text-[10px]">Filter</span>
                     </button>
                     <input
                         className="sea-search"

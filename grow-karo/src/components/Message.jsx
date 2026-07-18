@@ -63,7 +63,7 @@ export const allRounderMessage = (response) => {
     const alertIcon = iconMap[response?.status] || 'info';
 
     Swal.fire({
-        title: response?.title || 'Notification',
+        title: response?.status || 'Notification',
         text: response?.message || '',
         icon: alertIcon, // Safely falls back to a valid icon
     });

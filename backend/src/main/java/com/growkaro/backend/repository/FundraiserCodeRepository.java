@@ -15,41 +15,41 @@ import java.util.Optional;
 @Repository
 public interface FundraiserCodeRepository extends JpaRepository<FundraiserCode, String> {
 
-    // ── Lookup ───────────────────────────────────────────────────────────────
+       // ── Lookup ───────────────────────────────────────────────────────────────
 
-    Optional<FundraiserCode> findByCode(String code);
+       Optional<FundraiserCode> findByCode(String code);
 
-    Optional<FundraiserCode> findByCodeAndActive(String code, boolean active);
+       Optional<FundraiserCode> findByCodeAndActive(String code, boolean active);
 
-    // ── Per-remitter queries ─────────────────────────────────────────────────
+       // ── Per-remitter queries ─────────────────────────────────────────────────
 
-    Page<FundraiserCode> findByRemitterId(String remitterId, Pageable pageable);
+       Page<FundraiserCode> findByRemitterId(String remitterId, Pageable pageable);
 
-    List<FundraiserCode> findByRemitterIdAndActive(String remitterId, boolean active);
+       List<FundraiserCode> findByRemitterIdAndActive(String remitterId, boolean active);
 
-    // ── Existence checks ─────────────────────────────────────────────────────
+       // ── Existence checks ─────────────────────────────────────────────────────
 
-    boolean existsByCode(String code);
+       boolean existsByCode(String code);
 
-    // ── Active & non-expired codes ────────────────────────────────────────────
+       // ── Active & non-expired codes ────────────────────────────────────────────
 
-    @Query("SELECT fc FROM FundraiserCode fc WHERE fc.active = true AND " +
-           "(fc.expiresAt IS NULL OR fc.expiresAt > :now) AND " +
-           "fc.usageCount < fc.usageLimit")
-    List<FundraiserCode> findAllValidCodes(@Param("now") LocalDateTime now);
+       @Query("SELECT fc FROM FundraiserCode fc WHERE fc.active = true AND " +
+                     "(fc.expiresAt IS NULL OR fc.expiresAt > :now) AND " +
+                     "fc.usageCount < fc.usageLimit")
+       List<FundraiserCode> findAllValidCodes(@Param("now") LocalDateTime now);
 
-    @Query("SELECT fc FROM FundraiserCode fc WHERE fc.remitter.id = :remitterId AND fc.active = true AND " +
-           "(fc.expiresAt IS NULL OR fc.expiresAt > :now) AND " +
-           "fc.usageCount < fc.usageLimit")
-    List<FundraiserCode> findValidCodesByRemitter(@Param("remitterId") String remitterId,
-                                                   @Param("now") LocalDateTime now);
+       @Query("SELECT fc FROM FundraiserCode fc WHERE fc.remitter.id = :remitterId AND fc.active = true AND " +
+                     "(fc.expiresAt IS NULL OR fc.expiresAt > :now) AND " +
+                     "fc.usageCount < fc.usageLimit")
+       List<FundraiserCode> findValidCodesByRemitter(@Param("remitterId") String remitterId,
+                     @Param("now") LocalDateTime now);
 
-    // ── Stats ─────────────────────────────────────────────────────────────────
+       // ── Stats ─────────────────────────────────────────────────────────────────
 
-    long countByRemitterId(String remitterId);
+       long countByRemitterId(String remitterId);
 
-    long countByRemitterIdAndActive(String remitterId, boolean active);
+       long countByRemitterIdAndActive(String remitterId, boolean active);
 
-    @Query("SELECT COALESCE(SUM(fc.usageCount), 0) FROM FundraiserCode fc WHERE fc.remitter.id = :remitterId")
-    long sumUsageCountByRemitter(@Param("remitterId") String remitterId);
+       @Query("SELECT COALESCE(SUM(fc.usageCount), 0) FROM FundraiserCode fc WHERE fc.remitter.id = :remitterId")
+       long sumUsageCountByRemitter(@Param("remitterId") String remitterId);
 }

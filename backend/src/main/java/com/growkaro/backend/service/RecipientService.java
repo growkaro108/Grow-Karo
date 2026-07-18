@@ -27,8 +27,8 @@ public class RecipientService {
     private final UserRepository userRepository;
 
     public RecipientService(RecipientRepository recipientRepository,
-                            RemitterRepository remitterRepository,
-                            UserRepository userRepository) {
+            RemitterRepository remitterRepository,
+            UserRepository userRepository) {
         this.recipientRepository = recipientRepository;
         this.remitterRepository = remitterRepository;
         this.userRepository = userRepository;
@@ -65,18 +65,21 @@ public class RecipientService {
             return Optional.empty();
         }
 
-        if (recipientRepository.existsByRemitterIdAndUserId(remitterId, recipientUserId)) {
+        if (recipientRepository.existsByRemitterIdAndUserId(remitterId,
+                recipientUserId)) {
             throw new IllegalStateException("Recipient user already exists for this remitter");
         }
 
         String accountNumber = stringValue(payload.get("accountNumber"));
         if (accountNumber != null
-                && recipientRepository.existsByRemitterIdAndAccountNumber(remitterId, accountNumber)) {
+                && recipientRepository.existsByRemitterIdAndAccountNumber(remitterId,
+                        accountNumber)) {
             throw new IllegalStateException("Account number already exists for this remitter");
         }
 
         String upiId = stringValue(payload.get("upiId"));
-        if (upiId != null && recipientRepository.existsByRemitterIdAndUpiId(remitterId, upiId)) {
+        if (upiId != null &&
+                recipientRepository.existsByRemitterIdAndUpiId(remitterId, upiId)) {
             throw new IllegalStateException("UPI ID already exists for this remitter");
         }
 
@@ -95,7 +98,7 @@ public class RecipientService {
 
     @Transactional
     public Optional<Recipient> updateForRemitter(String remitterId, String recipientId,
-                                                 Map<String, Object> payload) {
+            Map<String, Object> payload) {
         Optional<Recipient> recipientOpt = recipientRepository.findByIdAndRemitterId(recipientId, remitterId);
         if (recipientOpt.isEmpty()) {
             return Optional.empty();
@@ -106,7 +109,8 @@ public class RecipientService {
         String accountNumber = stringValue(payload.get("accountNumber"));
         if (accountNumber != null
                 && !accountNumber.equals(recipient.getAccountNumber())
-                && recipientRepository.existsByRemitterIdAndAccountNumber(remitterId, accountNumber)) {
+                && recipientRepository.existsByRemitterIdAndAccountNumber(remitterId,
+                        accountNumber)) {
             throw new IllegalStateException("Account number already exists for this remitter");
         }
 
@@ -137,13 +141,16 @@ public class RecipientService {
         return item;
     }
 
-    public Map<String, Object> paginatedRemitterResponse(String remitterId, Page<Recipient> page) {
+    public Map<String, Object> paginatedRemitterResponse(String remitterId,
+            Page<Recipient> page) {
         Map<String, Object> data = paginatedMeta(remitterId, null, page);
-        data.put("items", page.getContent().stream().map(this::toRemitterView).toList());
+        data.put("items",
+                page.getContent().stream().map(this::toRemitterView).toList());
         return data;
     }
 
-    public Map<String, Object> paginatedUserResponse(String userId, Page<Recipient> page) {
+    public Map<String, Object> paginatedUserResponse(String userId,
+            Page<Recipient> page) {
         Map<String, Object> data = paginatedMeta(null, userId, page);
         data.put("items", page.getContent().stream().map(this::toUserView).toList());
         return data;
@@ -163,7 +170,8 @@ public class RecipientService {
         return item;
     }
 
-    private Map<String, Object> paginatedMeta(String remitterId, String userId, Page<Recipient> page) {
+    private Map<String, Object> paginatedMeta(String remitterId, String userId,
+            Page<Recipient> page) {
         Map<String, Object> data = new LinkedHashMap<>();
         if (remitterId != null) {
             data.put("remitterId", remitterId);
@@ -177,7 +185,8 @@ public class RecipientService {
         return data;
     }
 
-    private void applyPayload(Recipient recipient, Map<String, Object> payload, boolean creating) {
+    private void applyPayload(Recipient recipient, Map<String, Object> payload,
+            boolean creating) {
         if (payload.containsKey("name")) {
             recipient.setName(stringValue(payload.get("name")));
         } else if (creating && recipient.getUser() != null) {
@@ -244,6 +253,7 @@ public class RecipientService {
         if (parts.size() == 1) {
             return parts.get(0).substring(0, 1).toUpperCase();
         }
-        return (parts.get(0).substring(0, 1) + parts.get(1).substring(0, 1)).toUpperCase();
+        return (parts.get(0).substring(0, 1) + parts.get(1).substring(0,
+                1)).toUpperCase();
     }
 }

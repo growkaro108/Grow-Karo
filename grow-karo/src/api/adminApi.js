@@ -46,9 +46,8 @@ export async function approveUserSchemes(payload) {
   });
 }
 
-
-export async function rejectUserSchemes(userSchemeId, userId) {
-  return await apiRequest(`${END_POINT}user-scheme/reject/${userSchemeId}/${userId}`, {
+export async function rejectUserSchemes(userSchemeId) {
+  return await apiRequest(`${END_POINT}user-scheme/reject/${userSchemeId}`, {
     method: "PUT",
   });
 }

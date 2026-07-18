@@ -1,8 +1,15 @@
 package com.growkaro.backend.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "notifications")
 public class Notification {
@@ -34,25 +41,4 @@ public class Notification {
         INFO, SUCCESS, WARNING, PAYMENT, SYSTEM
     }
 
-    // ── Getters & Setters ────────────────────────────────────────────────────
-
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
-
-    public String getMessage() { return message; }
-    public void setMessage(String message) { this.message = message; }
-
-    public Type getType() { return type; }
-    public void setType(Type type) { this.type = type; }
-
-    public boolean isRead() { return read; }
-    public void setRead(boolean read) { this.read = read; }
-
-    public String getActionUrl() { return actionUrl; }
-    public void setActionUrl(String actionUrl) { this.actionUrl = actionUrl; }
-
-    public LocalDateTime getCreatedAt() { return createdAt; }
 }

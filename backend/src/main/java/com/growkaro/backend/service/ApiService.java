@@ -1,5 +1,6 @@
 package com.growkaro.backend.service;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.bcrypt.BCrypt;
@@ -48,29 +49,40 @@ public class ApiService {
         this.general = general;
     }
 
+    // caching user scheme
+    public UserScheme getUserSchemeById(String userSchemeId) {
+        return userSchemeRepository.findById(userSchemeId).get();
+    }
+
+    // check user scheme exists
+    public boolean isUserSchemeExits(String userSchemeId) {
+        return getUserSchemeById(userSchemeId) != null;
+    }
+
     public Map<String, Object> userSchemeStatusUpdate(String userSchemeId, String userId, UserSchemeStatus action,
             UserSchemeStatus condition, UserScheme existing) {
 
         // 1. Validate data existence beforehand
-        if (!userRepository.existsById(userId)) {
-            return general.response("error", "User not found", null);
-        }
-
+        if (userId != null) // when admin send request then
+            if (!userRepository.existsById(userId)) {
+                return general.response("error", "User not found", null);
+            }
         try {
             UserScheme userScheme;
             if (existing == null) {
-                Optional<UserScheme> userSchemeOpt = userSchemeRepository.findById(userSchemeId);
-                if (userSchemeOpt.isEmpty()) {
+                if (isUserSchemeExits(userSchemeId)) {
+                    userScheme = getUserSchemeById(userSchemeId);
+                } else {
                     return general.response("error", "Request record not found", null);
                 }
-                userScheme = userSchemeOpt.get();
             } else {
                 userScheme = existing;
             }
             // Status checks to provide contextual user feedback
-            if (!userScheme.getUser().getId().equals(userId)) {
-                return general.response("info", "User not enrolled in this scheme", null);
-            }
+            if (userId != null) // when admin send request
+                if (!userScheme.getUser().getId().equals(userId)) {
+                    return general.response("info", "User not enrolled in this scheme", null);
+                }
             switch (condition) {
                 case ACTIVE:
                     return general.response("info", "Application is already active and cannot be withdrawn", null);
@@ -81,9 +93,11 @@ public class ApiService {
                 case PENDING:
                     userScheme.setStatus(action);
                     userSchemeRepository.save(userScheme);
-                    return general.response("success", "Application withdrawn successfully", null);
+                    return general.response("success",
+                            "Application " + action.toString().toLowerCase() + " successfully", null);
                 default:
-                    return general.response("info", "Application cannot be withdrawn at this time", null);
+                    return general.response("info",
+                            "Application cannot be " + action.toString().toLowerCase() + " at this time", null);
             }
         } catch (Exception e) {
             System.out.println(e.getMessage());

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Copy, ShieldCheck, Users, Mail, Phone, Eye, EyeOff, CheckCircle2, X } from "lucide-react";
-import StatusBadge from "./StatusBadge";
 import { currency } from '../utils';
+import { StatusBadge } from './StatusBadge';
 
 export default function AdminRemitterTrackersTab({ codes, onAddRemitterToServer }) {
   // UI View States

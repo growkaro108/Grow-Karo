@@ -18,6 +18,11 @@ export const UserProvider = ({ children }) => {
             if (authUser) {
                 let response = await confirmMessage("you want to logout", "Are you sure?");
                 if (response) {
+                    // const response=await logoutUser(authUser.name);
+                    // if(!response.success){
+                    //     errorMessage("Logout failed", "Logout");
+                    //     return;
+                    // }
                     const status = await deleteSecureCookie("authUser")
                     if (status.success) {
                         setAuthUser(null);

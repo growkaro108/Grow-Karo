@@ -155,25 +155,29 @@ public class AdminAPIService {
         }
     }
 
-    public Map<String, Object> approveUserScheme(String userSchemeId, String userId, Long paidAmount) {
+    public Map<String, Object> activateUsersScheme(String userSchemeId, Long paidAmount) {
         try {
-            UserScheme userScheme = userSchemeRepository.findById(userSchemeId).orElse(null);
+            UserScheme userScheme = apiService.getUserSchemeById(userSchemeId);
             if (userScheme == null) {
                 return general.response("error", "User scheme not found", null);
             }
-            userScheme.setStatus(UserScheme.UserSchemeStatus.ACTIVE);
-            return apiService.userSchemeStatusUpdate(userSchemeId, userId, UserSchemeStatus.ACTIVE,
+            userScheme.setPaidAmount(paidAmount);
+            return apiService.userSchemeStatusUpdate(userSchemeId, null, UserSchemeStatus.ACTIVE,
                     UserSchemeStatus.PENDING, userScheme);
         } catch (Exception e) {
             return general.response("error", "Error in approving user scheme", null);
         }
     }
 
-    public Map<String, Object> rejectUserScheme(String userSchemeId, String userId) {
+    public Map<String, Object> rejectUserScheme(String userSchemeId) {
         try {
-            return apiService.userSchemeStatusUpdate(userSchemeId, userId, UserSchemeStatus.REJECTED,
+            if (!apiService.isUserSchemeExits(userSchemeId)) {
+                return general.response("error", "Request record not found", null);
+            }
+            return apiService.userSchemeStatusUpdate(userSchemeId, null, UserSchemeStatus.REJECTED,
                     UserSchemeStatus.PENDING, null);
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             return general.response("error", "Error in rejecting user scheme", null);
         }
     }

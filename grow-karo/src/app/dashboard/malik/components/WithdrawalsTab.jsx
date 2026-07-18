@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Check, X } from "lucide-react";
 import Modal from "./Modal";
-import StatusBadge from "./StatusBadge";
+import { StatusBadge } from "./StatusBadge";
 import { currency } from "../utils";
 
 export default function WithdrawalsTab({ withdrawals, onDecision }) {

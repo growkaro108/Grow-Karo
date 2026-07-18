@@ -140,7 +140,8 @@ public class General {
                 scheme.getInvestmentAmount(),
                 scheme.getProfitPercentage(),
                 scheme.getMaturityValue(),
-                scheme.getMaxInvestorsAllowed());
+                scheme.getMaxInvestorsAllowed(),
+                scheme.getJoinedUsers().stream().map(UserScheme::getUserSchemeId).toList());
     }
 
     public <T> void applyIfChanged(T newValue, T oldValue, Consumer<T> setter) {
