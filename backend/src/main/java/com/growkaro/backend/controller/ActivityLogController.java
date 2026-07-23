@@ -22,17 +22,17 @@ import java.time.Instant;
 // @PreAuthorize("hasRole('ADMIN')")
 public class ActivityLogController {
 
-    private final ActivityLogService service;
+    private final ActivityLogService activityLogService;
     private final ActivityLogBroadcaster broadcaster;
     // for production
     // private final AdminTokenValidator tokenValidator;
     // for development
     private final NoOpAdminTokenValidator tokenValidator;
 
-    public ActivityLogController(ActivityLogService service,
+    public ActivityLogController(ActivityLogService activityLogService,
             ActivityLogBroadcaster broadcaster,
             NoOpAdminTokenValidator tokenValidator) {
-        this.service = service;
+        this.activityLogService = activityLogService;
         this.broadcaster = broadcaster;
         this.tokenValidator = tokenValidator;
     }
@@ -45,7 +45,7 @@ public class ActivityLogController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        return service.search(actorId, type, from, to, pageable);
+        return activityLogService.search(actorId, type, from, to, pageable);
     }
 
     /**

@@ -6,6 +6,8 @@ export async function healthCheck() {
 export async function getAllPlans() {
   return await apiRequest("/scheme/get");
 }
+
+///pending belows
 export async function fetchPlatformConfig() {
   return apiRequest("/config");
 }

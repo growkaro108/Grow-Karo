@@ -27,28 +27,26 @@ import OverviewTab from "./components/OverviewTab";
 import TabLoader from "../../../loader/TabLoader";
 import { fetchMalikDashboardData } from "../../../../services/malikService";
 import dynamic from "next/dynamic";
-import AdminRemitterTrackersTab from "./components/Remitter";
-import ContactsComponent from "./components/Contact";
 
 const WithdrawalsTab = dynamic(() => import("./components/WithdrawalsTab"), {
   loading: () => <TabLoader />,
   ssr: false,
 });
-const FundraiserCodesTab = dynamic(
-  () => import("./components/Remitter"),
+const FundraiserCodesTab = dynamic(() => import("./components/Remitter"), {
+  loading: () => <TabLoader />,
+  ssr: false,
+});
+const PlanTab = dynamic(() => import("./components/Scheme/PlanTab"), {
+  loading: () => <TabLoader />,
+  ssr: false,
+});
+const SchemeApproval = dynamic(
+  () => import("./components/SchemeAproval/SchemeApprovals"),
   {
     loading: () => <TabLoader />,
     ssr: false,
   },
 );
-const PlanTab = dynamic(() => import("./components/PlanTab"), {
-  loading: () => <TabLoader />,
-  ssr: false
-})
-const SchemeApproval = dynamic(() => import("./components/SchemeApprovals"), {
-  loading: () => <TabLoader />,
-  ssr: false
-})
 const IssuesTab = dynamic(() => import("./components/IssuesTab"), {
   loading: () => <TabLoader />,
   ssr: false,
@@ -57,7 +55,18 @@ const Toast = dynamic(() => import("./components/Toast"), {
   loading: () => <TabLoader />,
   ssr: false,
 });
-const ActivityTab = dynamic(() => import("./components/ActivityTab"), {
+const ActivityTab = dynamic(() => import("./components/Activity/main"), {
+  loading: () => <TabLoader />,
+  ssr: false,
+});
+const AdminRemitterTrackersTab = dynamic(
+  () => import("./components/Remitter"),
+  {
+    loading: () => <TabLoader />,
+    ssr: false,
+  },
+);
+const ContactsComponent = dynamic(() => import("./components/Contact"), {
   loading: () => <TabLoader />,
   ssr: false,
 });
@@ -105,10 +114,14 @@ export default function AdminPanel() {
     fetchMalikDashboardData()
       .then((data) => {
         if (!active) return;
-        const withdrawalData = Array.isArray(data.withdrawals) ? data.withdrawals : [];
+        const withdrawalData = Array.isArray(data.withdrawals)
+          ? data.withdrawals
+          : [];
         const issueData = Array.isArray(data.issues) ? data.issues : [];
         const codeData = Array.isArray(data.codes) ? data.codes : [];
-        const inflowDataSet = Array.isArray(data.inflowData) ? data.inflowData : [];
+        const inflowDataSet = Array.isArray(data.inflowData)
+          ? data.inflowData
+          : [];
 
         setWithdrawals(withdrawalData);
         setIssues(issueData);

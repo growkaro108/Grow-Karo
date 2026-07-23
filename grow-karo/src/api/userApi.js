@@ -50,9 +50,18 @@ export async function userSchemeWithdraw(userSchemeId, userId) {
   })
 }
 
-export async function fetchUserProfile(userId) {
-  return apiRequest(`/users/${userId}`);
+export async function logoutUser(userId, userName) {
+  return await apiRequest(`/user/logout/${userId}/${userName}`, {
+    method: "POST"
+  })
 }
+
+export async function fetchUserProfile(userId) {
+  return apiRequest(`/users/${userId}`, {
+    method: "POST"
+  });
+}
+
 
 export async function updateUserProfile(userId, updates) {
   return apiRequest(`/users/${userId}`, {

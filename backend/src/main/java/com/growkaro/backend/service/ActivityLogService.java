@@ -19,14 +19,14 @@ import java.util.Map;
 @Service
 public class ActivityLogService {
 
-    private final ActivityLogRepository repo;
+    private final ActivityLogRepository activityLogRepository;
     private final tools.jackson.databind.ObjectMapper objectMapper;
     private final ActivityLogBroadcaster broadcaster;
 
-    public ActivityLogService(ActivityLogRepository repo,
+    public ActivityLogService(ActivityLogRepository activityLogRepository,
             tools.jackson.databind.ObjectMapper objectMapper,
             ActivityLogBroadcaster broadcaster) {
-        this.repo = repo;
+        this.activityLogRepository = activityLogRepository;
         this.objectMapper = objectMapper;
         this.broadcaster = broadcaster;
     }
@@ -57,7 +57,7 @@ public class ActivityLogService {
             entry.setMetadata("{}");
         }
 
-        entry = repo.save(entry);
+        entry = activityLogRepository.save(entry);
         broadcaster.broadcast(entry);
     }
 
@@ -67,7 +67,7 @@ public class ActivityLogService {
                 .where(ActivityLogSpecs.hasActorId(actorId))
                 .and(ActivityLogSpecs.hasType(type))
                 .and(ActivityLogSpecs.createdBetween(from, to));
-        return repo.findAll(spec, pageable);
+        return activityLogRepository.findAll(spec, pageable);
     }
 
     private String getCurrentRequestIp() {
@@ -82,4 +82,5 @@ public class ActivityLogService {
             return null;
         }
     }
+
 }

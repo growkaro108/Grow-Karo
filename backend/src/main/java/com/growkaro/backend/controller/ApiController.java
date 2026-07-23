@@ -2,7 +2,6 @@ package com.growkaro.backend.controller;
 
 import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.common.General;
-import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.service.AdminAPIService;
 import com.growkaro.backend.service.ApiService;
 
@@ -34,7 +33,6 @@ public class ApiController {
 
     @GetMapping("/scheme/get")
     public ResponseEntity<Map<String, Object>> getAllScheme() {
-        System.out.println("scheme api hit");
         try {
             List<SchemeResponse> allScheme = adminAPIService.getAllSchemes();
             if (allScheme == null)

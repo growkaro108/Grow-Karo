@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -76,20 +77,20 @@ public class UserScheme {
     @Column(name = "payment_date")
     private List<LocalDate> paymentDates;
 
-    @Column(name = "remaining_amount", nullable = true)
-    private Long remainingAmount;
+    // @Column(name = "remaining_amount", nullable = true)
+    // private Long remainingAmount;
 
     @Column(name = "bond_number", nullable = true)
     private String bondNumber;
 
-    @Column(name = "bond_price", nullable = true)
-    private Long bondPrice;
+    // @Column(name = "bond_price", nullable = true)
+    // private Long bondPrice;
 
     @Column(name = "bond_maturity_date", nullable = true)
     private LocalDate bondMaturityDate;
 
     @Column(name = "bond_maturity_value", nullable = true)
-    private Long bondMaturityValue;
+    private BigDecimal bondMaturityValue;
 
     public enum UserSchemeStatus {
         PENDING,

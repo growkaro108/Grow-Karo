@@ -1,8 +1,10 @@
 package com.growkaro.backend.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +23,8 @@ import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.common.General;
+import com.growkaro.backend.entity.ActivityLog;
+import com.growkaro.backend.entity.ActivityType;
 import com.growkaro.backend.entity.FundraiserCode;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Scheme;
@@ -38,7 +42,10 @@ import com.growkaro.backend.repository.UserRepository;
 import com.growkaro.backend.repository.UserSchemeRepository;
 import com.growkaro.backend.repository.WithdrawalRequestRepository;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 public class AdminAPIService {
 
     private static final int DEFAULT_PAGE_SIZE = 20;
@@ -52,6 +59,7 @@ public class AdminAPIService {
     private final SchemeRepository schemeRepository;
     private final UserSchemeRepository userSchemeRepository;
     private final ApiService apiService;
+    private final ActivityLogService activityLogService;
     private final General general;
 
     public AdminAPIService(UserRepository userRepository,
@@ -61,7 +69,7 @@ public class AdminAPIService {
             SupportIssueRepository supportIssueRepository,
             FundraiserCodeRepository fundraiserCodeRepository,
             SchemeRepository schemeRepository, UserSchemeRepository userSchemeRepository, @Lazy ApiService apiService,
-            General general) {
+            ActivityLogService activityLogService, General general) {
         this.userRepository = userRepository;
         this.remitterRepository = remitterRepository;
         this.transactionRepository = transactionRepository;
@@ -71,6 +79,7 @@ public class AdminAPIService {
         this.schemeRepository = schemeRepository;
         this.userSchemeRepository = userSchemeRepository;
         this.apiService = apiService;
+        this.activityLogService = activityLogService;
         this.general = general;
     }
 
@@ -155,29 +164,119 @@ public class AdminAPIService {
         }
     }
 
-    public Map<String, Object> activateUsersScheme(String userSchemeId, Long paidAmount) {
+    @Transactional
+    public Map<String, Object> activateUsersScheme(String userSchemeId, Long paidAmount, LocalDate paidDate) {
+        if (userSchemeId == null || userSchemeId.isBlank() || paidAmount == 0 || paidDate == null) {
+            return general.response("error", "Data is required", null);
+        }
+        UserScheme userScheme = null;
+        User user = null;
+        Scheme scheme = null;
+
         try {
-            UserScheme userScheme = apiService.getUserSchemeById(userSchemeId);
-            if (userScheme == null) {
+            Map<String, Object> isUserSchemeValid = isUserSchemeValid(userSchemeId);
+            if (isUserSchemeValid.isEmpty())
                 return general.response("error", "User scheme not found", null);
+
+            userScheme = (UserScheme) isUserSchemeValid.get("userScheme");
+            user = (User) isUserSchemeValid.get("user");
+            scheme = (Scheme) isUserSchemeValid.get("scheme");
+
+            if (Boolean.TRUE.equals(userScheme.getIsApproved())
+                    || userScheme.getStatus() == UserSchemeStatus.ACTIVE) {
+                return general.response("error", "User scheme is already active", null);
             }
+
+            // --- Server-side validation: never trust client-supplied amount/date ---
+            if (paidAmount == null || paidAmount <= 0) {
+                return general.response("error", "Paid amount must be greater than zero", null);
+            }
+            BigDecimal requiredAmount = scheme.getInvestmentAmount(); // adjust getter to match your entity
+            if (requiredAmount != null && BigDecimal.valueOf(paidAmount).compareTo(requiredAmount) > 0) {
+                return general.response("error", "Paid amount exceeds required capital", null);
+            }
+            if (paidDate == null || paidDate.isAfter(LocalDate.now())) {
+                return general.response("error", "Paid date cannot be in the future", null);
+            }
+            if (userScheme.getRequestDate() != null && paidDate.isBefore(userScheme.getRequestDate())) {
+                return general.response("error", "Paid date cannot be before the enrollment request date", null);
+            }
+
+            userScheme.setIsApproved(true);
             userScheme.setPaidAmount(paidAmount);
-            return apiService.userSchemeStatusUpdate(userSchemeId, null, UserSchemeStatus.ACTIVE,
-                    UserSchemeStatus.PENDING, userScheme);
+            List<LocalDate> paymentDates = new ArrayList<>(
+                    userScheme.getPaymentDates() != null ? userScheme.getPaymentDates() : List.of());
+            paymentDates.add(paidDate);
+            userScheme.setPaymentDates(paymentDates);
+            userScheme.setBondMaturityValue(general.calculateMaturityAmount(
+                    paidAmount, scheme.getProfitPercentage(), scheme.getTenure().intValue(),
+                    scheme.getPayoutFrequency()));
+            userScheme.setBondMaturityDate(paidDate.plusDays(scheme.getTenure()));
+            userScheme.setEnrollmentDate(LocalDateTime.now());
+            userScheme.setStatus(UserSchemeStatus.ACTIVE);
+            userSchemeRepository.save(userScheme);
+
+            return general.response("success", "User scheme activated successfully", userScheme);
         } catch (Exception e) {
+            log.error("Error activating user scheme {}", userSchemeId, e);
             return general.response("error", "Error in approving user scheme", null);
+        } finally {
+            if (userScheme != null && scheme != null && user != null) {
+                activityLogService.log("AdminId", "Admin Name", "Admin", ActivityType.SCHEME_ENROLLED,
+                        user.getName() + " has approved for " + scheme.getSchemeName(), "user", user.getId(), null);
+            }
         }
     }
 
+    // helper function
+    private Map<String, Object> isUserSchemeValid(String id) {
+        UserScheme userScheme = apiService.getUserSchemeById(id);
+        if (userScheme == null)
+            return Map.of();
+
+        User user = userScheme.getUser();
+        if (user == null)
+            return Map.of();
+
+        Scheme scheme = userScheme.getScheme();
+        if (scheme == null)
+            return Map.of();
+
+        return Map.of("userScheme", userScheme, "user", user, "scheme", scheme);
+    }
+
     public Map<String, Object> rejectUserScheme(String userSchemeId) {
+        if (userSchemeId == null || userSchemeId.isBlank()) {
+            return general.response("error", "User scheme id is required", null);
+        }
+        UserScheme userScheme = null;
+        User user = null;
+        Scheme scheme = null;
+
         try {
-            if (!apiService.isUserSchemeExits(userSchemeId)) {
-                return general.response("error", "Request record not found", null);
+            Map<String, Object> schemeContext = isUserSchemeValid(userSchemeId);
+            if (schemeContext.isEmpty()) {
+                return general.response("error", "User scheme not found", null);
             }
-            return apiService.userSchemeStatusUpdate(userSchemeId, null, UserSchemeStatus.REJECTED,
-                    UserSchemeStatus.PENDING, null);
+
+            userScheme = (UserScheme) schemeContext.get("userScheme");
+            user = (User) schemeContext.get("user");
+            scheme = (Scheme) schemeContext.get("scheme");
+
+            userSchemeRepository.deleteById(userSchemeId);
+            activityLogService.log(
+                    "adminId",
+                    "adminName",
+                    "Admin",
+                    ActivityType.SCHEME_REJECTED,
+                    "User: " + user.getName() + " is rejected for " + scheme.getSchemeName(),
+                    "user",
+                    userScheme.getUser().getId(),
+                    null);
+
+            return general.response("success", "Enrollment rejected successfully", null);
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            log.error("Error rejecting user scheme {}", userSchemeId, e);
             return general.response("error", "Error in rejecting user scheme", null);
         }
     }

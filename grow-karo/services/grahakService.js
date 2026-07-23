@@ -1,4 +1,4 @@
-import { enrollUser, fetchUserProfile, fetchUserTransactions, getEmailOtp, getEnrolledScheme, getUsersSchemes, userRegister, userSchemeWithdraw, validateEmailOtp } from '@/api/userApi';
+import { enrollUser, fetchUserProfile, fetchUserTransactions, getEmailOtp, getEnrolledScheme, getUsersSchemes, logoutUser, userRegister, userSchemeWithdraw, validateEmailOtp } from '@/api/userApi';
 
 const USE_MOCK = false;
 const NETWORK_DELAY_MS = 1000;
@@ -80,6 +80,11 @@ export async function withdrawUserScheme(userSchemeId, userId) {
   } catch (error) {
     return "failed";
   }
+}
+
+export const logoutApi = async (userId, userName) => {
+  return await logoutUser(userId, userName);
+
 }
 
 

@@ -103,11 +103,10 @@ export default function OverviewTab({ withdrawals, issues, feed, inflowData = []
             </span>
           </div>
           <div className="scrollbar-thin max-h-64 space-y-3 overflow-y-auto pr-1">
-            {feed.map((event) => (
+            {feed?.map((event) => (
               <div key={event.id} className="animate-feed-in flex items-start gap-3 border-b border-slate-800/60 pb-3 last:border-0">
-                <span className={`mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
-                  event.type === "withdrawal" ? "bg-amber-500/10 text-amber-400" : event.type === "deposit" ? "bg-emerald-500/10 text-emerald-400" : "bg-indigo-500/10 text-indigo-400"
-                }`}>
+                <span className={`mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${event.type === "withdrawal" ? "bg-amber-500/10 text-amber-400" : event.type === "deposit" ? "bg-emerald-500/10 text-emerald-400" : "bg-indigo-500/10 text-indigo-400"
+                  }`}>
                   <Activity className="h-3.5 w-3.5" />
                 </span>
                 <div className="min-w-0 flex-1">

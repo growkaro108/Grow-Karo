@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback, useEffect, use } from 'react';
-import Image from 'next/image';
+import React, { useState, useMemo, useCallback, useEffect, use } from "react";
+import Image from "next/image";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -9,25 +9,37 @@ import {
   ImageOff,
   Maximize2,
   Trash2,
-  Loader2
-} from 'lucide-react';
-import { TableRowLoader } from '@/loader/TableRowLoader';
-import { getAllUsersScheme, withdrawUserScheme } from '../../../../services/grahakService';
-import { allRounderMessage, confirmMessage } from '@/components/Message';
-import { userContext } from '@/context/UserContext';
+  Loader2,
+} from "lucide-react";
+import { TableRowLoader } from "@/loader/TableRowLoader";
+import {
+  getAllUsersScheme,
+  withdrawUserScheme,
+} from "../../../../services/grahakService";
+import { allRounderMessage, confirmMessage } from "@/components/Message";
+import { userContext } from "@/context/UserContext";
 
 const currency = (val) => {
-  const n = parseFloat(val);
-  return Number.isFinite(n) ? `₹ ${n.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—';
+  const n = Number.parseFloat(val);
+  return Number.isFinite(n)
+    ? `₹ ${n.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+    : "—";
 };
 
 const formatDate = (val) => {
-  if (!val) return '—';
+  if (!val) return "—";
   const d = new Date(val);
-  return Number.isNaN(d.getTime()) ? val : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  return Number.isNaN(d.getTime())
+    ? val
+    : d.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
 };
 
-const tableHeaderStyle = "px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap";
+const tableHeaderStyle =
+  "px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap";
 const tableCellStyle = "px-4 py-4 text-sm text-slate-600 whitespace-nowrap";
 
 function BondThumb({ src, alt, size = 40, onExpand }) {
@@ -43,7 +55,10 @@ function BondThumb({ src, alt, size = 40, onExpand }) {
 
   if (errored || !src) {
     return (
-      <div className="rounded-md bg-slate-100 flex items-center justify-center text-slate-400" style={dim}>
+      <div
+        className="rounded-md bg-slate-100 flex items-center justify-center text-slate-400"
+        style={dim}
+      >
         <ImageOff size={Math.round(size * 0.4)} />
       </div>
     );
@@ -60,7 +75,9 @@ function BondThumb({ src, alt, size = 40, onExpand }) {
       className="relative rounded-md overflow-hidden border border-slate-100 bg-slate-100 group focus:outline-none focus:ring-2 focus:ring-indigo-400"
       style={dim}
     >
-      {loading && <div className="absolute inset-0 animate-pulse bg-slate-200" />}
+      {loading && (
+        <div className="absolute inset-0 animate-pulse bg-slate-200" />
+      )}
       <Image
         src={src}
         alt={alt}
@@ -72,10 +89,13 @@ function BondThumb({ src, alt, size = 40, onExpand }) {
           setErrored(true);
           setLoading(false);
         }}
-        className={`object-cover transition-opacity duration-300 ${loading ? 'opacity-0' : 'opacity-100'}`}
+        className={`object-cover transition-opacity duration-300 ${loading ? "opacity-0" : "opacity-100"}`}
       />
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
-        <Maximize2 size={Math.round(size * 0.35)} className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+        <Maximize2
+          size={Math.round(size * 0.35)}
+          className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+        />
       </div>
     </button>
   );
@@ -86,12 +106,12 @@ function ImageLightbox({ bond, onClose }) {
   const [imgError, setImgError] = useState(false);
   const [imgLoading, setImgLoading] = useState(true);
 
-  const mainImage = bond.bondImageURL?.[0] || '';
+  const mainImage = bond.bondImageURL?.[0] || "";
 
   useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    const onKey = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
   useEffect(() => {
@@ -106,15 +126,15 @@ function ImageLightbox({ bond, onClose }) {
       const res = await fetch(mainImage);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `${bond.bondNumber || 'bond-image'}.png`;
+      a.download = `${bond.bondNumber || "bond-image"}.png`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      window.open(mainImage, '_blank', 'noopener,noreferrer');
+      window.open(mainImage, "_blank", "noopener,noreferrer");
     } finally {
       setDownloading(false);
     }
@@ -126,15 +146,26 @@ function ImageLightbox({ bond, onClose }) {
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label={`${bond.bondNumber || 'Bond'} image preview`}
+      aria-label={`${bond.bondNumber || "Bond"} image preview`}
     >
-      <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div>
-            <p className="text-sm font-semibold" style={{ color: '#1e293b' }}>{bond.bondNumber || 'N/A'}</p>
-            <p className="text-xs" style={{ color: '#64748b' }}>{bond.schemeName}</p>
+            <p className="text-sm font-semibold" style={{ color: "#1e293b" }}>
+              {bond.bondNumber || "N/A"}
+            </p>
+            <p className="text-xs" style={{ color: "#64748b" }}>
+              {bond.schemeName}
+            </p>
           </div>
-          <button onClick={onClose} aria-label="Close preview" className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+          <button
+            onClick={onClose}
+            aria-label="Close preview"
+            className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+          >
             <X size={18} />
           </button>
         </div>
@@ -154,7 +185,7 @@ function ImageLightbox({ bond, onClose }) {
               )}
               <Image
                 src={mainImage}
-                alt={bond.bondNumber || 'Bond Proof'}
+                alt={bond.bondNumber || "Bond Proof"}
                 fill
                 unoptimized
                 sizes="(max-width: 640px) 100vw, 500px"
@@ -163,14 +194,17 @@ function ImageLightbox({ bond, onClose }) {
                   setImgError(true);
                   setImgLoading(false);
                 }}
-                className={`object-contain rounded-lg transition-opacity duration-300 ${imgLoading ? 'opacity-0' : 'opacity-100'}`}
+                className={`object-contain rounded-lg transition-opacity duration-300 ${imgLoading ? "opacity-0" : "opacity-100"}`}
               />
             </div>
           )}
         </div>
 
         <div className="flex justify-end gap-2 px-5 py-4 border-t border-slate-100">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+          >
             Close
           </button>
           <button
@@ -179,7 +213,7 @@ function ImageLightbox({ bond, onClose }) {
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
           >
             <Download size={16} />
-            {downloading ? 'Downloading…' : 'Download'}
+            {downloading ? "Downloading…" : "Download"}
           </button>
         </div>
       </div>
@@ -193,8 +227,10 @@ function DetailField({ label, value, highlight = false }) {
       <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
         {label}
       </span>
-      <span className={`text-sm font-semibold tracking-tight ${highlight ? 'text-emerald-600 font-bold' : 'text-slate-700'}`}>
-        {value ?? '—'}
+      <span
+        className={`text-sm font-semibold tracking-tight ${highlight ? "text-emerald-600 font-bold" : "text-slate-700"}`}
+      >
+        {value ?? "—"}
       </span>
     </div>
   );
@@ -202,41 +238,57 @@ function DetailField({ label, value, highlight = false }) {
 
 function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
-  const mainImage = bond.bondImageURL?.[0] || '';
+  const mainImage = bond.bondImageURL?.[0] || "";
 
   const handleWithdrawClick = async () => {
-    const confirmed = await confirmMessage("you want to withdraw this application?");
+    const confirmed = await confirmMessage(
+      "you want to withdraw this application?",
+    );
     if (!confirmed) return;
     else {
       setIsWithdrawing(true);
       await onWithdraw(bond.userSchemeId);
       setIsWithdrawing(false);
     }
-
-
   };
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-in fade-in slide-in-from-bottom-3 duration-300 ease-out">
       <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-        <button onClick={onBack} className="group flex items-center gap-2 text-sm font-semibold text-indigo-600 transition-colors duration-200 hover:text-indigo-700">
-          <ArrowLeft size={16} className="transition-transform duration-200 group-hover:-translate-x-0.5" />
+        <button
+          onClick={onBack}
+          className="group flex items-center gap-2 text-sm font-semibold text-indigo-600 transition-colors duration-200 hover:text-indigo-700"
+        >
+          <ArrowLeft
+            size={16}
+            className="transition-transform duration-200 group-hover:-translate-x-0.5"
+          />
           Back to holdings
         </button>
-        <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${bond.isApproved ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-          <ShieldCheck size={14} /> {bond.isApproved ? 'Active Asset' : 'Pending Approval'}
+        <span
+          className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${bond.isApproved ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+        >
+          <ShieldCheck size={14} />{" "}
+          {bond.isApproved ? "Active Asset" : "Pending Approval"}
         </span>
       </div>
 
       <div className="p-6">
         <div className="flex flex-col gap-6 md:flex-row md:items-start">
-          <div onClick={onExpandImage} className="group relative h-28 w-28 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-slate-200 shadow-sm transition-transform duration-300 hover:scale-[1.02] self-center sm:self-start bg-slate-100 flex items-center justify-center">
+          <div
+            onClick={onExpandImage}
+            className="group relative h-28 w-28 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-slate-200 shadow-sm transition-transform duration-300 hover:scale-[1.02] self-center sm:self-start bg-slate-100 flex items-center justify-center"
+          >
             {mainImage ? (
               <>
                 <div className="absolute inset-0 z-10 flex items-center justify-center bg-indigo-950/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                   <ArrowUpRight size={20} className="text-white drop-shadow" />
                 </div>
-                <img src={mainImage} alt={bond.bondNumber} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                <img
+                  src={mainImage}
+                  alt={bond.bondNumber}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
               </>
             ) : (
               <ImageOff size={24} className="text-slate-400" />
@@ -244,18 +296,55 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
           </div>
 
           <div className="flex-1 text-center sm:text-left">
-            <h3 className="text-xl font-bold tracking-tight text-slate-900">{bond.bondNumber || 'Processing No.'}</h3>
-            <p className="mt-0.5 text-sm font-medium text-slate-400">{bond.schemeName}</p>
+            <h3 className="text-xl font-bold tracking-tight text-slate-900">
+              {bond.bondNumber || "Processing No."}
+            </h3>
+            <p className="mt-0.5 text-sm font-medium text-slate-400">
+              {bond.schemeName}
+            </p>
 
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <DetailField label="Invest Amount" value={currency(bond.investmentAmount)} />
-              <DetailField label="Paid Amount" value={currency(bond.paidAmount)} />
+              <DetailField
+                label="Invest Amount"
+                value={currency(bond.investmentAmount)}
+              />
+              <DetailField
+                label="Paid Amount"
+                value={currency(bond.paidAmount)}
+              />
               <DetailField label="Tenure" value={`${bond.tenure} Days`} />
-              <DetailField label="Profit %" value={bond.profitPercentage != null ? `${bond.profitPercentage}%` : '—'} highlight={true} />
-              <DetailField label="Payout Frequency" value={bond.payoutFrequency} />
-              <DetailField label="Enrollment Date" value={formatDate(bond.enrollmentDate)} />
-              <DetailField label="Request Date" value={formatDate(bond.requestDate)} />
-              <DetailField label="Maturity Value" value={currency(bond.maturityValue)} />
+              <DetailField
+                label="Profit %"
+                value={
+                  bond.profitPercentage != null
+                    ? `${bond.profitPercentage}%`
+                    : "—"
+                }
+                highlight={true}
+              />
+              <DetailField
+                label="Payout Frequency"
+                value={bond.payoutFrequency}
+              />
+              <DetailField
+                label="Enrollment Date"
+                value={formatDate(bond.enrollmentDate)}
+              />
+              {!bond.isApproved ? (
+                <DetailField
+                  label="Request Date"
+                  value={formatDate(bond.requestDate)}
+                />
+              ) : (
+                <DetailField
+                  label="Maturity Date"
+                  value={formatDate(bond.bondMaturityDate)}
+                />
+              )}
+              <DetailField
+                label="Maturity Value"
+                value={currency(bond.maturityValue)}
+              />
             </div>
           </div>
         </div>
@@ -264,7 +353,9 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
         {!bond.isApproved && (
           <div className="mt-8 flex justify-between items-center border-t border-slate-100 pt-6">
             {/* //request how much long ago was it made */}
-            <p className="text-sm font-medium text-slate-400">Request on: {formatDate(bond.requestDate)}</p>
+            <p className="text-sm font-medium text-slate-400">
+              Request on: {formatDate(bond.requestDate)}
+            </p>
             <button
               onClick={handleWithdrawClick}
               disabled={isWithdrawing}
@@ -275,7 +366,7 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
               ) : (
                 <Trash2 size={16} />
               )}
-              {isWithdrawing ? 'Withdrawing...' : 'Withdraw Request'}
+              {isWithdrawing ? "Withdrawing..." : "Withdraw Request"}
             </button>
           </div>
         )}
@@ -292,8 +383,13 @@ export default function Portfolio({ holdings = [] }) {
   const { authUser } = use(userContext);
 
   const sortedHoldings = useMemo(
-    () => [...holding].sort((a, b) => parseFloat(b.investmentAmount || 0) - parseFloat(a.investmentAmount || 0)),
-    [holding]
+    () =>
+      [...holding].sort(
+        (a, b) =>
+          Number.parseFloat(b.investmentAmount || 0) -
+          Number.parseFloat(a.investmentAmount || 0),
+      ),
+    [holding],
   );
 
   const openDetails = useCallback((bond) => setSelectedBond(bond), []);
@@ -307,16 +403,16 @@ export default function Portfolio({ holdings = [] }) {
     try {
       setLoading(true);
       const response = await getAllUsersScheme(userId);
-      allRounderMessage(response);
-      console.log(response)
+      console.log(response);
 
       if (response.status === "success" && response.data) {
-
         setHolding(response.data);
       } else {
+        allRounderMessage(response);
         setHolding([]);
       }
     } catch (error) {
+      allRounderMessage(response);
       setHolding([]);
       console.error("Error fetching holdings:", error);
     } finally {
@@ -337,21 +433,24 @@ export default function Portfolio({ holdings = [] }) {
     };
   }, [fetchHoldings]);
   // Handle asset withdrawal
-  const handleWithdrawRequest = useCallback(async (userSchemeId) => {
-    try {
-      const response = await withdrawUserScheme(userSchemeId, authUser?.id);
-      console.log(response)
-      allRounderMessage(response);
+  const handleWithdrawRequest = useCallback(
+    async (userSchemeId) => {
+      try {
+        const response = await withdrawUserScheme(userSchemeId, authUser?.id);
+        console.log(response);
+        allRounderMessage(response);
 
-      if (response.status === "success") {
-        // 2. Refresh local data set views cleanly
-        await fetchHoldings();
-        setSelectedBond(null);
+        if (response.status === "success") {
+          // 2. Refresh local data set views cleanly
+          await fetchHoldings();
+          setSelectedBond(null);
+        }
+      } catch (error) {
+        console.error("Failed to withdraw application:", error);
       }
-    } catch (error) {
-      console.error("Failed to withdraw application:", error);
-    }
-  }, [fetchHoldings, authUser?.id]);
+    },
+    [fetchHoldings, authUser?.id],
+  );
 
   return (
     <div className="flex flex-col gap-6 p-6 bg-slate-50 min-h-screen font-sans">
@@ -364,9 +463,11 @@ export default function Portfolio({ holdings = [] }) {
         />
       ) : (
         <div className="p-6 bg-white rounded-xl shadow-sm border border-slate-100">
-          <h3 className="text-lg font-semibold" style={{ color: '#1e293b' }}>Your Bond Holdings</h3>
-          <p className="text-sm mt-1 mb-4" style={{ color: '#64748b' }}>
-            Click a row for full details, or click the image to view it full-size
+          <h3 className="text-lg font-semibold" style={{ color: "#1e293b" }}>
+            Your Bond Holdings
+          </h3>
+          <p className="text-sm mt-1 mb-4" style={{ color: "#64748b" }}>
+            Click a row for details, or click the image to view it full-size
           </p>
 
           <div className="overflow-x-auto">
@@ -385,7 +486,10 @@ export default function Portfolio({ holdings = [] }) {
                   <TableRowLoader loading={"Joined Scheme.."} colSpan={5} />
                 ) : sortedHoldings.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-500">
+                    <td
+                      colSpan={5}
+                      className="px-4 py-8 text-center text-sm text-slate-500"
+                    >
                       No holdings available.
                     </td>
                   </tr>
@@ -394,27 +498,49 @@ export default function Portfolio({ holdings = [] }) {
                     <tr
                       key={bond.userSchemeId || index}
                       onClick={() => openDetails(bond)}
-                      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && openDetails(bond)}
+                      onKeyDown={(e) =>
+                        (e.key === "Enter" || e.key === " ") &&
+                        openDetails(bond)
+                      }
                       tabIndex={0}
                       role="button"
                       aria-label={`View details for bond ${bond.bondNumber}`}
                       className="cursor-pointer hover:bg-slate-50 focus:bg-slate-50 outline-none transition-colors duration-150"
                     >
-                      <td className={tableCellStyle} style={{ color: '#475569' }}>
+                      <td
+                        className={tableCellStyle}
+                        style={{ color: "#475569" }}
+                      >
                         <BondThumb
                           src={bond.bondImageURL?.[0]}
-                          alt={bond.bondNumber || 'Proof'}
+                          alt={bond.bondNumber || "Proof"}
                           onExpand={() => openLightbox(bond)}
                         />
                       </td>
-                      <td className={`${tableCellStyle} font-semibold`} style={{ color: '#1e293b' }}>
-                        {bond.bondNumber || 'Pending'}
+                      <td
+                        className={`${tableCellStyle} font-semibold`}
+                        style={{ color: "#1e293b" }}
+                      >
+                        {bond.bondNumber || "Pending"}
                       </td>
-                      <td className={tableCellStyle} style={{ color: '#475569' }}>{bond.schemeName}</td>
-                      <td className={`${tableCellStyle} font-semibold`} style={{ color: '#334155' }}>
+                      <td
+                        className={tableCellStyle}
+                        style={{ color: "#475569" }}
+                      >
+                        {bond.schemeName}
+                      </td>
+                      <td
+                        className={`${tableCellStyle} font-semibold`}
+                        style={{ color: "#334155" }}
+                      >
                         {currency(bond.investmentAmount)}
                       </td>
-                      <td className={tableCellStyle} style={{ color: '#475569' }}>{bond.payoutFrequency}</td>
+                      <td
+                        className={tableCellStyle}
+                        style={{ color: "#475569" }}
+                      >
+                        {bond.payoutFrequency}
+                      </td>
                     </tr>
                   ))
                 )}
@@ -424,7 +550,9 @@ export default function Portfolio({ holdings = [] }) {
         </div>
       )}
 
-      {lightboxBond && <ImageLightbox bond={lightboxBond} onClose={closeLightbox} />}
+      {lightboxBond && (
+        <ImageLightbox bond={lightboxBond} onClose={closeLightbox} />
+      )}
     </div>
   );
 }

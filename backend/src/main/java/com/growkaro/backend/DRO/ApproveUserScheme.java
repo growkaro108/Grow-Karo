@@ -1,5 +1,7 @@
 package com.growkaro.backend.DRO;
 
-public record ApproveUserScheme(String userSchemeId, Long paidAmount) {
+import java.time.LocalDate;
+
+public record ApproveUserScheme(String userSchemeId, Long paidAmount, LocalDate paidDate) {
 
 }

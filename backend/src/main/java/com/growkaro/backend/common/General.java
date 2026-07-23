@@ -1,6 +1,10 @@
 package com.growkaro.backend.common;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.Year;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Random;
@@ -123,7 +127,8 @@ public class General {
                 us.getUserSchemeId(),
                 us.getPaidAmount(),
                 us.getIsApproved(),
-                us.getStatus());
+                us.getStatus(),
+                us.getBondMaturityDate());
     }
 
     public SchemeResponse toSchemeResponse(Scheme scheme) {
@@ -152,5 +157,78 @@ public class General {
 
     public LocalDate calculateMaturityDate(LocalDate startDate, int tenure) {
         return startDate.plusDays(tenure);
+    }
+
+    private static int daysInYear() {
+        return Year.now().isLeap() ? 366 : 365;
+    }
+
+    public BigDecimal calculateMaturityAmount(Long investmentAmount, Double profitPercentage, int tenure,
+            String payoutFrequency) {
+
+        if (investmentAmount == null || investmentAmount <= 0) {
+            throw new IllegalArgumentException("Investment amount must be greater than zero");
+        }
+        if (profitPercentage == null || profitPercentage < 0) {
+            throw new IllegalArgumentException("Profit percentage must be zero or greater");
+        }
+        if (tenure <= 0) {
+            throw new IllegalArgumentException("Tenure must be greater than zero days");
+        }
+
+        int periodDays = resolvePeriodDays(payoutFrequency);
+
+        BigDecimal principal = BigDecimal.valueOf(investmentAmount);
+        // Annual rate as a fraction, e.g. 12.0 -> 0.12
+        BigDecimal annualRate = BigDecimal.valueOf(profitPercentage)
+                .divide(BigDecimal.valueOf(100), MathContext.DECIMAL64);
+
+        int daysInYear = daysInYear();
+
+        // Rate earned over exactly one full payout period.
+        BigDecimal periodRate = annualRate
+                .multiply(BigDecimal.valueOf(periodDays))
+                .divide(BigDecimal.valueOf(daysInYear), MathContext.DECIMAL64);
+        BigDecimal growthFactor = BigDecimal.ONE.add(periodRate);
+
+        int fullPeriods = tenure / periodDays;
+        int remainderDays = tenure % periodDays;
+
+        BigDecimal amount = principal;
+
+        // Compound once per full payout period elapsed in the tenure.
+        for (int i = 0; i < fullPeriods; i++) {
+            amount = amount.multiply(growthFactor, MathContext.DECIMAL64);
+        }
+
+        // Tenure isn't always an exact multiple of the payout period — prorate
+        // the leftover days at the same annual rate rather than dropping them
+        // or rounding up to a full extra period.
+        if (remainderDays > 0) {
+            BigDecimal remainderRate = annualRate
+                    .multiply(BigDecimal.valueOf(remainderDays))
+                    .divide(BigDecimal.valueOf(daysInYear), MathContext.DECIMAL64);
+            amount = amount.multiply(BigDecimal.ONE.add(remainderRate), MathContext.DECIMAL64);
+        }
+
+        return amount.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private int resolvePeriodDays(String payoutFrequency) {
+        if (payoutFrequency == null) {
+            throw new IllegalArgumentException("Payout frequency is required");
+        }
+        String key = payoutFrequency.trim().toLowerCase();
+        if (key.equals("21 days")) {
+            return 21;
+        } else if (key.equals("monthly")) {
+            return 30;
+        } else if (key.equals("half-yearly") || key.equals("half yearly")) {
+            return 182;
+        } else if (key.equals("yearly")) {
+            return 365;
+        } else {
+            throw new IllegalArgumentException("Unknown payout frequency: " + payoutFrequency);
+        }
     }
 }

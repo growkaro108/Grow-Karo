@@ -78,12 +78,12 @@ public class AdminAPIController {
 
     @PutMapping("/user-scheme/approve")
     public ResponseEntity<Map<String, Object>> activateUserScheme(@RequestBody ApproveUserScheme approveUserScheme) {
-        if (approveUserScheme.userSchemeId() == "" || approveUserScheme.userSchemeId() == null
+        if ("".equals(approveUserScheme.userSchemeId()) || approveUserScheme.userSchemeId() == null
                 || approveUserScheme.paidAmount() == null) {
             return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.ok(
-                adminAPIService.activateUsersScheme(approveUserScheme.userSchemeId(), approveUserScheme.paidAmount()));
+        return ResponseEntity.ok(adminAPIService.activateUsersScheme(approveUserScheme.userSchemeId(),
+                approveUserScheme.paidAmount(), approveUserScheme.paidDate()));
     }
 
     @PutMapping("/user-scheme/reject/{userSchemeId}")

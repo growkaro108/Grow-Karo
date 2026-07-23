@@ -1,22 +1,23 @@
 import React from "react";
-
-export  function PlanStatusBadge({ active }) {
-    return (
-        <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold tracking-wide uppercase border ${active
-                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_12px_rgba(16,185,129,0.1)]"
-                : "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                }`}
-        >
-            <span
-                className={`w-1.5 h-1.5 rounded-full animate-pulse ${active ? "bg-emerald-400 shadow-[0_0_8px_#34d399]" : "bg-rose-400"}
-                    `}
-            />
-            {active ? "Active" : "Closed"}
-        </span>
-    );
-}
 import { CircleDot } from "lucide-react";
+
+
+export function PlanStatusBadge({ active }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold tracking-wide uppercase border ${active
+        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_12px_rgba(16,185,129,0.1)]"
+        : "bg-rose-500/10 text-rose-400 border-rose-500/20"
+        }`}
+    >
+      <span
+        className={`w-1.5 h-1.5 rounded-full animate-pulse ${active ? "bg-emerald-400 shadow-[0_0_8px_#34d399]" : "bg-rose-400"}
+                    `}
+      />
+      {active ? "Active" : "Closed"}
+    </span>
+  );
+}
 
 export function StatusBadge({ status }) {
   const map = {
@@ -28,6 +29,10 @@ export function StatusBadge({ status }) {
     resolved: "bg-emerald-500/10 text-emerald-400 ring-emerald-500/30",
     active: "bg-emerald-500/10 text-emerald-400 ring-emerald-500/30",
     paused: "bg-slate-500/10 text-slate-400 ring-slate-500/30",
+    login: "bg-indigo-500/10 text-indigo-400 ring-indigo-500/30",
+    logout: "bg-red-500/10 text-red-400 ring-red-500/30",
+    signup: "bg-green-500/10 text-green-400 ring-green-500/30",
+    create: "bg-blue-500/10 text-blue-400 ring-blue-500/30",
   };
 
   const label = status.replace("_", " ");

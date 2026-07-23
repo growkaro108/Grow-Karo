@@ -156,9 +156,19 @@ public class UserAPIService {
         return general.response("ok", "Login successful", Map.of("user", finalUser));
     }
 
-    public Map<String, Object> logout() {
+    public Map<String, Object> logout(String userId, String userName) {
 
-        return general.response("ok", "Logout successful", Map.of());
+        try {
+            activityLogService.log(
+                    userId, userName, "USER",
+                    ActivityType.LOGOUT,
+                    userName + " logged out",
+                    "USER", "",
+                    Map.of());
+            return general.response("success", "Logout successful", Map.of());
+        } catch (Exception e) {
+            return general.response("error", "Logout failed", Map.of());
+        }
     }
 
     public Map<String, Object> enrollScheme(String schemeId, String userId) {
@@ -269,7 +279,8 @@ public class UserAPIService {
             }
         } catch (Exception e) {
             log.error("Error withdrawing userScheme {} for user {}", userSchemeId, userId, e);
-            return general.response("error", "Something went wrong while processing your cancellation request", null);
+            return general.response("error", e.getMessage() != null ? e.getMessage()
+                    : "Something went wrong while processing your cancellation request", null);
         } finally {
             if (user != null && userScheme != null) {
                 activityLogService.log(
@@ -284,6 +295,7 @@ public class UserAPIService {
 
     }
 
+    //// pending
     @Cacheable(value = "userProfile", key = "#userId")
     @Transactional(readOnly = true)
     public Map<String, Object> userProfile(String userId) {

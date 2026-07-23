@@ -1,7 +1,8 @@
 "use client";
-import React from "react";
+import React, { use } from "react";
 import dynamic from "next/dynamic";
 import Loader from "@/loader/Loader";
+import { userContext } from "@/context/UserContext";
 
 const AdminDashboard = dynamic(() => import("./malik/AdminDashboard"), {
   loading: () => <Loader />,
@@ -20,14 +21,17 @@ const UserDashboard = dynamic(() => import("./grahak/UserDashboard"), {
 });
 
 const Dashboard = () => {
+  const { authUser } = use(userContext);
   if (!AdminDashboard || !RemitterDashboard || !UserDashboard) {
     return <Loader />;
   }
-  return (
-    // <UserDashboard />
-    <AdminDashboard />
-    // <RemitterDashboard />
-  );
+  if (authUser?.email === "wv9304@gmail.com") return <AdminDashboard />;
+  else
+    return (
+      <UserDashboard />
+      // <AdminDashboard />
+      // <RemitterDashboard />
+    );
 };
 
 export default Dashboard;
