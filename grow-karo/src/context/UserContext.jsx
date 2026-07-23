@@ -1,87 +1,72 @@
-"use client";
-import { createContext, useCallback, useMemo, useState } from "react";
-import {
-  confirmMessage,
-  errorMessage,
-  infoMessage,
-  successMessage,
-} from "@/components/Message";
+'use client'
+import react, { createContext, useCallback, useMemo, useState } from "react";
+import { confirmMessage, errorMessage, infoMessage, successMessage } from "@/components/Message";
 import { useRouter } from "next/navigation";
 import { deleteSecureCookie, getSecureCookie } from "./cookiesManagement";
 import { logoutApi } from "../../services/grahakService";
 
+
+
 export const userContext = createContext({});
 export const UserProvider = ({ children }) => {
-  const [authUser, setAuthUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
+    const [authUser, setAuthUser] = useState(null);
+    const [isLoading, setIsLoading] = useState(true)
+    const router = useRouter();
 
-  const logout = useCallback(async () => {
-    if (!(authUser?.id && authUser?.name)) {
-      infoMessage("No user logged in...");
-      router.push("/");
-      return;
-    }
 
-    const confirmed = await confirmMessage(
-      "you want to logout",
-      "Are you sure?",
-    );
-    if (!confirmed) {
-      infoMessage("Logout cancelled...");
-      return;
-    }
+    const logout = useCallback(async () => {
+        try {
+            if (authUser && authUser?.id && authUser?.name) {
+                let response = await confirmMessage("you want to logout", "Are you sure?");
+                if (response) {
+                    const response = await logoutApi(authUser?.id, authUser?.name);
+                    // console.log("logout response", response)
+                    if (response.status !== 'success') {
+                        errorMessage("Logout failed", "Logout");
+                        return;
+                    }
+                    const status = await deleteSecureCookie("authUser")
+                    if (status.success) {
+                        setAuthUser(null);
+                        router.push("/auth");
+                        router.refresh();
+                        // console.log(authUser)
+                        successMessage("Logout successfully", "Logout")
+                    } else {
+                        errorMessage("Logout failed", "Logout")
+                    }
+                } else {
+                    infoMessage("Logout cancelled...")
+                }
+            } else {
+                infoMessage("No user logged in...")
+                router.push("/")
+            }
+        } catch (error) {
+            console.error("logout error:", error)
+        }
+    }, [authUser, router])
 
-    !isLoading && setIsLoading(true);
-    try {
-      const response = await logoutApi(authUser?.id, authUser?.name);
+    const getUserDataFromContext = useCallback(async () => {
+        if (authUser !== null) return authUser;
+        try {
+            const user = await getSecureCookie("authUser");
+            setAuthUser(user?.data);
+        } catch (error) {
+            console.error("Failed to get data", error)
+            return null;
+        }
+    }, [authUser]);
 
-      if (response.status !== "success") {
-        errorMessage("Logout failed", "Logout");
-        return;
-      }
-
-      const status = await deleteSecureCookie("authUser");
-      if (!status.success) {
-        errorMessage("Logout failed", "Logout");
-        return;
-      }
-
-      setAuthUser(null);
-      router.push("/auth");
-      router.refresh();
-      successMessage("Logout successfully", "Logout");
-    } catch (error) {
-      console.error("logout error:", error);
-      errorMessage("Something went wrong during logout", "Logout");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [authUser, isLoading, router]);
-
-  const getUserDataFromContext = useCallback(async () => {
-    if (authUser !== null) return authUser;
-    try {
-      const user = await getSecureCookie("authUser");
-      setAuthUser(user?.data);
-    } catch (error) {
-      console.error("Failed to get data", error);
-      return null;
-    }
-  }, [authUser]);
-
-  const contexValue = useMemo(
-    () => ({
-      authUser,
-      setAuthUser,
-      isLoading,
-      setIsLoading,
-      logout,
-      getUserDataFromContext,
-    }),
-    [authUser, getUserDataFromContext, isLoading, logout],
-  );
-  return (
-    <userContext.Provider value={contexValue}>{children}</userContext.Provider>
-  );
-};
+    const contexValue = useMemo(() => ({
+        authUser,
+        setAuthUser,
+        isLoading,
+        setIsLoading,
+        logout,
+        getUserDataFromContext
+    }), [authUser, getUserDataFromContext, logout]);
+    return <userContext.Provider value={contexValue}>
+        {children}
+    </userContext.Provider>
+}

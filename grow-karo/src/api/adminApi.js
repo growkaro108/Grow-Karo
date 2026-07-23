@@ -51,6 +51,13 @@ export async function rejectUserSchemes(userSchemeId) {
     method: "PUT",
   });
 }
+export async function addBonds(userSchemeId,payload) {
+  return await apiRequest(`${END_POINT}user-scheme/add-bond/${userSchemeId}`, {
+    method: "PUT",
+    body: payload,
+  });
+}
+
 export async function fetchAdminDashboard(params) {
   return await apiRequest(`${END_POINT}dashboard`, { params });
 }

@@ -1,14 +1,16 @@
 server:
   port: 9090
-# HTTP Compression
+  # HTTP Compression
   compression:
     enabled: true
     mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml
     min-response-size: 2048
+
 spring:
   application:
     name: backend
-  # PostgreSQL Configuration
+
+  # 1. PostgreSQL Configuration
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:growkaro_db}
     username: ${DB_USERNAME:growkaro}
@@ -28,29 +30,29 @@ spring:
       password: ${REDIS_PASSWORD:} # Leave blank if your container doesn't use a password
       timeout: 60000
 
-  # 3. Cache Configuration (For your @Cacheable annotations)
+  # 3. Cache Configuration
   cache:
     type: redis
     redis:
-      time-to-live: 360000 # Cache expiry in milliseconds (e.g., 10 min)
+      time-to-live: 10m # Set explicit duration (10 minutes)
       cache-null-values: false
 
   # 4. JPA / Hibernate Configuration
   jpa:
     hibernate:
-      ddl-auto: update   # auto-creates / updates tables from entities   
-    show-sql: true
+      ddl-auto: update # Change to 'validate' or 'none' for production
+    show-sql: false # Set to true during local development only
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        
+
   # 5. Mail Configuration
   mail:
     host: smtp.gmail.com
     port: 587
-    username: growkaroanand@gmail.com
-    password: llqk juwm cupw zyrk
+    username: ${MAIL_USERNAME:growkaroanand@gmail.com}
+    password: ${MAIL_PASSWORD:llqk juwm cupw zyrk} # Removed plain-text app password
     properties:
       mail:
         smtp:
@@ -58,11 +60,16 @@ spring:
           starttls:
             enable: true
             required: true
-          # Security Protocols (Forces modern handshakes)
           ssl:
             protocols: TLSv1.2 TLSv1.3
             trust: smtp.gmail.com
-          # Timeouts to prevent the connection reset error
           connectiontimeout: 10000
           timeout: 10000
           writetimeout: 10000
+# s3 storage
+app:
+  storage:
+    type: s3
+    s3:
+      bucket: your-bucket-name
+      public-url-base: https://your-bucket-name.s3.ap-south-1.amazonaws.com

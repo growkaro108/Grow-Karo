@@ -1,8 +1,12 @@
 package com.growkaro.backend.controller;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.growkaro.backend.DRO.ApproveUserScheme;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
@@ -25,6 +30,9 @@ public class AdminAPIController {
 
     private final AdminAPIService adminAPIService;
     private final General general;
+
+    private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of("image/jpeg", "image/png", "image/webp", "image/jpg");
+    private static final long MAX_FILE_SIZE_BYTES = 5L * 1024 * 1024;
 
     public AdminAPIController(AdminAPIService adminAPIService, General general) {
         this.adminAPIService = adminAPIService;
@@ -90,6 +98,45 @@ public class AdminAPIController {
     public ResponseEntity<Map<String, Object>> rejectUserScheme(@PathVariable String userSchemeId) {
         return ResponseEntity.ok(adminAPIService.rejectUserScheme(userSchemeId));
     }
+
+    // @PostMapping(value = "/scheme/bond/{userSchemeId}", consumes =
+    // MediaType.MULTIPART_FORM_DATA_VALUE)
+    // public ResponseEntity<Map<String, Object>> addBondDetails(
+    // @PathVariable String userSchemeId,
+    // String bondNumber,
+    // MultipartFile image) {
+    // return null;
+    // if (userSchemeId == null || userSchemeId.isBlank()) {
+    // return ResponseEntity.badRequest().body(general.response("error", "Invalid
+    // userSchemeId", null));
+    // }
+
+    // boolean hasBondNumber = bondNumber != null && !bondNumber.isBlank();
+    // boolean hasImage = image != null && !image.isEmpty();
+
+    // if (!hasBondNumber && !hasImage) {
+    // return ResponseEntity.badRequest()
+    // .body(general.response("error", "Provide a bond number or an image", null));
+    // }
+
+    // if (hasImage) {
+    // String contentType = image.getContentType();
+    // if (contentType == null ||
+    // !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
+    // return ResponseEntity.badRequest()
+    // .body(general.response("error", "Invalid file type: " +
+    // image.getOriginalFilename(), null));
+    // }
+    // if (image.getSize() > MAX_FILE_SIZE_BYTES) {
+    // return ResponseEntity.badRequest()
+    // .body(general.response("error", image.getOriginalFilename() + " exceeds the
+    // 5MB limit", null));
+    // }
+    // }
+
+    // return ResponseEntity.ok(adminAPIService.addBondDetails(userSchemeId,
+    // bondNumber, image));
+    // }
 
     @GetMapping("/dashboard")
     public ResponseEntity<Map<String, Object>> adminDashboard(@RequestParam(required = false) String range) {

@@ -13,12 +13,12 @@ import {
   rejectUserScheme,
 } from "../../../../../../services/malikService";
 import "./SchemeApprovals.css";
-import { currency } from "./components/constants";
 import FilterTabs from "./components/FilterTabs";
 import SchemeTable from "./components/SchemeTable";
 import ApprovalModal from "./components/ApprovalModal";
 import RejectModal from "./components/RejectModal";
 import Toast from "./components/Toast";
+import AddBondModal from "./components/AddBondModal";
 
 const getToday = () => new Date().toISOString().split("T")[0];
 
@@ -29,6 +29,7 @@ export default function SchemeApproval() {
   const [statusFilter, setStatusFilter] = useState("pending");
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [rejectTarget, setRejectTarget] = useState(null);
+  const [bondTarget, setBondTarget] = useState(null);
   const [paidAmount, setPaidAmount] = useState("");
   const [paidDate, setPaidDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -63,8 +64,15 @@ export default function SchemeApproval() {
   }, [showToast]);
 
   useEffect(() => {
-    loadRequests();
-    return () => clearTimeout(toastTimer.current);
+    let mounted = true;
+    (async () => {
+      if (!mounted) return;
+      await loadRequests();
+    })();
+    return () => {
+      mounted = false;
+      clearTimeout(toastTimer.current);
+    };
   }, [loadRequests]);
 
   // Autofocus the amount field on open.
@@ -79,6 +87,24 @@ export default function SchemeApproval() {
     setSelectedRequest(request);
     setPaidAmount("");
     setPaidDate(getToday());
+  };
+
+  const handleOpenAddBond = (request) => {
+    setBondTarget(request);
+  };
+
+  const handleCloseAddBond = () => {
+    setBondTarget(null);
+  };
+
+  const handleBondSuccess = (updatedData) => {
+    setRequests((prev) =>
+      prev.map((r) =>
+        r.userSchemeId === bondTarget?.userSchemeId
+          ? { ...r, ...updatedData }
+          : r,
+      ),
+    );
   };
 
   const totalAmount = selectedRequest ? selectedRequest.investmentAmount : 0;
@@ -136,7 +162,6 @@ export default function SchemeApproval() {
     let response = null;
     try {
       setSubmitting(true);
-      // console.table("payload", payload);
       response = await approveUserScheme(payload);
       if (response?.status !== "success") {
         allRounderMessage(response);
@@ -281,6 +306,7 @@ export default function SchemeApproval() {
         statusFilter={statusFilter}
         handleOpenApproval={handleOpenApproval}
         setRejectTarget={setRejectTarget}
+        handleOpenAddBond={handleOpenAddBond}
       />
 
       <ApprovalModal
@@ -299,6 +325,13 @@ export default function SchemeApproval() {
         rejectTarget={rejectTarget}
         setRejectTarget={setRejectTarget}
         handleConfirmReject={handleConfirmReject}
+      />
+
+      <AddBondModal
+        selectedRequest={bondTarget}
+        onClose={handleCloseAddBond}
+        onSuccess={handleBondSuccess}
+        showToast={showToast}
       />
 
       <Toast toast={toast} />

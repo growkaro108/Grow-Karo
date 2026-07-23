@@ -1,6 +1,57 @@
 import React from "react";
 import { STATUS_STYLES, FILTER_TABS, currency, initials } from "./constants";
 
+function ActionButton({
+  status,
+  handleOpenApproval,
+  setRejectTarget,
+  handleOpenAddBond,
+  req,
+}) {
+  if (status === "pending") {
+    return (
+      <div style={{ display: "flex", gap: "8px" }}>
+        <button
+          className="sea-btn sea-btn-approve"
+          onClick={() => handleOpenApproval(req)}
+        >
+          Approve
+        </button>
+        <button
+          className="sea-btn sea-btn-reject"
+          onClick={() => setRejectTarget(req)}
+        >
+          Reject
+        </button>
+      </div>
+    );
+  }
+
+  if (status === "active") {
+    return (
+      <div style={{ display: "flex", gap: "8px" }}>
+        <button
+          className="sea-btn sea-btn-approve"
+          onClick={() => handleOpenAddBond(req)}
+        >
+          Add Bond
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <span
+      style={{
+        color: "var(--text-muted)",
+        fontSize: "13px",
+      }}
+    >
+      &mdash;
+    </span>
+  );
+}
+
 export default function SchemeTable({
   loading,
   filteredRequests,
@@ -8,6 +59,7 @@ export default function SchemeTable({
   statusFilter,
   handleOpenApproval,
   setRejectTarget,
+  handleOpenAddBond,
 }) {
   return (
     <div className="sea-card">
@@ -73,9 +125,7 @@ export default function SchemeTable({
                     </div>
                   </td>
                   <td>{req.schemeName}</td>
-                  <td className="sea-mono">
-                    {currency(req.investmentAmount)}
-                  </td>
+                  <td className="sea-mono">{currency(req.investmentAmount)}</td>
                   <td>
                     <span
                       className="sea-badge"
@@ -85,32 +135,13 @@ export default function SchemeTable({
                     </span>
                   </td>
                   <td>
-                    {req.status.toLowerCase() === "pending" ||
-                    req.status.toLowerCase() === "PENDING" ? (
-                      <div style={{ display: "flex", gap: "8px" }}>
-                        <button
-                          className="sea-btn sea-btn-approve"
-                          onClick={() => handleOpenApproval(req)}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          className="sea-btn sea-btn-reject"
-                          onClick={() => setRejectTarget(req)}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    ) : (
-                      <span
-                        style={{
-                          color: "var(--text-muted)",
-                          fontSize: "13px",
-                        }}
-                      >
-                        &mdash;
-                      </span>
-                    )}
+                    <ActionButton
+                      req={req}
+                      status={req.status.toLowerCase()}
+                      handleOpenApproval={handleOpenApproval}
+                      setRejectTarget={setRejectTarget}
+                      handleOpenAddBond={handleOpenAddBond}
+                    />
                   </td>
                 </tr>
               );

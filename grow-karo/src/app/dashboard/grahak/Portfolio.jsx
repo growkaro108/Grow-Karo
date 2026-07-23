@@ -134,7 +134,8 @@ function ImageLightbox({ bond, onClose }) {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      window.open(mainImage, "_blank", "noopener,noreferrer");
+      console.log(`Exception while doing something: ${err}`);
+      // window.open(mainImage, "_blank", "noopener,noreferrer");
     } finally {
       setDownloading(false);
     }
@@ -239,7 +240,7 @@ function DetailField({ label, value, highlight = false }) {
 function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const mainImage = bond.bondImageURL?.[0] || "";
-
+  const isApproved = bond.isApproved;
   const handleWithdrawClick = async () => {
     const confirmed = await confirmMessage(
       "you want to withdraw this application?",
@@ -296,21 +297,31 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
           </div>
 
           <div className="flex-1 text-center sm:text-left">
-            <h3 className="text-xl font-bold tracking-tight text-slate-900">
-              {bond.bondNumber || "Processing No."}
+            <h3
+              className={`text-xl tracking-tight text-slate-900 ${bond.bondNumber ? "font-bold" : "text-red-600 font-light"}`}
+            >
+              {isApproved && (bond.bondNumber || "Bond Not Generated Yet")}
             </h3>
             <p className="mt-0.5 text-sm font-medium text-slate-400">
               {bond.schemeName}
             </p>
 
-            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div
+              className={`mt-6 grid grid-cols-2 gap-3 sm:grid-cols-${isApproved ? "4" : "3"}`}
+            >
+              {isApproved && (
+                <DetailField
+                  label="Paid Amount"
+                  value={currency(bond.paidAmount)}
+                />
+              )}
               <DetailField
-                label="Invest Amount"
-                value={currency(bond.investmentAmount)}
-              />
-              <DetailField
-                label="Paid Amount"
-                value={currency(bond.paidAmount)}
+                label={isApproved ? "Remaining Amount" : "Amount Applied"}
+                value={
+                  isApproved
+                    ? currency(bond.investmentAmount - bond.paidAmount)
+                    : currency(bond.investmentAmount)
+                }
               />
               <DetailField label="Tenure" value={`${bond.tenure} Days`} />
               <DetailField
@@ -326,21 +337,16 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
                 label="Payout Frequency"
                 value={bond.payoutFrequency}
               />
-              <DetailField
-                label="Enrollment Date"
-                value={formatDate(bond.enrollmentDate)}
-              />
-              {!bond.isApproved ? (
+              {isApproved && (
                 <DetailField
-                  label="Request Date"
-                  value={formatDate(bond.requestDate)}
-                />
-              ) : (
-                <DetailField
-                  label="Maturity Date"
-                  value={formatDate(bond.bondMaturityDate)}
+                  label="Enrollment Date"
+                  value={formatDate(bond.enrollmentDate)}
                 />
               )}
+              <DetailField
+                label="Request Date"
+                value={formatDate(bond.requestDate)}
+              />
               <DetailField
                 label="Maturity Value"
                 value={currency(bond.maturityValue)}
@@ -350,7 +356,7 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
         </div>
 
         {/* Dynamic Withdraw Actions Bar */}
-        {!bond.isApproved && (
+        {!isApproved && (
           <div className="mt-8 flex justify-between items-center border-t border-slate-100 pt-6">
             {/* //request how much long ago was it made */}
             <p className="text-sm font-medium text-slate-400">
@@ -403,16 +409,15 @@ export default function Portfolio({ holdings = [] }) {
     try {
       setLoading(true);
       const response = await getAllUsersScheme(userId);
-      console.log(response);
+      allRounderMessage(response);
+      // console.log(response);
 
       if (response.status === "success" && response.data) {
         setHolding(response.data);
       } else {
-        allRounderMessage(response);
         setHolding([]);
       }
     } catch (error) {
-      allRounderMessage(response);
       setHolding([]);
       console.error("Error fetching holdings:", error);
     } finally {
@@ -467,7 +472,8 @@ export default function Portfolio({ holdings = [] }) {
             Your Bond Holdings
           </h3>
           <p className="text-sm mt-1 mb-4" style={{ color: "#64748b" }}>
-            Click a row for details, or click the image to view it full-size
+            Click a row for full details, or click the image to view it
+            full-size
           </p>
 
           <div className="overflow-x-auto">

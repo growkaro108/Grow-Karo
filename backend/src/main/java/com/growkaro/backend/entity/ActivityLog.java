@@ -27,6 +27,7 @@ public class ActivityLog {
         private String actorRole;
 
         @Enumerated(EnumType.STRING)
+        @Column(name = "type")
         private ActivityType type;
 
         @Column(length = 500)

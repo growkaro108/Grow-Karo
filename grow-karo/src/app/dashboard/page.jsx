@@ -22,16 +22,16 @@ const UserDashboard = dynamic(() => import("./grahak/UserDashboard"), {
 
 const Dashboard = () => {
   const { authUser } = use(userContext);
+
   if (!AdminDashboard || !RemitterDashboard || !UserDashboard) {
     return <Loader />;
   }
   if (authUser?.email === "wv9304@gmail.com") return <AdminDashboard />;
-  else
-    return (
-      <UserDashboard />
-      // <AdminDashboard />
-      // <RemitterDashboard />
-    );
+  return (
+    <UserDashboard />
+    // <AdminDashboard />
+    // <RemitterDashboard />
+  );
 };
 
 export default Dashboard;

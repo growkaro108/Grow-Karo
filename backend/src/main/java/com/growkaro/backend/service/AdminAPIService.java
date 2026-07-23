@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DTO.SchemeResponse;
@@ -60,6 +61,7 @@ public class AdminAPIService {
     private final UserSchemeRepository userSchemeRepository;
     private final ApiService apiService;
     private final ActivityLogService activityLogService;
+    // private final S3FileStorageService s3FileStorageService;
     private final General general;
 
     public AdminAPIService(UserRepository userRepository,
@@ -280,6 +282,38 @@ public class AdminAPIService {
             return general.response("error", "Error in rejecting user scheme", null);
         }
     }
+
+    // @Transactional
+    // public Map<String, Object> addBondDetails(String userSchemeId, String
+    // bondNumber, MultipartFile images) {
+    // Optional<UserScheme> userSchemeOpt =
+    // userSchemeRepository.findById(userSchemeId);
+    // if (userSchemeOpt.isEmpty()) {
+    // return general.response("error", "User scheme not found", null);
+    // }
+
+    // UserScheme userScheme = userSchemeOpt.get();
+
+    // if (bondNumber != null && !bondNumber.isBlank()) {
+    // userScheme.setBondNumber(bondNumber.trim());
+    // }
+
+    // if (images != null && !images.isEmpty()) {
+    // String uploadedUrls = s3FileStorageService.store(images, "bonds/" +
+    // userSchemeId);
+    // if (userScheme.getBondImageURL() == null) {
+    // userScheme.setBondImageURL(new ArrayList<>());
+    // }
+    // userScheme.getBondImageURL().add(uploadedUrls);
+    // }
+
+    // userSchemeRepository.save(userScheme);
+
+    // return general.response("ok", "Bond details added successfully", Map.of(
+    // "userSchemeId", userScheme.getUserSchemeId(),
+    // "bondNumber", userScheme.getBondNumber(),
+    // "bondImageURL", userScheme.getBondImageURL()));
+    // }
 
     @Cacheable(value = "adminDashboard", key = "#range ?: 'default'")
     @Transactional(readOnly = true)

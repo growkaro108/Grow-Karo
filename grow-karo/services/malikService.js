@@ -1,4 +1,4 @@
-import { approveUserSchemes, createScheme, deleteScheme, fetchAdminDashboard, getAllScheme, getAllUsersRequests, rejectUserSchemes, updateScheme } from '@/api/adminApi';
+import { addBonds, approveUserSchemes, createScheme, deleteScheme, fetchAdminDashboard, getAllScheme, getAllUsersRequests, rejectUserSchemes, updateScheme } from '@/api/adminApi';
 
 const USE_MOCK = false;
 const NETWORK_DELAY_MS = 1500;
@@ -87,6 +87,9 @@ export async function approveUserScheme(payload) {
 }
 export async function rejectUserScheme(userSchemeId) {
   return await rejectUserSchemes(userSchemeId);
+}
+export async function AddBond(userSchemeId,payload) {
+  return await addBonds(userSchemeId,payload);
 }
 
 export async function fetchMalikDashboardData() {

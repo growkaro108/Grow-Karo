@@ -27,6 +27,7 @@ import OverviewTab from "./components/OverviewTab";
 import TabLoader from "../../../loader/TabLoader";
 import { fetchMalikDashboardData } from "../../../../services/malikService";
 import dynamic from "next/dynamic";
+// import SchemeApproval from "./components/SchemeAproval/SchemeApprovals";
 
 const WithdrawalsTab = dynamic(() => import("./components/WithdrawalsTab"), {
   loading: () => <TabLoader />,

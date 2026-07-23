@@ -24,8 +24,8 @@ export const STATUS_STYLES = {
 export const FILTER_TABS = [
   { key: "pending", label: "Pending", ...STATUS_STYLES.pending },
   { key: "active", label: "Approved", ...STATUS_STYLES.active },
-  { key: "rejected", label: "Rejected", ...STATUS_STYLES.rejected },
-  { key: "withdrawn", label: "Withdraw request", ...STATUS_STYLES.withdrawn },
+  // { key: "rejected", label: "Rejected", ...STATUS_STYLES.rejected },
+  // { key: "withdrawn", label: "Withdraw request", ...STATUS_STYLES.withdrawn },
   { key: "all", label: "All", color: "var(--gold)", bg: "var(--gold-soft)" },
 ];
 
