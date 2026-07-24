@@ -6,10 +6,13 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Component;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DRO.UserRegister;
@@ -19,6 +22,7 @@ import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
+import com.growkaro.backend.entity.UserScheme.UserSchemeStatus;
 
 @Component
 public class General {
@@ -90,6 +94,35 @@ public class General {
         authUserData.setName(user.getName());
         authUserData.setEmail(user.getEmail());
         authUserData.setPhone(user.getPhone());
+        // user total investment amount
+        List<UserScheme> totalEnrollScheme = user.getEnrolledSchemes();
+        if (totalEnrollScheme != null && !totalEnrollScheme.isEmpty()) {
+            // set total scheme count
+            int investedSchemeCount = totalEnrollScheme.stream()
+                    .filter(us -> us.getStatus() == UserSchemeStatus.ACTIVE)
+                    .map(UserScheme::getScheme)
+                    .map(Scheme::getSchemeName)
+                    .collect(Collectors.toSet()).size();
+            authUserData.setInvestedSchemeCount(investedSchemeCount);
+            // set total investment
+            long totalInvestment = totalEnrollScheme.stream()
+                    .filter(us -> us.getStatus() == UserSchemeStatus.ACTIVE)
+                    .mapToLong(UserScheme::getPaidAmount)
+                    .sum();
+            authUserData.setTotalInvestmentAmount(totalInvestment);
+
+            // remaining payments
+            BigDecimal remainingPayments = totalEnrollScheme.stream()
+                    .filter(us -> us.getStatus() == UserSchemeStatus.ACTIVE)
+                    .map(us -> {
+                        BigDecimal investmentAmount = us.getScheme().getInvestmentAmount(); // BigDecimal
+                        BigDecimal paidAmount = BigDecimal.valueOf(us.getPaidAmount()); // long -> BigDecimal
+                        return investmentAmount.subtract(paidAmount);
+                    })
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            authUserData.setRemainingPayments(remainingPayments);
+        }
+
         return authUserData;
     }
 
@@ -128,7 +161,8 @@ public class General {
                 us.getPaidAmount(),
                 us.getIsApproved(),
                 us.getStatus(),
-                us.getBondMaturityDate());
+                us.getBondMaturityDate(),
+                us.getPaymentDates());
     }
 
     public SchemeResponse toSchemeResponse(Scheme scheme) {

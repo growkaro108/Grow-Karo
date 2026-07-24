@@ -2,13 +2,22 @@ package com.growkaro.backend.DTO;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDate;
+import java.util.List;
+
 import com.growkaro.backend.entity.UserScheme.UserSchemeStatus;
 import java.math.BigDecimal;
 
 public interface UserRequest {
     String getUserSchemeId();
+
     UserSchemeStatus getStatus();
+
+    Long getPaidAmount();
+
+    List<LocalDate> getPaymentDates();
+
     Boolean getIsApproved();
+
     LocalDate getRequestDate();
 
     @JsonIgnore
@@ -19,12 +28,15 @@ public interface UserRequest {
 
     interface SchemeProjection {
         String getSchemeName();
+
         BigDecimal getInvestmentAmount();
     }
 
     interface UserProjection {
         String getEmail();
+
         String getPhone();
+
         String getName();
     }
 

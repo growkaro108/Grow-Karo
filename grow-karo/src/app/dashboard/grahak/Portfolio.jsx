@@ -16,7 +16,11 @@ import {
   getAllUsersScheme,
   withdrawUserScheme,
 } from "../../../../services/grahakService";
-import { allRounderMessage, confirmMessage } from "@/components/Message";
+import {
+  allRounderMessage,
+  confirmMessage,
+  errorMessage,
+} from "@/components/Message";
 import { userContext } from "@/context/UserContext";
 
 const currency = (val) => {
@@ -231,7 +235,16 @@ function DetailField({ label, value, highlight = false }) {
       <span
         className={`text-sm font-semibold tracking-tight ${highlight ? "text-emerald-600 font-bold" : "text-slate-700"}`}
       >
-        {value ?? "—"}
+        {/* in case of payment date show each date in */}
+        {value.constructor === Array
+          ? value.map((date) => (
+              <div key={date} className="flex flex-col justify-center">
+                <span className="text-sm font-semibold tracking-tight">
+                  {formatDate(date)}
+                </span>
+              </div>
+            ))
+          : (value ?? "—")}
       </span>
     </div>
   );
@@ -266,6 +279,7 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
           />
           Back to holdings
         </button>
+
         <span
           className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${bond.isApproved ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
         >
@@ -302,9 +316,14 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
             >
               {isApproved && (bond.bondNumber || "Bond Not Generated Yet")}
             </h3>
-            <p className="mt-0.5 text-sm font-medium text-slate-400">
-              {bond.schemeName}
-            </p>
+            <div className="flex flex-col sm:flex-row md:justify-between justify-center mt-1">
+              <p className="mt-0.5 text-sm font-medium text-slate-400">
+                {bond.schemeName}
+              </p>
+              <span className="text-xs font-semibold text-emerald-600 border border-emerald-500 bg-emerald-50 rounded-xl px-2 py-1">
+                + ₹ 7,978 profit
+              </span>
+            </div>
 
             <div
               className={`mt-6 grid grid-cols-2 gap-3 sm:grid-cols-${isApproved ? "4" : "3"}`}
@@ -343,10 +362,17 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
                   value={formatDate(bond.enrollmentDate)}
                 />
               )}
-              <DetailField
-                label="Request Date"
-                value={formatDate(bond.requestDate)}
-              />
+              {!isApproved && !bond.paymentDates ? (
+                <DetailField
+                  label="Request Date"
+                  value={formatDate(bond.requestDate)}
+                />
+              ) : (
+                <DetailField
+                  label="Payment Dates"
+                  value={bond.paymentDates.map((date) => formatDate(date))}
+                />
+              )}
               <DetailField
                 label="Maturity Value"
                 value={currency(bond.maturityValue)}
@@ -405,19 +431,18 @@ export default function Portfolio({ holdings = [] }) {
   const fetchHoldings = useCallback(async () => {
     const userId = authUser?.id;
     if (!userId) return;
-
     try {
       setLoading(true);
       const response = await getAllUsersScheme(userId);
-      allRounderMessage(response);
       // console.log(response);
-
       if (response.status === "success" && response.data) {
         setHolding(response.data);
       } else {
+        allRounderMessage(response);
         setHolding([]);
       }
     } catch (error) {
+      errorMessage("something went wrong");
       setHolding([]);
       console.error("Error fetching holdings:", error);
     } finally {
@@ -458,7 +483,7 @@ export default function Portfolio({ holdings = [] }) {
   );
 
   return (
-    <div className="flex flex-col gap-6 p-6 bg-slate-50 min-h-screen font-sans">
+    <div className="flex flex-col gap-6 p-1 sm:p-6 bg-slate-50 min-h-screen font-sans">
       {selectedBond ? (
         <BondDetailsPage
           bond={selectedBond}
@@ -484,12 +509,13 @@ export default function Portfolio({ holdings = [] }) {
                   <th className={tableHeaderStyle}>Bond No.</th>
                   <th className={tableHeaderStyle}>Scheme Name</th>
                   <th className={tableHeaderStyle}>Invest Amount</th>
-                  <th className={tableHeaderStyle}>Payout Mode</th>
+                  <th className={tableHeaderStyle}>Payout Cycle</th>
+                  <th className={tableHeaderStyle}>Total Pay</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <TableRowLoader loading={"Joined Scheme.."} colSpan={5} />
+                  <TableRowLoader loading={"Joined Scheme.."} colSpan={6} />
                 ) : sortedHoldings.length === 0 ? (
                   <tr>
                     <td
@@ -517,17 +543,20 @@ export default function Portfolio({ holdings = [] }) {
                         className={tableCellStyle}
                         style={{ color: "#475569" }}
                       >
-                        <BondThumb
-                          src={bond.bondImageURL?.[0]}
-                          alt={bond.bondNumber || "Proof"}
-                          onExpand={() => openLightbox(bond)}
-                        />
+                        {
+                          <BondThumb
+                            src={bond.bondImageURL?.[0] || "./pending.png"}
+                            alt={bond.bondNumber || "Proof"}
+                            onExpand={() => openLightbox(bond)}
+                          />
+                        }
                       </td>
                       <td
                         className={`${tableCellStyle} font-semibold`}
                         style={{ color: "#1e293b" }}
                       >
-                        {bond.bondNumber || "Pending"}
+                        {bond.bondNumber ||
+                          (bond.isApproved ? "Approved" : "Pending")}
                       </td>
                       <td
                         className={tableCellStyle}
@@ -546,6 +575,17 @@ export default function Portfolio({ holdings = [] }) {
                         style={{ color: "#475569" }}
                       >
                         {bond.payoutFrequency}
+                      </td>
+                      <td
+                        className={tableCellStyle}
+                        style={{ color: "#397299" }}
+                      >
+                        {/* show how much user pay for scheme in % */}
+                        {(
+                          (bond.paidAmount / bond.investmentAmount) *
+                          100
+                        ).toFixed(1)}{" "}
+                        %
                       </td>
                     </tr>
                   ))

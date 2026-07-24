@@ -19,12 +19,15 @@ import com.growkaro.backend.repository.SupportIssueRepository;
 import com.growkaro.backend.repository.UserRepository;
 import com.growkaro.backend.repository.UserSchemeRepository;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 @Service
+@Slf4j
 public class ApiService {
 
     private final UserRepository userRepository;
@@ -99,7 +102,7 @@ public class ApiService {
                             "Application cannot be " + action.toString().toLowerCase() + " at this time", null);
             }
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            log.error("Error while processing cancellation request: " + e.getMessage());
             return general.response("error", "Something went wrong while processing your cancellation request", null);
 
         } finally {

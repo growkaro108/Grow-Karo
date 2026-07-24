@@ -40,6 +40,8 @@ public interface UserSchemeRepository extends JpaRepository<UserScheme, String> 
                    us.status AS status,
                    us.isApproved AS isApproved,
                    us.requestDate AS requestDate,
+                   us.paidAmount AS paidAmount,
+                   us.paymentDates AS paymentDates,
                    us.scheme AS scheme,
                    us.user AS user
             FROM UserScheme us

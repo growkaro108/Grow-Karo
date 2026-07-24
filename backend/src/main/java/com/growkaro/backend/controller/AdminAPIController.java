@@ -24,6 +24,9 @@ import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.service.AdminAPIService;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RestController
 @RequestMapping("/api/admin")
 public class AdminAPIController {
@@ -43,16 +46,14 @@ public class AdminAPIController {
     @PostMapping("/scheme/create")
     public ResponseEntity<Map<String, Object>> createScheme(@RequestBody ReceiveSchemeData schemeData) {
         try {
-            Thread.sleep(3000);
-            // System.out.println(schemeData);
             if (schemeData == null) {
                 return ResponseEntity.badRequest().build();
             }
             Scheme savedScheme = adminAPIService.createScheme(schemeData);
             return ResponseEntity
                     .ok(general.response("success", savedScheme.getSchemeName() + " saved successfully..", schemeData));
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            log.error("Error while creating scheme: " + e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
 
@@ -69,6 +70,7 @@ public class AdminAPIController {
             return ResponseEntity
                     .ok(general.response("success", updatedScheme.getSchemeName() + " is updated..", updateScheme));
         } catch (Exception e) {
+            log.error("Error while updating scheme: " + e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }

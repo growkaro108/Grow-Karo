@@ -42,8 +42,6 @@ public class RedisService {
                 log.debug("No OTP found (expired or never set) for key {}", redisKey);
                 return false;
             }
-            System.out.println("stored: " + stored);
-            System.out.println("submitted: " + submittedOtp);
 
             boolean matches = String.valueOf(stored).equals(submittedOtp);
             if (matches) {

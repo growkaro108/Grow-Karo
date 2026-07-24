@@ -398,7 +398,6 @@ export default function PlansPage() {
           schemeNames={schemeNames}
           showSuggestions={showSuggestions}
           setShowSuggestions={setShowSuggestions}
-          suggestionMatches={suggestionMatches}
           selectSuggestion={selectSuggestion}
         />
       )}

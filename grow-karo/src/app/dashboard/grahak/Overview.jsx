@@ -9,40 +9,82 @@ const StockGraph = dynamic(() => import("./StockGraph"), {
   ssr: false,
 });
 
-const Overview = ({ balance, portfolioValue }) => {
+const Overview = ({ userData }) => {
+  if (!userData) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {[1, 2, 3, 4].map((card) => (
+          <div
+            key={card}
+            className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-end justify-between gap-4 min-h-40"
+          >
+            <div className="flex flex-col items-start justify-between h-full flex-1 min-w-0">
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider truncate w-full">
+                  Net Worth
+                </p>
+                <p className="text-xl sm:text-[27px] font-medium mt-2 text-slate-900 tracking-tight truncate w-full">
+                  ₹ 0.00
+                </p>
+              </div>
+
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-md inline-block mt-3 wrap-break-word max-w-full text-slate-500 bg-slate-50">
+                This is pending
+              </span>
+            </div>
+
+            <div className="shrink-0 select-none pointer-events-none mb-1">
+              <div className="w-14 h-14 bg-slate-100 rounded-xl animate-pulse"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
   const cardsData = [
     {
       id: "net-worth",
       title: "Total Net Worth",
-      value: `₹ ${(balance + portfolioValue).toLocaleString("en-IN", {
+      value: `₹ ${userData?.totalInvestmentAmount.toLocaleString("en-IN", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })}`,
-      badge: "+4.2% this week",
+      badge: "This is pending",
       isPositiveBadge: true,
       imageSrc: "/muscle.png", // Unique decorative asset
     },
     {
       id: "invested-stocks",
       title: "Invested in Stocks",
-      value: `₹ ${portfolioValue.toLocaleString("en-IN", {
+      value: `₹ ${userData?.totalInvestmentAmount.toLocaleString("en-IN", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })}`,
-      badge: "Allocated across 3 assets",
+      badge: `Allocated across ${userData?.investedSchemeCount} schemes`,
       isPositiveBadge: true,
       imageSrc: "/money.png", // Unique decorative asset
     },
+    // {
+    //   id: "cash-balance",
+    //   title: "Cash Balance",
+    //   value: `₹ ${balance.toLocaleString("en-IN", {
+    //     minimumFractionDigits: 2,
+    //     maximumFractionDigits: 2,
+    //   })}`,
+    //   badge: "⚠️ Available Limited withdrawal",
+    //   isPositiveBadge: true,
+    //   imageSrc: "/wallet.png", // Unique decorative asset
+    // },
     {
-      id: "cash-balance",
-      title: "Cash Balance",
-      value: `₹ ${balance.toLocaleString("en-IN", {
+      id: "Pending payments",
+      title: "Pending payments",
+      value: `₹ ${userData?.remainingPayments.toLocaleString("en-IN", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })}`,
-      badge: "⚠️ Available Limited withdrawal",
-      isPositiveBadge: true,
-      imageSrc: "/wallet.png", // Unique decorative asset
+      badge: "Pending payment",
+      // isPositiveBadge: true,
+      imageSrc: "/pending.png", // Unique decorative asset
     },
   ];
   return (
@@ -66,10 +108,11 @@ const Overview = ({ balance, portfolioValue }) => {
               </div>
 
               <span
-                className={`text-[11px] font-bold px-2 py-0.5 rounded-md inline-block mt-3 wrap-break-word max-w-full ${card.isPositiveBadge
-                  ? "text-emerald-600 bg-emerald-50"
-                  : "text-slate-500 bg-slate-50"
-                  }`}
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-md inline-block mt-3 wrap-break-word max-w-full ${
+                  card.isPositiveBadge
+                    ? "text-emerald-600 bg-emerald-50"
+                    : "text-slate-500 bg-slate-50"
+                }`}
               >
                 {card.badge}
               </span>

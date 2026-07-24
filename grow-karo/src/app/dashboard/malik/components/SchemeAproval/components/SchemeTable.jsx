@@ -8,6 +8,7 @@ function ActionButton({
   handleOpenAddBond,
   req,
 }) {
+  const isfullPaid = req.investmentAmount - req.paidAmount === 0;
   if (status === "pending") {
     return (
       <div style={{ display: "flex", gap: "8px" }}>
@@ -30,6 +31,14 @@ function ActionButton({
   if (status === "active") {
     return (
       <div style={{ display: "flex", gap: "8px" }}>
+        {!isfullPaid && (
+          <button
+            className="sea-btn sea-btn-addbond"
+            onClick={() => handleOpenApproval(req)}
+          >
+            Add amount
+          </button>
+        )}
         <button
           className="sea-btn sea-btn-approve"
           onClick={() => handleOpenAddBond(req)}
@@ -110,7 +119,7 @@ export default function SchemeTable({
                 STATUS_STYLES[req.status.toLowerCase()] ||
                 STATUS_STYLES.pending;
               return (
-                <tr key={idx + 1}>
+                <tr key={req?.userSchemeId}>
                   <td className="sea-index">
                     No. {String(idx + 1).padStart(3, "0")}
                   </td>

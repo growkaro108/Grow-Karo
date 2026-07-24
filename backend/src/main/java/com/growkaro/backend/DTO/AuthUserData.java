@@ -1,5 +1,7 @@
 package com.growkaro.backend.DTO;
 
+import java.math.BigDecimal;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,5 +17,7 @@ public class AuthUserData {
     String phone;
     String role;
     String token;
-
+    int investedSchemeCount;
+    Long totalInvestmentAmount;
+    BigDecimal remainingPayments;
 }

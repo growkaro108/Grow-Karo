@@ -11,19 +11,22 @@ export default function ApprovalModal({
   submitting,
   handleConfirmApproval,
   inputRef,
+  refresh,
 }) {
   const modalRef = useRef(null);
   const today = new Date().toISOString().split("T")[0];
 
-  const totalAmount = selectedRequest?.investmentAmount || 0;
+  const existingPaidAmount = selectedRequest?.paidAmount || 0;
+  const totalAmount =
+    selectedRequest?.investmentAmount - existingPaidAmount || 0;
   const numericPaid = Number(paidAmount) || 0;
   const remainingAmount = Math.max(0, totalAmount - numericPaid);
   const isOverpaid = numericPaid > totalAmount;
   const isValidAmount = paidAmount !== "" && numericPaid >= 0;
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     if (!submitting) setSelectedRequest(null);
-  };
+  }, [setSelectedRequest, submitting]);
 
   // Escape to close, Enter (outside a textarea) to confirm
   useEffect(() => {
@@ -84,7 +87,7 @@ export default function ApprovalModal({
       onMouseDown={(e) => e.target === e.currentTarget && closeModal()}
     >
       <div
-        className="sea-modal"
+        className="sea-modal gap-y-0.5"
         ref={modalRef}
         role="dialog"
         aria-modal="true"
@@ -95,13 +98,33 @@ export default function ApprovalModal({
         </h3>
         <p className="sea-modal-sub">
           {selectedRequest.name} &middot; {selectedRequest.schemeName}
-          <br />
-          {"Requset on. "}
-          {selectedRequest.requestDate}
+          {!selectedRequest.isApproved ? (
+            <>
+              <br />
+              {"Requset on. "}
+              {selectedRequest.requestDate}
+            </>
+          ) : (
+            <>
+              <br />
+              {"Last Payment on. "}
+              {selectedRequest?.paymentDates &&
+                selectedRequest.paymentDates.length > 0 &&
+                (() => {
+                  const lastDate =
+                    selectedRequest.paymentDates[
+                      selectedRequest.paymentDates.length - 1
+                    ];
+                  return lastDate
+                    ? new Date(lastDate).toLocaleDateString()
+                    : "";
+                })()}
+            </>
+          )}
         </p>
 
         <div className="sea-row-line">
-          <span>Required capital</span>
+          <span>Required {existingPaidAmount && "to fill the "}capital</span>
           <span className="sea-mono">{currency(totalAmount)}</span>
         </div>
 
@@ -168,7 +191,7 @@ export default function ApprovalModal({
           <button
             className="sea-btn sea-btn-primary"
             onClick={handleConfirmApproval}
-            disabled={submitting || !isValidAmount}
+            disabled={submitting || !isValidAmount || isOverpaid}
           >
             {submitting ? "Approving..." : "Confirm approval"}
           </button>

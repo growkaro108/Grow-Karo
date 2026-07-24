@@ -49,6 +49,7 @@ export default function SchemeApproval() {
     try {
       setLoading(true);
       const response = await getAllUserRequests();
+      // console.table(response.data);
       if (response.status !== "success") {
         allRounderMessage(response);
         console.log(response);
@@ -96,6 +97,27 @@ export default function SchemeApproval() {
   const handleCloseAddBond = () => {
     setBondTarget(null);
   };
+
+  const mergeRequestInState = useCallback((updatedRequest) => {
+    if (!updatedRequest?.userSchemeId) return;
+
+    setRequests((prev) => {
+      const existingIndex = prev.findIndex(
+        (item) => item.userSchemeId === updatedRequest.userSchemeId,
+      );
+
+      if (existingIndex >= 0) {
+        const next = [...prev];
+        next[existingIndex] = {
+          ...next[existingIndex],
+          ...updatedRequest,
+        };
+        return next;
+      }
+
+      return [...prev, updatedRequest];
+    });
+  }, []);
 
   const handleBondSuccess = (updatedData) => {
     setRequests((prev) =>
@@ -169,16 +191,22 @@ export default function SchemeApproval() {
         return;
       }
 
-      setRequests((prev) =>
-        prev.map((r) =>
-          r.userSchemeId === selectedRequest.userSchemeId
-            ? { ...r, status: "active" }
-            : r,
-        ),
-      );
+      const updatedRequest = response?.data;
+      if (updatedRequest?.userSchemeId) {
+        mergeRequestInState(updatedRequest);
+      } else {
+        await loadRequests();
+      }
+
+      const isExistingCustomer =
+        selectedRequest?.isApproved ||
+        selectedRequest?.status?.toLowerCase() === "active";
+
       showToast(
         "success",
-        `${selectedRequest.name}'s enrollment was approved.`,
+        isExistingCustomer
+          ? `${selectedRequest.name}'s amount was updated.`
+          : `${selectedRequest.name}'s enrollment was approved.`,
       );
       setSelectedRequest(null);
     } catch (error) {
@@ -196,7 +224,7 @@ export default function SchemeApproval() {
     numericPaid,
     paidDate,
     showToast,
-  ]);
+    loadRequests,    mergeRequestInState,  ]);
 
   const handleConfirmReject = useCallback(async () => {
     if (!rejectTarget) return;
@@ -213,13 +241,7 @@ export default function SchemeApproval() {
         showToast("error", response?.message || "Rejection failed.");
         return;
       }
-      setRequests((prev) =>
-        prev.map((r) =>
-          r.userSchemeId === rejectTarget.userSchemeId
-            ? { ...r, status: "rejected" }
-            : r,
-        ),
-      );
+      loadRequests();
       showToast(
         "success",
         `Request from ${rejectTarget.schemeName} was rejected.`,
@@ -231,7 +253,7 @@ export default function SchemeApproval() {
       if (response) allRounderMessage(response);
       setRejectTarget(null);
     }
-  }, [rejectTarget, showToast]);
+  }, [rejectTarget, showToast, loadRequests]);
 
   const filteredRequests = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -319,6 +341,7 @@ export default function SchemeApproval() {
         submitting={submitting}
         handleConfirmApproval={handleConfirmApproval}
         inputRef={inputRef}
+        refresh={loadRequests}
       />
 
       <RejectModal

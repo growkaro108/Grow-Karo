@@ -33,7 +33,7 @@ public class EmailService {
         message.setSubject(subject);
         message.setText(body);
         mailSender.send(message);
-        System.out.println("Email sent successfully to " + to);
+        // System.out.println("Email sent successfully to " + to);
     }
 
     public boolean sendOtp(String email, String remark) {
@@ -42,7 +42,7 @@ public class EmailService {
         String body = "Your " + remark + " OTP code is: " + otp + ". It will expire in 5 minutes.";
         sendSimpleEmail(email, subject, body);
         redisService.saveOtp(remark, email, otp);
-        System.out.println("otp sent to " + email + " remark: " + remark);
+        // System.out.println("otp sent to " + email + " remark: " + remark);
         return true;
     }
 

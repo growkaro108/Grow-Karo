@@ -10,8 +10,9 @@ function Row({ label, value, mono = false }) {
         {label}
       </span>
       <span
-        className={`min-w-0 flex-1 wrap-break-word text-sm text-slate-200 ${mono ? "font-mono text-[12px] text-slate-300" : "font-body"
-          }`}
+        className={`min-w-0 flex-1 wrap-break-word text-sm text-slate-200 ${
+          mono ? "font-mono text-[12px] text-slate-300" : "font-body"
+        }`}
       >
         {value}
       </span>
@@ -79,9 +80,13 @@ export default function LogDetailsModal({ log, onClose }) {
               </span>
             }
           />
-          <Row label="Status" value={log.status && <StatusBadge status={log.status} />} />
+          <Row
+            label="Status"
+            value={log.status && <StatusBadge status={log.status} />}
+          />
           <Row label="Amount" value={log.amount} mono />
           <Row label="Time" value={log.time} mono />
+          {/* <Row label="Ip Address" value={log.ipAddress || "-"} /> */}
           <Row label="Created at" value={log.createdAt} mono />
         </div>
 

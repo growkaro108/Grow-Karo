@@ -168,9 +168,11 @@ public class AdminAPIService {
 
     @Transactional
     public Map<String, Object> activateUsersScheme(String userSchemeId, Long paidAmount, LocalDate paidDate) {
-        if (userSchemeId == null || userSchemeId.isBlank() || paidAmount == 0 || paidDate == null) {
-            return general.response("error", "Data is required", null);
+        if (userSchemeId == null || userSchemeId.isBlank() || paidAmount == null || paidAmount <= 0
+                || paidDate == null) {
+            return general.response("error", "Invalid Request", null);
         }
+
         UserScheme userScheme = null;
         User user = null;
         Scheme scheme = null;
@@ -184,41 +186,56 @@ public class AdminAPIService {
             user = (User) isUserSchemeValid.get("user");
             scheme = (Scheme) isUserSchemeValid.get("scheme");
 
-            if (Boolean.TRUE.equals(userScheme.getIsApproved())
-                    || userScheme.getStatus() == UserSchemeStatus.ACTIVE) {
-                return general.response("error", "User scheme is already active", null);
+            // now it's safe to compute these
+            Long existingPaidAmount = userScheme.getPaidAmount() != null ? userScheme.getPaidAmount() : 0L;
+            Long investmentAmount = scheme.getInvestmentAmount().longValue();
+            Long requiredAmount = investmentAmount - existingPaidAmount;
+
+            // if user is active and fully paid
+            if ((Boolean.TRUE.equals(userScheme.getIsApproved())
+                    || userScheme.getStatus() == UserSchemeStatus.ACTIVE)
+                    && existingPaidAmount.longValue() == investmentAmount.longValue()) {
+                return general.response("error", user.getName() + " already paid full amount.", null);
             }
 
-            // --- Server-side validation: never trust client-supplied amount/date ---
-            if (paidAmount == null || paidAmount <= 0) {
-                return general.response("error", "Paid amount must be greater than zero", null);
-            }
-            BigDecimal requiredAmount = scheme.getInvestmentAmount(); // adjust getter to match your entity
-            if (requiredAmount != null && BigDecimal.valueOf(paidAmount).compareTo(requiredAmount) > 0) {
+            // validate incoming paid amount
+            if (paidAmount > requiredAmount || (existingPaidAmount + paidAmount) > investmentAmount) {
                 return general.response("error", "Paid amount exceeds required capital", null);
             }
-            if (paidDate == null || paidDate.isAfter(LocalDate.now())) {
+
+            // validate paidDate
+            if (paidDate.isAfter(LocalDate.now())) {
                 return general.response("error", "Paid date cannot be in the future", null);
             }
             if (userScheme.getRequestDate() != null && paidDate.isBefore(userScheme.getRequestDate())) {
                 return general.response("error", "Paid date cannot be before the enrollment request date", null);
             }
 
-            userScheme.setIsApproved(true);
-            userScheme.setPaidAmount(paidAmount);
+            boolean isApproved = Boolean.TRUE.equals(userScheme.getIsApproved());
             List<LocalDate> paymentDates = new ArrayList<>(
                     userScheme.getPaymentDates() != null ? userScheme.getPaymentDates() : List.of());
-            paymentDates.add(paidDate);
-            userScheme.setPaymentDates(paymentDates);
-            userScheme.setBondMaturityValue(general.calculateMaturityAmount(
-                    paidAmount, scheme.getProfitPercentage(), scheme.getTenure().intValue(),
-                    scheme.getPayoutFrequency()));
-            userScheme.setBondMaturityDate(paidDate.plusDays(scheme.getTenure()));
-            userScheme.setEnrollmentDate(LocalDateTime.now());
-            userScheme.setStatus(UserSchemeStatus.ACTIVE);
-            userSchemeRepository.save(userScheme);
 
-            return general.response("success", "User scheme activated successfully", userScheme);
+            if (isApproved) {
+                userScheme.setPaidAmount(existingPaidAmount + paidAmount);
+                paymentDates.add(paidDate);
+                userScheme.setPaymentDates(paymentDates);
+            } else {
+                userScheme.setIsApproved(true);
+                userScheme.setPaidAmount(paidAmount);
+                paymentDates.add(paidDate);
+                userScheme.setPaymentDates(paymentDates);
+                userScheme.setBondMaturityValue(general.calculateMaturityAmount(
+                        paidAmount, scheme.getProfitPercentage(), scheme.getTenure().intValue(),
+                        scheme.getPayoutFrequency()));
+                userScheme.setBondMaturityDate(paidDate.plusDays(scheme.getTenure()));
+                userScheme.setEnrollmentDate(LocalDateTime.now());
+                userScheme.setStatus(UserSchemeStatus.ACTIVE);
+            }
+
+            userSchemeRepository.save(userScheme);
+            return general.response("success",
+                    "User scheme " + (isApproved ? "activated " : "amount added") + " successfully", userScheme);
+
         } catch (Exception e) {
             log.error("Error activating user scheme {}", userSchemeId, e);
             return general.response("error", "Error in approving user scheme", null);

@@ -66,6 +66,7 @@ table.sea-table { width: 100%; border-collapse: collapse; text-align: left; }
 .sea-btn:active { transform: translateY(1px); }
 .sea-btn:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 .sea-btn-approve { background: var(--success); color: #062420; }
+.sea-btn-addbond { background: #cb3e5c; color: #072608; }
 .sea-btn-reject { background: transparent; color: var(--danger); border: 1px solid rgba(225,85,68,0.4); }
 .sea-btn-reject:hover { background: var(--danger-soft); }
 .sea-btn-primary { background: var(--gold); color: #241a05; }
