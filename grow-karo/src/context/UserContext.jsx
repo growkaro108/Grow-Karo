@@ -4,6 +4,7 @@ import { confirmMessage, errorMessage, infoMessage, successMessage } from "@/com
 import { useRouter } from "next/navigation";
 import { deleteSecureCookie, getSecureCookie } from "./cookiesManagement";
 import { logoutApi } from "../../services/grahakService";
+import { useLoader } from "./LoaderContext";
 
 
 
@@ -11,6 +12,7 @@ export const userContext = createContext({});
 export const UserProvider = ({ children }) => {
     const [authUser, setAuthUser] = useState(null);
     const [isLoading, setIsLoading] = useState(true)
+    const { showLoader, hideLoader } = useLoader();
     const router = useRouter();
 
 
@@ -19,6 +21,7 @@ export const UserProvider = ({ children }) => {
             if (authUser && authUser?.id && authUser?.name) {
                 let response = await confirmMessage("you want to logout", "Are you sure?");
                 if (response) {
+                    showLoader("Logging out...");
                     const response = await logoutApi(authUser?.id, authUser?.name);
                     // console.log("logout response", response)
                     if (response.status !== 'success') {
@@ -44,7 +47,10 @@ export const UserProvider = ({ children }) => {
             }
         } catch (error) {
             console.error("logout error:", error)
+        }finally {
+            hideLoader();
         }
+    
     }, [authUser, router])
 
     const getUserDataFromContext = useCallback(async () => {

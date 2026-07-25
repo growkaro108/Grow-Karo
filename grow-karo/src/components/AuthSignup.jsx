@@ -8,6 +8,7 @@ import {
 } from "../../services/grahakService";
 import { errorMessage } from "./Message";
 import { userSendOTPMessage, userSignUpMessage, userValidateOTPMessage } from "@/showMessage/grahakMessage";
+import { useLoader } from "@/context/LoaderContext";
 
 // Hoisted outside the component so they aren't recreated on every render.
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$/;
@@ -53,6 +54,7 @@ export default function AuthSignup({ onSwitch }) {
   const [otpError, setOtpError] = useState("");
   const [otpMessage, setOtpMessage] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
+   const { showLoader, hideLoader } = useLoader();
 
   const cooldownIntervalRef = useRef(null);
 
@@ -207,6 +209,7 @@ export default function AuthSignup({ onSwitch }) {
 
     try {
       setLoading(true);
+      showLoader("Submitting Details to the server...");
 
       const payload = {
         name: sanitizedName,
@@ -236,6 +239,7 @@ export default function AuthSignup({ onSwitch }) {
       setError(err.message || "Network error. Please try again later.");
     } finally {
       setLoading(false);
+      hideLoader();
     }
   };
 

@@ -7,6 +7,7 @@ import { use, useState } from "react";
 import { errorMessage, successMessage } from "./Message";
 import { userContext } from "@/context/UserContext";
 import { setSecureCookie } from "@/context/cookiesManagement";
+import { useLoader } from "@/context/LoaderContext";
 
 export default function AuthLogin({ onSwitch }) {
   const [email, setEmail] = useState("");
@@ -14,8 +15,10 @@ export default function AuthLogin({ onSwitch }) {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+   const { showLoader, hideLoader } = useLoader();
+  // const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { setAuthUser } = use(userContext);
+  const { setAuthUser} = use(userContext);
 
   const validateEmail = (email) => {
     return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$/.test(email);
@@ -45,6 +48,9 @@ export default function AuthLogin({ onSwitch }) {
     });
     // console.log("--------------\n" + response);
 
+    // setIsLoading(true);
+    showLoader("Logging in...");
+
     try {
       // console.log(response.data.user);
       if (response.status === "ok") {
@@ -65,6 +71,10 @@ export default function AuthLogin({ onSwitch }) {
     } catch (error) {
       errorMessage("Something went wrong");
       console.error(error);
+    }
+    finally {
+      // setIsLoading(false);
+      hideLoader();
     }
   };
 
@@ -140,9 +150,9 @@ export default function AuthLogin({ onSwitch }) {
         {/* Login Button */}
         <button
           type="submit"
-          className="w-full h-12 bg-slate-950 hover:bg-slate-900 text-white rounded-full font-semibold text-sm transition-colors mt-4"
+          className="w-full h-12 bg-slate-950 hover:bg-slate-900 text-white rounded-full font-semibold text-sm transition-colors mt-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Login
+           Login
         </button>
       </form>
 

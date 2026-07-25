@@ -1,0 +1,134 @@
+name: growkaro-prod
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: growkaro-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-growkaro_db}
+      POSTGRES_USER: ${POSTGRES_USER:-growkaro}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-growkaro123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-growkaro} -d ${POSTGRES_DB:-growkaro_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - growkaro-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: growkaro-redis-prod
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - growkaro-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: growkaro-backend-01
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 4000
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-growkaro_db}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-growkaro}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-growkaro123}
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    expose:
+      - "4000"
+    volumes:
+      - uploads_data:/app/uploads # uploads data
+
+    networks:
+      - growkaro-network
+
+  backend-backup:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: growkaro-backend-02
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 4000
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-growkaro_db}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-growkaro}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-growkaro123}
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    expose:
+      - "4000"
+    networks:
+      - growkaro-network
+
+  frontend:
+    build:
+      context: ./grow-karo
+      dockerfile: Dockerfile
+    container_name: growkaro-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+      backend-backup:
+        condition: service_started
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: /api
+    expose:
+      - "3000"
+    networks:
+      - growkaro-network
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: growkaro-nginx
+    restart: unless-stopped
+    depends_on:
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_started
+      backend-backup:
+        condition: service_started
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/prod/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - growkaro-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  uploads_data:
+
+networks:
+  growkaro-network:
+    driver: bridge

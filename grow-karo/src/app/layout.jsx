@@ -3,6 +3,8 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { UserProvider } from "@/context/UserContext";
 import { AdminContextProvider } from "@/context/AdminContext";
+import { LoaderProvider } from "@/context/LoaderContext";
+import GlobalLoader from "@/loader/GlobalLoader";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,12 +28,15 @@ export default function RootLayout({ children }) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <AdminContextProvider>
-          <UserProvider>
-            <Navbar />
-            {children}
-          </UserProvider>
-        </AdminContextProvider>
+        <LoaderProvider>
+          <AdminContextProvider>
+            <UserProvider>
+              <Navbar />
+              {children}
+               <GlobalLoader />
+            </UserProvider>
+          </AdminContextProvider>
+        </LoaderProvider>
       </body>
     </html>
   );
