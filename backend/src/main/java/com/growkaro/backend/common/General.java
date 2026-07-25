@@ -23,7 +23,6 @@ import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
-import com.growkaro.backend.entity.UserScheme.UserSchemeStatus;
 
 @Component
 public class General {
@@ -100,28 +99,18 @@ public class General {
         if (totalEnrollScheme != null && !totalEnrollScheme.isEmpty()) {
             // set total scheme count
             int investedSchemeCount = totalEnrollScheme.stream()
-                    .filter(us -> us.getStatus() == UserSchemeStatus.ACTIVE)
+                    .filter(us -> us.getUserApproved().getIsApproved())
                     .map(UserScheme::getScheme)
                     .map(Scheme::getSchemeName)
                     .collect(Collectors.toSet()).size();
             authUserData.setInvestedSchemeCount(investedSchemeCount);
             // set total investment
-            long totalInvestment = totalEnrollScheme.stream()
-                    .filter(us -> us.getStatus() == UserSchemeStatus.ACTIVE)
-                    .mapToLong(UserScheme::getPaidAmount)
-                    .sum();
+            BigDecimal totalInvestment = totalEnrollScheme.stream()
+                    .filter(us -> us.getUserApproved().getIsApproved())
+                    .map(UserScheme::getPaidAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
             authUserData.setTotalInvestmentAmount(totalInvestment);
 
-            // remaining payments
-            BigDecimal remainingPayments = totalEnrollScheme.stream()
-                    .filter(us -> us.getStatus() == UserSchemeStatus.ACTIVE)
-                    .map(us -> {
-                        BigDecimal investmentAmount = us.getScheme().getInvestmentAmount(); // BigDecimal
-                        BigDecimal paidAmount = BigDecimal.valueOf(us.getPaidAmount()); // long -> BigDecimal
-                        return investmentAmount.subtract(paidAmount);
-                    })
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            authUserData.setRemainingPayments(remainingPayments);
         }
 
         return authUserData;
@@ -137,9 +126,7 @@ public class General {
         scheme.setStartDate(schemeData.startDate());
         scheme.setEndDate(schemeData.endDate());
         scheme.setStatus(schemeData.status());
-        scheme.setInvestmentAmount(schemeData.investmentAmount());
         scheme.setProfitPercentage(schemeData.profitPercentage());
-        scheme.setMaturityValue(schemeData.maturityValue());
         scheme.setMaxInvestorsAllowed(schemeData.maxInvestorsAllowed());
         return scheme;
     }
@@ -149,21 +136,16 @@ public class General {
         return new UserPortfolio(
                 scheme.getSchemeId(),
                 scheme.getSchemeName(),
-                scheme.getInvestmentAmount(),
                 scheme.getTenure(),
                 scheme.getPayoutFrequency(),
                 scheme.getProfitPercentage(),
-                scheme.getMaturityValue(),
-                us.getEnrollmentDate(),
-                us.getBondImageURL(),
-                us.getBondNumber(),
+                us.getUserApproved().getEnrollmentDate(),
+                us.getUserApproved().getBondImageURL(),
+                us.getUserApproved().getBondNumber(),
                 us.getRequestDate(),
                 us.getUserSchemeId(),
                 us.getPaidAmount(),
-                us.getIsApproved(),
-                us.getStatus(),
-                us.getBondMaturityDate(),
-                us.getPaymentDates());
+                us.getUserApproved().getIsApproved());
     }
 
     public SchemeResponse toSchemeResponse(Scheme scheme) {
@@ -177,9 +159,8 @@ public class General {
                 scheme.getStartDate(),
                 scheme.getEndDate(),
                 scheme.getStatus(),
-                scheme.getInvestmentAmount(),
+                scheme.getMinimunAmount(),
                 scheme.getProfitPercentage(),
-                scheme.getMaturityValue(),
                 scheme.getMaxInvestorsAllowed(),
                 scheme.getJoinedUsers().stream().map(UserScheme::getUserSchemeId).toList());
     }
@@ -270,8 +251,9 @@ public class General {
     public UserRequest toUserRequest(UserScheme us) {
         Scheme s = us.getScheme();
         User u = us.getUser();
-        return new UserRequest(us.getUserSchemeId(), us.getStatus(), us.getPaidAmount(), us.getPaymentDates(),
-                us.getIsApproved(), us.getRequestDate(), s.getSchemeName(), s.getInvestmentAmount(), u.getName(),
+        return new UserRequest(us.getUserSchemeId(), us.getPaidAmount(), us.getUserApproved().getEnrollmentDate(),
+                us.getUserApproved().getIsApproved(),
+                us.getRequestDate(), s.getSchemeName(), u.getName(),
                 u.getEmail(), u.getPhone());
     }
 }

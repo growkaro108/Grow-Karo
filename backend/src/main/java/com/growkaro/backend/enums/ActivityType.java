@@ -1,4 +1,4 @@
-package com.growkaro.backend.entity;
+package com.growkaro.backend.enums;
 
 public enum ActivityType {
     ACCOUNT_CREATED,

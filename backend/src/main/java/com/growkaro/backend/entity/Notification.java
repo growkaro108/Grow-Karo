@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+import com.growkaro.backend.enums.NotificationType;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -27,7 +29,7 @@ public class Notification {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Type type = Type.INFO;
+    private NotificationType type = NotificationType.INFO;
 
     @Column(nullable = false)
     private boolean read = false;
@@ -36,9 +38,5 @@ public class Notification {
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
-
-    public enum Type {
-        INFO, SUCCESS, WARNING, PAYMENT, SYSTEM
-    }
 
 }

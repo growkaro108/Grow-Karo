@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 
+import com.growkaro.backend.enums.ActivityType;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

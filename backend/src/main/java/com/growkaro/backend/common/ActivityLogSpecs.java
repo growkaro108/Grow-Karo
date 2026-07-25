@@ -3,7 +3,7 @@ package com.growkaro.backend.common;
 import org.springframework.data.jpa.domain.Specification;
 
 import com.growkaro.backend.entity.ActivityLog;
-import com.growkaro.backend.entity.ActivityType;
+import com.growkaro.backend.enums.ActivityType;
 
 import java.time.Instant;
 

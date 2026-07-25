@@ -2,6 +2,7 @@ package com.growkaro.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -34,6 +35,10 @@ public class Scheme {
     @Column(name = "scheme_name", nullable = false)
     private String schemeName;
 
+    @Column(name = "minimum_amount", nullable = false, precision = 19, scale = 2)
+    @Positive(message = "Minimum amount must be greater than 0")
+    private BigDecimal minimunAmount;
+
     @Column(name = "scheme_category", nullable = false)
     private String schemeCategory;
 
@@ -61,14 +66,14 @@ public class Scheme {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @Column(name = "investment_amount", nullable = false, precision = 15, scale = 2)
-    private BigDecimal investmentAmount;
+    // @Column(name = "amount", nullable = false, precision = 15, scale = 2)
+    // private BigDecimal amount;
 
     @Column(name = "profit_percentage", nullable = false)
     private Double profitPercentage;
 
-    @Column(name = "maturity_value", nullable = false, precision = 15, scale = 2)
-    private BigDecimal maturityValue;
+    // @Column(name = "maturity_value", nullable = false, precision = 15, scale = 2)
+    // private BigDecimal maturityValue;
 
     @Column(name = "max_investors_allowed")
     private Integer maxInvestorsAllowed;
@@ -99,19 +104,15 @@ public class Scheme {
 
     // --- Helper Methods for Defensive Association Management ---
 
-    public void addJoinedUser(UserScheme userScheme) {
-        if (this.joinedUsers == null) {
-            this.joinedUsers = new ArrayList<>();
-        }
-        this.joinedUsers.add(userScheme);
+    public void enrollUserInScheme(UserScheme userScheme) {
         userScheme.setScheme(this);
+        this.joinedUsers.add(userScheme);
     }
 
-    public void removeJoinedUser(UserScheme userScheme) {
-        if (this.joinedUsers != null) {
-            this.joinedUsers.remove(userScheme);
-            userScheme.setScheme(null);
-        }
+    public void removeUserFromScheme(UserScheme userScheme) {
+
+        this.joinedUsers.remove(userScheme);
+        userScheme.setScheme(null);
     }
 
     // --- Safe Equals & HashCode Implementation ---

@@ -1,6 +1,8 @@
 package com.growkaro.backend.repository;
 
 import com.growkaro.backend.entity.Notification;
+import com.growkaro.backend.enums.NotificationType;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -25,7 +27,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Stri
 
     // ── Specific type ─────────────────────────────────────────────────────────
 
-    Page<Notification> findByUserIdAndType(String userId, Notification.Type type, Pageable pageable);
+    Page<Notification> findByUserIdAndType(String userId, NotificationType type, Pageable pageable);
 
     // ── Count ─────────────────────────────────────────────────────────────────
 

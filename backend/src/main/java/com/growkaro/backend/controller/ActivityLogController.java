@@ -11,7 +11,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.growkaro.backend.common.ActivityLogBroadcaster;
 import com.growkaro.backend.entity.ActivityLog;
-import com.growkaro.backend.entity.ActivityType;
+import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.security.NoOpAdminTokenValidator;
 import com.growkaro.backend.service.ActivityLogService;
 

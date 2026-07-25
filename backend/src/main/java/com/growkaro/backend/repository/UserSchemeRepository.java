@@ -20,7 +20,7 @@ public interface UserSchemeRepository extends JpaRepository<UserScheme, String> 
     // Fetch all UserScheme rows for a user, eagerly loading the scheme to avoid
     // N+1.
     @Query("SELECT us FROM UserScheme us JOIN FETCH us.scheme WHERE us.user.id = :userId")
-    List<UserScheme> findAllByUserIdWithSchemeDetails(@Param("userId") String userId);
+    List<UserScheme> findAllByUserId(@Param("userId") String userId);
 
     // Lookup for checking/creating a UserScheme for a given (scheme, user) pair.
     Optional<UserScheme> findBySchemeAndUser(Scheme scheme, User user);

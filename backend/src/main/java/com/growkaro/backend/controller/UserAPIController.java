@@ -9,9 +9,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.growkaro.backend.DRO.EnrollingUser;
 import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.common.General;
-import com.growkaro.backend.entity.UserScheme.UserSchemeStatus;
+import com.growkaro.backend.enums.Remark;
 import com.growkaro.backend.service.ApiService;
 import com.growkaro.backend.service.EmailService;
 import com.growkaro.backend.service.RedisService;
@@ -28,23 +29,6 @@ public class UserAPIController {
     private final RedisService redisService;
     private final General general;
     private final ApiService apiService;
-
-    private enum Remark {
-        SIGNUP("signup"),
-        LOGIN("login"),
-        FORGOT_PASSWORD("forgotPassword"),
-        RESET_PASSWORD("resetPassword");
-
-        private final String value;
-
-        Remark(String value) {
-            this.value = value;
-        }
-
-        public String getValue() {
-            return value;
-        }
-    }
 
     public UserAPIController(UserAPIService userAPIService, EmailService emailService, RedisService redisService,
             ApiService apiService, General general) {
@@ -136,16 +120,17 @@ public class UserAPIController {
         return ResponseEntity.ok(userAPIService.logout(userId, userName));
     }
 
-    @PostMapping("/scheme/enroll/{schemeId}/{userId}")
-    public ResponseEntity<Map<String, Object>> enrollScheme(@PathVariable String schemeId,
-            @PathVariable String userId) {
+    @PostMapping("/scheme/enroll")
+    public ResponseEntity<Map<String, Object>> enrollScheme(@RequestBody EnrollingUser enrollingUser) {
         try {
-            if (schemeId.isBlank() || userId.isBlank()) {
+            if (enrollingUser.schemeId().isBlank() || enrollingUser.userId().isBlank()) {
                 return ResponseEntity.badRequest().body(general.response("error", "Invalid data", null));
             }
-            return ResponseEntity.ok(userAPIService.enrollScheme(schemeId, userId));
+            return ResponseEntity.ok(userAPIService.enrollInScheme(enrollingUser.schemeId(), enrollingUser.userId(),
+                    enrollingUser.amount()));
         } catch (Exception e) {
-            log.error("Error enrolling scheme {} for user {}", schemeId, userId, e);
+            log.error("Error enrolling scheme {} for user {} with amount {}", enrollingUser.schemeId(),
+                    enrollingUser.userId(), enrollingUser.amount(), e);
             return ResponseEntity.internalServerError().body(general.response("error", "Internal Server error", null));
         }
     }
@@ -156,7 +141,7 @@ public class UserAPIController {
     }
 
     @GetMapping("/scheme/user/{userId}")
-    public ResponseEntity<Map<String, Object>> userScheme(@PathVariable String userId) {
+    public ResponseEntity<Map<String, Object>> showUserPortfolio(@PathVariable String userId) {
         return ResponseEntity.ok(userAPIService.getUserPortfolio(userId));
     }
 
@@ -167,8 +152,7 @@ public class UserAPIController {
             if (userSchemeId.isBlank() || userId.isBlank()) {
                 return ResponseEntity.badRequest().body(general.response("error", "Invalid data", null));
             }
-            return ResponseEntity.ok(apiService.userSchemeStatusUpdate(userSchemeId, userId,
-                    UserSchemeStatus.WITHDRAWN, UserSchemeStatus.PENDING, null));
+            return ResponseEntity.ok(userAPIService.schemeWithdrawal(userSchemeId, userId));
         } catch (Exception e) {
             log.error("Error withdrawing userScheme {} for user {}", userSchemeId, userId, e);
             return ResponseEntity.internalServerError().body(general.response("error", "Internal Server error", null));

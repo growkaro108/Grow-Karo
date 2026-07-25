@@ -2,6 +2,8 @@ package com.growkaro.backend.entity;
 
 import org.springframework.stereotype.Component;
 
+import com.growkaro.backend.enums.NotificationType;
+
 import java.util.Map;
 
 /**
@@ -71,15 +73,15 @@ public class NotificationContentBuilder {
 
     /**
      * Maps a business action to the severity/category shown in your
-     * Notification.Type UI badge.
+     * NotificationType UI badge.
      */
-    public com.growkaro.backend.entity.Notification.Type toNotificationType(EssentialActionType action) {
+    public NotificationType toNotificationType(EssentialActionType action) {
         return switch (action) {
             case FUND_TRANSFER_INITIATED, WITHDRAWAL_REQUESTED, KYC_UPDATED ->
-                com.growkaro.backend.entity.Notification.Type.INFO;
+                NotificationType.INFO;
             case FUND_TRANSFER_COMPLETED, WITHDRAWAL_APPROVED, INVESTMENT_CONFIRMED ->
-                com.growkaro.backend.entity.Notification.Type.SUCCESS;
-            case PAYMENT_FAILED -> com.growkaro.backend.entity.Notification.Type.WARNING;
+                NotificationType.SUCCESS;
+            case PAYMENT_FAILED -> NotificationType.WARNING;
         };
     }
 }

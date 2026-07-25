@@ -3,7 +3,7 @@ package com.growkaro.backend.service;
 import com.growkaro.backend.common.ActivityLogBroadcaster;
 import com.growkaro.backend.common.ActivityLogSpecs;
 import com.growkaro.backend.entity.ActivityLog;
-import com.growkaro.backend.entity.ActivityType;
+import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.repository.ActivityLogRepository;
 
 import org.springframework.data.domain.Page;

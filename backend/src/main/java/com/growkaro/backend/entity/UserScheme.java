@@ -10,10 +10,12 @@ import lombok.ToString;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -24,9 +26,13 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 
 @Getter
 @Setter
@@ -38,14 +44,8 @@ import jakarta.persistence.UniqueConstraint;
 public class UserScheme {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "user_scheme_id")
     private String userSchemeId;
-
-    @ElementCollection(fetch = FetchType.LAZY)
-    @CollectionTable(name = "user_scheme_bond_images", joinColumns = @JoinColumn(name = "user_scheme_id", referencedColumnName = "user_scheme_id"))
-    @Column(name = "image_url")
-    private List<String> bondImageURL = new ArrayList<>();
 
     @Column(name = "request_date", nullable = false, updatable = false)
     private LocalDate requestDate;
@@ -60,49 +60,47 @@ public class UserScheme {
     @JsonBackReference // CRITICAL: Pairs with @JsonManagedReference in Scheme to fix the Nesting Depth
     private Scheme scheme;
 
-    @Column(name = "is_approved", nullable = false)
-    private Boolean isApproved = false;
+    @NotNull(message = "Amount is required")
+    @Positive(message = "Amount must be greater than zero")
+    @DecimalMin(value = "0.0000", message = "Paid Amount cannot be negative")
+    @Column(name = "paid_amount", nullable = false, precision = 19, scale = 2)
+    private BigDecimal paidAmount = BigDecimal.ZERO;
 
-    @Column(name = "status", nullable = false)
-    private UserSchemeStatus status = UserSchemeStatus.PENDING;
+    // after approve by admin
+    @OneToOne(mappedBy = "userScheme", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY, optional = true)
+    private UserApproved userApproved;
 
-    @Column(name = "enrollment_date", nullable = true)
-    private LocalDateTime enrollmentDate;
+    // @Column(name = "status", nullable = false)
+    // private UserSchemeStatus status = UserSchemeStatus.PENDING;
 
-    @Column(name = "paid_amount", nullable = true)
-    private Long paidAmount;
-
-    @ElementCollection(fetch = FetchType.LAZY)
-    @CollectionTable(name = "user_scheme_payment_dates", joinColumns = @JoinColumn(name = "user_scheme_id", referencedColumnName = "user_scheme_id"))
-    @Column(name = "payment_date")
-    private List<LocalDate> paymentDates;
+    // @Column(name = "payment_date", nullable = true)
+    // private LocalDate paymentDates;
 
     // @Column(name = "remaining_amount", nullable = true)
     // private Long remainingAmount;
 
-    @Column(name = "bond_number", nullable = true)
-    private String bondNumber;
-
     // @Column(name = "bond_price", nullable = true)
     // private Long bondPrice;
 
-    @Column(name = "bond_maturity_date", nullable = true)
-    private LocalDate bondMaturityDate;
+    // @Column(name = "bond_maturity_date", nullable = true)
+    // private LocalDate bondMaturityDate;
 
-    @Column(name = "bond_maturity_value", nullable = true)
-    private BigDecimal bondMaturityValue;
+    // @Column(name = "bond_maturity_value", nullable = true)
+    // private BigDecimal bondMaturityValue;
 
-    public enum UserSchemeStatus {
-        PENDING,
-        ACTIVE,
-        REJECTED,
-        WITHDRAWN
-    }
+    // public enum UserSchemeStatus {
+    // PENDING,
+    // ACTIVE,
+    // // REJECTED,
+    // // WITHDRAWN
+    // }
 
     @PrePersist
     protected void onCreate() {
-        if (this.requestDate == null) {
-            this.requestDate = LocalDate.now();
+        if (this.requestDate == null && this.userSchemeId == null) {
+            LocalDate now = LocalDate.now();
+            this.requestDate = now;
+            this.userSchemeId = "GKUSID" + now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         }
     }
 
@@ -119,5 +117,11 @@ public class UserScheme {
     @Override
     public int hashCode() {
         return getClass().hashCode();
+    }
+
+    // generate meaningfull userScheme Id
+    @PrePersist
+    private void generateUserSchemeId() {
+
     }
 }

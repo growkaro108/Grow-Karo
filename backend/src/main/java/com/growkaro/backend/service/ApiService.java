@@ -12,7 +12,6 @@ import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.SupportIssue;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
-import com.growkaro.backend.entity.UserScheme.UserSchemeStatus;
 import com.growkaro.backend.repository.FundraiserCodeRepository;
 import com.growkaro.backend.repository.RemitterRepository;
 import com.growkaro.backend.repository.SupportIssueRepository;
@@ -59,56 +58,6 @@ public class ApiService {
     // check user scheme exists
     public boolean isUserSchemeExits(String userSchemeId) {
         return getUserSchemeById(userSchemeId) != null;
-    }
-
-    public Map<String, Object> userSchemeStatusUpdate(String userSchemeId, String userId, UserSchemeStatus action,
-            UserSchemeStatus condition, UserScheme existing) {
-
-        // 1. Validate data existence beforehand
-        if (userId != null) // when admin send request then
-            if (!userRepository.existsById(userId)) {
-                return general.response("error", "User not found", null);
-            }
-        try {
-            UserScheme userScheme;
-            if (existing == null) {
-                if (isUserSchemeExits(userSchemeId)) {
-                    userScheme = getUserSchemeById(userSchemeId);
-                } else {
-                    return general.response("error", "Request record not found", null);
-                }
-            } else {
-                userScheme = existing;
-            }
-            // Status checks to provide contextual user feedback
-            if (userId != null) // when admin send request
-                if (!userScheme.getUser().getId().equals(userId)) {
-                    return general.response("info", "User not enrolled in this scheme", null);
-                }
-            switch (condition) {
-                case ACTIVE:
-                    return general.response("info", "Application is already active and cannot be withdrawn", null);
-                case WITHDRAWN:
-                    return general.response("info", "Application has already been withdrawn", null);
-                case REJECTED:
-                    return general.response("info", "Application has already been rejected", null);
-                case PENDING:
-                    userScheme.setStatus(action);
-                    userSchemeRepository.save(userScheme);
-                    return general.response("success",
-                            "Application " + action.toString().toLowerCase() + " successfully", null);
-                default:
-                    return general.response("info",
-                            "Application cannot be " + action.toString().toLowerCase() + " at this time", null);
-            }
-        } catch (Exception e) {
-            log.error("Error while processing cancellation request: " + e.getMessage());
-            return general.response("error", "Something went wrong while processing your cancellation request", null);
-
-        } finally {
-            // genrate notification for admin and user
-
-        }
     }
 
     @Cacheable(value = "health", key = "#root.methodName")

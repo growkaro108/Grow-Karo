@@ -1,12 +1,10 @@
 package com.growkaro.backend.controller;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -85,15 +83,18 @@ public class AdminAPIController {
         return ResponseEntity.ok(adminAPIService.getAllUsersRequests());
     }
 
-    @PutMapping("/user-scheme/approve")
-    public ResponseEntity<Map<String, Object>> activateUserScheme(@RequestBody ApproveUserScheme approveUserScheme) {
-        if ("".equals(approveUserScheme.userSchemeId()) || approveUserScheme.userSchemeId() == null
-                || approveUserScheme.paidAmount() == null) {
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok(adminAPIService.activateUsersScheme(approveUserScheme.userSchemeId(),
-                approveUserScheme.paidAmount(), approveUserScheme.paidDate()));
-    }
+    // @PutMapping("/user-scheme/approve")
+    // public ResponseEntity<Map<String, Object>> activateUserScheme(@RequestBody
+    // ApproveUserScheme approveUserScheme) {
+    // if ("".equals(approveUserScheme.userSchemeId()) ||
+    // approveUserScheme.userSchemeId() == null
+    // || approveUserScheme.paidAmount() == null) {
+    // return ResponseEntity.badRequest().build();
+    // }
+    // return
+    // ResponseEntity.ok(adminAPIService.activateUsersScheme(approveUserScheme.userSchemeId(),
+    // approveUserScheme.paidAmount(), approveUserScheme.paidDate()));
+    // }
 
     @PutMapping("/user-scheme/reject/{userSchemeId}")
     public ResponseEntity<Map<String, Object>> rejectUserScheme(@PathVariable String userSchemeId) {

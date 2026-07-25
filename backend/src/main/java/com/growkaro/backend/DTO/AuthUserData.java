@@ -18,6 +18,5 @@ public class AuthUserData {
     String role;
     String token;
     int investedSchemeCount;
-    Long totalInvestmentAmount;
-    BigDecimal remainingPayments;
+    BigDecimal totalInvestmentAmount;
 }

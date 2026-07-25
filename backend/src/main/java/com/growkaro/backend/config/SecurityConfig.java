@@ -22,7 +22,7 @@ public class SecurityConfig {
                                                                 "/api/user/test",
                                                                 "/api/user/login",
                                                                 "/api/user/dashboard",
-                                                                "/api/user/scheme/enroll/{schemeId}/{userId}",
+                                                                "/api/user/scheme/enroll",
                                                                 "/api/user/myscheme/{userId}",
                                                                 "/api/user/scheme/user/{userId}",
                                                                 "/api/user/scheme/withdraw/{userSchemeId}/{userId}",

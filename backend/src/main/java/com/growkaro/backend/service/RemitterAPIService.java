@@ -4,6 +4,7 @@ import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.WithdrawalRequest;
+import com.growkaro.backend.enums.WithdrawalStatus;
 import com.growkaro.backend.repository.RecipientRepository;
 import com.growkaro.backend.repository.RemitterRepository;
 import com.growkaro.backend.repository.TransactionRepository;
@@ -76,7 +77,7 @@ public class RemitterAPIService {
                 "activeCounterparties", recipientRepository.countByRemitterIdAndActive(remitter.getId(), true)));
         data.put("summary", Map.of(
                 "received", totalVolume,
-                "pending", withdrawalRequestRepository.sumAmountByStatus(WithdrawalRequest.Status.PENDING)));
+                "pending", withdrawalRequestRepository.sumAmountByStatus(WithdrawalStatus.PENDING)));
         data.put("chartData", transactions.getContent().stream().map(this::toChartPoint).toList());
         data.put("transactions", transactions.getContent().stream().map(this::toTransactionView).toList());
         data.put("recipients", recipients.getContent().stream().map(recipientService::toRemitterView).toList());
@@ -147,7 +148,7 @@ public class RemitterAPIService {
         }
 
         WithdrawalRequest request = requestOpt.get();
-        request.setStatus(WithdrawalRequest.Status.PROCESSED);
+        request.setStatus(WithdrawalStatus.PROCESSED);
         if (payload.containsKey("proofUrl")) {
             request.setProofUrl(stringValue(payload.get("proofUrl")));
         }
@@ -254,7 +255,7 @@ public class RemitterAPIService {
         data.put("amount", request.getAmount());
         data.put("date", request.getCreatedAt());
         data.put("status", request.getStatus().name());
-        data.put("isSettled", request.getStatus() == WithdrawalRequest.Status.PROCESSED);
+        data.put("isSettled", request.getStatus() == WithdrawalStatus.PROCESSED);
         data.put("proofUrl", request.getProofUrl());
         return data;
     }

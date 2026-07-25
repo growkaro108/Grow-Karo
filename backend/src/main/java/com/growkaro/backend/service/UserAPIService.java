@@ -24,14 +24,14 @@ import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.DTO.AuthUserData;
 import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.common.General;
-import com.growkaro.backend.entity.ActivityType;
 import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.Notification;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
+import com.growkaro.backend.entity.UserApproved;
 import com.growkaro.backend.entity.UserScheme;
-import com.growkaro.backend.entity.UserScheme.UserSchemeStatus;
+import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.repository.NotificationRepository;
 import com.growkaro.backend.repository.SchemeRepository;
 import com.growkaro.backend.repository.TransactionRepository;
@@ -88,6 +88,19 @@ public class UserAPIService {
 
     public boolean existUserSchemeId(String userSchemeId) {
         return userSchemeRepository.existsById(userSchemeId);
+    }
+
+    public Scheme getSchemeById(String schemeId) {
+        Optional<Scheme> scheme = schemeRepository.findById(schemeId);
+        return scheme.isPresent() ? scheme.get() : null;
+    }
+
+    public User getUserById(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return null;
+        }
+        Optional<User> user = userRepository.findById(userId);
+        return user.isPresent() ? user.get() : null;
     }
 
     @Transactional
@@ -171,30 +184,27 @@ public class UserAPIService {
         }
     }
 
-    public Map<String, Object> enrollScheme(String schemeId, String userId) {
+    public Map<String, Object> enrollInScheme(String schemeId, String userId, BigDecimal amount) {
         try {
-            List<Object[]> results = schemeRepository.findSchemeAndUserByIds(schemeId, userId);
-
-            if (results.isEmpty()) {
-                return general.response("error", "Scheme or User not found", null);
+            if (schemeId == null || userId == null || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+                return general.response("error", "Invalid request...", null);
             }
 
-            Object[] row = results.get(0);
-            Scheme scheme = (Scheme) row[0];
-            User user = (User) row[1];
-            if (scheme == null || user == null) {
-                return general.response("error", "Scheme or User not found", null);
-            }
+            User user = getUserById(userId);
+            Scheme scheme = getSchemeById(schemeId);
 
-            Optional<UserScheme> existingEnrollment = userSchemeRepository.findBySchemeAndUser(scheme, user);
-            if (existingEnrollment.isPresent()) {
-                return general.response("info", "User is already enrolled in this scheme", null);
+            if (user == null || scheme == null || amount.compareTo(scheme.getMinimunAmount()) < 0) {
+                return general.response("error", "Invalid request...", null);
             }
 
             UserScheme newUserScheme = new UserScheme();
-            newUserScheme.setScheme(scheme);
             newUserScheme.setUser(user);
+            newUserScheme.setPaidAmount(amount); // <-- was validated but never persisted
+            scheme.enrollUserInScheme(newUserScheme); // sets scheme + adds to scheme's joinedUsers
+            user.enrollInScheme(newUserScheme); // if you keep this method, make sure it doesn't create a second
+                                                // UserScheme — see note below
             userSchemeRepository.save(newUserScheme);
+
             activityLogService.log(
                     user.getId(), user.getName(), "USER",
                     ActivityType.SCHEME_ENROLLED,
@@ -211,11 +221,11 @@ public class UserAPIService {
 
     public Map<String, Object> getMyScheme(String userId) {
         try {
-            Optional<User> userOpt = resolveUser(userId);
-            if (userOpt.isEmpty()) {
-                return general.response("error", "User not found", Map.of("id", userId));
+            User user = getUserById(userId);
+            if (user == null) {
+                return general.response("error", "Invalid Data...", Map.of("id", userId));
             }
-            List<String> userSchemesIds = userSchemeRepository.findAllJoinedSchemeId(userOpt.get());
+            List<String> userSchemesIds = userSchemeRepository.findAllJoinedSchemeId(user);
             return general.response("success", "User schemes fetched", userSchemesIds);
         } catch (Exception e) {
             log.error("Failed to fetch schemes for user {}", userId, e);
@@ -226,15 +236,13 @@ public class UserAPIService {
     @Transactional(readOnly = true)
     public Map<String, Object> getUserPortfolio(String userId) {
         try {
-            if (!existByUserId(userId)) {
-                return general.response("error", "User not found", null);
+            User user = getUserById(userId);
+            if (user == null) {
+                return general.response("error", "Invalid Data...", null);
             }
-            // filter with status not WITHDRAWN and REJECTED
-            List<UserPortfolio> portfolios = userSchemeRepository
-                    .findAllByUserIdWithSchemeDetails(userId)
+            List<UserPortfolio> portfolios = user.getEnrolledSchemes()
                     .stream()
-                    .filter(us -> us.getStatus() != UserSchemeStatus.WITHDRAWN
-                            && us.getStatus() != UserSchemeStatus.REJECTED)
+                    // .filter(us -> us.getUserApproved().getIsApproved())
                     .map(general::toUserPortfolio)
                     .toList();
 
@@ -246,65 +254,56 @@ public class UserAPIService {
     }
 
     @Transactional
-    public Map<String, Object> userSchemeWithdrawEnrollRequest(String userSchemeId, String userId) {
-        if (!existByUserId(userId)) {
+    public Map<String, Object> schemeWithdrawal(String userSchemeId, String userId) {
+        User user = getUserById(userId);
+        if (user == null) {
             return general.response("error", "Invalid data", null);
         }
-        User user = null;
-        UserScheme userScheme = null;
         try {
             Optional<UserScheme> userSchemeOpt = userSchemeRepository.findById(userSchemeId);
             if (userSchemeOpt.isEmpty()) {
                 return general.response("error", "Request record not found", null);
             }
-
-            userScheme = userSchemeOpt.get();
-            user = userScheme.getUser();
+            UserScheme userScheme = userSchemeOpt.get();
             if (!user.getId().equals(userId)) {
                 return general.response("info", "User not enrolled in this scheme", null);
             }
-            switch (userScheme.getStatus()) {
-                case ACTIVE:
-                    return general.response("info", "Application is already active and cannot be withdrawn", null);
-                case WITHDRAWN:
-                    return general.response("info", "Application has already been withdrawn", null);
-                case REJECTED:
-                    return general.response("info", "Application has already been rejected", null);
-                case PENDING:
-                    userScheme.setStatus(UserScheme.UserSchemeStatus.WITHDRAWN);
-                    userSchemeRepository.save(userScheme);
-                    return general.response("success", "Application withdrawn successfully", null);
-                default:
-                    return general.response("info", "Application cannot be withdrawn at this time", null);
+
+            Scheme scheme = userScheme.getScheme();
+            String schemeName = (scheme != null) ? scheme.getSchemeName() : null;
+
+            // Actually perform the withdrawal
+            if (scheme != null) {
+                scheme.removeUserFromScheme(userScheme); // removes from joinedUsers, nulls scheme ref
             }
+            user.getEnrolledSchemes().remove(userScheme); // keep in-memory side consistent, if this collection exists
+
+            userSchemeRepository.delete(userScheme);
+
+            activityLogService.log(
+                    user.getId(), user.getName(), "USER",
+                    ActivityType.SCHEME_WITHDRAWAL,
+                    user.getName() + " withdrew from scheme " + schemeName,
+                    "USER", user.getId(),
+                    Map.of("userSchemeId", userSchemeId));
+
+            return general.response("success", "Application withdrawn successfully", null);
+
         } catch (Exception e) {
             log.error("Error withdrawing userScheme {} for user {}", userSchemeId, userId, e);
             return general.response("error", e.getMessage() != null ? e.getMessage()
                     : "Something went wrong while processing your cancellation request", null);
-        } finally {
-            if (user != null && userScheme != null) {
-                activityLogService.log(
-                        user.getId(), user.getName(), "USER",
-                        ActivityType.SCHEME_WITHDRAWAL,
-                        user.getName() + " withdrew from scheme " + userScheme.getScheme().getSchemeName(),
-                        "USER", user.getId(),
-                        Map.of("userSchemeId", userSchemeId));
-                return general.response("success", "Application withdrawn successfully", null);
-            }
         }
-
     }
 
     //// pending
     @Cacheable(value = "userProfile", key = "#userId")
     @Transactional(readOnly = true)
     public Map<String, Object> userProfile(String userId) {
-        Optional<User> userOpt = resolveUser(userId);
-        if (userOpt.isEmpty()) {
-            return general.response("error", "User not found", Map.of("id", userId));
+        User user = getUserById(userId);
+        if (user == null) {
+            return general.response("error", "Invalid requests...", Map.of("id", userId));
         }
-
-        User user = userOpt.get();
         BigDecimal deposits = transactionRepository.sumSuccessfulAmountByUser(user.getId());
         BigDecimal withdrawals = withdrawalRequestRepository.sumProcessedAmountByUser(user.getId());
         BigDecimal balance = deposits.subtract(withdrawals);
@@ -320,12 +319,11 @@ public class UserAPIService {
     @CachePut(value = "userProfile", key = "#userId")
     @Transactional
     public Map<String, Object> updateUser(String userId, Map<String, Object> updates) {
-        Optional<User> userOpt = resolveUser(userId);
-        if (userOpt.isEmpty()) {
-            return general.response("error", "User not found", Map.of("id", userId));
+        User user = getUserById(userId);
+        if (user == null) {
+            return general.response("error", "Invalid requests...", Map.of("id", userId));
         }
 
-        User user = userOpt.get();
         applyUserUpdates(user, updates);
         return general.response("ok", "User updated successfully", toUserProfile(userRepository.save(user)));
     }
@@ -338,12 +336,10 @@ public class UserAPIService {
     })
     @Transactional
     public Map<String, Object> deleteUser(String userId) {
-        Optional<User> userOpt = resolveUser(userId);
-        if (userOpt.isEmpty()) {
-            return general.response("error", "User not found", Map.of("id", userId));
+        User user = getUserById(userId);
+        if (user == null) {
+            return general.response("error", "Invalid requests...", Map.of("id", userId));
         }
-
-        User user = userOpt.get();
         user.setActive(false);
         userRepository.save(user);
         return general.response("ok", "User deactivated", Map.of("id", user.getId()));
@@ -352,28 +348,28 @@ public class UserAPIService {
     @Cacheable(value = "userTransactions", key = "#userId + ':' + (#page != null ? #page : '1')")
     @Transactional(readOnly = true)
     public Map<String, Object> userTransactions(String userId, String page) {
-        Optional<User> userOpt = resolveUser(userId);
-        if (userOpt.isEmpty()) {
-            return general.response("error", "User not found", Map.of("id", userId));
+        User user = getUserById(userId);
+        if (user == null) {
+            return general.response("error", "Invalid requests...", Map.of("id", userId));
         }
 
-        Page<Transaction> transactions = transactionRepository.findByUserId(userOpt.get().getId(), pageable(page));
+        Page<Transaction> transactions = transactionRepository.findByUserId(user.getId(), pageable(page));
         return general.response("ok", "User transactions fetched",
-                paginatedTransactions(transactions, "userId", userOpt.get().getId()));
+                paginatedTransactions(transactions, "clientId", user.getId()));
     }
 
     @Cacheable(value = "userNotifications", key = "#userId")
     @Transactional(readOnly = true)
     public Map<String, Object> userNotifications(String userId) {
-        Optional<User> userOpt = resolveUser(userId);
-        if (userOpt.isEmpty()) {
-            return general.response("error", "User not found", Map.of("id", userId));
+        User user = getUserById(userId);
+        if (user == null) {
+            return general.response("error", "Invalid requests...", Map.of("id", userId));
         }
 
-        Page<Notification> notifications = notificationRepository.findByUserId(userOpt.get().getId(), pageable("1"));
+        Page<Notification> notifications = notificationRepository.findByUserId(user.getId(), pageable("1"));
         Map<String, Object> data = paginatedMeta(notifications);
-        data.put("userId", userOpt.get().getId());
-        data.put("unreadCount", notificationRepository.countByUserIdAndRead(userOpt.get().getId(), false));
+        data.put("userId", user.getId());
+        data.put("unreadCount", notificationRepository.countByUserIdAndRead(user.getId(), false));
         data.put("items", notifications.getContent().stream().map(this::toNotificationView).toList());
         return general.response("ok", "User notifications fetched", data);
     }
@@ -381,15 +377,13 @@ public class UserAPIService {
     @CacheEvict(value = "userProfile", key = "#userId")
     @Transactional
     public Map<String, Object> changePassword(String userId, String oldPassword, String newPassword) {
-        Optional<User> userOpt = resolveUser(userId);
-        if (userOpt.isEmpty()) {
-            return general.response("error", "User not found", Map.of("id", userId));
+        User user = getUserById(userId);
+        if (user == null) {
+            return general.response("error", "Invalid requests...", Map.of("id", userId));
         }
         if (oldPassword == null || newPassword == null || !general.validatePassword(newPassword)) {
             return general.response("error", "Invalid password data", null);
         }
-
-        User user = userOpt.get();
         if (!BCrypt.checkpw(oldPassword, user.getPasswordHash())) {
             return general.response("error", "Old password is incorrect", Map.of("id", user.getId()));
         }
@@ -401,14 +395,14 @@ public class UserAPIService {
     @CacheEvict(value = "userNotifications", key = "#userId")
     @Transactional
     public Map<String, Object> markNotificationsAsRead(String userId, List<String> notificationIds) {
-        Optional<User> userOpt = resolveUser(userId);
-        if (userOpt.isEmpty()) {
-            return general.response("error", "User not found", Map.of("id", userId));
+        User user = getUserById(userId);
+        if (user == null) {
+            return general.response("error", "Invalid requests...", Map.of("id", userId));
         }
 
         int updated = notificationIds == null || notificationIds.isEmpty()
-                ? notificationRepository.markAllAsRead(userOpt.get().getId())
-                : notificationRepository.markAsRead(userOpt.get().getId(), notificationIds);
+                ? notificationRepository.markAllAsRead(user.getId())
+                : notificationRepository.markAsRead(user.getId(), notificationIds);
         return general.response("ok", "Notifications marked as read", Map.of("updatedCount", updated));
     }
 
@@ -416,13 +410,6 @@ public class UserAPIService {
         // TODO: persist settings — currently just echoed back, not saved anywhere
         return general.response("ok", "Notification preferences updated",
                 Map.of("userId", userId, "settings", settings));
-    }
-
-    private Optional<User> resolveUser(String userId) {
-        if (userId == null || userId.isBlank()) {
-            return Optional.empty();
-        }
-        return userRepository.findById(userId);
     }
 
     private Map<String, Object> toUserProfile(User user) {

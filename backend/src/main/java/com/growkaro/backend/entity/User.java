@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,7 +33,7 @@ public class User {
     @Column(nullable = false)
     private String passwordHash;
 
-    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "bank_details_id")
     private BankDetails bankDetails;
 
@@ -40,10 +41,8 @@ public class User {
     private List<UserScheme> enrolledSchemes = new ArrayList<>();
 
     // Helper method to handle defensive synchronization of the relationship
-    public void enrollInScheme(Scheme scheme) {
-        UserScheme userScheme = new UserScheme();
+    public void enrollInScheme(UserScheme userScheme) {
         userScheme.setUser(this);
-        userScheme.setScheme(scheme);
         this.enrolledSchemes.add(userScheme);
     }
 
@@ -63,17 +62,21 @@ public class User {
     private boolean phoneVerified = false;
 
     @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = getTime();
 
-    private LocalDateTime updatedAt = LocalDateTime.now();
+    private LocalDateTime updatedAt = getTime();
 
     @PreUpdate
     public void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = getTime();
     }
 
     public enum Role {
         GRAHAK, REMITTER, ADMIN
+    }
+
+    private LocalDateTime getTime() {
+        return LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
     }
 
 }
