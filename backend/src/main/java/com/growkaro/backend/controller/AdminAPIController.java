@@ -56,7 +56,6 @@ public class AdminAPIController {
             log.error("Error while creating scheme: " + e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
-
     }
 
     @PutMapping("/scheme/update/{schemeId}")
@@ -101,44 +100,28 @@ public class AdminAPIController {
         return ResponseEntity.ok(adminAPIService.rejectUserScheme(userSchemeId));
     }
 
-    // @PostMapping(value = "/scheme/bond/{userSchemeId}", consumes =
-    // MediaType.MULTIPART_FORM_DATA_VALUE)
-    // public ResponseEntity<Map<String, Object>> addBondDetails(
-    // @PathVariable String userSchemeId,
-    // String bondNumber,
-    // MultipartFile image) {
-    // return null;
-    // if (userSchemeId == null || userSchemeId.isBlank()) {
-    // return ResponseEntity.badRequest().body(general.response("error", "Invalid
-    // userSchemeId", null));
-    // }
+    @PostMapping(value = "/scheme/bond/{userSchemeId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Object>> addBondDetails(@PathVariable String userSchemeId, String bondNumber,
+            MultipartFile image) {
+        boolean hasBondNumber = bondNumber != null && !bondNumber.isBlank();
+        boolean hasImage = image != null && !image.isEmpty();
+        if (userSchemeId == null || userSchemeId.isBlank() || !hasBondNumber || !hasImage) {
+            return ResponseEntity.badRequest().body(general.response("error", "Invalid request.", null));
+        }
 
-    // boolean hasBondNumber = bondNumber != null && !bondNumber.isBlank();
-    // boolean hasImage = image != null && !image.isEmpty();
+        String contentType = image.getContentType();
+        if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
+            return ResponseEntity.badRequest()
+                    .body(general.response("error", "Invalid file type: " + image.getOriginalFilename(), null));
+        }
+        if (image.getSize() > MAX_FILE_SIZE_BYTES) {
+            return ResponseEntity.badRequest()
+                    .body(general.response("error", image.getOriginalFilename() + " exceeds the 5MB limit", null));
+        }
 
-    // if (!hasBondNumber && !hasImage) {
-    // return ResponseEntity.badRequest()
-    // .body(general.response("error", "Provide a bond number or an image", null));
-    // }
-
-    // if (hasImage) {
-    // String contentType = image.getContentType();
-    // if (contentType == null ||
-    // !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
-    // return ResponseEntity.badRequest()
-    // .body(general.response("error", "Invalid file type: " +
-    // image.getOriginalFilename(), null));
-    // }
-    // if (image.getSize() > MAX_FILE_SIZE_BYTES) {
-    // return ResponseEntity.badRequest()
-    // .body(general.response("error", image.getOriginalFilename() + " exceeds the
-    // 5MB limit", null));
-    // }
-    // }
-
-    // return ResponseEntity.ok(adminAPIService.addBondDetails(userSchemeId,
-    // bondNumber, image));
-    // }
+        return ResponseEntity.ok(adminAPIService.addBondDetails(userSchemeId,
+                bondNumber, image));
+    }
 
     @GetMapping("/dashboard")
     public ResponseEntity<Map<String, Object>> adminDashboard(@RequestParam(required = false) String range) {

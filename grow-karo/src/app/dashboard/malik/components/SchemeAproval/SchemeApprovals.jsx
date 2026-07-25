@@ -49,7 +49,7 @@ export default function SchemeApproval() {
     try {
       setLoading(true);
       const response = await getAllUserRequests();
-      // console.table(response.data);
+      // console.log(response.data);
       if (response.status !== "success") {
         allRounderMessage(response);
         console.log(response);
@@ -224,7 +224,9 @@ export default function SchemeApproval() {
     numericPaid,
     paidDate,
     showToast,
-    loadRequests,    mergeRequestInState,  ]);
+    loadRequests,
+    mergeRequestInState,
+  ]);
 
   const handleConfirmReject = useCallback(async () => {
     if (!rejectTarget) return;

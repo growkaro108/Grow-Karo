@@ -34,17 +34,4 @@ public interface UserSchemeRepository extends JpaRepository<UserScheme, String> 
     // If it's a plain class DTO, this needs @Query("SELECT new
     // ...UserPortfolio(...) FROM UserScheme us WHERE us.user.id = :userId")
     List<UserPortfolio> findByUserId(String userId);
-
-    @Query("""
-            SELECT us.userSchemeId AS userSchemeId,
-                   us.status AS status,
-                   us.isApproved AS isApproved,
-                   us.requestDate AS requestDate,
-                   us.paidAmount AS paidAmount,
-                   us.paymentDates AS paymentDates,
-                   us.scheme AS scheme,
-                   us.user AS user
-            FROM UserScheme us
-            """)
-    List<UserRequest> findAllWithUserAndScheme();
 }

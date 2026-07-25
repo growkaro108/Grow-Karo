@@ -78,7 +78,7 @@ export default function SchemeTable({
             <th></th>
             <th>Applicant</th>
             <th>Scheme</th>
-            <th>Capital required</th>
+            <th>Remaining amount</th>
             <th>Status</th>
             <th>Action</th>
           </tr>
@@ -134,7 +134,9 @@ export default function SchemeTable({
                     </div>
                   </td>
                   <td>{req.schemeName}</td>
-                  <td className="sea-mono">{currency(req.investmentAmount)}</td>
+                  <td className="sea-mono">
+                    {currency(req.investmentAmount - req.paidAmount)}
+                  </td>
                   <td>
                     <span
                       className="sea-badge"

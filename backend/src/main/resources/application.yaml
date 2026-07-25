@@ -66,10 +66,17 @@ spring:
           connectiontimeout: 10000
           timeout: 10000
           writetimeout: 10000
-# s3 storage
+
 app:
   storage:
-    type: s3
-    s3:
-      bucket: your-bucket-name
-      public-url-base: https://your-bucket-name.s3.ap-south-1.amazonaws.com
+    type: local
+    local:
+      base-path: ./uploads
+      base-url: http://localhost:9090/uploads
+
+# s3 storage
+#   storage:
+#     type: s3
+#     s3:
+#       bucket: your-bucket-name
+#       public-url-base: https://your-bucket-name.s3.ap-south-1.amazonaws.com

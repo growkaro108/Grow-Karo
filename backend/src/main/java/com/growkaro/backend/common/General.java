@@ -19,6 +19,7 @@ import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.DTO.AuthUserData;
 import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.UserPortfolio;
+import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
@@ -264,5 +265,13 @@ public class General {
         } else {
             throw new IllegalArgumentException("Unknown payout frequency: " + payoutFrequency);
         }
+    }
+
+    public UserRequest toUserRequest(UserScheme us) {
+        Scheme s = us.getScheme();
+        User u = us.getUser();
+        return new UserRequest(us.getUserSchemeId(), us.getStatus(), us.getPaidAmount(), us.getPaymentDates(),
+                us.getIsApproved(), us.getRequestDate(), s.getSchemeName(), s.getInvestmentAmount(), u.getName(),
+                u.getEmail(), u.getPhone());
     }
 }
