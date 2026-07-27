@@ -120,7 +120,7 @@ public class UserAPIController {
         return ResponseEntity.ok(userAPIService.logout(userId, userName));
     }
 
-    @PostMapping("/scheme/enroll")
+    @PutMapping("/scheme/enroll")
     public ResponseEntity<Map<String, Object>> enrollScheme(@RequestBody EnrollingUser enrollingUser) {
         try {
             if (enrollingUser.schemeId().isBlank() || enrollingUser.userId().isBlank()) {

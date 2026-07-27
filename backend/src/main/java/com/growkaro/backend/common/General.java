@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Year;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.springframework.cglib.core.Local;
 import org.springframework.stereotype.Component;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DRO.UserRegister;
@@ -99,18 +101,20 @@ public class General {
         if (totalEnrollScheme != null && !totalEnrollScheme.isEmpty()) {
             // set total scheme count
             int investedSchemeCount = totalEnrollScheme.stream()
-                    .filter(us -> us.getUserApproved().getIsApproved())
+                    .filter(us -> us.getIsApproved())
                     .map(UserScheme::getScheme)
                     .map(Scheme::getSchemeName)
                     .collect(Collectors.toSet()).size();
             authUserData.setInvestedSchemeCount(investedSchemeCount);
             // set total investment
             BigDecimal totalInvestment = totalEnrollScheme.stream()
-                    .filter(us -> us.getUserApproved().getIsApproved())
+                    .filter(us -> us.getIsApproved())
                     .map(UserScheme::getPaidAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             authUserData.setTotalInvestmentAmount(totalInvestment);
 
+        } else {
+            authUserData.setTotalInvestmentAmount(BigDecimal.ZERO);
         }
 
         return authUserData;
@@ -125,7 +129,9 @@ public class General {
         scheme.setTenure(schemeData.tenure());
         scheme.setStartDate(schemeData.startDate());
         scheme.setEndDate(schemeData.endDate());
+        scheme.setMinimumAmount(schemeData.minimumAmount());
         scheme.setStatus(schemeData.status());
+        scheme.setRiskLevel(schemeData.riskLevel());
         scheme.setProfitPercentage(schemeData.profitPercentage());
         scheme.setMaxInvestorsAllowed(schemeData.maxInvestorsAllowed());
         return scheme;
@@ -139,13 +145,14 @@ public class General {
                 scheme.getTenure(),
                 scheme.getPayoutFrequency(),
                 scheme.getProfitPercentage(),
-                us.getUserApproved().getEnrollmentDate(),
-                us.getUserApproved().getBondImageURL(),
-                us.getUserApproved().getBondNumber(),
+                us.getEnrollmentDate(),
+                us.getBondImageURL(),
+                us.getBondNumber(),
                 us.getRequestDate(),
                 us.getUserSchemeId(),
                 us.getPaidAmount(),
-                us.getUserApproved().getIsApproved());
+                us.getIsApproved(),
+                us.getProfit());
     }
 
     public SchemeResponse toSchemeResponse(Scheme scheme) {
@@ -159,9 +166,11 @@ public class General {
                 scheme.getStartDate(),
                 scheme.getEndDate(),
                 scheme.getStatus(),
-                scheme.getMinimunAmount(),
+                scheme.getMinimumAmount(),
                 scheme.getProfitPercentage(),
                 scheme.getMaxInvestorsAllowed(),
+                scheme.getUpdatedAt(),
+                scheme.getRiskLevel(),
                 scheme.getJoinedUsers().stream().map(UserScheme::getUserSchemeId).toList());
     }
 
@@ -251,8 +260,8 @@ public class General {
     public UserRequest toUserRequest(UserScheme us) {
         Scheme s = us.getScheme();
         User u = us.getUser();
-        return new UserRequest(us.getUserSchemeId(), us.getPaidAmount(), us.getUserApproved().getEnrollmentDate(),
-                us.getUserApproved().getIsApproved(),
+        return new UserRequest(us.getUserSchemeId(), us.getPaidAmount(), us.getEnrollmentDate(),
+                us.getIsApproved(),
                 us.getRequestDate(), s.getSchemeName(), u.getName(),
                 u.getEmail(), u.getPhone());
     }

@@ -1,12 +1,14 @@
 package com.growkaro.backend.entity;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.ToString;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.NoArgsConstructor;
@@ -27,7 +29,8 @@ public class BankDetails {
     private String accountNumber;
 
     private String accountHolderName;
-    @ToString.Exclude
-    @OneToOne(mappedBy = "bankDetails")
+
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 }

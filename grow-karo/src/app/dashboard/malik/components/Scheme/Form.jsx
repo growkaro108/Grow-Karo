@@ -15,13 +15,13 @@ export default function FormModal({
   formError,
   setForm,
   PAYOUT_FREQUENCIES,
+  RISK_LEVELS,
   setEditingId,
   setPlans,
   setFormError,
   setOpen,
   emptyPlan,
   schemeNames,
-  showSuggestions,
   setShowSuggestions,
 }) {
   const [isSaving, setIsSaving] = useState(false);
@@ -38,6 +38,8 @@ export default function FormModal({
     },
     [setForm],
   );
+  //if existing plan are changed then enable save config button else disable save
+
   const handleStatusChange = useCallback(
     (e) => {
       setForm((prev) => ({ ...prev, status: e.target.value === "true" }));
@@ -53,23 +55,15 @@ export default function FormModal({
   const handleSubmit = useCallback(
     async (e) => {
       e.preventDefault();
-
-      if (!form.maturityValue) {
-        setFormError(
-          "Maturity Value couldn't be calculated — check Start Date, Tenure, Investment Threshold and Profit Percentage.",
-        );
-        return;
-      }
-
       setIsSaving(true);
       setFormError(null);
-
+      console.log("Request: ", form);
       try {
         const isEditing = editingId ?? false;
         const response = isEditing
           ? await updatePlan(editingId, form)
           : await createPlan(form);
-
+        console.log("response", response);
         if (response.status !== "success") {
           const message = response.message || "Something went wrong..";
           errorMessage(message, "error");
@@ -85,12 +79,7 @@ export default function FormModal({
           "success",
         );
 
-        setPlans((prev) =>
-          isEditing
-            ? prev.map((p) => (p.schemeId === editingId ? response.data : p))
-            : [response.data, ...prev],
-        );
-
+        setPlans(response.data);
         closeModal();
       } catch (err) {
         setFormError(
@@ -102,17 +91,6 @@ export default function FormModal({
     },
     [form, setFormError, editingId, setPlans, closeModal],
   );
-  //   const suggestionMatches = useMemo(() => {
-  //     const term = form.schemeName.trim().toLowerCase();
-  //     if (!term) return [];
-  //     return schemeNames
-  //       .filter((name) => name.toLowerCase().includes(term))
-  //       .slice(0, 6);
-  //   }, [schemeNames, form.schemeName]);
-  //   const selectSuggestion = useCallback((name) => {
-  //     setForm((prev) => ({ ...prev, schemeName: name }));
-  //     setShowSuggestions(false);
-  //   }, []);
   return (
     <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex justify-center items-center z-50 p-4 transition-all duration-300">
       <form
@@ -134,6 +112,9 @@ export default function FormModal({
                 ? "Modify Asset Configuration"
                 : "Deploy New Asset Plan"}
             </h2>
+            {editingId && (
+              <p className="text-xs">Last Updated : {form.updatedAt}</p>
+            )}
           </div>
           <button
             type="button"
@@ -168,7 +149,7 @@ export default function FormModal({
                   }
                 />
               </Field>
-              {
+              {!editingId && (
                 <Suggestion
                   schemeNames={schemeNames}
                   target={form.schemeName}
@@ -176,28 +157,28 @@ export default function FormModal({
                     setForm((prev) => ({ ...prev, schemeName: value }))
                   }
                 />
-              }
+              )}
             </div>
-            <Field label="Scheme Category">
+            <Field label="Category">
               <input
                 required
                 name="schemeCategory"
                 value={form.schemeCategory || ""}
                 onChange={handleChange}
-                placeholder="e.g. Fixed Income"
+                placeholder="e.g. investment..."
                 className={`${INPUT_CLS} uppercase tracking-wide`}
               />
             </Field>
           </div>
 
           {/* Financials */}
-          <div className="bg-slate-950/40 border border-slate-800/80 rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            <Field label="Investment Threshold (₹)">
+          <div className="bg-slate-950/40 border border-slate-800/80 rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            <Field label="Min. Investment (₹)">
               <input
                 type="number"
                 required
-                name="investmentAmount"
-                value={form.investmentAmount || ""}
+                name="minimumAmount"
+                value={form.minimumAmount || ""}
                 onChange={handleChange}
                 placeholder="5000"
                 className={INPUT_CLS}
@@ -227,15 +208,20 @@ export default function FormModal({
                 className={`${INPUT_CLS} font-bold text-emerald-400`}
               />
             </Field>
-            <Field label="Maturity Value (₹)-calculated">
-              <input
-                type="number"
-                readOnly
-                name="maturityValue"
-                value={form.maturityValue || ""}
-                placeholder="Fill amount, %, tenure & frequency"
-                className={READONLY_INPUT_CLS}
-              />
+
+            <Field label="Risk Level">
+              <select
+                name="riskLevel"
+                value={form.riskLevel || "1"}
+                onChange={handleChange}
+                className={INPUT_CLS}
+              >
+                {RISK_LEVELS.map((risk, idx) => (
+                  <option key={risk} value={idx}>
+                    {risk}
+                  </option>
+                ))}
+              </select>
             </Field>
           </div>
 
@@ -290,7 +276,7 @@ export default function FormModal({
                 className={INPUT_CLS}
               />
             </Field>
-            <Field label="System Lifecycle Status">
+            <Field label="Scheme Status">
               <select
                 name="status"
                 value={form.status === undefined ? "true" : String(form.status)}

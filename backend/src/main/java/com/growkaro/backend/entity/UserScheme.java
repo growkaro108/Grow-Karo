@@ -1,6 +1,7 @@
 package com.growkaro.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,19 +11,14 @@ import lombok.ToString;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 import jakarta.persistence.CascadeType;
-import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -38,7 +34,7 @@ import jakarta.validation.constraints.Positive;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@ToString(exclude = { "user", "scheme" }) // Avoid infinite loops in toString()
+@ToString(exclude = { "user", "scheme", "userApproved" }) // Avoid infinite loops in toString()
 @Entity
 @Table(name = "user_schemes", uniqueConstraints = { @UniqueConstraint(columnNames = { "user_id", "scheme_id" }) })
 public class UserScheme {
@@ -48,16 +44,16 @@ public class UserScheme {
     private String userSchemeId;
 
     @Column(name = "request_date", nullable = false, updatable = false)
-    private LocalDate requestDate;
+    private LocalDateTime requestDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    @JsonBackReference(value = "user-schemes") // Breaks circular JSON serialization if User tracks UserSchemes
+    @JsonBackReference(value = "user-schemes")
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "scheme_id", nullable = false)
-    @JsonBackReference // CRITICAL: Pairs with @JsonManagedReference in Scheme to fix the Nesting Depth
+    @JsonBackReference
     private Scheme scheme;
 
     @NotNull(message = "Amount is required")
@@ -66,41 +62,36 @@ public class UserScheme {
     @Column(name = "paid_amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal paidAmount = BigDecimal.ZERO;
 
-    // after approve by admin
-    @OneToOne(mappedBy = "userScheme", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY, optional = true)
-    private UserApproved userApproved;
+    @Column(name = "is_approved", nullable = false)
+    private Boolean isApproved = false;
 
-    // @Column(name = "status", nullable = false)
-    // private UserSchemeStatus status = UserSchemeStatus.PENDING;
+    @Column(name = "enrollment_date")
+    private LocalDateTime enrollmentDate;
 
-    // @Column(name = "payment_date", nullable = true)
-    // private LocalDate paymentDates;
+    @Column(name = "bond_image_url")
+    private String bondImageURL;
 
-    // @Column(name = "remaining_amount", nullable = true)
-    // private Long remainingAmount;
+    @Column(name = "bond_number")
+    private String bondNumber;
 
-    // @Column(name = "bond_price", nullable = true)
-    // private Long bondPrice;
+    @NotNull(message = "Profit is required")
+    @DecimalMin(value = "0.0000", message = "Profit cannot be negative")
+    @Column(name = "profit", precision = 19, scale = 4)
+    private BigDecimal profit = BigDecimal.ZERO;
 
-    // @Column(name = "bond_maturity_date", nullable = true)
-    // private LocalDate bondMaturityDate;
-
-    // @Column(name = "bond_maturity_value", nullable = true)
-    // private BigDecimal bondMaturityValue;
-
-    // public enum UserSchemeStatus {
-    // PENDING,
-    // ACTIVE,
-    // // REJECTED,
-    // // WITHDRAWN
-    // }
+    @Column(name = "next_payout_date")
+    private LocalDate nextPayoutDate;
 
     @PrePersist
     protected void onCreate() {
-        if (this.requestDate == null && this.userSchemeId == null) {
-            LocalDate now = LocalDate.now();
-            this.requestDate = now;
-            this.userSchemeId = "GKUSID" + now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        LocalDateTime indianTimezone = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+        if (this.requestDate == null) {
+            this.requestDate = indianTimezone;
+        }
+        if (this.userSchemeId == null) {
+            this.userSchemeId = "GKUSID"
+                    + LocalDateTime.now(ZoneId.of("Asia/Kolkata"))
+                            .format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         }
     }
 
@@ -108,20 +99,13 @@ public class UserScheme {
     public boolean equals(Object o) {
         if (this == o)
             return true;
-        if (!(o instanceof UserScheme))
+        if (!(o instanceof UserScheme that))
             return false;
-        UserScheme that = (UserScheme) o;
         return userSchemeId != null && Objects.equals(userSchemeId, that.userSchemeId);
     }
 
     @Override
     public int hashCode() {
         return getClass().hashCode();
-    }
-
-    // generate meaningfull userScheme Id
-    @PrePersist
-    private void generateUserSchemeId() {
-
     }
 }

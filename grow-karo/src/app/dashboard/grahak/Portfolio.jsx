@@ -284,7 +284,7 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
           className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${bond.isApproved ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
         >
           <ShieldCheck size={14} />{" "}
-          {bond.isApproved ? "Active Asset" : "Pending Approval"}
+          {isApproved ? "Active Asset" : "Pending Approval"}
         </span>
       </div>
 
@@ -320,9 +320,11 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
               <p className="mt-0.5 text-sm font-medium text-slate-400">
                 {bond.schemeName}
               </p>
-              <span className="text-xs font-semibold text-emerald-600 border border-emerald-500 bg-emerald-50 rounded-xl px-2 py-1">
-                + ₹ 7,978 profit
-              </span>
+              {isApproved && (
+                <span className="text-xs font-semibold text-emerald-600 border border-emerald-500 bg-emerald-50 rounded-xl px-2 py-1">
+                  + ₹ {bond.profit} profit
+                </span>
+              )}
             </div>
 
             <div
@@ -335,12 +337,8 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
                 />
               )}
               <DetailField
-                label={isApproved ? "Remaining Amount" : "Amount Applied"}
-                value={
-                  isApproved
-                    ? currency(bond.investmentAmount - bond.paidAmount)
-                    : currency(bond.investmentAmount)
-                }
+                label={isApproved ? "Submit Amount" : "Amount Applied"}
+                value={currency(bond.paidAmount)}
               />
               <DetailField label="Tenure" value={`${bond.tenure} Days`} />
               <DetailField
@@ -370,13 +368,9 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
               ) : (
                 <DetailField
                   label="Payment Dates"
-                  value={bond.paymentDates.map((date) => formatDate(date))}
+                  value={formatDate(bond.enrollmentDate)}
                 />
               )}
-              <DetailField
-                label="Maturity Value"
-                value={currency(bond.maturityValue)}
-              />
             </div>
           </div>
         </div>
@@ -467,11 +461,10 @@ export default function Portfolio({ holdings = [] }) {
     async (userSchemeId) => {
       try {
         const response = await withdrawUserScheme(userSchemeId, authUser?.id);
-        console.log(response);
+        // console.log(response);
         allRounderMessage(response);
 
         if (response.status === "success") {
-          // 2. Refresh local data set views cleanly
           await fetchHoldings();
           setSelectedBond(null);
         }
@@ -479,7 +472,7 @@ export default function Portfolio({ holdings = [] }) {
         console.error("Failed to withdraw application:", error);
       }
     },
-    [fetchHoldings, authUser?.id],
+    [fetchHoldings, authUser],
   );
 
   return (
@@ -508,9 +501,10 @@ export default function Portfolio({ holdings = [] }) {
                   <th className={tableHeaderStyle}>Bond</th>
                   <th className={tableHeaderStyle}>Bond No.</th>
                   <th className={tableHeaderStyle}>Scheme Name</th>
-                  <th className={tableHeaderStyle}>Invest Amount</th>
+                  <th className={tableHeaderStyle}>Invested Amount</th>
                   <th className={tableHeaderStyle}>Payout Cycle</th>
-                  <th className={tableHeaderStyle}>Total Pay</th>
+                  <th className={tableHeaderStyle}>Yeild %</th>
+                  <th className={tableHeaderStyle}>Profit</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -528,7 +522,7 @@ export default function Portfolio({ holdings = [] }) {
                 ) : (
                   sortedHoldings.map((bond, index) => (
                     <tr
-                      key={bond.userSchemeId || index}
+                      key={bond.userSchemeId + (index + 1)}
                       onClick={() => openDetails(bond)}
                       onKeyDown={(e) =>
                         (e.key === "Enter" || e.key === " ") &&
@@ -545,7 +539,7 @@ export default function Portfolio({ holdings = [] }) {
                       >
                         {
                           <BondThumb
-                            src={bond.bondImageURL?.[0] || "./pending.png"}
+                            src={bond.bondImageURL || "./pending.png"}
                             alt={bond.bondNumber || "Proof"}
                             onExpand={() => openLightbox(bond)}
                           />
@@ -568,7 +562,7 @@ export default function Portfolio({ holdings = [] }) {
                         className={`${tableCellStyle} font-semibold`}
                         style={{ color: "#334155" }}
                       >
-                        {currency(bond.investmentAmount)}
+                        {currency(bond.paidAmount)}
                       </td>
                       <td
                         className={tableCellStyle}
@@ -580,12 +574,13 @@ export default function Portfolio({ holdings = [] }) {
                         className={tableCellStyle}
                         style={{ color: "#397299" }}
                       >
-                        {/* show how much user pay for scheme in % */}
-                        {(
-                          (bond.paidAmount / bond.investmentAmount) *
-                          100
-                        ).toFixed(1)}{" "}
-                        %
+                        {bond.profitPercentage}
+                      </td>
+                      <td
+                        className={tableCellStyle}
+                        style={{ color: "#397299" }}
+                      >
+                        {bond.profit === 0 ? "⏱️" : bond.profit}
                       </td>
                     </tr>
                   ))

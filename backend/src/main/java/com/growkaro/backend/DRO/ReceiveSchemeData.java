@@ -11,8 +11,8 @@ public record ReceiveSchemeData(
                 Integer tenure,
                 LocalDate startDate,
                 LocalDate endDate,
-                BigDecimal investmentAmount,
-                BigDecimal maturityValue,
+                BigDecimal minimumAmount,
+                Byte riskLevel,
                 Boolean status,
                 Double profitPercentage,
                 Integer maxInvestorsAllowed) {

@@ -32,10 +32,10 @@ const Settings = dynamic(() => import("./Settings"), {
 export default function DashboardPage() {
   const [balance, setBalance] = useState(0);
   const [portfolioValue, setPortfolioValue] = useState(0);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("portfolio");
   const { authUser } = use(userContext);
   const router = useRouter();
-  
+
   const [dashboardData, setDashboardData] = useState({
     holdings: [],
     transactions: [],
@@ -83,8 +83,8 @@ export default function DashboardPage() {
 
   const { holdings, transactions, graphDataMap } = dashboardData;
   if (!authUser) {
-   router.push("/auth");
-    return ;
+    router.push("/auth");
+    return;
   }
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950 flex flex-col lg:flex-row">
@@ -140,9 +140,7 @@ export default function DashboardPage() {
                 onCancel={() => setActiveTab("overview")}
               />
             )}
-            {activeTab === "portfolio" && (
-              <Portfolio/>
-            )}
+            {activeTab === "portfolio" && <Portfolio />}
             {activeTab === "transactions" && (
               <Transactions transactions={transactions} />
             )}

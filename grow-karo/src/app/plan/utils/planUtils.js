@@ -1,24 +1,45 @@
 export const currency = (val) => {
-    const n = parseFloat(val);
-    return Number.isFinite(n) ? `₹${n.toLocaleString(undefined, { minimumFractionDigits: 0 })}` : '—';
+  const n = parseFloat(val);
+  return Number.isFinite(n)
+    ? `₹${n.toLocaleString(undefined, { minimumFractionDigits: 0 })}`
+    : "—";
 };
 
 export const formatDate = (val) => {
-    if (!val) return '—';
-    const d = new Date(val);
-    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  if (!val) return "—";
+  const d = new Date(val);
+  return Number.isNaN(d.getTime())
+    ? "—"
+    : d.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+};
+
+export const formatDateTime = (val) => {
+  if (!val) return "—";
+  // LocalDateTime has no timezone info — treat as UTC-safe local string
+  const d = new Date(val.endsWith("Z") ? val : val + "Z");
+  return Number.isNaN(d.getTime())
+    ? "—"
+    : d.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
 };
 
 export const riskColors = {
-    Low: { bg: '#ecfdf5', text: '#059669' },
-    Medium: { bg: '#fffbeb', text: '#d97706' },
-    High: { bg: '#fef2f2', text: '#dc2626' },
+  0: { bg: "#ecfdf5", text: "#059669" },
+  1: { bg: "#fffbeb", text: "#d97706" },
+  2: { bg: "#fef2f2", text: "#dc2626" },
+  3: { bg: "#fef2f2", text: "#dc2626" },
 };
 
-export const deriveRiskLevel = (profitPercentage) => {
-    const p = parseFloat(profitPercentage);
-    if (!Number.isFinite(p)) return 'Medium';
-    if (p >= 7) return 'High';
-    if (p >= 5) return 'Medium';
-    return 'Low';
+export const riskLabel = {
+  0: "Low",
+  1: "Medium",
+  2: "High",
+  3: "Very_high",
 };

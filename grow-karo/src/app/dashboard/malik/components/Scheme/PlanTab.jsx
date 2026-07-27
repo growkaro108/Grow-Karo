@@ -36,6 +36,8 @@ const PAYOUT_FREQUENCIES = [
   "Yearly",
 ];
 
+const RISK_LEVELS = ["Low", "Medium", "High", "Very High"];
+
 const PAGE_SIZE = 5;
 const SEARCH_DEBOUNCE_MS = 400;
 
@@ -44,11 +46,11 @@ const emptyPlan = {
   schemeCategory: "",
   schemeDetails: "",
   payoutFrequency: "Monthly",
+  riskLevel: 1,
   tenure: "",
   startDate: "",
   endDate: "",
-  investmentAmount: "",
-  maturityValue: "",
+  minimumAmount: "",
   status: true,
   profitPercentage: "",
   maxInvestorsAllowed: "",
@@ -80,7 +82,7 @@ export default function PlansPage() {
     try {
       const response = await getAllPlans(term ? { search: term } : undefined);
       const data = response.data ?? [];
-      //   console.log(data);
+      console.log(data);
       setPlans(data);
       setPage(0);
       // Only refresh the autocomplete universe on unfiltered loads, so
@@ -149,7 +151,7 @@ export default function PlansPage() {
   useEffect(() => {
     setForm((prev) => {
       const maturityValue = calcMaturityValue(
-        prev.investmentAmount,
+        prev.minimumAmount,
         prev.profitPercentage,
         prev.tenure,
         prev.payoutFrequency,
@@ -162,7 +164,7 @@ export default function PlansPage() {
   }, [
     form.startDate,
     form.tenure,
-    form.investmentAmount,
+    form.minimumAmount,
     form.profitPercentage,
     form.payoutFrequency,
   ]);
@@ -201,6 +203,7 @@ export default function PlansPage() {
           : errorMessage("Failed to delete this plan. Please try again.");
         loadPlans(search.trim());
       } catch (err) {
+        console.log(`error while deleting scheme id ${id} `, err);
         if (removedPlan) setPlans((prev) => [removedPlan, ...prev]);
         errorMessage("Something went wrong..");
       }
@@ -255,10 +258,11 @@ export default function PlansPage() {
             <thead>
               <tr className="bg-slate-900/80 border-b border-slate-800 text-[11px] font-bold uppercase tracking-widest text-slate-400">
                 <th className="p-4 pl-6 text-left">Investment Plan</th>
-                <th className="p-4 text-left">Capital Threshold</th>
+                {/* <th className="p-4 text-left">Invested Amount</th> */}
                 <th className="p-4 text-left">Yield Ratio</th>
-                <th className="p-4 text-left">Maturity Value</th>
+                <th className="p-4 text-left">Minimum Amount</th>
                 <th className="p-4 text-left">Total Investors</th>
+                <th className="p-4 text-left">Seat Left</th>
                 <th className="p-4 text-left">Status</th>
                 <th className="p-4 text-center pr-6">Management</th>
               </tr>
@@ -296,6 +300,7 @@ export default function PlansPage() {
                     key={plan.schemeId ?? index}
                     className="hover:bg-slate-800/30 transition-colors duration-150 group"
                   >
+                    {/* Scheme name */}
                     <td className="p-4 pl-6">
                       <h2 className="font-bold text-slate-100 tracking-tight group-hover:text-cyan-400 transition-colors">
                         {plan.schemeName || "Untitled Asset"}
@@ -304,29 +309,39 @@ export default function PlansPage() {
                         {plan.tenure} days
                       </p>
                     </td>
-                    <td className="p-4 font-semibold text-slate-200">
-                      ₹{" "}
-                      {Number(plan.investmentAmount || 0).toLocaleString(
-                        undefined,
-                        { minimumFractionDigits: 2 },
-                      )}
-                    </td>
+
+                    {/* invested Amount*/}
+                    {/* <td className="p-4 font-semibold text-slate-200">
+                      {plan.investedAmount}
+                    </td> */}
+
+                    {/* Profit percentage */}
                     <td className="p-4 font-bold text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.15)]">
                       {plan.profitPercentage}%
                       <span className="text-[10px] font-medium text-slate-500 tracking-normal block">
                         {plan.payoutFrequency}
                       </span>
                     </td>
-                    <td className="p-3 font-mono text-xs font-semibold text-slate-400">
-                      ₹ {plan.maturityValue || "—"}
-                    </td>
 
+                    {/* minimum amount */}
+                    <td className="p-3 font-mono text-xs font-semibold text-slate-400">
+                      ₹ {plan.minimumAmount || "—"}
+                    </td>
+                    {/* total investors */}
                     <td className="p-4 font-medium text-slate-400">
                       {plan?.joinedUsers?.length ?? 0} active
                     </td>
+
+                    {/* seat left */}
+                    <td className="p-4 font-medium text-slate-400">
+                      {plan.maxInvestorsAllowed - plan?.joinedUsers}
+                    </td>
+
+                    {/* status */}
                     <td className="p-4">
                       <PlanStatusBadge active={plan.status === true} />
                     </td>
+                    {/* Management */}
                     <td className="p-4 pr-6">
                       <div className="flex justify-center items-center gap-2">
                         <button
@@ -390,6 +405,7 @@ export default function PlansPage() {
           formError={formError}
           setForm={setForm}
           PAYOUT_FREQUENCIES={PAYOUT_FREQUENCIES}
+          RISK_LEVELS={RISK_LEVELS}
           setEditingId={setEditingId}
           setPlans={setPlans}
           setFormError={setFormError}

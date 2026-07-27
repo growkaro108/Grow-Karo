@@ -1,5 +1,6 @@
 package com.growkaro.backend.controller;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -18,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.growkaro.backend.DRO.ApproveUserScheme;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
+import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.service.AdminAPIService;
@@ -47,9 +49,15 @@ public class AdminAPIController {
             if (schemeData == null) {
                 return ResponseEntity.badRequest().build();
             }
-            Scheme savedScheme = adminAPIService.createScheme(schemeData);
-            return ResponseEntity
-                    .ok(general.response("success", savedScheme.getSchemeName() + " saved successfully..", schemeData));
+            boolean status = adminAPIService.createScheme(schemeData);
+            if (status) {
+                List<SchemeResponse> schemes = adminAPIService.getAllSchemes(true);
+                return ResponseEntity
+                        .ok(general.response("success", schemeData.schemeName() + " saved successfully..", schemes));
+            } else {
+                return ResponseEntity
+                        .ok(general.response("error", schemeData.schemeName() + " failed to save..", schemeData));
+            }
         } catch (Exception e) {
             log.error("Error while creating scheme: " + e.getMessage());
             return ResponseEntity.internalServerError().build();
@@ -63,9 +71,10 @@ public class AdminAPIController {
             return ResponseEntity.badRequest().build();
         }
         try {
-            Scheme updatedScheme = adminAPIService.updateScheme(schemeId, updateScheme);
+            List<SchemeResponse> updatedSchemes = adminAPIService.updateScheme(schemeId, updateScheme);
+            String schemeName = updatedSchemes.stream().map(SchemeResponse::schemeName).findFirst().orElse("");
             return ResponseEntity
-                    .ok(general.response("success", updatedScheme.getSchemeName() + " is updated..", updateScheme));
+                    .ok(general.response("success", schemeName + " is updated..", updatedSchemes));
         } catch (Exception e) {
             log.error("Error while updating scheme: " + e.getMessage());
             return ResponseEntity.internalServerError().build();

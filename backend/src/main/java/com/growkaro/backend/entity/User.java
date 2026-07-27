@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,7 +19,7 @@ import java.util.List;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(updatable = false, nullable = false)
     private String id;
 
     @Column(nullable = false)
@@ -34,7 +35,6 @@ public class User {
     private String passwordHash;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY, optional = true)
-    @JoinColumn(name = "bank_details_id")
     private BankDetails bankDetails;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -65,6 +65,11 @@ public class User {
     private LocalDateTime createdAt = getTime();
 
     private LocalDateTime updatedAt = getTime();
+
+    @PrePersist
+    protected void onCreate() {
+        this.id = "GKUSID" + getTime().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+    }
 
     @PreUpdate
     public void onUpdate() {

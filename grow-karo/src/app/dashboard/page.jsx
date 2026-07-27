@@ -26,7 +26,7 @@ const Dashboard = () => {
   if (!AdminDashboard || !RemitterDashboard || !UserDashboard) {
     return <Loader />;
   }
-  if (authUser?.email === "wv9304@gmail.com") return <AdminDashboard />;
+  // if (authUser?.email === "wv9304@gmail.com") return <AdminDashboard />;
   return (
     <UserDashboard />
     // <AdminDashboard />

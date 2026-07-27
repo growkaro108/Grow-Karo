@@ -1,6 +1,8 @@
 package com.growkaro.backend.repository;
 
 import com.growkaro.backend.entity.WithdrawalRequest;
+import com.growkaro.backend.enums.WithdrawalStatus;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,17 +20,17 @@ public interface WithdrawalRequestRepository extends JpaRepository<WithdrawalReq
 
     Page<WithdrawalRequest> findByUserId(String userId, Pageable pageable);
 
-    Page<WithdrawalRequest> findByUserIdAndStatus(String userId, WithdrawalRequest.Status status, Pageable pageable);
+    Page<WithdrawalRequest> findByUserIdAndStatus(String userId, WithdrawalStatus status, Pageable pageable);
 
     // ── Admin queries ─────────────────────────────────────────────────────────
 
-    Page<WithdrawalRequest> findByStatus(WithdrawalRequest.Status status, Pageable pageable);
+    Page<WithdrawalRequest> findByStatus(WithdrawalStatus status, Pageable pageable);
 
     Page<WithdrawalRequest> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     // ── Existence / guard ─────────────────────────────────────────────────────
 
-    boolean existsByUserIdAndStatus(String userId, WithdrawalRequest.Status status);
+    boolean existsByUserIdAndStatus(String userId, WithdrawalStatus status);
 
     // ── Date range ────────────────────────────────────────────────────────────
 
@@ -36,10 +38,10 @@ public interface WithdrawalRequestRepository extends JpaRepository<WithdrawalReq
 
     // ── Aggregates for dashboard ──────────────────────────────────────────────
 
-    long countByStatus(WithdrawalRequest.Status status);
+    long countByStatus(WithdrawalStatus status);
 
     @Query("SELECT COALESCE(SUM(w.amount), 0) FROM WithdrawalRequest w WHERE w.status = :status")
-    BigDecimal sumAmountByStatus(@Param("status") WithdrawalRequest.Status status);
+    BigDecimal sumAmountByStatus(@Param("status") WithdrawalStatus status);
 
     @Query("SELECT COALESCE(SUM(w.amount), 0) FROM WithdrawalRequest w WHERE w.user.id = :userId AND w.status = 'PROCESSED'")
     BigDecimal sumProcessedAmountByUser(@Param("userId") String userId);

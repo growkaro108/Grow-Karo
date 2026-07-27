@@ -18,7 +18,7 @@ public class UserRequest {
     BigDecimal paidAmount;
     LocalDateTime paymentDates;
     Boolean isApproved;
-    LocalDate requestDate;
+    LocalDateTime requestDate;
     // scheme
     String schemeName;
     // user

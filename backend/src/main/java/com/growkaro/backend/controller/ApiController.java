@@ -34,7 +34,7 @@ public class ApiController {
     @GetMapping("/scheme/get")
     public ResponseEntity<Map<String, Object>> getAllScheme() {
         try {
-            List<SchemeResponse> allScheme = adminAPIService.getAllSchemes();
+            List<SchemeResponse> allScheme = adminAPIService.getAllSchemes(false);
             if (allScheme == null)
                 return ResponseEntity.internalServerError().build();
             else

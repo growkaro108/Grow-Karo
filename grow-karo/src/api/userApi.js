@@ -11,15 +11,14 @@ export async function userRegister(payload) {
 export async function getEmailOtp(email) {
   return await apiRequest(`/user/getEmailOtp/${email}`, {
     method: "POST",
-
-  })
+  });
 }
 
 export async function validateEmailOtp(email, otp) {
   return await apiRequest("/user/validateEmailOtp", {
     method: "POST",
-    body: { "email": email, "otp": otp }
-  })
+    body: { email: email, otp: otp },
+  });
 }
 
 export async function loginUser(credentials) {
@@ -29,14 +28,15 @@ export async function loginUser(credentials) {
   });
 }
 
-export async function enrollUser(schemeId, userId) {
-  return await apiRequest(`/user/scheme/enroll/${schemeId}/${userId}`, {
-    method: "POST"
-  })
+export async function enrollUser(payload) {
+  return await apiRequest(`/user/scheme/enroll`, {
+    method: "PUT",
+    body: payload,
+  });
 }
 export async function getEnrolledScheme(userId) {
   return await apiRequest(`/user/myscheme/${userId}`, {
-    method: "POST"
+    method: "POST",
   });
 }
 
@@ -46,22 +46,21 @@ export async function getUsersSchemes(userId) {
 
 export async function userSchemeWithdraw(userSchemeId, userId) {
   return await apiRequest(`/user/scheme/withdraw/${userSchemeId}/${userId}`, {
-    method: "PUT"
-  })
+    method: "PUT",
+  });
 }
 
 export async function logoutUser(userId, userName) {
   return await apiRequest(`/user/logout/${userId}/${userName}`, {
-    method: "POST"
-  })
+    method: "POST",
+  });
 }
 
 export async function fetchUserProfile(userId) {
   return apiRequest(`/users/${userId}`, {
-    method: "POST"
+    method: "POST",
   });
 }
-
 
 export async function updateUserProfile(userId, updates) {
   return apiRequest(`/users/${userId}`, {

@@ -88,27 +88,32 @@ public class AdminAPIService {
 
     // create a new scheme
     @CacheEvict(value = "allSchemes", allEntries = true)
-    public Scheme createScheme(ReceiveSchemeData schemeData) {
+    public boolean createScheme(ReceiveSchemeData schemeData) {
         Scheme scheme = general.toScheme(schemeData);
         try {
-            return schemeRepository.save(scheme);
+            schemeRepository.save(scheme);
+            return true;
         } catch (Exception e) {
             log.error("error in creating scheme", e.getMessage());
-            return null;
+            return false;
         }
     }
 
-    public List<SchemeResponse> getAllSchemes() {
-        return schemeRepository.findAll().stream()
-                // filter which is closed(status: false)
-                .filter(scheme -> Boolean.TRUE.equals(scheme.getStatus()))
-                .map(general::toSchemeResponse)
-                .toList();
+    public List<SchemeResponse> getAllSchemes(boolean admin) {
+        if (admin) {
+            return schemeRepository.findAll().stream().map(general::toSchemeResponse).toList();
+        } else {
+            return schemeRepository.findAll().stream()
+                    // filter which is closed(status: false)
+                    .filter(scheme -> Boolean.TRUE.equals(scheme.getStatus()))
+                    .map(general::toSchemeResponse)
+                    .toList();
+        }
     }
 
     // Update the scheme
     @CacheEvict(value = "allSchemes", allEntries = true)
-    public Scheme updateScheme(String id, ReceiveSchemeData receiveData) {
+    public List<SchemeResponse> updateScheme(String id, ReceiveSchemeData receiveData) {
         if (id == null || id.isBlank() || receiveData == null) {
             return null;
         }
@@ -137,7 +142,8 @@ public class AdminAPIService {
             general.applyIfChanged(receiveData.maxInvestorsAllowed(), existingSchemeData.getMaxInvestorsAllowed(),
                     existingSchemeData::setMaxInvestorsAllowed);
 
-            return schemeRepository.save(existingSchemeData);
+            schemeRepository.save(existingSchemeData);
+            return getAllSchemes(true);
         } catch (Exception e) {
             log.error("error in updating scheme", e.getMessage());
             return null;
@@ -320,20 +326,20 @@ public class AdminAPIService {
         UserScheme userScheme = userSchemeOpt.get();
 
         if (bondNumber != null && !bondNumber.isBlank()) {
-            userScheme.getUserApproved().setBondNumber(bondNumber.trim());
+            userScheme.setBondNumber(bondNumber.trim());
         }
 
         if (images != null && !images.isEmpty()) {
             String uploadedUrls = localFileStorageService.store(images, "bonds/" + userSchemeId);
 
-            userScheme.getUserApproved().setBondImageURL(uploadedUrls);
+            userScheme.setBondImageURL(uploadedUrls);
         }
         userSchemeRepository.save(userScheme);
 
         return general.response("success", "Bond details added successfully", Map.of(
                 "userSchemeId", userScheme.getUserSchemeId(),
-                "bondNumber", userScheme.getUserApproved().getBondNumber(),
-                "bondImageURL", userScheme.getUserApproved().getBondImageURL()));
+                "bondNumber", userScheme.getBondNumber(),
+                "bondImageURL", userScheme.getBondImageURL()));
     }
 
     @Cacheable(value = "adminDashboard", key = "#range ?: 'default'")

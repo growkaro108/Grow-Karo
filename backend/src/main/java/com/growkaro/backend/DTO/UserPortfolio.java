@@ -1,7 +1,6 @@
 package com.growkaro.backend.DTO;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public record UserPortfolio(
@@ -13,8 +12,9 @@ public record UserPortfolio(
         LocalDateTime enrollmentDate,
         String bondImageURL,
         String bondNumber,
-        LocalDate requestDate,
+        LocalDateTime requestDate,
         String userSchemeId,
         BigDecimal paidAmount,
-        Boolean isApproved) {
+        Boolean isApproved,
+        BigDecimal profit) {
 }

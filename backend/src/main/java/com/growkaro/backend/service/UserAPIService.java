@@ -29,7 +29,6 @@ import com.growkaro.backend.entity.Notification;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
-import com.growkaro.backend.entity.UserApproved;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.repository.NotificationRepository;
@@ -91,6 +90,9 @@ public class UserAPIService {
     }
 
     public Scheme getSchemeById(String schemeId) {
+        if (schemeId == null || schemeId.isBlank()) {
+            return null;
+        }
         Optional<Scheme> scheme = schemeRepository.findById(schemeId);
         return scheme.isPresent() ? scheme.get() : null;
     }
@@ -186,14 +188,14 @@ public class UserAPIService {
 
     public Map<String, Object> enrollInScheme(String schemeId, String userId, BigDecimal amount) {
         try {
-            if (schemeId == null || userId == null || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
                 return general.response("error", "Invalid request...", null);
             }
 
             User user = getUserById(userId);
             Scheme scheme = getSchemeById(schemeId);
 
-            if (user == null || scheme == null || amount.compareTo(scheme.getMinimunAmount()) < 0) {
+            if (user == null || scheme == null || amount.compareTo(scheme.getMinimumAmount()) < 0) {
                 return general.response("error", "Invalid request...", null);
             }
 
@@ -242,7 +244,7 @@ public class UserAPIService {
             }
             List<UserPortfolio> portfolios = user.getEnrolledSchemes()
                     .stream()
-                    // .filter(us -> us.getUserApproved().getIsApproved())
+                    // .filter(us -> us.getIsApproved())
                     .map(general::toUserPortfolio)
                     .toList();
 
