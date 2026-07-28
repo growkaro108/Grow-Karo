@@ -1,6 +1,6 @@
 import { apiRequest } from "./apiClient";
 
-const END_POINT = "/admin/"
+const END_POINT = "/admin/";
 
 export async function createScheme(payload) {
   return await apiRequest(`${END_POINT}scheme/create`, {
@@ -42,7 +42,7 @@ export async function getAllUsersRequests() {
 export async function approveUserSchemes(payload) {
   return await apiRequest(`${END_POINT}user-scheme/approve`, {
     method: "PUT",
-    body: payload
+    body: payload,
   });
 }
 
@@ -51,10 +51,10 @@ export async function rejectUserSchemes(userSchemeId) {
     method: "PUT",
   });
 }
-export async function addBonds(userSchemeId,payload) {
-  return await apiRequest(`${END_POINT}user-scheme/add-bond/${userSchemeId}`, {
-    method: "PUT",
-    body: payload,
+export async function addBonds(userSchemeId, payload) {
+  return await apiRequest(`${END_POINT}user_scheme/add-bond/${userSchemeId}`, {
+    method: "POST",
+    body: payload, // payload is FormData — apiClient handles multipart automatically
   });
 }
 

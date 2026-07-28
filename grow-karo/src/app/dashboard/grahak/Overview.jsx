@@ -10,7 +10,7 @@ const StockGraph = dynamic(() => import("./StockGraph"), {
 });
 
 const Overview = ({ userData }) => {
-  console.log(userData);
+  // console.log(userData);
   if (!userData) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

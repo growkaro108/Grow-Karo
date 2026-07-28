@@ -27,7 +27,7 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:} # Leave blank if your container doesn't use a password
+      password: ${REDIS_PASSWORD:}
       timeout: 60000
 
   # 3. Cache Configuration
@@ -66,13 +66,16 @@ spring:
           connectiontimeout: 10000
           timeout: 10000
           writetimeout: 10000
-
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
 app:
   storage:
     type: local
     local:
       base-path: ./uploads
-      base-url: http://localhost:9090/uploads
+      base-url: /uploads   # relative — frontend prepends API host; works in dev + Docker
 
 # s3 storage
 #   storage:

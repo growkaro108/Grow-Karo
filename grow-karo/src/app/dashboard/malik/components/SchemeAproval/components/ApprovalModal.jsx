@@ -11,17 +11,15 @@ export default function ApprovalModal({
   submitting,
   handleConfirmApproval,
   inputRef,
-  refresh,
 }) {
   const modalRef = useRef(null);
   const today = new Date().toISOString().split("T")[0];
-
-  const existingPaidAmount = selectedRequest?.paidAmount || 0;
-  const totalAmount =
-    selectedRequest?.investmentAmount - existingPaidAmount || 0;
+  // // const existingPaidAmount = selectedRequest?.paidAmount || 0;
+  // const totalAmount =
+  //   selectedRequest?.investmentAmount - existingPaidAmount || 0;
   const numericPaid = Number(paidAmount) || 0;
-  const remainingAmount = Math.max(0, totalAmount - numericPaid);
-  const isOverpaid = numericPaid > totalAmount;
+  // // const remainingAmount = Math.max(0, totalAmount - numericPaid);
+  // const isOverpaid = numericPaid > totalAmount;
   const isValidAmount = paidAmount !== "" && numericPaid >= 0;
 
   const closeModal = useCallback(() => {
@@ -69,6 +67,11 @@ export default function ApprovalModal({
     closeModal,
   ]);
 
+  function formatDateTime(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleString();
+  }
+
   // Lock background scroll while modal is open
   useEffect(() => {
     if (!selectedRequest) return;
@@ -102,7 +105,7 @@ export default function ApprovalModal({
             <>
               <br />
               {"Requset on. "}
-              {selectedRequest.requestDate}
+              {formatDateTime(selectedRequest.requestDate)}
             </>
           ) : (
             <>
@@ -124,8 +127,10 @@ export default function ApprovalModal({
         </p>
 
         <div className="sea-row-line">
-          <span>Required {existingPaidAmount && "to fill the "}capital</span>
-          <span className="sea-mono">{currency(totalAmount)}</span>
+          {/* <span>Required {existingPaidAmount && "to fill the "}capital</span> */}
+          <span className="sea-mono">
+            Requested Amount: {currency(paidAmount)}
+          </span>
         </div>
 
         <div className="sea-field">
@@ -162,7 +167,7 @@ export default function ApprovalModal({
         </div>
 
         <div className="sea-field">
-          <label className="sea-label" htmlFor="sea-remaining-balance">
+          {/* <label className="sea-label" htmlFor="sea-remaining-balance">
             Remaining balance
           </label>
           <input
@@ -171,13 +176,13 @@ export default function ApprovalModal({
             disabled
             readOnly
             value={currency(remainingAmount)}
-          />
-          {isOverpaid && (
+          /> */}
+          {/* {isOverpaid && (
             <p className="sea-warning" role="alert">
               Paid amount is {currency(numericPaid - totalAmount)} over the
               required capital.
             </p>
-          )}
+          )} */}
         </div>
 
         <div className="sea-modal-actions">
@@ -191,7 +196,7 @@ export default function ApprovalModal({
           <button
             className="sea-btn sea-btn-primary"
             onClick={handleConfirmApproval}
-            disabled={submitting || !isValidAmount || isOverpaid}
+            disabled={submitting || !isValidAmount}
           >
             {submitting ? "Approving..." : "Confirm approval"}
           </button>

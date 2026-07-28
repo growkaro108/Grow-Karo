@@ -3,12 +3,18 @@ import { Tab } from "./Tab";
 import { RiskBadge, StatusBadge, EnrolledBadge } from "./Badges";
 import { currency } from "../utils/planUtils";
 
-export function PlanCard({ plan, isEnrolled, onOpenDetails, onRequestEnroll }) {
+export function PlanCard({
+  plan,
+  enrolledMap,
+  onOpenDetails,
+  onRequestEnroll,
+}) {
   const slotsLeft = Math.max(
     0,
     (plan.maxInvestorsAllowed ?? 0) - (plan.joinedUsers?.length ?? 0),
   );
   const isFull = plan.maxInvestorsAllowed != null && slotsLeft <= 0;
+  const enrolledCount = enrolledMap.get(plan.schemeId) ?? 0;
 
   return (
     <div
@@ -19,7 +25,7 @@ export function PlanCard({ plan, isEnrolled, onOpenDetails, onRequestEnroll }) {
       tabIndex={0}
       role="button"
       aria-label={`View details for ${plan.schemeName}`}
-      className="flex flex-col gap-4 p-5 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-100 cursor-pointer transition-all duration-200 outline-none focus:ring-2 focus:ring-indigo-300"
+      className="flex flex-col gap-3 p-5 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-100 cursor-pointer transition-all duration-200 outline-none focus:ring-2 focus:ring-indigo-300"
     >
       <div className="flex items-start justify-between gap-2">
         <Tab
@@ -33,12 +39,26 @@ export function PlanCard({ plan, isEnrolled, onOpenDetails, onRequestEnroll }) {
         </div>
       </div>
 
-      <p
-        className="text-sm leading-relaxed line-clamp-2"
-        style={{ color: "#64748b" }}
-      >
-        {plan.schemeDetails}
-      </p>
+      {enrolledCount > 0 && <EnrolledBadge count={enrolledCount} />}
+
+      <div className="flex items-baseline gap-1.5 min-w-0">
+        <p
+          className="text-sm truncate min-w-0 pr-4"
+          style={{ color: "#64748b" }}
+        >
+          {plan.schemeDetails}
+        </p>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenDetails(plan);
+          }}
+          className="text-xs font-medium whitespace-nowrap flex-shrink-0 hover:underline"
+          style={{ color: "#4f46e5" }}
+        >
+          See more
+        </button>
+      </div>
 
       <div className="flex items-end justify-between">
         <div>
@@ -51,29 +71,25 @@ export function PlanCard({ plan, isEnrolled, onOpenDetails, onRequestEnroll }) {
           </p>
         </div>
 
-        {isEnrolled ? (
-          <EnrolledBadge />
-        ) : (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onRequestEnroll(plan);
-            }}
-            disabled={isFull || !plan.status}
-            className="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: "#4f46e5" }}
-            onMouseEnter={(e) =>
-              !e.currentTarget.disabled &&
-              (e.currentTarget.style.backgroundColor = "#4338ca")
-            }
-            onMouseLeave={(e) =>
-              !e.currentTarget.disabled &&
-              (e.currentTarget.style.backgroundColor = "#4f46e5")
-            }
-          >
-            {isFull ? "Full" : !plan.status ? "Closed" : "Enroll"}
-          </button>
-        )}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onRequestEnroll(plan);
+          }}
+          disabled={isFull || !plan.status}
+          className="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ backgroundColor: "#4f46e5" }}
+          onMouseEnter={(e) =>
+            !e.currentTarget.disabled &&
+            (e.currentTarget.style.backgroundColor = "#4338ca")
+          }
+          onMouseLeave={(e) =>
+            !e.currentTarget.disabled &&
+            (e.currentTarget.style.backgroundColor = "#4f46e5")
+          }
+        >
+          {isFull ? "Full" : !plan.status ? "Closed" : "Enroll"}
+        </button>
       </div>
     </div>
   );

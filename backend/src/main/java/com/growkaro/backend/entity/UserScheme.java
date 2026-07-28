@@ -34,9 +34,12 @@ import jakarta.validation.constraints.Positive;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@ToString(exclude = { "user", "scheme", "userApproved" }) // Avoid infinite loops in toString()
+@ToString(exclude = { "user", "scheme" }) // Avoid infinite loops in toString()
 @Entity
-@Table(name = "user_schemes", uniqueConstraints = { @UniqueConstraint(columnNames = { "user_id", "scheme_id" }) })
+@Table(name = "user_schemes"
+// , uniqueConstraints = { @UniqueConstraint(columnNames = { "user_id",
+// "scheme_id" }) } /// for no duplicate entries
+)
 public class UserScheme {
 
     @Id
@@ -67,6 +70,9 @@ public class UserScheme {
 
     @Column(name = "enrollment_date")
     private LocalDateTime enrollmentDate;
+
+    @Column(name = "paid_date")
+    private LocalDate paidDate;
 
     @Column(name = "bond_image_url")
     private String bondImageURL;

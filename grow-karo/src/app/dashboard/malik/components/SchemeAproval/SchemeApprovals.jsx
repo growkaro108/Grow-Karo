@@ -15,10 +15,24 @@ import {
 import "./SchemeApprovals.css";
 import FilterTabs from "./components/FilterTabs";
 import SchemeTable from "./components/SchemeTable";
-import ApprovalModal from "./components/ApprovalModal";
-import RejectModal from "./components/RejectModal";
+// import ApprovalModal from "./components/ApprovalModal";
+// import RejectModal from "./components/RejectModal";
 import Toast from "./components/Toast";
-import AddBondModal from "./components/AddBondModal";
+import dynamic from "next/dynamic";
+import TabLoader from "@/loader/TabLoader";
+// import AddBondModal from "./components/AddBondModal";
+const AddBondModal = dynamic(() => import("./components/AddBondModal"), {
+  loading: TabLoader,
+  ssr: false,
+});
+const ApprovalModal = dynamic(() => import("./components/ApprovalModal"), {
+  loading: TabLoader,
+  ssr: false,
+});
+const RejectModal = dynamic(() => import("./components/RejectModal"), {
+  loading: TabLoader,
+  ssr: false,
+});
 
 const getToday = () => new Date().toISOString().split("T")[0];
 
@@ -26,7 +40,7 @@ export default function SchemeApproval() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("pending");
+  const [statusFilter, setStatusFilter] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [rejectTarget, setRejectTarget] = useState(null);
   const [bondTarget, setBondTarget] = useState(null);
@@ -34,7 +48,7 @@ export default function SchemeApproval() {
   const [paidDate, setPaidDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
-  const [showFilter, setShowFilter] = useState(false);
+  const [showFilter, setShowFilter] = useState(true);
 
   const inputRef = useRef(null);
   const toastTimer = useRef(null);
@@ -75,7 +89,6 @@ export default function SchemeApproval() {
       clearTimeout(toastTimer.current);
     };
   }, [loadRequests]);
-
   // Autofocus the amount field on open.
   // (Escape-to-close is handled inside ApprovalModal itself, which also
   // guards against closing mid-submission — no need to duplicate it here.)
@@ -86,7 +99,7 @@ export default function SchemeApproval() {
 
   const handleOpenApproval = (request) => {
     setSelectedRequest(request);
-    setPaidAmount("");
+    setPaidAmount(request.paidAmount);
     setPaidDate(getToday());
   };
 
@@ -129,21 +142,24 @@ export default function SchemeApproval() {
     );
   };
 
-  const totalAmount = selectedRequest ? selectedRequest.investmentAmount : 0;
   const numericPaid = Number(paidAmount) || 0;
-  const isOverpaid = selectedRequest ? numericPaid > totalAmount : false;
+  const isLessPaid = selectedRequest
+    ? numericPaid < selectedRequest.paidAmount
+    : false;
   const isValidAmount = paidAmount !== "" && numericPaid >= 0;
 
   // Guarded against selectedRequest being null (e.g. right after the modal
   // closes but paidDate/paidAmount haven't been cleared yet).
+  const reqDate = selectedRequest?.requestDate?.split("T")[0];
   const isValidDate =
     !!selectedRequest &&
     !!paidDate &&
-    paidDate >= selectedRequest.requestDate &&
+    paidDate >= reqDate &&
     paidDate <= getToday();
 
   const handleConfirmApproval = useCallback(async () => {
     if (!selectedRequest || !isValidAmount) {
+      // console.log(paidAmount);
       showToast("error", "Enter a valid paid amount first.");
       return;
     }
@@ -155,11 +171,11 @@ export default function SchemeApproval() {
       });
       return;
     }
-    if (isOverpaid) {
-      showToast("error", "Amount cannot be greater than total amount.");
+    if (isLessPaid) {
+      showToast("error", "Amount cannot be less than minimum amount.");
       allRounderMessage({
         status: "error",
-        message: "Amount cannot be greater than total amount.",
+        message: "Amount cannot be less than minimum amount.",
       });
       return;
     }
@@ -180,7 +196,7 @@ export default function SchemeApproval() {
       paidAmount: numericPaid,
       paidDate: paidDate,
     };
-
+    // console.log(payload);
     let response = null;
     try {
       setSubmitting(true);
@@ -219,13 +235,13 @@ export default function SchemeApproval() {
   }, [
     selectedRequest,
     isValidAmount,
-    isOverpaid,
+    isLessPaid,
     isValidDate,
     numericPaid,
     paidDate,
     showToast,
-    loadRequests,
     mergeRequestInState,
+    loadRequests,
   ]);
 
   const handleConfirmReject = useCallback(async () => {
@@ -259,9 +275,10 @@ export default function SchemeApproval() {
 
   const filteredRequests = useMemo(() => {
     const q = query.trim().toLowerCase();
+    if (requests.length === 0) return [];
     return requests.filter((r) => {
       const matchesStatus =
-        statusFilter === "all" || r.status.toLowerCase() === statusFilter;
+        statusFilter === "all" || r.isApproved === statusFilter;
       const matchesQuery =
         !q ||
         r.name.toLowerCase().includes(q) ||
@@ -270,15 +287,12 @@ export default function SchemeApproval() {
     });
   }, [requests, query, statusFilter]);
 
-  const pendingCount = requests.filter(
-    (r) => r.status.toLowerCase() === "pending",
-  ).length;
+  const pendingCount = requests.filter((r) => r.isApproved === false).length;
 
   const statusCounts = useMemo(() => {
     const counts = { all: requests.length };
     requests.forEach((r) => {
-      counts[r.status.toLowerCase()] =
-        (counts[r.status.toLowerCase()] || 0) + 1;
+      counts[r.isApproved] = (counts[r.isApproved] || 0) + 1;
     });
     return counts;
   }, [requests]);
@@ -304,7 +318,7 @@ export default function SchemeApproval() {
             onClick={() => setShowFilter(!showFilter)}
           >
             <ListFilterPlus size={17} />{" "}
-            <span className="text-[10px]">Filter</span>
+            <span className="text-[10px]">{showFilter ? "Hide" : "Show"}</span>
           </button>
           <input
             className="sea-search"

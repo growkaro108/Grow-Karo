@@ -26,12 +26,14 @@ const Dashboard = () => {
   if (!AdminDashboard || !RemitterDashboard || !UserDashboard) {
     return <Loader />;
   }
-  // if (authUser?.email === "wv9304@gmail.com") return <AdminDashboard />;
-  return (
-    <UserDashboard />
-    // <AdminDashboard />
-    // <RemitterDashboard />
-  );
+  if (authUser?.email === "wv9304@gmail.com") return <AdminDashboard />;
+  else {
+    return (
+      <UserDashboard />
+      // <AdminDashboard />
+      // <RemitterDashboard />
+    );
+  }
 };
 
 export default Dashboard;

@@ -324,7 +324,7 @@ export default function PlansPage() {
                     </td>
 
                     {/* minimum amount */}
-                    <td className="p-3 font-mono text-xs font-semibold text-slate-400">
+                    <td className="p-3 font-mono font-semibold text-slate-400">
                       ₹ {plan.minimumAmount || "—"}
                     </td>
                     {/* total investors */}
@@ -334,7 +334,7 @@ export default function PlansPage() {
 
                     {/* seat left */}
                     <td className="p-4 font-medium text-slate-400">
-                      {plan.maxInvestorsAllowed - plan?.joinedUsers}
+                      {plan.maxInvestorsAllowed - plan?.joinedUsers.length}
                     </td>
 
                     {/* status */}

@@ -20,3 +20,10 @@ spring:
       timeout: 2000ms
   cache:
     type: redis
+
+app:
+  storage:
+    type: local
+    local:
+      base-path: ${STORAGE_BASE_PATH:/app/uploads}   # mount a Docker volume here
+      base-url: /uploads                              # relative — frontend prepends API host

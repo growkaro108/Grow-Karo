@@ -230,7 +230,7 @@ public class UserAPIService {
             List<String> userSchemesIds = userSchemeRepository.findAllJoinedSchemeId(user);
             return general.response("success", "User schemes fetched", userSchemesIds);
         } catch (Exception e) {
-            log.error("Failed to fetch schemes for user {}", userId, e);
+            log.error("Failed to fetch schemes for user {} because {}", userId, e.getMessage());
             return general.response("error", "Failed to fetch user schemes. Please try again.", null);
         }
     }
@@ -285,8 +285,8 @@ public class UserAPIService {
             activityLogService.log(
                     user.getId(), user.getName(), "USER",
                     ActivityType.SCHEME_WITHDRAWAL,
-                    user.getName() + " withdrew from scheme " + schemeName,
-                    "USER", user.getId(),
+                    user.getName() + " withdraw from scheme " + schemeName,
+                    "USER", user.getId() + "with ₹ " + userScheme.getPaidAmount(),
                     Map.of("userSchemeId", userSchemeId));
 
             return general.response("success", "Application withdrawn successfully", null);

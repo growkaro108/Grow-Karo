@@ -124,6 +124,13 @@ services:
     networks:
       - growkaro-network
 
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    ports:
+      - "8888:8080"
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:

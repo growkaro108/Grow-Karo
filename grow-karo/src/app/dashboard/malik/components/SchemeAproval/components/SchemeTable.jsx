@@ -8,8 +8,30 @@ function ActionButton({
   handleOpenAddBond,
   req,
 }) {
-  const isfullPaid = req.investmentAmount - req.paidAmount === 0;
-  if (status === "pending") {
+  if (status) {
+    return (
+      <div style={{ display: "flex", gap: "8px" }}>
+        {/* {!isfullPaid && (
+          <button
+            className="sea-btn sea-btn-addbond"
+            onClick={() => handleOpenApproval(req)}
+          >
+            Add amount
+          </button>
+        )} */}
+        {!req.bondImageURL ? (
+          <button
+            className="sea-btn sea-btn-approve"
+            onClick={() => handleOpenAddBond(req)}
+          >
+            Add Bond
+          </button>
+        ) : (
+          "-"
+        )}
+      </div>
+    );
+  } else {
     return (
       <div style={{ display: "flex", gap: "8px" }}>
         <button
@@ -28,37 +50,16 @@ function ActionButton({
     );
   }
 
-  if (status === "active") {
-    return (
-      <div style={{ display: "flex", gap: "8px" }}>
-        {!isfullPaid && (
-          <button
-            className="sea-btn sea-btn-addbond"
-            onClick={() => handleOpenApproval(req)}
-          >
-            Add amount
-          </button>
-        )}
-        <button
-          className="sea-btn sea-btn-approve"
-          onClick={() => handleOpenAddBond(req)}
-        >
-          Add Bond
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <span
-      style={{
-        color: "var(--text-muted)",
-        fontSize: "13px",
-      }}
-    >
-      &mdash;
-    </span>
-  );
+  // return (
+  //   <span
+  //     style={{
+  //       color: "var(--text-muted)",
+  //       fontSize: "13px",
+  //     }}
+  //   >
+  //     &mdash;
+  //   </span>
+  // );
 }
 
 export default function SchemeTable({
@@ -78,7 +79,7 @@ export default function SchemeTable({
             <th></th>
             <th>Applicant</th>
             <th>Scheme</th>
-            <th>Remaining amount</th>
+            <th>Amount</th>
             <th>Status</th>
             <th>Action</th>
           </tr>
@@ -115,9 +116,9 @@ export default function SchemeTable({
 
           {!loading &&
             filteredRequests.map((req, idx) => {
-              const status =
-                STATUS_STYLES[req.status.toLowerCase()] ||
-                STATUS_STYLES.pending;
+              const status = req?.isApproved
+                ? STATUS_STYLES.active
+                : STATUS_STYLES.pending;
               return (
                 <tr key={req?.userSchemeId}>
                   <td className="sea-index">
@@ -134,9 +135,7 @@ export default function SchemeTable({
                     </div>
                   </td>
                   <td>{req.schemeName}</td>
-                  <td className="sea-mono">
-                    {currency(req.investmentAmount - req.paidAmount)}
-                  </td>
+                  <td className="sea-mono">{currency(req.paidAmount)}</td>
                   <td>
                     <span
                       className="sea-badge"
@@ -148,7 +147,7 @@ export default function SchemeTable({
                   <td>
                     <ActionButton
                       req={req}
-                      status={req.status.toLowerCase()}
+                      status={req.isApproved}
                       handleOpenApproval={handleOpenApproval}
                       setRejectTarget={setRejectTarget}
                       handleOpenAddBond={handleOpenAddBond}

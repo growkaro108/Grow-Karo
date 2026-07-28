@@ -22,14 +22,15 @@ export const STATUS_STYLES = {
 };
 
 export const FILTER_TABS = [
-  { key: "pending", label: "Pending", ...STATUS_STYLES.pending },
-  { key: "active", label: "Approved", ...STATUS_STYLES.active },
+  { key: false, label: "Pending", ...STATUS_STYLES.pending },
+  { key: true, label: "Approved", ...STATUS_STYLES.active },
   // { key: "rejected", label: "Rejected", ...STATUS_STYLES.rejected },
   // { key: "withdrawn", label: "Withdraw request", ...STATUS_STYLES.withdrawn },
   { key: "all", label: "All", color: "var(--gold)", bg: "var(--gold-soft)" },
 ];
 
-export const currency = (n) => `\u20b9${Number(n || 0).toLocaleString("en-IN")}`;
+export const currency = (n) =>
+  `\u20b9${Number(n || 0).toLocaleString("en-IN")}`;
 
 export const initials = (name) => {
   if (!name) return "";

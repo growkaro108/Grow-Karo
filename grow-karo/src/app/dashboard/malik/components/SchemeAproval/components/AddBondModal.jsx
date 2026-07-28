@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { X, UploadCloud, FileText } from "lucide-react";
-import { AddBond } from "../../../../../../../services/malikService";
+import { addBonds } from "@/api/adminApi";
 import { allRounderMessage } from "@/components/Message";
 
 export default function AddBondModal({
@@ -72,8 +72,8 @@ export default function AddBondModal({
   };
 
   const handleSubmit = async () => {
-    if (!bondNumber.trim() && !file) {
-      showToast("error", "Enter a bond number or select an image.");
+    if (!bondNumber.trim() || !file) {
+      showToast("error", "Both bond number and bond image are required.");
       return;
     }
 
@@ -88,7 +88,7 @@ export default function AddBondModal({
 
     try {
       setSubmitting(true);
-      const response = await AddBond(selectedRequest.userSchemeId, formData);
+      const response = await addBonds(selectedRequest.userSchemeId, formData);
 
       allRounderMessage(response);
 
@@ -143,27 +143,27 @@ export default function AddBondModal({
 
           <div className="sea-field">
             <label className="sea-field-label">Bond image</label>
-            <label
-              htmlFor="bondImage"
-              className={`sea-dropzone ${submitting ? "sea-dropzone-disabled" : ""}`}
-            >
-              <UploadCloud size={20} />
-              <span>
-                Click to select an image, or drag it here <br />
-                Only .jpeg, .png, .jpg, .webp allowed <br />
-                Max size: 5MB
-              </span>
-              <input
-                id="bondImage"
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/jpg"
-                onChange={handleFileChange}
-                disabled={submitting}
-                hidden
-              />
-            </label>
-
-            {preview && (
+            {!preview ? (
+              <label
+                htmlFor="bondImage"
+                className={`sea-dropzone ${submitting ? "sea-dropzone-disabled" : ""}`}
+              >
+                <UploadCloud size={20} />
+                <span>
+                  Click to select an image, or drag it here <br />
+                  Only .jpeg, .png, .jpg, .webp allowed <br />
+                  Max size: 5MB
+                </span>
+                <input
+                  id="bondImage"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/jpg"
+                  onChange={handleFileChange}
+                  disabled={submitting}
+                  hidden
+                />
+              </label>
+            ) : (
               <div className="sea-file-grid">
                 <div className="sea-file-chip">
                   <img

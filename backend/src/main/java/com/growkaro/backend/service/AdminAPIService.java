@@ -172,96 +172,51 @@ public class AdminAPIService {
         }
     }
 
-    // @Transactional
-    // public Map<String, Object> activateUsersScheme(String userSchemeId, Long
-    // paidAmount, LocalDate paidDate) {
-    // if (userSchemeId == null || userSchemeId.isBlank() || paidAmount == null ||
-    // paidAmount <= 0
-    // || paidDate == null) {
-    // return general.response("error", "Invalid Request", null);
-    // }
+    @Transactional
+    public Map<String, Object> activateUsersScheme(String userSchemeId, BigDecimal paidAmount, LocalDate paidDate) {
+        if (userSchemeId == null || userSchemeId.isBlank() || paidAmount == null
+                || paidAmount.compareTo(BigDecimal.ZERO) <= 0 || paidDate == null) {
+            return general.response("error", "Invalid Request", null);
+        }
 
-    // UserScheme userScheme = null;
-    // User user = null;
-    // Scheme scheme = null;
+        UserScheme userScheme = null;
+        User user = null;
+        Scheme scheme = null;
 
-    // try {
-    // Map<String, Object> isUserSchemeValid = isUserSchemeValid(userSchemeId);
-    // if (isUserSchemeValid.isEmpty())
-    // return general.response("error", "User scheme not found", null);
+        try {
+            Map<String, Object> isUserSchemeValid = isUserSchemeValid(userSchemeId);
+            if (isUserSchemeValid.isEmpty()) {
+                log.error("error while getting user scheme for id {}", userSchemeId);
+                return general.response("error", "Invaild request...", null);
+            }
+            userScheme = (UserScheme) isUserSchemeValid.get("userScheme");
+            user = (User) isUserSchemeValid.get("user");
+            scheme = (Scheme) isUserSchemeValid.get("scheme");
 
-    // userScheme = (UserScheme) isUserSchemeValid.get("userScheme");
-    // user = (User) isUserSchemeValid.get("user");
-    // scheme = (Scheme) isUserSchemeValid.get("scheme");
+            userScheme.setIsApproved(true);
+            userScheme.setEnrollmentDate(general.getCurrentDateTime());
+            userScheme.setPaidAmount(paidAmount);
+            userScheme.setPaidDate(paidDate);
+            userScheme.setNextPayoutDate(
+                    general.calculateNextPayoutDate(userScheme.getEnrollmentDate(), scheme.getPayoutFrequency()));
+            userScheme.setProfit(general.calculateProfit(userScheme.getPaidAmount(), scheme.getProfitPercentage(),
+                    scheme.getMinimumAmount()));
+            userSchemeRepository.save(userScheme);
+            return general.response("success",
+                    user.getName() + " is approved for " + scheme.getSchemeName() + " successfully..", userScheme);
 
-    // Long existingPaidAmount = userScheme.getPaidAmount() != null ?
-    // userScheme.getPaidAmount() : 0L;
-    // Long investmentAmount = scheme.getInvestmentAmount().longValue();
-    // Long requiredAmount = investmentAmount - existingPaidAmount;
-
-    // // if user is active and fully paid
-    // if ((Boolean.TRUE.equals(userScheme.getIsApproved())
-    // || userScheme.getStatus() == UserSchemeStatus.ACTIVE)
-    // && existingPaidAmount.longValue() == investmentAmount.longValue()) {
-    // return general.response("error", user.getName() + " already paid full
-    // amount.", null);
-    // }
-
-    // // validate incoming paid amount
-    // if (paidAmount > requiredAmount || (existingPaidAmount + paidAmount) >
-    // investmentAmount) {
-    // return general.response("error", "Paid amount exceeds required capital",
-    // null);
-    // }
-
-    // if (paidDate.isAfter(LocalDate.now())) {
-    // return general.response("error", "Paid date cannot be in the future", null);
-    // }
-    // if (userScheme.getRequestDate() != null &&
-    // paidDate.isBefore(userScheme.getRequestDate())) {
-    // return general.response("error", "Paid date cannot be before the enrollment
-    // request date", null);
-    // }
-
-    // boolean isApproved = Boolean.TRUE.equals(userScheme.getIsApproved());
-    // List<LocalDate> paymentDates = new ArrayList<>(
-    // userScheme.getPaymentDates() != null ? userScheme.getPaymentDates() :
-    // List.of());
-
-    // if (isApproved) {
-    // userScheme.setPaidAmount(existingPaidAmount + paidAmount);
-    // paymentDates.add(paidDate);
-    // userScheme.setPaymentDates(paymentDates);
-    // } else {
-    // userScheme.setIsApproved(true);
-    // userScheme.setPaidAmount(paidAmount);
-    // paymentDates.add(paidDate);
-    // userScheme.setPaymentDates(paymentDates);
-    // userScheme.setBondMaturityValue(general.calculateMaturityAmount(
-    // paidAmount, scheme.getProfitPercentage(), scheme.getTenure().intValue(),
-    // scheme.getPayoutFrequency()));
-    // userScheme.setBondMaturityDate(paidDate.plusDays(scheme.getTenure()));
-    // userScheme.setEnrollmentDate(LocalDateTime.now());
-    // userScheme.setStatus(UserSchemeStatus.ACTIVE);
-    // }
-
-    // userSchemeRepository.save(userScheme);
-    // return general.response("success",
-    // "User scheme " + (isApproved ? "activated " : "amount added") + "
-    // successfully", userScheme);
-
-    // } catch (Exception e) {
-    // log.error("Error activating user scheme {}", userSchemeId, e);
-    // return general.response("error", "Error in approving user scheme", null);
-    // } finally {
-    // if (userScheme != null && scheme != null && user != null) {
-    // activityLogService.log("AdminId", "Admin Name", "Admin",
-    // ActivityType.SCHEME_ENROLLED,
-    // user.getName() + " has approved for " + scheme.getSchemeName(), "user",
-    // user.getId(), null);
-    // }
-    // }
-    // }
+        } catch (Exception e) {
+            log.error("Error activating user scheme {}", userSchemeId, e);
+            return general.response("error", "Error in approving user scheme", null);
+        } finally {
+            if (userScheme != null && scheme != null && user != null) {
+                activityLogService.log("AdminId", "Admin Name", "Admin",
+                        ActivityType.SCHEME_ENROLLED,
+                        user.getName() + " has approved for " + scheme.getSchemeName(), "user",
+                        user.getId(), null);
+            }
+        }
+    }
 
     // helper function
     private Map<String, Object> isUserSchemeValid(String id) {
@@ -318,28 +273,32 @@ public class AdminAPIService {
 
     @Transactional
     public Map<String, Object> addBondDetails(String userSchemeId, String bondNumber, MultipartFile images) {
-        Optional<UserScheme> userSchemeOpt = userSchemeRepository.findById(userSchemeId);
-        if (userSchemeOpt.isEmpty()) {
-            return general.response("error", "User scheme not found", null);
+        try {
+            Optional<UserScheme> userSchemeOpt = userSchemeRepository.findById(userSchemeId);
+            if (userSchemeOpt.isEmpty()) {
+                return general.response("error", "User scheme not found", null);
+            }
+            UserScheme userScheme = userSchemeOpt.get();
+
+            if (bondNumber != null && !bondNumber.isBlank()) {
+                userScheme.setBondNumber(bondNumber.trim());
+            }
+
+            if (images != null && !images.isEmpty()) {
+                String uploadedUrl = localFileStorageService.store(images, "bonds/" + userSchemeId);
+                userScheme.setBondImageURL(uploadedUrl);
+            }
+
+            userSchemeRepository.save(userScheme);
+
+            return general.response("success", "Bond details added successfully", Map.of(
+                    "userSchemeId", userScheme.getUserSchemeId(),
+                    "bondNumber", userScheme.getBondNumber() != null ? userScheme.getBondNumber() : "",
+                    "bondImageURL", userScheme.getBondImageURL() != null ? userScheme.getBondImageURL() : ""));
+        } catch (Exception e) {
+            log.error("Error in adding bond details {} {}", userSchemeId, bondNumber, e.getMessage());
+            return general.response("error", "Error in adding bond details", null);
         }
-
-        UserScheme userScheme = userSchemeOpt.get();
-
-        if (bondNumber != null && !bondNumber.isBlank()) {
-            userScheme.setBondNumber(bondNumber.trim());
-        }
-
-        if (images != null && !images.isEmpty()) {
-            String uploadedUrls = localFileStorageService.store(images, "bonds/" + userSchemeId);
-
-            userScheme.setBondImageURL(uploadedUrls);
-        }
-        userSchemeRepository.save(userScheme);
-
-        return general.response("success", "Bond details added successfully", Map.of(
-                "userSchemeId", userScheme.getUserSchemeId(),
-                "bondNumber", userScheme.getBondNumber(),
-                "bondImageURL", userScheme.getBondImageURL()));
     }
 
     @Cacheable(value = "adminDashboard", key = "#range ?: 'default'")

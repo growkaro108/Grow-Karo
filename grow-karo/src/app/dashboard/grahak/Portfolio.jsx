@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, use } from "react";
 import Image from "next/image";
+import { BASE_URL } from "@/api/apiClient";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -23,9 +24,22 @@ import {
 } from "@/components/Message";
 import { userContext } from "@/context/UserContext";
 
-const currency = (val) => {
-  const n = Number.parseFloat(val);
-  return Number.isFinite(n)
+/**
+ * Resolves a stored image path to a full URL that the browser can fetch.
+ * - If the path is already absolute (http/https) it is returned as-is.
+ * - If the path is relative (e.g. /uploads/bonds/...) the API base URL is prepended.
+ * - If the path is empty / null, returns an empty string.
+ */
+const resolveMediaUrl = (path) => {
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) return path; // already absolute
+  // Strip the trailing /api suffix so we get just the origin+port
+  const apiBase = BASE_URL.replace(/\/api\/?$/, "");
+  return apiBase + (path.startsWith("/") ? path : "/" + path);
+};
+
+const currency = (n) => {
+  return n !== undefined && n !== null
     ? `₹ ${n.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
     : "—";
 };
@@ -93,7 +107,7 @@ function BondThumb({ src, alt, size = 40, onExpand }) {
           setErrored(true);
           setLoading(false);
         }}
-        className={`object-cover transition-opacity duration-300 ${loading ? "opacity-0" : "opacity-100"}`}
+        className={`object-fit transition-opacity duration-300 ${loading ? "opacity-0" : "opacity-100"}`}
       />
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
         <Maximize2
@@ -110,7 +124,7 @@ function ImageLightbox({ bond, onClose }) {
   const [imgError, setImgError] = useState(false);
   const [imgLoading, setImgLoading] = useState(true);
 
-  const mainImage = bond.bondImageURL?.[0] || "";
+  const mainImage = resolveMediaUrl(bond.bondImageURL);
 
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
@@ -176,7 +190,7 @@ function ImageLightbox({ bond, onClose }) {
         </div>
 
         <div className="p-6 flex items-center justify-center bg-slate-50 min-h-70">
-          {imgError || !mainImage ? (
+          {imgError ? (
             <div className="flex flex-col items-center gap-2 text-slate-400">
               <ImageOff size={32} />
               <span className="text-xs">Image unavailable</span>
@@ -252,7 +266,7 @@ function DetailField({ label, value, highlight = false }) {
 
 function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
-  const mainImage = bond.bondImageURL?.[0] || "";
+  const mainImage = resolveMediaUrl(bond.bondImageURL);
   const isApproved = bond.isApproved;
   const handleWithdrawClick = async () => {
     const confirmed = await confirmMessage(
@@ -300,9 +314,9 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
                   <ArrowUpRight size={20} className="text-white drop-shadow" />
                 </div>
                 <img
-                  src={mainImage}
+                  src={resolveMediaUrl(bond.bondImageURL)}
                   alt={bond.bondNumber}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-110"
                 />
               </>
             ) : (
@@ -322,20 +336,12 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
               </p>
               {isApproved && (
                 <span className="text-xs font-semibold text-emerald-600 border border-emerald-500 bg-emerald-50 rounded-xl px-2 py-1">
-                  + ₹ {bond.profit} profit
+                  + ₹ {bond.profit} profit on {formatDate(bond.nextPayoutDate)}
                 </span>
               )}
             </div>
 
-            <div
-              className={`mt-6 grid grid-cols-2 gap-3 sm:grid-cols-${isApproved ? "4" : "3"}`}
-            >
-              {isApproved && (
-                <DetailField
-                  label="Paid Amount"
-                  value={currency(bond.paidAmount)}
-                />
-              )}
+            <div className={`mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3`}>
               <DetailField
                 label={isApproved ? "Submit Amount" : "Amount Applied"}
                 value={currency(bond.paidAmount)}
@@ -368,7 +374,7 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
               ) : (
                 <DetailField
                   label="Payment Dates"
-                  value={formatDate(bond.enrollmentDate)}
+                  value={formatDate(bond.paidDate)}
                 />
               )}
             </div>
@@ -539,7 +545,7 @@ export default function Portfolio({ holdings = [] }) {
                       >
                         {
                           <BondThumb
-                            src={bond.bondImageURL || "./pending.png"}
+                            src={resolveMediaUrl(bond.bondImageURL)}
                             alt={bond.bondNumber || "Proof"}
                             onExpand={() => openLightbox(bond)}
                           />

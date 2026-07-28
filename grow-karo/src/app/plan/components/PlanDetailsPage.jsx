@@ -26,7 +26,11 @@ export default function PlanDetailsPage({
       </button>
 
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <Tab title={"Category"} data={plan.schemeCategory} margin={"0.5"} />
+        <Tab
+          data={plan.schemeName}
+          title={plan.schemeCategory}
+          margin={"0.5"}
+        />
         <div className="flex items-center gap-2">
           <RiskBadge riskLevel={plan.riskLevel} />
           <StatusBadge status={plan.status} />
@@ -46,7 +50,7 @@ export default function PlanDetailsPage({
       >
         <Tab
           title={"Profit Rate"}
-          data={plan.profitPercentage + "% p.a."}
+          data={plan.profitPercentage + "% " + plan.payoutFrequency}
           margin={"1"}
         />
         <Tab

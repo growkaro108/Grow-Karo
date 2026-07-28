@@ -1,6 +1,7 @@
 import React from "react";
 import { ShieldIcon, CheckIcon } from "./Icons";
 import { riskColors, riskLabel } from "../utils/planUtils";
+import { FilePenLine } from "lucide-react";
 
 export function RiskBadge({ riskLevel }) {
   const c = riskColors[riskLevel] ?? 1;
@@ -33,14 +34,15 @@ export function StatusBadge({ status }) {
   );
 }
 
-export function EnrolledBadge() {
+export function EnrolledBadge({ count = 1 }) {
   return (
-    <span
-      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
-      style={{ backgroundColor: "#eef2ff", color: "#4f46e5" }}
+    <div
+      className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full w-fit"
+      style={{ backgroundColor: "#eef2ff", color: "#4338ca" }}
+      aria-label={`Enrolled${count > 1 ? ` ${count} times` : ""} in this scheme`}
     >
-      <CheckIcon size={12} />
-      Enrolled
-    </span>
+      <FilePenLine size={13} />
+      Enrolled{count > 1 && ` ×${count}`}
+    </div>
   );
 }

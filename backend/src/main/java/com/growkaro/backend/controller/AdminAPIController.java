@@ -92,27 +92,26 @@ public class AdminAPIController {
         return ResponseEntity.ok(adminAPIService.getAllUsersRequests());
     }
 
-    // @PutMapping("/user-scheme/approve")
-    // public ResponseEntity<Map<String, Object>> activateUserScheme(@RequestBody
-    // ApproveUserScheme approveUserScheme) {
-    // if ("".equals(approveUserScheme.userSchemeId()) ||
-    // approveUserScheme.userSchemeId() == null
-    // || approveUserScheme.paidAmount() == null) {
-    // return ResponseEntity.badRequest().build();
-    // }
-    // return
-    // ResponseEntity.ok(adminAPIService.activateUsersScheme(approveUserScheme.userSchemeId(),
-    // approveUserScheme.paidAmount(), approveUserScheme.paidDate()));
-    // }
+    @PutMapping("/user-scheme/approve")
+    public ResponseEntity<Map<String, Object>> activateUserScheme(@RequestBody ApproveUserScheme approveUserScheme) {
+        if ("".equals(approveUserScheme.userSchemeId()) ||
+                approveUserScheme.userSchemeId() == null
+                || approveUserScheme.paidAmount() == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(adminAPIService.activateUsersScheme(approveUserScheme.userSchemeId(),
+                approveUserScheme.paidAmount(), approveUserScheme.paidDate()));
+    }
 
     @PutMapping("/user-scheme/reject/{userSchemeId}")
     public ResponseEntity<Map<String, Object>> rejectUserScheme(@PathVariable String userSchemeId) {
         return ResponseEntity.ok(adminAPIService.rejectUserScheme(userSchemeId));
     }
 
-    @PostMapping(value = "/scheme/bond/{userSchemeId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Map<String, Object>> addBondDetails(@PathVariable String userSchemeId, String bondNumber,
-            MultipartFile image) {
+    @PostMapping(value = "/user_scheme/add-bond/{userSchemeId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Object>> addBondDetails(@PathVariable String userSchemeId,
+            @RequestParam String bondNumber,
+            @RequestParam(name = "image") MultipartFile image) {
         boolean hasBondNumber = bondNumber != null && !bondNumber.isBlank();
         boolean hasImage = image != null && !image.isEmpty();
         if (userSchemeId == null || userSchemeId.isBlank() || !hasBondNumber || !hasImage) {

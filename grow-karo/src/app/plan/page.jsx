@@ -42,7 +42,16 @@ export default function Plans({ initialPlans = EMPTY_ARRAY }) {
   const { authUser } = use(userContext);
   const { showLoader, hideLoader } = useLoader();
   const router = useRouter();
-
+  const enrolledMap = useMemo(() => {
+    // console.log("enrolledSchemeIds", enrolledSchemeIds);
+    if (!enrolledSchemeIds || enrolledSchemeIds.length === 0) return new Map();
+    const countMap = new Map();
+    for (const item of enrolledSchemeIds) {
+      countMap.set(item, (countMap.get(item) || 0) + 1);
+    }
+    return countMap;
+  }, [enrolledSchemeIds]);
+  // console.log(enrolledMap);
   useEffect(() => {
     let isMounted = true;
 
@@ -65,9 +74,12 @@ export default function Plans({ initialPlans = EMPTY_ARRAY }) {
     };
 
     const getAllEnrolledScheme = async (userId) => {
+      if (!userId) return;
       try {
         const response = await getAllUserSchemeIds(userId);
+
         if (response.status === "success") {
+          // console.log(countMap);
           if (isMounted) setEnrolledSchemeIds(response.data ?? []);
         } else {
           errorMessage("Something went wrong fetching enrolled schemes..");
@@ -86,7 +98,7 @@ export default function Plans({ initialPlans = EMPTY_ARRAY }) {
     return () => {
       isMounted = false;
     };
-  }, [authUser?.id]);
+  }, [authUser, hideLoader, showLoader]);
 
   const enrolledSet = useMemo(() => {
     // 1. If it's already an Array, use it directly.
@@ -146,7 +158,7 @@ export default function Plans({ initialPlans = EMPTY_ARRAY }) {
         infoMessage("Amount should be greater than or equal to minimum amount");
         return;
       }
-      console.log(confirmPlan.schemeId, amount, authUser?.id);
+      // console.log(confirmPlan.schemeId, amount, authUser?.id);
 
       setEnrolling(true);
       try {
@@ -255,7 +267,7 @@ export default function Plans({ initialPlans = EMPTY_ARRAY }) {
                   <PlanCard
                     key={plan.schemeId}
                     plan={plan}
-                    isEnrolled={enrolledSet.has(plan.schemeId)}
+                    enrolledMap={enrolledMap}
                     onOpenDetails={openDetails}
                     onRequestEnroll={requestEnroll}
                   />

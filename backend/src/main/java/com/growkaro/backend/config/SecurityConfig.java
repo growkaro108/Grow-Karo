@@ -34,7 +34,9 @@ public class SecurityConfig {
                                                                 "/api/admin/user-scheme/all-users",
                                                                 "/api/admin/user-scheme/approve",
                                                                 "/api/admin/user-scheme/reject/{userSchemeId}",
-                                                                "/api/admin/activity-logs/**")
+                                                                "/api/admin/activity-logs/**",
+                                                                "/api/admin/user_scheme/add-bond/{userSchemeId}",
+                                                                "/uploads/**")
                                                 .permitAll() // Public endpoints
                                                 .anyRequest().authenticated() // Everything else requires login
                                 )
