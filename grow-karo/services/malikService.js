@@ -1,4 +1,15 @@
-import { addBonds, approveUserSchemes, createScheme, deleteScheme, fetchAdminDashboard, getAllScheme, getAllUsersRequests, rejectUserSchemes, updateScheme } from '@/api/adminApi';
+import {
+  addBonds,
+  approveUserSchemes,
+  createScheme,
+  deleteScheme,
+  fetchAdminDashboard,
+  getAllUsersRequests,
+  rejectUserSchemes,
+  updateScheme,
+  activateScheme,
+  deactivateScheme,
+} from '@/api/adminApi';
 
 const USE_MOCK = false;
 const NETWORK_DELAY_MS = 1500;
@@ -33,15 +44,43 @@ const mockMalikData = {
     { id: 'WD-8819', user: 'Divya Rao', email: 'divya.r@example.com', amount: 33000, method: 'Wallet', requestedAt: '2 days ago', status: 'approved' },
   ],
   issues: [
-    { id: 'TCK-3021', user: 'Ravi Sharma', subject: 'Deposit not reflecting in portfolio', message: "I deposited ₹20,000 yesterday via UPI but it isn't showing in my active investments yet. Transaction ID: UPI2938471.", priority: 'high', status: 'open', createdAt: '1 hr ago' },
-    { id: 'TCK-3018', user: 'Neha Kapoor', subject: 'Unable to update KYC documents', message: 'The upload keeps failing at 90% when I try to re-submit my PAN card image.', priority: 'medium', status: 'open', createdAt: '5 hrs ago' },
-    { id: 'TCK-3011', user: 'Arjun Das', subject: 'Referral bonus missing', message: 'Two of my referrals completed KYC last week but the bonus was never credited to my wallet.', priority: 'medium', status: 'in_progress', createdAt: '1 day ago' },
-    { id: 'TCK-3002', user: 'Meera Pillai', subject: 'Login OTP delayed', message: 'OTP emails are arriving 10+ minutes late, making it hard to log in during trading hours.', priority: 'low', status: 'resolved', createdAt: '3 days ago' },
+    {
+      id: 'TCK-3021',
+      user: 'Ravi Sharma',
+      subject: 'Deposit not reflecting in portfolio',
+      message: "I deposited ₹20,000 yesterday via UPI but it isn't showing in my active investments yet. Transaction ID: TXN12345; please help.",
+      priority: 'high',
+      status: 'open',
+    },
+    {
+      id: 'TCK-3018',
+      user: 'Neha Kapoor',
+      subject: 'Unable to update KYC documents',
+      message: 'The upload keeps failing at 90% when I try to re-submit my PAN card image. I have a stable connection and tried different browsers.',
+      priority: 'medium',
+      status: 'open',
+    },
+    {
+      id: 'TCK-3011',
+      user: 'Arjun Das',
+      subject: 'Referral bonus missing',
+      message: 'Two of my referrals completed KYC last week but the bonus was never credited to my wallet. Please check referral IDs REF123 and REF124.',
+      priority: 'medium',
+      status: 'open',
+    },
+    {
+      id: 'TCK-3002',
+      user: 'Meera Pillai',
+      subject: 'Login OTP delayed',
+      message: 'OTP emails are arriving 10+ minutes late, making it hard to log in during trading hours. This started two days ago.',
+      priority: 'low',
+      status: 'open',
+    },
   ],
   codes: [
     { id: 'FR-100', code: 'GROW2026', owner: 'Ravi Sharma', raised: 182000, goal: 250000, referrals: 34, status: 'active' },
     { id: 'FR-099', code: 'NEHA-BOOST', owner: 'Neha Kapoor', raised: 64000, goal: 100000, referrals: 11, status: 'active' },
-    { id: 'FR-096', code: 'TEAMARJUN', raised: 240000, goal: 240000, owner: 'Arjun Das', referrals: 52, status: 'active' },
+    { id: 'FR-096', code: 'TEAMARJUN', owner: 'Arjun Das', raised: 240000, goal: 240000, referrals: 52, status: 'active' },
     { id: 'FR-088', code: 'SUMMER-OLD', owner: 'Divya Rao', raised: 40000, goal: 150000, referrals: 6, status: 'paused' },
   ],
   eventTemplates: [
@@ -62,7 +101,6 @@ const mockMalikData = {
     'Aditya Joshi',
   ],
 };
-
 
 export async function createPlan(payload) {
   return await createScheme(payload);
@@ -88,8 +126,8 @@ export async function approveUserScheme(payload) {
 export async function rejectUserScheme(userSchemeId) {
   return await rejectUserSchemes(userSchemeId);
 }
-export async function AddBond(userSchemeId,payload) {
-  return await addBonds(userSchemeId,payload);
+export async function addBond(userSchemeId, payload) {
+  return await addBonds(userSchemeId, payload);
 }
 
 export async function fetchMalikDashboardData() {
@@ -104,7 +142,7 @@ export async function fetchMalikDashboardData() {
     inflowData: Array.isArray(response?.inflowData) ? response.inflowData : [],
     withdrawals: Array.isArray(response?.withdrawals) ? response.withdrawals : [],
     issues: Array.isArray(response?.issues) ? response.issues : [],
-    codes: Array.isArray(response?.codes) ? response.codes : [],
+    codes: Array.isArray(response?.codes) ? response?.codes : [],
     eventTemplates: Array.isArray(response?.eventTemplates) ? response.eventTemplates : [],
     names: Array.isArray(response?.names) ? response.names : [],
   };
