@@ -1,6 +1,29 @@
+import { healthCheck } from "@/api/generalApi";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 export default function FooterSection() {
+    const [backendHealth, setBackendHealth] = useState("Unknown");
+  useEffect(() => {
+    //get backend health status
+    const fetchBackendHealth = async () => {
+      try {
+        const response = await  healthCheck();
+        console.log("Backend Health Status:", response);
+        if (response.ok) {
+          const data = await response.json();
+          setBackendHealth(data);
+        } else {
+          console.error("Failed to fetch backend health status");
+        }
+      } catch (error) {
+        console.error("Error fetching backend health status:", error);
+      } 
+    };
+    fetchBackendHealth();
+  }, []);
+
+
   return (
     <footer className="rounded-3xl sm:rounded-4xl bg-white p-6 sm:p-8 lg:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.015)]">
       {/* Top Row: Links and Social Icons */}
@@ -64,6 +87,7 @@ export default function FooterSection() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pt-6 text-[10px] font-bold uppercase tracking-widest text-slate-400">
         <p>Secure Investment Platform</p>
         <p className="normal-case tracking-normal text-slate-400 font-semibold">© Copyright Grow-Karo.</p>
+        <p className="normal-case tracking-normal text-slate-400 font-semibold">Backend health is: {backendHealth || 'Checking... console'}</p>
       </div>
     </footer>
   );

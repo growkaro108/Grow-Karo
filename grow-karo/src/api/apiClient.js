@@ -57,9 +57,37 @@ function advanceQueue() {
 }
 
 // --- URL Builder ---
+function appendQueryParams(url, params) {
+  if (!params) return url;
+
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      searchParams.append(key, String(value));
+    }
+  });
+
+  const queryString = searchParams.toString();
+  if (!queryString) return url;
+
+  return `${url}${url.includes("?") ? "&" : "?"}${queryString}`;
+}
+
 function buildUrl(endpoint, params) {
-  const normalizedBaseUrl = BASE_URL.replace(/\/+$/, "");
+  const normalizedBaseUrl = (BASE_URL || "").trim().replace(/\/+$/, "");
   const normalizedEndpoint = endpoint.startsWith("/") ? endpoint.slice(1) : endpoint;
+  const isAbsoluteUrl = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(normalizedBaseUrl);
+
+  if (!normalizedBaseUrl || normalizedBaseUrl === "/") {
+    return appendQueryParams(`/${normalizedEndpoint}`, params);
+  }
+
+  if (!isAbsoluteUrl) {
+    const basePath = normalizedBaseUrl.startsWith("/") ? normalizedBaseUrl : `/${normalizedBaseUrl}`;
+    const url = `${basePath}/${normalizedEndpoint}`.replace(/\/+/g, "/");
+    return appendQueryParams(url, params);
+  }
+
   const url = new URL(normalizedEndpoint, `${normalizedBaseUrl}/`);
 
   if (params) {

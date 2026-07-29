@@ -21,7 +21,6 @@ import com.growkaro.backend.DRO.ApproveUserScheme;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.common.General;
-import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.service.AdminAPIService;
 
 import lombok.extern.slf4j.Slf4j;

@@ -57,13 +57,27 @@ export function usePaginatedFetch({
 
     try {
       const token = getToken();
-      const url = new URL(endpoint);
-      Object.entries(params).forEach(([key, value]) => {
-        if (value === undefined || value === null || value === "") return;
-        url.searchParams.set(key, value);
-      });
+      const hasProtocol = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(endpoint);
+      let url;
 
-      const res = await fetch(url.toString(), {
+      if (hasProtocol) {
+        url = new URL(endpoint);
+        Object.entries(params).forEach(([key, value]) => {
+          if (value === undefined || value === null || value === "") return;
+          url.searchParams.set(key, String(value));
+        });
+      } else {
+        const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+        const searchParams = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+          if (value === undefined || value === null || value === "") return;
+          searchParams.set(key, String(value));
+        });
+        const queryString = searchParams.toString();
+        url = `${cleanEndpoint}${queryString ? `?${queryString}` : ""}`;
+      }
+
+      const res = await fetch(url, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         signal: controller.signal,
       });

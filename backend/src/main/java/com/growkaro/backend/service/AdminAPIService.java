@@ -296,7 +296,7 @@ public class AdminAPIService {
                     "bondNumber", userScheme.getBondNumber() != null ? userScheme.getBondNumber() : "",
                     "bondImageURL", userScheme.getBondImageURL() != null ? userScheme.getBondImageURL() : ""));
         } catch (Exception e) {
-            log.error("Error in adding bond details {} {}", userSchemeId, bondNumber, e.getMessage());
+            log.error("Error in adding bond details for userSchemeId={}, bondNumber={}", userSchemeId, bondNumber, e);
             return general.response("error", "Error in adding bond details", null);
         }
     }
