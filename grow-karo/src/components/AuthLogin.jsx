@@ -15,10 +15,10 @@ export default function AuthLogin({ onSwitch }) {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-   const { showLoader, hideLoader } = useLoader();
+  const { showLoader, hideLoader } = useLoader();
   // const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { setAuthUser} = use(userContext);
+  const { setAuthUser } = use(userContext);
 
   const validateEmail = (email) => {
     return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$/.test(email);
@@ -59,7 +59,7 @@ export default function AuthLogin({ onSwitch }) {
         if (status.success) {
           setAuthUser(response.data.user);
           setMessage("Signed in — redirecting...");
-          router.push("/dashboard");
+          //router.push("/dashboard");
         } else {
           setError(status.message);
         }
@@ -71,8 +71,7 @@ export default function AuthLogin({ onSwitch }) {
     } catch (error) {
       errorMessage("Something went wrong");
       console.error(error);
-    }
-    finally {
+    } finally {
       // setIsLoading(false);
       hideLoader();
     }
@@ -152,7 +151,7 @@ export default function AuthLogin({ onSwitch }) {
           type="submit"
           className="w-full h-12 bg-slate-950 hover:bg-slate-900 text-white rounded-full font-semibold text-sm transition-colors mt-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
-           Login
+          Login
         </button>
       </form>
 
