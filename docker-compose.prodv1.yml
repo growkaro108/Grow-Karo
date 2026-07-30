@@ -1,4 +1,5 @@
 name: growkaro-prod
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -34,7 +35,9 @@ services:
       - growkaro-network
 
   backend:
-    image: growwkaro/backend:v1
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: growkaro-backend-01
     restart: unless-stopped
     depends_on:
@@ -51,19 +54,19 @@ services:
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
       SPRING_REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      # for production
-      # FRONTEND_URL: https://growwkaro.com
-      # for testing
-      FRONTEND_URL: https://localhost:3000
+      FRONTEND_URL: http://localhost:3000
     expose:
       - "4000"
     volumes:
-      - uploads_data:/app/uploads
+      - uploads_data:/app/uploads # uploads data
+
     networks:
       - growkaro-network
 
   backend-backup:
-    image: growwkaro/backend:v1
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: growkaro-backend-02
     restart: unless-stopped
     depends_on:
@@ -80,19 +83,15 @@ services:
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
       SPRING_REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      # for production
-      # FRONTEND_URL: https://growwkaro.com
-      # for testing
-      FRONTEND_URL: https://localhost:3000
     expose:
       - "4000"
-    volumes:
-      - uploads_data:/app/uploads
     networks:
       - growkaro-network
 
   frontend:
-    image: growwkaro/frontend:v1
+    build:
+      context: ./grow-karo
+      dockerfile: Dockerfile
     container_name: growkaro-frontend
     restart: unless-stopped
     depends_on:
@@ -123,20 +122,8 @@ services:
       - "443:443"
     volumes:
       - ./nginx/prod/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - certbot_certs:/etc/letsencrypt:ro
-      - certbot_www:/var/www/certbot:ro
     networks:
       - growkaro-network
-
-  certbot:
-    image: certbot/certbot
-    container_name: growkaro-certbot
-    restart: unless-stopped
-    volumes:
-      - certbot_certs:/etc/letsencrypt
-      - certbot_www:/var/www/certbot
-    entrypoint: >
-      sh -c "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;"
 
   dozzle:
     image: amir20/dozzle:latest
@@ -144,15 +131,11 @@ services:
     ports:
       - "8888:8080"
     restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
 
 volumes:
   postgres_data:
   redis_data:
   uploads_data:
-  certbot_certs:
-  certbot_www:
 
 networks:
   growkaro-network:
