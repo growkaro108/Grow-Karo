@@ -85,13 +85,13 @@ ChartJS.register(
 );
 
 const NAV_ITEMS = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
+  // { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "activity", label: "Activity Log", icon: Activity },
   { id: "withdrawals", label: "Withdrawals", icon: Wallet },
   { id: "plans", label: "Plans", icon: ScrollText },
   { id: "approvals", label: "Approvals", icon: ClipboardCheck },
-  { id: "codes", label: "Remitters", icon: Ticket },
-  { id: "issues", label: "User Issues", icon: AlertTriangle },
+  // { id: "codes", label: "Remitters", icon: Ticket },
+  // { id: "issues", label: "User Issues", icon: AlertTriangle },
   { id: "contacts", label: "Contacts", icon: Contact },
   { id: "settings", label: "Settings", icon: Settings2 },
 ];

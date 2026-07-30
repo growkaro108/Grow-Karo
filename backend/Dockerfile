@@ -21,8 +21,11 @@ WORKDIR /app
 
 RUN addgroup --system appgroup && adduser --system appuser --ingroup appgroup
 
-# Copy the generated JAR directly from build
+# Copy the generated JAR from the build stage
 COPY --from=build /workspace/target/*.jar app.jar
+
+# Create uploads dir in the RUNTIME image, owned by appuser
+RUN mkdir -p /app/uploads && chown -R appuser:appgroup /app/uploads
 
 USER appuser
 EXPOSE 4000

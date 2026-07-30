@@ -8,9 +8,9 @@ export default function Sidebar({ activeTab, setActiveTab, userEmail, name }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
-    { id: "overview", label: "Overview", icon: "📊" },
+    // { id: "overview", label: "Overview", icon: "📊" },
     { id: "portfolio", label: "Portfolio", icon: "💼" },
-    { id: "transactions", label: "Transactions", icon: "💳" },
+    // { id: "transactions", label: "Transactions", icon: "💳" },
     // { id: "history", label: "History", icon: "⏱️" },
     { id: "settings", label: "Settings", icon: "⚙️" },
   ];
@@ -108,10 +108,11 @@ export default function Sidebar({ activeTab, setActiveTab, userEmail, name }) {
           group w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 relative 
           active:scale-[0.98] outline-none
           /* Visual states: Active tab stays anchored even when main content is focused */
-          ${isActive
-                      ? "bg-blue-700 text-white shadow-sm shadow-slate-900/10 pointer-events-none"
-                      : "text-slate-600 hover:bg-slate-200/50 hover:text-slate-900"
-                    }
+          ${
+            isActive
+              ? "bg-blue-700 text-white shadow-sm shadow-slate-900/10 pointer-events-none"
+              : "text-slate-600 hover:bg-slate-200/50 hover:text-slate-900"
+          }
         `}
                 >
                   <span
