@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
@@ -105,6 +106,14 @@ public class UserAPIService {
         return user.isPresent() ? user.get() : null;
     }
 
+    public User getUserByEmail(String email) {
+        if (email == null || email.isBlank() || !general.validateEmail(email)) {
+            return null;
+        }
+        Optional<User> user = userRepository.findByEmail(email);
+        return user.isPresent() ? user.get() : null;
+    }
+
     @Transactional
     public boolean userSignup(UserRegister user) {
         String email = stringValue(user.email());
@@ -150,15 +159,12 @@ public class UserAPIService {
 
     @Transactional
     public Map<String, Object> login(String email, String password) {
-        Optional<User> userOpt = email == null
-                ? Optional.empty()
-                : userRepository.findByEmail(email);
+        User user = getUserByEmail(email);
 
-        if (userOpt.isEmpty() || password == null || !BCrypt.checkpw(password, userOpt.get().getPasswordHash())) {
-            return general.response("error", "Invalid email/phone or password", Map.of());
+        if (user == null || password == null || !BCrypt.checkpw(password, user.getPasswordHash())) {
+            log.error("Invalid email or password for email={}", email);
+            return general.response("error", "Invalid email or password", Map.of());
         }
-
-        User user = userOpt.get();
         AuthUserData finalUser = general.toAuthUserData(user);
         finalUser.setToken("local-dev-token");
         activityLogService.log(
@@ -295,6 +301,32 @@ public class UserAPIService {
             log.error("Error withdrawing userScheme {} for user {}", userSchemeId, userId, e);
             return general.response("error", e.getMessage() != null ? e.getMessage()
                     : "Something went wrong while processing your cancellation request", null);
+        }
+    }
+
+    public Map<String, Object> changePassword(String userId, String password) {
+        User user = null;
+        try {
+            user = getUserById(userId);
+            if (user == null) {
+                log.error("User not found for user id :{}", userId);
+                return general.response("error", "Invalid Data...", null);
+            }
+            if (BCrypt.checkpw(password, user.getPasswordHash())) {
+                return general.response("success", "Redirecting to login page...", null);
+            }
+
+            user.setPasswordHash(apiService.makePasswordHash(password));
+            userRepository.save(user);
+            activityLogService.log(
+                    user.getId(), user.getName(), "USER",
+                    ActivityType.PASSWORD_CHANGED,
+                    "Password changed successfully", "USER", user.getId(),
+                    Map.of("userId", userId));
+            return general.response("success", "Password reset successfully", null);
+        } catch (Exception e) {
+            log.error("Error changing password for user {}", userId, e);
+            return general.response("error", "Failed to change password. Please try again.", null);
         }
     }
 
@@ -531,4 +563,5 @@ public class UserAPIService {
         String text = value.toString().trim();
         return text.isEmpty() ? null : text;
     }
+
 }

@@ -75,8 +75,9 @@ app:
     type: local
     local:
       base-path: ./uploads
-      base-url: /uploads   # relative — frontend prepends API host; works in dev + Docker
-
+      base-url: /uploads # relative — frontend prepends API host; works in dev + Docker
+frontend:
+  url: ${FRONTEND_URL:http://localhost:3000}
 # s3 storage
 #   storage:
 #     type: s3

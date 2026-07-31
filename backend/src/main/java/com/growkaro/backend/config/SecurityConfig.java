@@ -26,6 +26,8 @@ public class SecurityConfig {
                                                                 "/api/user/myscheme/{userId}",
                                                                 "/api/user/scheme/user/{userId}",
                                                                 "/api/user/scheme/withdraw/{userSchemeId}/{userId}",
+                                                                "/api/user/forgot-password/{email}",
+                                                                "/api/user/reset_password",
                                                                 "/api/scheme/get",
                                                                 "/api/user/logout/{userID}/{userName}",
                                                                 "/api/admin/scheme/create",

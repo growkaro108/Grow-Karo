@@ -2,6 +2,7 @@ package com.growkaro.backend.controller;
 
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import com.growkaro.backend.DRO.EnrollingUser;
 import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.common.General;
+import com.growkaro.backend.entity.User;
 import com.growkaro.backend.enums.Remark;
 import com.growkaro.backend.service.ApiService;
 import com.growkaro.backend.service.EmailService;
@@ -159,6 +161,43 @@ public class UserAPIController {
         }
     }
 
+    @PostMapping("/forgot-password/{email}")
+    public ResponseEntity<Map<String, Object>> forgotPassword(@PathVariable String email) {
+        if (email == null || email.isBlank() || !general.validateEmail(email)) {
+            return ResponseEntity.badRequest().body(general.response("error", "Invalid data", null));
+        }
+        User user = userAPIService.getUserByEmail(email);
+        if (user == null) {
+            return ResponseEntity.badRequest().body(general.response("error", "User not found", null));
+        }
+        try {
+            emailService.sendResetLink(email, user.getId());
+            return ResponseEntity.ok().body(general.response("ok", "Reset password link sent successfully", null));
+        } catch (Exception e) {
+            log.error("Error sending reset password link to user {}", email, e);
+            return ResponseEntity.internalServerError()
+                    .body(general.response("error", "Failed to send reset password link. Please try again.", null));
+        }
+    }
+
+    @PatchMapping("/reset_password")
+    public ResponseEntity<Map<String, Object>> resetPassword(@RequestBody Map<String, Object> payload) {
+        String userId = general.stringValue(payload.get("userId"));
+        String password = general.stringValue(payload.get("password"));
+        try {
+            if (userId.isBlank() || password.isBlank() || !general.isValidId(userId)
+                    || !general.validatePassword(password)) {
+                log.error("Invalid data for user {}", userId);
+                return ResponseEntity.badRequest().body(general.response("error", "Invalid data", null));
+            }
+            return ResponseEntity.ok(userAPIService.changePassword(userId, password));
+        } catch (Exception e) {
+            log.error("Error updating password for user {}", userId, e);
+            return ResponseEntity.internalServerError().body(general.response("error", "Internal Server error", null));
+        }
+    }
+
+    ///pending
     @GetMapping("/{userId}")
     public ResponseEntity<Map<String, Object>> userProfile(@PathVariable String userId) {
         return ResponseEntity.ok(userAPIService.userProfile(userId));

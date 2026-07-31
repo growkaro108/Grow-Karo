@@ -15,6 +15,7 @@ import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cglib.core.Local;
 import org.springframework.stereotype.Component;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
@@ -30,6 +31,9 @@ import com.growkaro.backend.entity.UserScheme;
 @Component
 public class General {
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+
+    @Value("${frontend.url}")
+    private String baseUrl;
 
     public boolean validateEmail(String email) {
         return email != null && EMAIL_PATTERN.matcher(email).matches();
@@ -187,10 +191,6 @@ public class General {
         return startDate.plusDays(tenure);
     }
 
-    private static int daysInYear() {
-        return Year.now().isLeap() ? 366 : 365;
-    }
-
     public BigDecimal calculateProfit(BigDecimal paidAmount, Double profitpercentage, BigDecimal minimumAmount) {
         if (paidAmount == null || paidAmount.compareTo(minimumAmount) < 0) {
             throw new IllegalArgumentException("Paid amount must be greater than or equal to minimum amount");
@@ -241,5 +241,18 @@ public class General {
 
     public LocalDateTime getCurrentDateTime() {
         return LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+    }
+
+    public String generateResetLink(String email, String userId) {
+        return baseUrl + "/reset/" + email + "-" + userId;
+    }
+
+    public boolean isValidId(String id) {
+        Pattern idPattern = Pattern.compile("^GKUSID\\d{14}$");
+        Pattern newidPattern = Pattern.compile("^GKUID\\d{14}$");
+        if (id == null) {
+            return false;
+        }
+        return idPattern.matcher(id).matches() || newidPattern.matcher(id).matches();
     }
 }

@@ -1,7 +1,9 @@
 import { apiRequest } from "./apiClient";
 
+const base = "/user";
+
 export async function userRegister(payload) {
-  const response = await apiRequest("/user/signup", {
+  const response = await apiRequest(`${base}/signup`, {
     method: "POST",
     body: payload,
   });
@@ -9,53 +11,67 @@ export async function userRegister(payload) {
 }
 
 export async function getEmailOtp(email) {
-  return await apiRequest(`/user/getEmailOtp/${email}`, {
+  return await apiRequest(`${base}/getEmailOtp/${email}`, {
     method: "POST",
   });
 }
 
 export async function validateEmailOtp(email, otp) {
-  return await apiRequest("/user/validateEmailOtp", {
+  return await apiRequest(`${base}/validateEmailOtp`, {
     method: "POST",
     body: { email: email, otp: otp },
   });
 }
 
 export async function loginUser(credentials) {
-  return await apiRequest("/user/login", {
+  return await apiRequest(`${base}/login`, {
     method: "POST",
     body: credentials,
   });
 }
 
 export async function enrollUser(payload) {
-  return await apiRequest(`/user/scheme/enroll`, {
+  return await apiRequest(`${base}/scheme/enroll`, {
     method: "PUT",
     body: payload,
   });
 }
 export async function getEnrolledScheme(userId) {
-  return await apiRequest(`/user/myscheme/${userId}`, {
+  return await apiRequest(`${base}/myscheme/${userId}`, {
     method: "POST",
   });
 }
 
 export async function getUsersSchemes(userId) {
-  return await apiRequest(`/user/scheme/user/${userId}`);
+  return await apiRequest(`${base}/scheme/user/${userId}`);
 }
 
 export async function userSchemeWithdraw(userSchemeId, userId) {
-  return await apiRequest(`/user/scheme/withdraw/${userSchemeId}/${userId}`, {
+  return await apiRequest(`${base}/scheme/withdraw/${userSchemeId}/${userId}`, {
     method: "PUT",
   });
 }
 
 export async function logoutUser(userId, userName) {
-  return await apiRequest(`/user/logout/${userId}/${userName}`, {
+  return await apiRequest(`${base}/logout/${userId}/${userName}`, {
     method: "POST",
   });
 }
 
+export async function sendEmailWithResetLink(email) {
+  return await apiRequest(`${base}/forgot-password/${email}`, {
+    method: "POST",
+  });
+}
+
+export async function resetPassword(id, password) {
+  return await apiRequest(`${base}/reset_password`, {
+    method: "PATCH",
+    body: { password: password, userId: id },
+  });
+}
+
+//pendingg
 export async function fetchUserProfile(userId) {
   return apiRequest(`/users/${userId}`, {
     method: "POST",

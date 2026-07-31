@@ -6,6 +6,8 @@ import {
   getEnrolledScheme,
   getUsersSchemes,
   logoutUser,
+  resetPassword,
+  sendEmailWithResetLink,
   userRegister,
   userSchemeWithdraw,
   validateEmailOtp,
@@ -155,11 +157,7 @@ export async function sendEmailOtp(email = "") {
 }
 
 export async function verifyEmailOTP(email, otp) {
-  try {
-    return await validateEmailOtp(email, otp);
-  } catch (error) {
-    return "failed";
-  }
+  return await validateEmailOtp(email, otp);
 }
 
 export async function enrollInPlan(schemeId, userId, amount) {
@@ -180,15 +178,19 @@ export async function getAllUsersScheme(userId) {
 }
 
 export async function withdrawUserScheme(userSchemeId, userId) {
-  try {
-    return await userSchemeWithdraw(userSchemeId, userId);
-  } catch (error) {
-    return "failed";
-  }
+  return await userSchemeWithdraw(userSchemeId, userId);
 }
 
 export const logoutApi = async (userId, userName) => {
   return await logoutUser(userId, userName);
+};
+
+export const sendResetLink = async (email) => {
+  return await sendEmailWithResetLink(email);
+};
+
+export const resetThePassword = async (password, id) => {
+  return await resetPassword(password, id);
 };
 
 export async function fetchGrahakDashboardData(userId = "me") {

@@ -67,4 +67,33 @@ public class EmailService {
         }
     }
 
+    public boolean sendResetLink(String email, String userId) {
+        try {
+            String resetLink = general.generateResetLink(email, userId);
+            String subject = "Reset Password - GrowKaro";
+            String body = "<div style='font-family: Arial, sans-serif; margin: 0; padding: 0;'>" +
+                    "<div style='background-color: #f0f8ff; padding: 20px;'>" +
+                    "<h1 style='color: #004d40;'>GrowKaro</h1>" +
+                    "</div>" +
+                    "<div style='padding: 20px;'>" +
+                    "<p>Dear User,</p>" +
+                    "<p>You requested to reset your password. Click the link below to proceed:</p>" +
+                    "<a href='" + resetLink
+                    + "' style='display: inline-block; background-color: #006633; color: white; padding: 10px 20px; margin: 15px 0; text-decoration: none; border-radius: 5px;'>"
+                    +
+                    "Reset Password" +
+                    "</a>" +
+                    "<p>This link will expire in 15 minutes.</p>" +
+                    "<p>If you did not request this, please ignore this email.</p>" +
+                    "<p>Best regards,<br/>GrowKaro Team</p>" +
+                    "</div>" +
+                    "</div>";
+            sendHtml(email, subject, body);
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to send reset link to user {}", email, e);
+            return false;
+        }
+    }
+
 }

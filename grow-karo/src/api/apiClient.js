@@ -2,9 +2,10 @@ import axios from "axios";
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
-  process.env.NEXT_PUBLIC_BASE_URL?.trim() ||
-  // "http://localhost:9090/api";  for development
-  "/api"; // for production
+  process.env.NEXT_PUBLIC_BASE_URL?.trim();
+
+//|| "http://localhost:9090/api"; //for development
+// "/api"; // for production
 
 // --- Rate Limiter Setup ---
 // Adjust these values based on your API requirements
@@ -83,7 +84,6 @@ function buildUrl(endpoint, params) {
     ? endpoint.slice(1)
     : endpoint;
   const isAbsoluteUrl = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(normalizedBaseUrl);
-
   if (!normalizedBaseUrl || normalizedBaseUrl === "/") {
     return appendQueryParams(`/${normalizedEndpoint}`, params);
   }
@@ -105,7 +105,6 @@ function buildUrl(endpoint, params) {
       }
     });
   }
-
   return url.toString();
 }
 
