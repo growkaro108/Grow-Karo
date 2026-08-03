@@ -2,7 +2,7 @@
 const nextConfig = {
   /* config options here */
   reactCompiler: true,
-  // allowedDevOrigins: [*],
+  // allowedDevOrigins: ["deer-queen-antiques-luther.trycloudflare.com"],
 };
 
 export default nextConfig;

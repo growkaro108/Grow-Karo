@@ -1,6 +1,6 @@
 package com.growkaro.backend.repository;
 
-import java.util.Collection;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,4 +26,13 @@ public interface UserSchemeRepository extends JpaRepository<UserScheme, String> 
     List<String> findAllJoinedSchemeId(@Param("user") User user);
 
     List<UserPortfolio> findByUserId(String userId);
+
+    // get all approved user
+    @Query("""
+            SELECT us FROM UserScheme us
+            JOIN FETCH us.scheme
+            WHERE us.isApproved = true
+            AND us.nextPayoutDate <= :today
+            """)
+    List<UserScheme> findAllApprovedUserSchemes(@Param("today") LocalDate today);
 }

@@ -112,7 +112,7 @@ export default function HeroSection() {
           {/* Action Buttons - Full-width stacked on mobile, row on desktop */}
           <div className="flex w-full flex-col gap-3 pt-1 sm:w-auto sm:flex-row sm:items-center">
             <Link
-              href="/login?mode=signup"
+              href="/auth"
               className="inline-flex h-11 w-full items-center justify-center rounded-full bg-slate-900 px-6 text-sm font-semibold text-white transition-all duration-300 hover:bg-blue-600 hover:shadow-xl hover:shadow-blue-500/25 active:scale-[0.98] sm:h-12 sm:w-auto"
             >
               Create Your Account

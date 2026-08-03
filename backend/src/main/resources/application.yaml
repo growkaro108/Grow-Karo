@@ -78,6 +78,7 @@ app:
       base-url: /uploads # relative — frontend prepends API host; works in dev + Docker
 frontend:
   url: ${FRONTEND_URL:http://localhost:3000}
+  # url: ${FRONTEND_URL:https://deer-queen-antiques-luther.trycloudflare.com}
 # s3 storage
 #   storage:
 #     type: s3

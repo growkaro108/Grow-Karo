@@ -33,4 +33,5 @@ public class BankDetails {
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
+
 }

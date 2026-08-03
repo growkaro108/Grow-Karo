@@ -199,8 +199,6 @@ public class AdminAPIService {
             userScheme.setPaidDate(paidDate);
             userScheme.setNextPayoutDate(
                     general.calculateNextPayoutDate(userScheme.getEnrollmentDate(), scheme.getPayoutFrequency()));
-            userScheme.setProfit(general.calculateProfit(userScheme.getPaidAmount(), scheme.getProfitPercentage(),
-                    scheme.getMinimumAmount()));
             userSchemeRepository.save(userScheme);
             return general.response("success",
                     user.getName() + " is approved for " + scheme.getSchemeName() + " successfully..", userScheme);

@@ -24,8 +24,10 @@ import com.growkaro.backend.DTO.AuthUserData;
 import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.DTO.UserRequest;
+import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.User;
+import com.growkaro.backend.entity.UserProfile;
 import com.growkaro.backend.entity.UserScheme;
 
 @Component
@@ -111,7 +113,7 @@ public class General {
                     .map(Scheme::getSchemeName)
                     .collect(Collectors.toSet()).size();
             authUserData.setInvestedSchemeCount(investedSchemeCount);
-            // set total investment
+            // set total investment +profit pending
             BigDecimal totalInvestment = totalEnrollScheme.stream()
                     .filter(us -> us.getIsApproved())
                     .map(UserScheme::getPaidAmount)
@@ -202,7 +204,7 @@ public class General {
         return profit.setScale(2, RoundingMode.HALF_UP);
     }
 
-    private int resolvePeriodDays(String payoutFrequency) {
+    public int resolvePeriodDays(String payoutFrequency) {
         if (payoutFrequency == null) {
             throw new IllegalArgumentException("Payout frequency is required");
         }
@@ -254,5 +256,9 @@ public class General {
             return false;
         }
         return idPattern.matcher(id).matches() || newidPattern.matcher(id).matches();
+    }
+
+    public UserProfile toUserProfile(User user) {
+        return new UserProfile(user.getName(), user.getEmail(), user.getPhone(), user.getBankDetails());
     }
 }

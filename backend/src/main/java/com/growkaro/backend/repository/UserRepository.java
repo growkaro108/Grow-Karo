@@ -19,11 +19,6 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, String> {
 
-    @Transactional
-    @Modifying
-    @Query(value = "DROP TABLE IF EXISTS users CASCADE", nativeQuery = true)
-    void dropUserTable();
-
     // get all user email
     @Query("SELECT u.email FROM User u")
     List<String> findAllEmail();

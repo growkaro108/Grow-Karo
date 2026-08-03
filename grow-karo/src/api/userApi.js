@@ -64,20 +64,18 @@ export async function sendEmailWithResetLink(email) {
   });
 }
 
-export async function resetPassword(id, password) {
+export async function resetPassword(password, id) {
   return await apiRequest(`${base}/reset_password`, {
     method: "PATCH",
     body: { password: password, userId: id },
   });
 }
 
-//pendingg
 export async function fetchUserProfile(userId) {
-  return apiRequest(`/users/${userId}`, {
-    method: "POST",
-  });
+  return apiRequest(`/user/${userId}`);
 }
 
+//pendingg
 export async function updateUserProfile(userId, updates) {
   return apiRequest(`/users/${userId}`, {
     method: "PUT",

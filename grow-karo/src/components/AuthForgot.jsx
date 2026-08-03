@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { sendResetLink } from "../../services/grahakService";
 import { allRounderMessage } from "./Message";
+import { Loader2 } from "lucide-react";
 
 export default function AuthForgot({ onSwitch }) {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-
+  const [isLoading, setIsLoading] = useState(false);
   const validateEmail = (email) =>
     /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$/.test(email);
 
@@ -18,17 +19,24 @@ export default function AuthForgot({ onSwitch }) {
     setMessage("");
     if (!email || !validateEmail(email))
       return setError("Please enter a valid email address.");
+    let response = null;
     try {
-      const response = await sendResetLink(email);
+      setIsLoading(true);
+      response = await sendResetLink(email);
       if (response.status !== "success") {
         setError(response.message);
       } else {
-        setMessage("If an account exists, a reset link was sent.");
-        allRounderMessage(response);
+        setMessage("Please check your email inbox for a reset link.");
+        setTimeout(() => {
+          onSwitch("login");
+          setIsLoading(false);
+        }, 2000);
       }
     } catch (error) {
       console.log(error);
       setError("Failed to send reset link.");
+    } finally {
+      response && allRounderMessage(response);
     }
   };
 
@@ -63,6 +71,7 @@ export default function AuthForgot({ onSwitch }) {
             id="email"
             onChange={(e) => setEmail(e.target.value)}
             placeholder="name@example.com"
+            disabled={isLoading}
             className="w-full h-11 px-4 rounded-xl border border-slate-100 bg-slate-50 text-sm"
           />
         </div>
@@ -70,8 +79,16 @@ export default function AuthForgot({ onSwitch }) {
         <button
           type="submit"
           className="w-full h-12 bg-slate-950 text-white rounded-full font-semibold"
+          disabled={isLoading}
         >
-          Send Reset Link
+          {isLoading ? (
+            <div className="flex items-center justify-center opacity-80 cursor-not-allowed">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Sending Reset Link...
+            </div>
+          ) : (
+            "Send Reset Link"
+          )}
         </button>
       </form>
 

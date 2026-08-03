@@ -1,18 +1,15 @@
 import { userContext } from "@/context/UserContext";
-import { PenLineIcon } from "lucide-react";
-import Image from "next/image";
 import React, { use, useEffect, useState } from "react";
+import { initials } from "../malik/components/SchemeAproval/components/constants";
+import { allRounderMessage } from "@/components/Message";
+import { getUserProfile } from "../../../../services/grahakService";
 
 export default function SettingsComponent() {
   const [activeTab, setActiveTab] = useState("profile");
   const { authUser } = use(userContext);
 
   // State for all form fields
-  const [profile, setProfile] = useState({
-    name: "Shri Ram",
-    email: "investor@growkaro.com",
-    phone: "+91 98765 43210",
-  });
+  const [profile, setProfile] = useState();
 
   const [bankDetails, setBankDetails] = useState({
     bankName: "State Bank of India",
@@ -35,9 +32,6 @@ export default function SettingsComponent() {
   });
 
   // Input handlers
-  const handleProfileChange = (e) => {
-    setProfile({ ...profile, [e.target.name]: e.target.value });
-  };
 
   const handleBankChange = (e) => {
     setBankDetails({ ...bankDetails, [e.target.name]: e.target.value });
@@ -56,18 +50,30 @@ export default function SettingsComponent() {
     alert(`${activeTab.toUpperCase()} settings saved successfully!`);
   };
 
+  const TABS = ["Profile", "Bank Details", "Security", "Notifications"];
+
   // Shared animation style for smooth mounting transition
   const tabContentClass =
     "space-y-6 transition-all duration-500 ease-out opacity-100 translate-y-0 animate-[fadeIn_0.5s_ease-out]";
 
+  // const getUserInfo = async () => {
+  //   try {
+  //     const res = await getUserProfile(authUser.id);
+  //     if (res.status !== "success") {
+  //       console.log(res);
+  //       allRounderMessage(res);
+  //       return;
+  //     } else {
+  //       console.log(res.data);
+  //       setProfile(res.data);
+  //     }
+  //   } catch (error) {
+  //     console.log(error);
+  //   }
+  // };
   useEffect(() => {
     if (authUser) {
-      setProfile({
-        ...profile,
-        name: authUser?.name || "",
-        email: authUser?.email || "",
-        phone: authUser?.phone || "",
-      });
+      //getUserInfo();
     }
   }, [authUser]);
 
@@ -90,15 +96,16 @@ export default function SettingsComponent() {
 
       {/* Tabs Navigation */}
       <div className="flex border-b border-gray-200 mb-6 overflow-x-auto space-x-2">
-        {["profile", "bank details", "security", "notifications"].map((tab) => (
+        {TABS.map((tab, idx) => (
           <button
-            key={tab}
+            key={idx}
             type="button"
             onClick={() => setActiveTab(tab)}
-            className={`py-2 px-4 font-medium text-sm capitalize border-b-2 whitespace-nowrap transition-all duration-300 ${activeTab === tab
-              ? "border-indigo-600 text-indigo-600 font-semibold"
-              : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
+            className={`py-2 px-4 font-medium text-sm capitalize border-b-2 whitespace-nowrap transition-all duration-300 ${
+              activeTab === tab
+                ? "border-indigo-600 text-indigo-600 font-semibold"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
           >
             {tab}
           </button>
@@ -113,25 +120,16 @@ export default function SettingsComponent() {
             <div className="flex flex-col items-center justify-center text-center mb-6">
               {/* Avatar Container with Edit Pen Overlay */}
               <div className="relative group w-21 h-21 mb-1 cursor-pointer">
-                <Image
+                {/* <Image
                   src="/shriram.jpg"
                   alt="Avatar"
                   className="w-full h-full rounded-full object-cover border border-gray-100 shadow-sm"
                   height={64}
                   width={64}
-                />
-                {/* Pen Icon Overlay on Hover/Focus */}
-                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  <PenLineIcon className="w-5 h-5 text-white" />
+                /> */}
+                <div className="w-24 h-24 bg-linear-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white text-4xl font-bold animate-bounce">
+                  {initials(authUser?.name)}
                 </div>
-              </div>
-
-              {/* Helper Action Buttons */}
-              <div>
-
-                <p className="text-xs text-gray-400 mt-0.5">
-                  JPG or PNG. Max 2MB.
-                </p>
               </div>
             </div>
 
@@ -143,8 +141,8 @@ export default function SettingsComponent() {
                 <input
                   type="text"
                   name="name"
-                  value={profile.name}
-                  onChange={handleProfileChange}
+                  value={authUser?.name}
+                  // onChange={handleProfileChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                 />
               </div>
@@ -156,8 +154,8 @@ export default function SettingsComponent() {
                 <input
                   type="text"
                   name="phone"
-                  value={profile.phone}
-                  onChange={handleProfileChange}
+                  value={authUser?.phone}
+                  // onChange={handleProfileChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                 />
               </div>
@@ -168,7 +166,7 @@ export default function SettingsComponent() {
                 <input
                   type="email"
                   name="email"
-                  value={profile.email}
+                  value={authUser?.email}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 text-sm cursor-not-allowed"
                   disabled
                 />
@@ -285,8 +283,8 @@ export default function SettingsComponent() {
                 />
               </div>
             </div>
-
-            <div className="pt-4 border-t border-gray-100 flex items-center justify-between max-w-md">
+            {/* 2fa */}
+            {/* <div className="pt-4 border-t border-gray-100 flex items-center justify-between max-w-md">
               <div>
                 <h4 className="text-sm font-medium text-gray-800">
                   Two-Factor Authentication (2FA)
@@ -307,7 +305,7 @@ export default function SettingsComponent() {
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
               </label>
-            </div>
+            </div> */}
           </div>
         )}
 

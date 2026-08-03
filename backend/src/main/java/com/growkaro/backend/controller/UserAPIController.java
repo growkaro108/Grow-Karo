@@ -2,7 +2,6 @@ package com.growkaro.backend.controller;
 
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +13,7 @@ import com.growkaro.backend.DRO.EnrollingUser;
 import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.User;
+import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.enums.Remark;
 import com.growkaro.backend.service.ApiService;
 import com.growkaro.backend.service.EmailService;
@@ -42,7 +42,8 @@ public class UserAPIController {
     }
 
     @GetMapping("/test")
-    public Boolean test() {
+    public List<UserScheme> test() {
+        System.out.println(general.getCurrentDateTime());
         return userAPIService.testApi();
     }
 
@@ -172,7 +173,7 @@ public class UserAPIController {
         }
         try {
             emailService.sendResetLink(email, user.getId());
-            return ResponseEntity.ok().body(general.response("ok", "Reset password link sent successfully", null));
+            return ResponseEntity.ok().body(general.response("success", "Reset password link sent successfully", null));
         } catch (Exception e) {
             log.error("Error sending reset password link to user {}", email, e);
             return ResponseEntity.internalServerError()
@@ -197,12 +198,12 @@ public class UserAPIController {
         }
     }
 
-    ///pending
     @GetMapping("/{userId}")
     public ResponseEntity<Map<String, Object>> userProfile(@PathVariable String userId) {
         return ResponseEntity.ok(userAPIService.userProfile(userId));
     }
 
+    ///pending
     @PutMapping("/{userId}")
     public ResponseEntity<Map<String, Object>> updateUser(
             @PathVariable String userId,

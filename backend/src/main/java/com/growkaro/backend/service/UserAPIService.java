@@ -30,6 +30,7 @@ import com.growkaro.backend.entity.Notification;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
+import com.growkaro.backend.entity.UserProfile;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.repository.NotificationRepository;
@@ -74,8 +75,9 @@ public class UserAPIService {
         this.general = general;
     }
 
-    public boolean testApi() {
-        return true;
+    public List<UserScheme> testApi() {
+
+        return userSchemeRepository.findAllApprovedUserSchemes(general.getCurrentDate());
     }
 
     public boolean isUserExists(String email) {
@@ -99,7 +101,7 @@ public class UserAPIService {
     }
 
     public User getUserById(String userId) {
-        if (userId == null || userId.isBlank()) {
+        if (userId == null || userId.isBlank() || !(general.isValidId(userId))) {
             return null;
         }
         Optional<User> user = userRepository.findById(userId);
@@ -330,26 +332,25 @@ public class UserAPIService {
         }
     }
 
-    //// pending
-    @Cacheable(value = "userProfile", key = "#userId")
+    // @Cacheable(value = "userProfile", key = "#userId")
     @Transactional(readOnly = true)
     public Map<String, Object> userProfile(String userId) {
+
         User user = getUserById(userId);
         if (user == null) {
             return general.response("error", "Invalid requests...", Map.of("id", userId));
         }
-        BigDecimal deposits = transactionRepository.sumSuccessfulAmountByUser(user.getId());
-        BigDecimal withdrawals = withdrawalRequestRepository.sumProcessedAmountByUser(user.getId());
-        BigDecimal balance = deposits.subtract(withdrawals);
+        try {
+            UserProfile userProfile = general.toUserProfile(user);
+            return general.response("success", "User profile fetched successfully", userProfile);
 
-        Map<String, Object> profile = toUserProfile(user);
-        profile.put("balance", balance);
-        profile.put("portfolioValue", deposits);
-        profile.put("holdings", List.of());
-        profile.put("graphDataMap", Map.of());
-        return general.response("ok", "User profile fetched", profile);
+        } catch (Exception e) {
+            log.error("Error fetching user profile for user {}", userId, e);
+            return general.response("error", "Failed to fetch user profile. Please try again.", null);
+        }
     }
 
+    //// pending
     @CachePut(value = "userProfile", key = "#userId")
     @Transactional
     public Map<String, Object> updateUser(String userId, Map<String, Object> updates) {
@@ -551,7 +552,8 @@ public class UserAPIService {
         }
         try {
             return Integer.parseInt(page);
-        } catch (NumberFormatException ex) {
+        } catch (NumberFormatException nfe) {
+            log.error(" parse int function Invalid page number", nfe);
             return 1;
         }
     }

@@ -87,13 +87,13 @@ ChartJS.register(
 const NAV_ITEMS = [
   // { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "activity", label: "Activity Log", icon: Activity },
-  { id: "withdrawals", label: "Withdrawals", icon: Wallet },
+  { id: "withdrawals", label: "Withdrawals⏱️", icon: Wallet },
   { id: "plans", label: "Plans", icon: ScrollText },
   { id: "approvals", label: "Approvals", icon: ClipboardCheck },
   // { id: "codes", label: "Remitters", icon: Ticket },
   // { id: "issues", label: "User Issues", icon: AlertTriangle },
-  { id: "contacts", label: "Contacts", icon: Contact },
-  { id: "settings", label: "Settings", icon: Settings2 },
+  { id: "contacts", label: "Contacts⏱️", icon: Contact },
+  { id: "settings", label: "Settings⏱️", icon: Settings2 },
 ];
 
 export default function AdminPanel() {
@@ -111,7 +111,8 @@ export default function AdminPanel() {
   useEffect(() => {
     let active = true;
 
-    setInitialLoading(true);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // setInitialLoading(true);
     fetchMalikDashboardData()
       .then((data) => {
         if (!active) return;
@@ -131,9 +132,6 @@ export default function AdminPanel() {
       })
       .catch((err) => {
         console.error(err);
-      })
-      .finally(() => {
-        if (active) setInitialLoading(false);
       });
 
     return () => {

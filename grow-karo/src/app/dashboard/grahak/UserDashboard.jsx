@@ -82,10 +82,12 @@ export default function DashboardPage() {
   };
 
   const { holdings, transactions, graphDataMap } = dashboardData;
-  if (!authUser) {
-    router.push("/auth");
-    return;
-  }
+  useEffect(() => {
+    if (!authUser) {
+      router.replace("/auth");
+    }
+  }, [authUser, router]);
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950 flex flex-col lg:flex-row">
       <Sidebar
@@ -94,7 +96,7 @@ export default function DashboardPage() {
         userEmail={authUser?.email}
         name={authUser?.name}
       />
-      <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex flex-col gap-8 grow">
+      <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-6 sm:pt-8 flex flex-col gap-7 grow">
         {(activeTab === "overview" || activeTab === "portfolio") && (
           <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-2 border-b border-slate-200">
             <div>

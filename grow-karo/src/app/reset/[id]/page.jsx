@@ -4,6 +4,7 @@ import React, { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { resetThePassword } from "../../../../services/grahakService";
 import Link from "next/link";
+import { allRounderMessage } from "@/components/Message";
 
 // Pure, reusable — no reason for these to live inside the component body.
 const PASSWORD_RULES = [
@@ -91,7 +92,7 @@ export default function Page({ params }) {
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setUserId(userId);
-    console.log(email, userId);
+    // console.log(email, userId);
   }, [id, router]);
 
   async function handleSubmit(e) {
@@ -110,6 +111,7 @@ export default function Page({ params }) {
     setStatus("submitting");
     try {
       const res = await resetThePassword(password, userId);
+      allRounderMessage(res);
       if (res.status !== "success") {
         setError(res.message);
       } else {
@@ -121,6 +123,10 @@ export default function Page({ params }) {
     } catch (err) {
       setStatus("error");
       setError(err.message);
+    } finally {
+      setTimeout(() => {
+        setStatus("idle");
+      }, 2000);
     }
   }
 

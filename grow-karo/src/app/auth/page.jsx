@@ -14,14 +14,14 @@ function AuthFormContent() {
 }
 
 const AuthFormWithParams = dynamic(
-  //here we are using dynamic import to load the AuthFormContent component asynchronously. 
+  //here we are using dynamic import to load the AuthFormContent component asynchronously.
   // This is useful for code splitting and improving performance, especially if the AuthFormContent
   //  component is large or has heavy dependencies.
   () => Promise.resolve(AuthFormContent),
   {
     loading: () => <Loader />,
-    ssr: false
-  }
+    ssr: false,
+  },
 );
 
 export default function LoginPage() {
@@ -30,7 +30,7 @@ export default function LoginPage() {
   useEffect(() => {
     //  SAFE: This runs strictly AFTER the component finishes rendering
     if (authUser) {
-      router.push("/dashboard");
+      router.replace("/dashboard");
     }
   }, [authUser, router]); // Run whenever these variables change else
   return (

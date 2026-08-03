@@ -336,19 +336,19 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
               </p>
               {isApproved && (
                 <span className="text-xs font-semibold text-emerald-600 border border-emerald-500 bg-emerald-50 rounded-xl px-2 py-1">
-                  + ₹ {bond.profit} profit on {formatDate(bond.nextPayoutDate)}
+                  Next profit on {formatDate(bond.nextPayoutDate)}
                 </span>
               )}
             </div>
 
-            <div className={`mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3`}>
+            <div className={`mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4`}>
               <DetailField
                 label={isApproved ? "Submit Amount" : "Amount Applied"}
                 value={currency(bond.paidAmount)}
               />
               <DetailField label="Tenure" value={`${bond.tenure} Days`} />
               <DetailField
-                label="Profit %"
+                label="Yeild %"
                 value={
                   bond.profitPercentage != null
                     ? `${bond.profitPercentage}%`
@@ -357,8 +357,9 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
                 highlight={true}
               />
               <DetailField
-                label="Payout Frequency"
-                value={bond.payoutFrequency}
+                label="Profit"
+                value={currency(bond.profit)}
+                highlight={true}
               />
               {isApproved && (
                 <DetailField
@@ -377,6 +378,7 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
                   value={formatDate(bond.paidDate)}
                 />
               )}
+              <DetailField label={"Cycle"} value={bond.payoutFrequency} />
             </div>
           </div>
         </div>

@@ -4,7 +4,18 @@ import { useContext, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { MoveRight, UserRoundKey, Menu, X, Home, LayoutDashboardIcon, NotebookPen, Send, LogOut, ScrollText } from "lucide-react";
+import {
+  MoveRight,
+  UserRoundKey,
+  Menu,
+  X,
+  Home,
+  LayoutDashboardIcon,
+  NotebookPen,
+  Send,
+  LogOut,
+  ScrollText,
+} from "lucide-react";
 import { userContext } from "@/context/UserContext";
 
 export default function Navbar() {
@@ -17,14 +28,18 @@ export default function Navbar() {
         await getUserDataFromContext();
       }
       // console.log("Welcome back, ", authUser?.name)
-    }
+    };
     getUser();
   }, [authUser, getUserDataFromContext]);
 
   // Centralized route definition to eliminate redundancy
   const navLinks = [
     { href: "/", label: "Home", icon: Home },
-    { href: authUser ? "/dashboard" : "/about", label: authUser ? "Dashboard" : "About Us", icon: authUser ? LayoutDashboardIcon : NotebookPen },
+    {
+      href: authUser ? "/dashboard" : "/about",
+      label: authUser ? "Dashboard" : "About Us",
+      icon: authUser ? LayoutDashboardIcon : NotebookPen,
+    },
     { href: "/plan", label: "Scheme", icon: ScrollText },
     { href: "/solution", label: "Solutions", icon: Send },
   ];
@@ -32,15 +47,24 @@ export default function Navbar() {
   return (
     <header className="sticky -top-1 z-50 rounded-3xl border border-slate-100 bg-white/95 backdrop-blur-md p-4 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
       <div className="flex items-center justify-between">
-
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 group">
           <div className="flex h-10 w-10 items-center justify-center rounded-full overflow-hidden bg-slate-100 border border-slate-200/60 shadow-sm transition group-hover:opacity-90">
-            <Image src="/logo.jpg" alt="Logo" width={40} height={40} className="object-cover h-full w-full" />
+            <Image
+              src="/logo.jpg"
+              alt="Logo"
+              width={40}
+              height={40}
+              className="object-contain h-full w-full"
+            />
           </div>
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-700">Groww Karo</p>
-            <p className="text-xs text-slate-500">Trusted investment platform</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-700">
+              Groww Karo
+            </p>
+            <p className="text-[11px] text-slate-500">
+              Premium investment platform
+            </p>
           </div>
         </Link>
 
@@ -52,10 +76,14 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`relative flex items-center gap-1 py-1 transition-colors hover:text-blue-600 ${isActive ? "text-blue-600 font-semibold" : "text-slate-600"
-                  }`}
+                className={`relative flex items-center gap-1 py-1 transition-colors hover:text-blue-600 ${
+                  isActive ? "text-blue-600 font-semibold" : "text-slate-600"
+                }`}
               >
-                <span>{link.icon && <link.icon className="h-5 w-5 lg:h-4 lg:w-4" />}</span> <span className=" lg:block hidden">{link.label}</span>
+                <span>
+                  {link.icon && <link.icon className="h-5 w-5 lg:h-4 lg:w-4" />}
+                </span>{" "}
+                <span className=" lg:block hidden">{link.label}</span>
                 {/* Active indicator bar */}
                 {isActive && (
                   <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-blue-600 transition-all" />
@@ -121,13 +149,16 @@ export default function Navbar() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setIsOpen(false)}
-                className={`flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${isActive
-                  ? "bg-blue-50/60 text-blue-600 font-semibold"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"
-                  }`}
+                className={`flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
+                  isActive
+                    ? "bg-blue-50/60 text-blue-600 font-semibold"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"
+                }`}
               >
                 <span>{link.label}</span>
-                {isActive && <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />}
+                {isActive && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
+                )}
               </Link>
             );
           })}
@@ -173,7 +204,6 @@ export default function Navbar() {
               </Link>
             </div>
           )}
-
         </div>
       )}
     </header>

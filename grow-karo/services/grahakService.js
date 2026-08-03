@@ -193,6 +193,10 @@ export const resetThePassword = async (password, id) => {
   return await resetPassword(password, id);
 };
 
+export async function getUserProfile(userId) {
+  return await fetchUserProfile(userId);
+}
+
 export async function fetchGrahakDashboardData(userId = "me") {
   if (true) {
     return delay(mockGrahakData);
