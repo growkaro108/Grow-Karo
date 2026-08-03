@@ -1,11 +1,9 @@
 package com.growkaro.backend.common;
 
 import java.math.BigDecimal;
-import java.math.MathContext;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.Year;
 import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -16,7 +14,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cglib.core.Local;
 import org.springframework.stereotype.Component;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DRO.UserRegister;
@@ -24,7 +21,6 @@ import com.growkaro.backend.DTO.AuthUserData;
 import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.DTO.UserRequest;
-import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserProfile;
@@ -84,6 +80,12 @@ public class General {
     }
 
     public boolean validatePassword(String password) {
+        // password should be at least 8 characters long and at most 64 characters long
+        // password should contain at least one uppercase letter
+        // password should contain at least one lowercase letter
+        // password should contain at least one digit
+        // password should contain at least one special character
+        // password should not contain any whitespace
         Pattern PASSWORD_PATTERN = Pattern
                 .compile("^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[!@#$%^&*(),.?\":{}|<>])(?=\\S+$).{8,64}$");
         return password != null && PASSWORD_PATTERN.matcher(password).matches();
