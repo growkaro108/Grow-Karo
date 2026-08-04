@@ -47,13 +47,10 @@ const Overview = ({ userData }) => {
     {
       id: "net-worth",
       title: "Total Net Worth",
-      value: `₹ ${(userData?.totalInvestmentAmount ?? 0).toLocaleString(
-        "en-IN",
-        {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        },
-      )}`,
+      value: `₹ ${(userData?.networth ?? 0).toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`,
       badge: "This is pending",
       isPositiveBadge: true,
       imageSrc: "/muscle.png", // Unique decorative asset
@@ -61,13 +58,10 @@ const Overview = ({ userData }) => {
     {
       id: "invested-stocks",
       title: "Invested in Stocks",
-      value: `₹ ${(userData?.totalInvestmentAmount ?? 0).toLocaleString(
-        "en-IN",
-        {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        },
-      )}`,
+      value: `₹ ${(userData?.totalInvestment ?? 0).toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`,
       badge: `Allocated across ${userData?.investedSchemeCount ?? 0} schemes`,
       isPositiveBadge: true,
       imageSrc: "/money.png", // Unique decorative asset
@@ -84,15 +78,15 @@ const Overview = ({ userData }) => {
     //   imageSrc: "/wallet.png", // Unique decorative asset
     // },
     {
-      id: "withdrawal-payments",
-      title: "Withdrawal payments",
-      value: `₹ ${(userData?.remainingPayments ?? 0).toLocaleString("en-IN", {
+      id: "total-profit",
+      title: "Total Profit",
+      value: `₹ ${(userData?.totalProfit ?? 0).toLocaleString("en-IN", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })}`,
-      badge: "withdrawal payment",
+      badge: "Total Profit",
       // isPositiveBadge: true,
-      imageSrc: "/pending.png", // Unique decorative asset
+      imageSrc: "/profit.png", // Unique decorative asset
     },
   ];
 

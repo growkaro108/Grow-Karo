@@ -85,7 +85,7 @@ ChartJS.register(
 );
 
 const NAV_ITEMS = [
-  // { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "activity", label: "Activity Log", icon: Activity },
   { id: "withdrawals", label: "Withdrawals⏱️", icon: Wallet },
   { id: "plans", label: "Plans", icon: ScrollText },
@@ -215,7 +215,7 @@ export default function AdminPanel() {
   };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-slate-950 font-body">
+    <div className="flex h-[87vh] w-full overflow-hidden bg-slate-950 font-body">
       <Sidebar
         active={activeTab}
         onNavigate={handleNavigate}

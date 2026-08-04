@@ -13,6 +13,7 @@ import com.growkaro.backend.DRO.EnrollingUser;
 import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.User;
+import com.growkaro.backend.entity.UserProfile;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.enums.Remark;
 import com.growkaro.backend.service.ApiService;
@@ -198,23 +199,20 @@ public class UserAPIController {
         }
     }
 
-    @GetMapping("/{userId}")
-    public ResponseEntity<Map<String, Object>> userProfile(@PathVariable String userId) {
-        return ResponseEntity.ok(userAPIService.userProfile(userId));
+    
+
+    @PutMapping("/change_password")
+    public ResponseEntity<Map<String, Object>> updateUser(
+            @RequestBody UserProfile userProfile) {
+        return ResponseEntity.ok(userAPIService.updateUser(userProfile));
     }
 
     ///pending
-    @PutMapping("/{userId}")
-    public ResponseEntity<Map<String, Object>> updateUser(
-            @PathVariable String userId,
-            @RequestBody Map<String, Object> updates) {
-        return ResponseEntity.ok(userAPIService.updateUser(userId, updates));
-    }
-
-    @DeleteMapping("/{userId}")
-    public ResponseEntity<Map<String, Object>> deleteUser(@PathVariable String userId) {
-        return ResponseEntity.ok(userAPIService.deleteUser(userId));
-    }
+    // @DeleteMapping("/{userId}")
+    // public ResponseEntity<Map<String, Object>> deleteUser(@PathVariable String
+    // userId) {
+    // return ResponseEntity.ok(userAPIService.deleteUser(userId));
+    // }
 
     // @GetMapping("/{userId}/transactions")
     // public ResponseEntity<Map<String, Object>> userTransactions(

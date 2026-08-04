@@ -8,6 +8,7 @@ import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
@@ -17,10 +18,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DRO.UserRegister;
-import com.growkaro.backend.DTO.AuthUserData;
 import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.DTO.UserRequest;
+import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserProfile;
@@ -97,36 +98,6 @@ public class General {
         response.put("message", message);
         response.put("data", data != null ? data : Map.of());
         return response;
-    }
-
-    public AuthUserData toAuthUserData(User user) {
-        AuthUserData authUserData = new AuthUserData();
-        authUserData.setId(user.getId());
-        authUserData.setName(user.getName());
-        authUserData.setEmail(user.getEmail());
-        authUserData.setPhone(user.getPhone());
-        // user total investment amount
-        List<UserScheme> totalEnrollScheme = user.getEnrolledSchemes();
-        if (totalEnrollScheme != null && !totalEnrollScheme.isEmpty()) {
-            // set total scheme count
-            int investedSchemeCount = totalEnrollScheme.stream()
-                    .filter(us -> us.getIsApproved())
-                    .map(UserScheme::getScheme)
-                    .map(Scheme::getSchemeName)
-                    .collect(Collectors.toSet()).size();
-            authUserData.setInvestedSchemeCount(investedSchemeCount);
-            // set total investment +profit pending
-            BigDecimal totalInvestment = totalEnrollScheme.stream()
-                    .filter(us -> us.getIsApproved())
-                    .map(UserScheme::getPaidAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            authUserData.setTotalInvestmentAmount(totalInvestment);
-
-        } else {
-            authUserData.setTotalInvestmentAmount(BigDecimal.ZERO);
-        }
-
-        return authUserData;
     }
 
     public Scheme toScheme(ReceiveSchemeData schemeData) {
@@ -260,7 +231,44 @@ public class General {
         return idPattern.matcher(id).matches() || newidPattern.matcher(id).matches();
     }
 
-    public UserProfile toUserProfile(User user) {
-        return new UserProfile(user.getName(), user.getEmail(), user.getPhone(), user.getBankDetails());
+    public UserProfile toUserProfile(User user, String token) {
+        BankDetails bankDetails = user.getBankDetails();
+
+        List<UserScheme> totalEnrollScheme = user.getEnrolledSchemes();
+
+        int investedSchemeCount = 0;
+        BigDecimal totalInvestment = BigDecimal.ZERO;
+        BigDecimal totalProfit = BigDecimal.ZERO;
+
+        if (totalEnrollScheme != null && !totalEnrollScheme.isEmpty()) {
+
+            investedSchemeCount = totalEnrollScheme.stream()
+                    .filter(us -> Boolean.TRUE.equals(us.getIsApproved()))
+                    .map(UserScheme::getScheme)
+                    .filter(Objects::nonNull)
+                    .map(Scheme::getSchemeName)
+                    .collect(Collectors.toSet()).size();
+
+            totalInvestment = totalEnrollScheme.stream()
+                    .filter(us -> Boolean.TRUE.equals(us.getIsApproved()))
+                    .map(us -> us.getPaidAmount() != null ? us.getPaidAmount() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            totalProfit = totalEnrollScheme.stream()
+                    .filter(us -> Boolean.TRUE.equals(us.getIsApproved()))
+                    .map(us -> us.getProfit() != null ? us.getProfit() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
+
+        BigDecimal networth = totalInvestment.add(totalProfit);
+        return new UserProfile(user.getId(), user.getName(), user.getEmail(), user.getPhone(),
+                bankDetails.getBankName(),
+                bankDetails.getAccountNumber(),
+                bankDetails.getIfscCode(),
+                bankDetails.getAccountHolderName(), user.isSecurityAlerts(), user.isSchemeAlerts(), token,
+                investedSchemeCount,
+                totalInvestment,
+                totalProfit,
+                networth);
     }
 }

@@ -22,7 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.growkaro.backend.DRO.UserRegister;
-import com.growkaro.backend.DTO.AuthUserData;
 import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.BankDetails;
@@ -135,6 +134,7 @@ public class UserAPIService {
         newUser.setEmail(email);
         newUser.setPhone(phone);
         newUser.setPasswordHash(apiService.makePasswordHash(passwordHash));
+        newUser.setEmailVerified(true);
 
         BankDetails bankDetails = new BankDetails();
         bankDetails.setBankName(stringValue(user.bankName()));
@@ -167,8 +167,8 @@ public class UserAPIService {
             log.error("Invalid email or password for email={}", email);
             return general.response("error", "Invalid email or password", Map.of());
         }
-        AuthUserData finalUser = general.toAuthUserData(user);
-        finalUser.setToken("local-dev-token");
+        String token = "local-dev-token";
+        UserProfile finalUser = general.toUserProfile(user, token);
         activityLogService.log(
                 user.getId(), user.getName(), "USER",
                 ActivityType.LOGIN,
@@ -332,37 +332,50 @@ public class UserAPIService {
         }
     }
 
-    // @Cacheable(value = "userProfile", key = "#userId")
-    @Transactional(readOnly = true)
-    public Map<String, Object> userProfile(String userId) {
+    @CachePut(value = "userProfile", key = "#up.id()")
+    @Transactional
+    public Map<String, Object> updateUser(UserProfile up) {
+        // create new token
+        String token = "local-dev-token";
 
-        User user = getUserById(userId);
+        User user = getUserById(up.id());
         if (user == null) {
-            return general.response("error", "Invalid requests...", Map.of("id", userId));
+            return general.response("error", "Invalid requests...", Map.of("id", up.id()));
         }
-        try {
-            UserProfile userProfile = general.toUserProfile(user);
-            return general.response("success", "User profile fetched successfully", userProfile);
 
-        } catch (Exception e) {
-            log.error("Error fetching user profile for user {}", userId, e);
-            return general.response("error", "Failed to fetch user profile. Please try again.", null);
+        if (!up.bankName().trim().isEmpty()
+                && !up.accountHolderName().trim().isEmpty()
+                && !up.accountNumber().trim().isEmpty()
+                && !up.ifscCode().trim().isEmpty()) {
+
+            // Reuse the existing bank_details row if the user already has one —
+            // user_id is unique, so always creating `new BankDetails()` would
+            // violate that constraint on the second save.
+            BankDetails bankDetails = user.getBankDetails();
+            if (bankDetails == null) {
+                bankDetails = new BankDetails();
+                bankDetails.setUser(user); // add new bank details
+            }
+
+            bankDetails.setBankName(up.bankName());
+            bankDetails.setAccountHolderName(up.accountHolderName());
+            bankDetails.setAccountNumber(up.accountNumber());
+            bankDetails.setIfscCode(up.ifscCode());
+
+            user.setBankDetails(bankDetails);
         }
+
+        user.setName(up.name());
+        user.setPhone(up.phone());
+        user.setEmail(up.email());
+        user.setSchemeAlerts(up.schemeAlerts());
+        user.setSecurityAlerts(up.securityAlerts());
+        userRepository.save(user);
+
+        return general.response("success", "User updated successfully", general.toUserProfile(user, token));
     }
 
     //// pending
-    @CachePut(value = "userProfile", key = "#userId")
-    @Transactional
-    public Map<String, Object> updateUser(String userId, Map<String, Object> updates) {
-        User user = getUserById(userId);
-        if (user == null) {
-            return general.response("error", "Invalid requests...", Map.of("id", userId));
-        }
-
-        applyUserUpdates(user, updates);
-        return general.response("ok", "User updated successfully", toUserProfile(userRepository.save(user)));
-    }
-
     @Caching(evict = {
             @CacheEvict(value = "userProfile", key = "#userId"),
             @CacheEvict(value = "userTransactions", allEntries = true),
@@ -512,34 +525,6 @@ public class UserAPIService {
         data.put("totalPages", page.getTotalPages());
         data.put("totalItems", page.getTotalElements());
         return data;
-    }
-
-    private void applyUserUpdates(User user, Map<String, Object> updates) {
-        if (updates.containsKey("name")) {
-            user.setName(stringValue(updates.get("name")));
-        }
-        if (updates.containsKey("email")) {
-            String newEmail = stringValue(updates.get("email"));
-            if (newEmail != null && !newEmail.equalsIgnoreCase(user.getEmail()) && isUserExists(newEmail)) {
-                throw new IllegalArgumentException("Email already in use");
-            }
-            user.setEmail(newEmail);
-        }
-        if (updates.containsKey("phone")) {
-            user.setPhone(stringValue(updates.get("phone")));
-        }
-        if (updates.containsKey("bankName")) {
-            user.getBankDetails().setBankName(stringValue(updates.get("bankName")));
-        }
-        if (updates.containsKey("accountHolderName")) {
-            user.getBankDetails().setAccountHolderName(stringValue(updates.get("accountHolderName")));
-        }
-        if (updates.containsKey("accountNumber")) {
-            user.getBankDetails().setAccountNumber(stringValue(updates.get("accountNumber")));
-        }
-        if (updates.containsKey("ifscCode")) {
-            user.getBankDetails().setIfscCode(stringValue(updates.get("ifscCode")));
-        }
     }
 
     private Pageable pageable(String page) {

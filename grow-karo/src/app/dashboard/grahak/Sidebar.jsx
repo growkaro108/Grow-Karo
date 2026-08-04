@@ -10,7 +10,7 @@ export default function Sidebar({ activeTab, setActiveTab, userEmail, name }) {
   const menuItems = [
     { id: "overview", label: "Overview", icon: "📊" },
     { id: "portfolio", label: "Portfolio", icon: "💼" },
-    // { id: "transactions", label: "Transactions", icon: "💳" },
+    { id: "transactions", label: "Transactions", icon: "💳" },
     // { id: "history", label: "History", icon: "⏱️" },
     { id: "settings", label: "Settings", icon: "⚙️" },
   ];

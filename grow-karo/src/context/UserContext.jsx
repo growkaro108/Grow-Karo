@@ -16,6 +16,7 @@ export const UserProvider = ({ children }) => {
   const [authUser, setAuthUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const { showLoader, hideLoader } = useLoader();
+
   const router = useRouter();
 
   const logout = useCallback(async () => {
@@ -55,7 +56,7 @@ export const UserProvider = ({ children }) => {
     } finally {
       hideLoader();
     }
-  }, [authUser, router]);
+  }, [authUser, hideLoader, router, showLoader]);
 
   const getUserDataFromContext = useCallback(async () => {
     if (authUser !== null) return authUser;
@@ -77,7 +78,7 @@ export const UserProvider = ({ children }) => {
       logout,
       getUserDataFromContext,
     }),
-    [authUser, getUserDataFromContext, logout],
+    [authUser, getUserDataFromContext, isLoading, logout],
   );
   return (
     <userContext.Provider value={contexValue}>{children}</userContext.Provider>

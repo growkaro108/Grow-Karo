@@ -4,14 +4,7 @@
 /* two views stay visually + semantically in sync.       */
 /* ---------------------------------------------------- */
 
-export const PROCESS_FILTERS = [
-  { id: "all", label: "All" },
-  { id: "deposit", label: "Deposit" },
-  { id: "withdrawal", label: "Withdrawal" },
-  { id: "signup", label: "Signup" },
-  { id: "kyc", label: "KYC" },
-  // { id: "referral", label: "Referral" },
-];
+export const PROCESS_FILTERS = [{ id: "all", label: "All" }];
 
 export const STATUS_FILTERS = [
   { id: "all", label: "All" },
@@ -60,7 +53,8 @@ export const BACKEND_TYPE_TO_UI_TYPE = {
 export function normalizeStatus(rawStatus) {
   if (!rawStatus) return undefined;
   const s = rawStatus.toString().toLowerCase();
-  if (["completed", "approved", "success", "successful"].includes(s)) return "completed";
+  if (["completed", "approved", "success", "successful"].includes(s))
+    return "completed";
   if (["pending", "requested"].includes(s)) return "pending";
   if (["processing", "in_progress"].includes(s)) return "processing";
   return s;
@@ -97,7 +91,10 @@ export function mapBackendLog(log) {
   let metadata = {};
   if (log.metadata) {
     try {
-      metadata = typeof log.metadata === "string" ? JSON.parse(log.metadata) : log.metadata;
+      metadata =
+        typeof log.metadata === "string"
+          ? JSON.parse(log.metadata)
+          : log.metadata;
     } catch {
       metadata = {};
     }
@@ -107,7 +104,9 @@ export function mapBackendLog(log) {
     id: log.id,
     name: log.actorName,
     text: log.description?.replace(log.actorName, "").trim() || log.description,
-    type: BACKEND_TYPE_TO_UI_TYPE[log.type] ?? (log.type ? String(log.type).toLowerCase() : "unknown"),
+    type:
+      BACKEND_TYPE_TO_UI_TYPE[log.type] ??
+      (log.type ? String(log.type).toLowerCase() : "unknown"),
     status: normalizeStatus(metadata.status),
     amount:
       metadata.amount !== undefined

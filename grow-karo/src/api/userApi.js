@@ -75,14 +75,14 @@ export async function fetchUserProfile(userId) {
   return apiRequest(`/user/${userId}`);
 }
 
-//pendingg
-export async function updateUserProfile(userId, updates) {
-  return apiRequest(`/users/${userId}`, {
+export async function updateUserProfile(updates) {
+  return apiRequest(`/user/change_password`, {
     method: "PUT",
     body: updates,
   });
 }
 
+//pendingg
 export async function fetchUserTransactions(userId, params) {
   return apiRequest(`/users/${userId}/transactions`, { params });
 }

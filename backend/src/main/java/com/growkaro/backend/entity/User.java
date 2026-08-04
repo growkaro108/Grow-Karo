@@ -25,7 +25,7 @@ public class User {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false, unique = true)
+    @Column(updatable = false, nullable = false, unique = true)
     private String email;
 
     @Column(nullable = false, unique = true)
@@ -61,6 +61,13 @@ public class User {
     @Column(nullable = false)
     private boolean phoneVerified = false;
 
+    // Alerts
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean securityAlerts = true;
+
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean schemeAlerts = true;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = getTime();
 
@@ -68,7 +75,7 @@ public class User {
 
     @PrePersist
     protected void onCreate() {
-        this.id = "GKUSID" + getTime().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        this.id = "GKUID" + getTime().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
     }
 
     @PreUpdate
