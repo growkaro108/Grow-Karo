@@ -17,46 +17,42 @@ public interface TransactionRepository extends JpaRepository<Transaction, String
 
     // ── Per-user queries ─────────────────────────────────────────────────────
 
-    Page<Transaction> findByUserId(String userId, Pageable pageable);
+    // Page<Transaction> findByUserId(String userId, Pageable pageable);
 
-    Page<Transaction> findByUserIdAndStatus(String userId, Transaction.Status status, Pageable pageable);
+    // Page<Transaction> findByUserIdAndStatus(String userId, Transaction.Status
+    // status, Pageable pageable);
 
-    List<Transaction> findByUserIdAndCreatedAtBetween(String userId, LocalDateTime from, LocalDateTime to);
+    // List<Transaction> findByUserIdAndCreatedAtBetween(String userId,
+    // LocalDateTime from, LocalDateTime to);
 
     // ── Per-remitter queries ─────────────────────────────────────────────────
 
-    Page<Transaction> findByRemitterId(String remitterId, Pageable pageable);
-
-    Page<Transaction> findByRemitterIdAndStatus(String remitterId, Transaction.Status status, Pageable pageable);
-
-    List<Transaction> findByRemitterIdAndCreatedAtBetween(String remitterId, LocalDateTime from, LocalDateTime to);
+    // Page<Transaction> findByRemitterIdAndStatus(String remitterId,
+    // Transaction.Status status, Pageable pageable);
 
     // ── Status filters ───────────────────────────────────────────────────────
 
-    Page<Transaction> findByStatus(Transaction.Status status, Pageable pageable);
+    // Page<Transaction> findByStatus(Transaction.Status status, Pageable pageable);
 
-    long countByStatus(Transaction.Status status);
+    // long countByStatus(Transaction.Status status);
 
     // ── Aggregates for dashboards ─────────────────────────────────────────────
 
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.user.id = :userId AND t.status = 'SUCCESS'")
-    BigDecimal sumSuccessfulAmountByUser(@Param("userId") String userId);
+    // @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.user.id
+    // = :userId AND t.status = 'SUCCESS'")
+    // BigDecimal sumSuccessfulAmountByUser(@Param("userId") String userId);
 
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.remitter.id = :remitterId AND t.status = 'SUCCESS'")
-    BigDecimal sumSuccessfulAmountByRemitter(@Param("remitterId") String remitterId);
-
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.status = 'SUCCESS' AND t.createdAt BETWEEN :from AND :to")
-    BigDecimal sumSuccessfulAmountBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+    // @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.status =
+    // 'SUCCESS' AND t.createdAt BETWEEN :from AND :to")
+    // BigDecimal sumSuccessfulAmountBetween(@Param("from") LocalDateTime from,
+    // @Param("to") LocalDateTime to);
 
     // ── Count stats ───────────────────────────────────────────────────────────
 
-    long countByUserId(String userId);
+    // long countByUserId(String userId);
 
-    long countByRemitterId(String remitterId);
-
-    long countByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
+    // long countByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
 
     // ── Reference ID lookup ───────────────────────────────────────────────────
 
-    java.util.Optional<Transaction> findByReferenceId(String referenceId);
 }

@@ -137,10 +137,11 @@ public class AdminAPIController {
         return adminAPIService.getAllStoredActivityTypes();
     }
 
-    @GetMapping("/dashboard")
-    public ResponseEntity<Map<String, Object>> adminDashboard(@RequestParam(required = false) String range) {
-        return ResponseEntity.ok(adminAPIService.adminDashboard(range));
-    }
+    // @GetMapping("/dashboard")
+    // public ResponseEntity<Map<String, Object>>
+    // adminDashboard(@RequestParam(required = false) String range) {
+    // return ResponseEntity.ok(adminAPIService.adminDashboard(range));
+    // }
 
     @GetMapping("/withdrawals")
     public ResponseEntity<Map<String, Object>> withdrawals(@RequestParam(required = false) String status) {
@@ -173,14 +174,16 @@ public class AdminAPIController {
         return ResponseEntity.ok(adminAPIService.createRemitter(payload));
     }
 
-    @GetMapping("/fundraiser-codes")
-    public ResponseEntity<Map<String, Object>> fundraiserCodes(@RequestParam(required = false) String page) {
-        return ResponseEntity.ok(adminAPIService.fundraiserCodes(page));
-    }
+    // @GetMapping("/fundraiser-codes")
+    // public ResponseEntity<Map<String, Object>>
+    // fundraiserCodes(@RequestParam(required = false) String page) {
+    // return ResponseEntity.ok(adminAPIService.fundraiserCodes(page));
+    // }
 
-    @PostMapping("/fundraiser-codes")
-    public ResponseEntity<Map<String, Object>> createFundraiserCode(@RequestBody Map<String, Object> payload) {
-        return ResponseEntity.ok(adminAPIService.createFundraiserCode(payload));
-    }
+    // @PostMapping("/fundraiser-codes")
+    // public ResponseEntity<Map<String, Object>> createFundraiserCode(@RequestBody
+    // Map<String, Object> payload) {
+    // return ResponseEntity.ok(adminAPIService.createFundraiserCode(payload));
+    // }
 
 }

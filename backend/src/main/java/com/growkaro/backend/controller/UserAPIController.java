@@ -205,7 +205,23 @@ public class UserAPIController {
         return ResponseEntity.ok(userAPIService.updateUser(userProfile));
     }
 
-    ///pending
+    @PostMapping("/withdraw")
+    public ResponseEntity<Map<String, Object>> withdraw(@RequestBody Map<String, Object> payload) {
+        String userId = general.stringValue(payload.get("userId"));
+        String schemeId = general.stringValue(payload.get("schemeId"));
+        String amount = general.stringValue(payload.get("amount"));
+        try {
+            if (userId.isBlank() || general.isValidId(userId) || schemeId.isBlank() || amount.isBlank()) {
+                return ResponseEntity.badRequest().body(general.response("error", "Invalid data...", null));
+            }
+            return ResponseEntity.ok(userAPIService.withdrawAmount(userId, schemeId, amount));
+        } catch (Exception e) {
+            log.error("Error withdrawing from scheme {} for user {} with amount {}", schemeId, userId, amount, e);
+            return ResponseEntity.internalServerError().body(general.response("error", "Internal Server error", null));
+        }
+    }
+
+    /// pending
     // @DeleteMapping("/{userId}")
     // public ResponseEntity<Map<String, Object>> deleteUser(@PathVariable String
     // userId) {
@@ -222,19 +238,6 @@ public class UserAPIController {
     @GetMapping("/{userId}/notifications")
     public ResponseEntity<Map<String, Object>> userNotifications(@PathVariable String userId) {
         return ResponseEntity.ok(userAPIService.userNotifications(userId));
-    }
-
-    @PutMapping("/{userId}/password")
-    public ResponseEntity<Map<String, Object>> changePassword(
-            @PathVariable String userId,
-            @RequestBody Map<String, String> passwordPayload) {
-        String oldPassword = passwordPayload.get("oldPassword");
-        String newPassword = passwordPayload.get("newPassword");
-
-        if (oldPassword == null || newPassword == null || !general.validatePassword(newPassword)) {
-            return ResponseEntity.badRequest().body(general.response("error", "Invalid password data", null));
-        }
-        return ResponseEntity.ok(userAPIService.changePassword(userId, oldPassword, newPassword));
     }
 
     @PostMapping("/{userId}/notifications/read")

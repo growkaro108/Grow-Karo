@@ -392,6 +392,10 @@ public class UserAPIService {
         return general.response("success", "User updated successfully", general.toUserProfile(user, token));
     }
 
+    public Map<String, Object> withdrawAmount(String userId, String schemeId, String amount) {
+        return null;
+    }
+
     //// pending
     @Caching(evict = {
             @CacheEvict(value = "userProfile", key = "#userId"),
@@ -410,18 +414,21 @@ public class UserAPIService {
         return general.response("ok", "User deactivated", Map.of("id", user.getId()));
     }
 
-    @Cacheable(value = "userTransactions", key = "#userId + ':' + (#page != null ? #page : '1')")
-    @Transactional(readOnly = true)
-    public Map<String, Object> userTransactions(String userId, String page) {
-        User user = getUserById(userId);
-        if (user == null) {
-            return general.response("error", "Invalid requests...", Map.of("id", userId));
-        }
+    // @Cacheable(value = "userTransactions", key = "#userId + ':' + (#page != null
+    // ? #page : '1')")
+    // @Transactional(readOnly = true)
+    // public Map<String, Object> userTransactions(String userId, String page) {
+    // User user = getUserById(userId);
+    // if (user == null) {
+    // return general.response("error", "Invalid requests...", Map.of("id",
+    // userId));
+    // }
 
-        Page<Transaction> transactions = transactionRepository.findByUserId(user.getId(), pageable(page));
-        return general.response("ok", "User transactions fetched",
-                paginatedTransactions(transactions, "clientId", user.getId()));
-    }
+    // Page<Transaction> transactions =
+    // transactionRepository.findByUserId(user.getId(), pageable(page));
+    // return general.response("ok", "User transactions fetched",
+    // paginatedTransactions(transactions, "clientId", user.getId()));
+    // }
 
     @Cacheable(value = "userNotifications", key = "#userId")
     @Transactional(readOnly = true)
@@ -437,24 +444,6 @@ public class UserAPIService {
         data.put("unreadCount", notificationRepository.countByUserIdAndRead(user.getId(), false));
         data.put("items", notifications.getContent().stream().map(this::toNotificationView).toList());
         return general.response("ok", "User notifications fetched", data);
-    }
-
-    @CacheEvict(value = "userProfile", key = "#userId")
-    @Transactional
-    public Map<String, Object> changePassword(String userId, String oldPassword, String newPassword) {
-        User user = getUserById(userId);
-        if (user == null) {
-            return general.response("error", "Invalid requests...", Map.of("id", userId));
-        }
-        if (oldPassword == null || newPassword == null || !general.validatePassword(newPassword)) {
-            return general.response("error", "Invalid password data", null);
-        }
-        if (!BCrypt.checkpw(oldPassword, user.getPasswordHash())) {
-            return general.response("error", "Old password is incorrect", Map.of("id", user.getId()));
-        }
-        user.setPasswordHash(apiService.makePasswordHash(newPassword));
-        userRepository.save(user);
-        return general.response("ok", "Password changed successfully", Map.of("id", user.getId()));
     }
 
     @CacheEvict(value = "userNotifications", key = "#userId")
@@ -477,53 +466,36 @@ public class UserAPIService {
                 Map.of("userId", userId, "settings", settings));
     }
 
-    private Map<String, Object> toUserProfile(User user) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("id", user.getId());
-        data.put("name", user.getName());
-        data.put("email", user.getEmail());
-        data.put("phone", user.getPhone());
-        data.put("bankName", user.getBankDetails().getBankName());
-        data.put("accountHolderName", user.getBankDetails().getAccountHolderName());
-        data.put("accountNumber", user.getBankDetails().getAccountNumber());
-        data.put("ifscCode", user.getBankDetails().getIfscCode());
-        data.put("role", user.getRole());
-        data.put("active", user.isActive());
-        data.put("emailVerified", user.isEmailVerified());
-        data.put("phoneVerified", user.isPhoneVerified());
-        data.put("createdAt", user.getCreatedAt());
-        data.put("updatedAt", user.getUpdatedAt());
-        return data;
-    }
+    // private Map<String, Object> paginatedTransactions(Page<Transaction> page,
+    // String ownerKey, String ownerId) {
+    // Map<String, Object> data = paginatedMeta(page);
+    // data.put(ownerKey, ownerId);
+    // data.put("items",
+    // page.getContent().stream().map(this::toTransactionView).toList());
+    // return data;
+    // }
 
-    private Map<String, Object> paginatedTransactions(Page<Transaction> page, String ownerKey, String ownerId) {
-        Map<String, Object> data = paginatedMeta(page);
-        data.put(ownerKey, ownerId);
-        data.put("items", page.getContent().stream().map(this::toTransactionView).toList());
-        return data;
-    }
-
-    private Map<String, Object> toTransactionView(Transaction transaction) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("id", transaction.getId());
-        data.put("amount", transaction.getAmount());
-        data.put("status", transaction.getStatus());
-        data.put("referenceId", transaction.getReferenceId());
-        data.put("description", transaction.getRemarks());
-        data.put("remarks", transaction.getRemarks());
-        data.put("date", transaction.getCreatedAt());
-        data.put("createdAt", transaction.getCreatedAt());
-        data.put("updatedAt", transaction.getUpdatedAt());
-        if (transaction.getRemitter() != null) {
-            data.put("remitterId", transaction.getRemitter().getId());
-            data.put("remitterName", transaction.getRemitter().getOrganizationName());
-        }
-        if (transaction.getRecipient() != null) {
-            data.put("recipientId", transaction.getRecipient().getId());
-            data.put("recipientName", transaction.getRecipient().getName());
-        }
-        return data;
-    }
+    // private Map<String, Object> toTransactionView(Transaction transaction) {
+    // Map<String, Object> data = new LinkedHashMap<>();
+    // data.put("id", transaction.getId());
+    // data.put("amount", transaction.getAmount());
+    // data.put("status", transaction.getStatus());
+    // data.put("referenceId", transaction.getReferenceId());
+    // data.put("description", transaction.getRemarks());
+    // data.put("remarks", transaction.getRemarks());
+    // data.put("date", transaction.getCreatedAt());
+    // data.put("createdAt", transaction.getCreatedAt());
+    // data.put("updatedAt", transaction.getUpdatedAt());
+    // if (transaction.getRemitter() != null) {
+    // data.put("remitterId", transaction.getRemitter().getId());
+    // data.put("remitterName", transaction.getRemitter().getOrganizationName());
+    // }
+    // if (transaction.getRecipient() != null) {
+    // data.put("recipientId", transaction.getRecipient().getId());
+    // data.put("recipientName", transaction.getRecipient().getName());
+    // }
+    // return data;
+    // }
 
     private Map<String, Object> toNotificationView(Notification notification) {
         Map<String, Object> data = new LinkedHashMap<>();

@@ -11,6 +11,7 @@ import {
   Maximize2,
   Trash2,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { TableRowLoader } from "@/loader/TableRowLoader";
 import {
@@ -418,9 +419,7 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
   );
 }
 
-export default function Portfolio({ holdings = [] }) {
-  const [holding, setHolding] = useState(holdings);
-  const [loading, setLoading] = useState(false);
+export default function Portfolio({ holding, refresh, loading }) {
   const [selectedBond, setSelectedBond] = useState(null);
   const [lightboxBond, setLightboxBond] = useState(null);
   const { authUser } = use(userContext);
@@ -438,42 +437,7 @@ export default function Portfolio({ holdings = [] }) {
   const openDetails = useCallback((bond) => setSelectedBond(bond), []);
   const closeDetails = useCallback(() => setSelectedBond(null), []);
   const openLightbox = useCallback((bond) => setLightboxBond(bond), []);
-  const closeLightbox = useCallback(() => setLightboxBond(null), []);
-  const fetchHoldings = useCallback(async () => {
-    const userId = authUser?.id;
-    if (!userId) return;
-    try {
-      setLoading(true);
-      const response = await getAllUsersScheme(userId);
-      // console.log(response.data);
-      if (response.status === "success" && response.data) {
-        setHolding(response.data);
-      } else {
-        allRounderMessage(response);
-        setHolding([]);
-      }
-    } catch (error) {
-      errorMessage("something went wrong");
-      setHolding([]);
-      console.error("Error fetching holdings:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [authUser?.id]); // Fixed dependency here
-
-  useEffect(() => {
-    let isMounted = true;
-
-    // Only update state if the component hasn't unmounted or user hasn't switched mid-request
-    if (isMounted) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      fetchHoldings();
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [fetchHoldings]);
+  const closeLightbox = useCallback(() => setLightboxBond(null), []); // Fixed dependency here
   // Handle asset withdrawal
   const handleWithdrawRequest = useCallback(
     async (userSchemeId) => {
@@ -483,14 +447,14 @@ export default function Portfolio({ holdings = [] }) {
         allRounderMessage(response);
 
         if (response.status === "success") {
-          await fetchHoldings();
+          await refresh();
           setSelectedBond(null);
         }
       } catch (error) {
         console.error("Failed to withdraw application:", error);
       }
     },
-    [fetchHoldings, authUser],
+    [authUser, refresh],
   );
 
   return (
@@ -503,10 +467,25 @@ export default function Portfolio({ holdings = [] }) {
           onWithdraw={handleWithdrawRequest}
         />
       ) : (
-        <div className="p-6 bg-white rounded-xl shadow-sm border border-slate-100">
-          <h3 className="text-lg font-semibold" style={{ color: "#1e293b" }}>
-            Your Bond Holdings
-          </h3>
+        <div className="p-6 bg-white rounded-xl shadow-sm border border-slate-100 ">
+          <div className="flex justify-between">
+            {" "}
+            <h3 className="text-lg font-semibold" style={{ color: "#1e293b" }}>
+              Your Bond Holdings
+            </h3>{" "}
+            {/* //refesh button */}
+            <button
+              onClick={refresh}
+              className="flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-4 py-2 text-sm font-semibold text-indigo-600 transition-all duration-200 hover:bg-indigo-50 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            >
+              {loading ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <RefreshCw size={16} />
+              )}
+              {loading ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
           <p className="text-sm mt-1 mb-4" style={{ color: "#64748b" }}>
             Click a row for full details, or click the image to view it
             full-size

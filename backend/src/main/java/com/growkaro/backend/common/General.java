@@ -34,8 +34,29 @@ public class General {
     @Value("${frontend.url}")
     private String baseUrl;
 
+    public boolean isValidId(String id) {
+        Pattern idPattern = Pattern.compile("^GKUSID\\d{14}$");
+        Pattern newidPattern = Pattern.compile("^GKUID\\d{14}$");
+        if (id == null) {
+            return false;
+        }
+        return idPattern.matcher(id).matches() || newidPattern.matcher(id).matches();
+    }
+
     public boolean validateEmail(String email) {
         return email != null && EMAIL_PATTERN.matcher(email).matches();
+    }
+
+    public boolean validatePassword(String password) {
+        // password should be at least 8 characters long and at most 64 characters long
+        // password should contain at least one uppercase letter
+        // password should contain at least one lowercase letter
+        // password should contain at least one digit
+        // password should contain at least one special character
+        // password should not contain any whitespace
+        Pattern PASSWORD_PATTERN = Pattern
+                .compile("^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[!@#$%^&*(),.?\":{}|<>])(?=\\S+$).{8,64}$");
+        return password != null && PASSWORD_PATTERN.matcher(password).matches();
     }
 
     // generate exactly 6 digit otp
@@ -78,18 +99,6 @@ public class General {
         }
         String text = value.toString().trim();
         return text.isEmpty() ? null : text;
-    }
-
-    public boolean validatePassword(String password) {
-        // password should be at least 8 characters long and at most 64 characters long
-        // password should contain at least one uppercase letter
-        // password should contain at least one lowercase letter
-        // password should contain at least one digit
-        // password should contain at least one special character
-        // password should not contain any whitespace
-        Pattern PASSWORD_PATTERN = Pattern
-                .compile("^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[!@#$%^&*(),.?\":{}|<>])(?=\\S+$).{8,64}$");
-        return password != null && PASSWORD_PATTERN.matcher(password).matches();
     }
 
     public Map<String, Object> response(String status, String message, Object data) {
@@ -222,15 +231,6 @@ public class General {
 
     public String generateResetLink(String email, String userId) {
         return baseUrl + "/reset/" + email + "-" + userId;
-    }
-
-    public boolean isValidId(String id) {
-        Pattern idPattern = Pattern.compile("^GKUSID\\d{14}$");
-        Pattern newidPattern = Pattern.compile("^GKUID\\d{14}$");
-        if (id == null) {
-            return false;
-        }
-        return idPattern.matcher(id).matches() || newidPattern.matcher(id).matches();
     }
 
     public UserProfile toUserProfile(User user, String token) {

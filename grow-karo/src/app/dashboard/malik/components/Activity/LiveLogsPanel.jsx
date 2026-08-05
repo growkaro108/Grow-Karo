@@ -3,7 +3,7 @@ import { AlertTriangle } from "lucide-react";
 import { STATUS_FILTERS, TYPE_DOT, mapBackendLog } from "./activityLogShared";
 import { StatusBadge } from "../StatusBadge";
 import { useEventStream } from "@/api/useEventStream";
-import Filter from "./Filter";
+import { Filter } from "./Filter";
 
 const MAX_LIVE_EVENTS = 100; // cap in-memory feed so the tab doesn't grow unbounded over a long session
 

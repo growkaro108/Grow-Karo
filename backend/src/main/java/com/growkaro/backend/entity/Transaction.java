@@ -1,11 +1,36 @@
 package com.growkaro.backend.entity;
 
-import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 @Entity
-@Table(name = "transactions")
+@Table(name = "transactions", indexes = {
+        @Index(name = "idx_transactions_user_id", columnList = "user_id"),
+        @Index(name = "idx_transactions_user_status", columnList = "user_id, status")
+})
 public class Transaction {
 
     @Id
@@ -16,65 +41,60 @@ public class Transaction {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "remitter_id")
-    private Remitter remitter;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "recipient_id")
-    private Recipient recipient;
-
+    // Gross amount requested (scheme amount for aggressive, typed amount for
+    // general)
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
 
+    @Column(nullable = true, length = 100)
+    private String schemeName; // or @ManyToOne to a Scheme entity if schemes live in the DB
+
+    // Only populated for AGGRESSIVE_WITHDRAWAL
+    @Column(precision = 12, scale = 2)
+    private BigDecimal penaltyAmount = BigDecimal.ZERO;
+
+    // amount - penaltyAmount; null for GENERAL_WITHDRAWAL and DEPOSIT
+    // @Column(precision = 12, scale = 2)
+    // private BigDecimal netAmount;
+
+    // Bank details snapshot at time of request — not a live reference to the user's
+    // profile
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "bank_details_id", referencedColumnName = "bank_details_id", nullable = false)
+    private BankDetails bankDetails;
+
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Status status = Status.PENDING;
+    @Column(nullable = false, length = 20)
+    private TransactionStatus status = TransactionStatus.PENDING;
 
-    private String referenceId;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private TransactionType type = TransactionType.GENERAL_WITHDRAWAL;
 
-    private String remarks;
+    private String failureReason;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "approved_by")
+    private User approvedBy;
+
+    @Version
+    private Long version;
+
+    @CreationTimestamp
     @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
 
-    private LocalDateTime updatedAt = LocalDateTime.now();
+    @UpdateTimestamp
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
 
-    @PreUpdate
-    public void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    public enum Status {
+    public enum TransactionStatus {
         PENDING, SUCCESS, FAILED, REFUNDED
     }
 
-    // ── Getters & Setters ────────────────────────────────────────────────────
-
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
-
-    public Remitter getRemitter() { return remitter; }
-    public void setRemitter(Remitter remitter) { this.remitter = remitter; }
-
-    public Recipient getRecipient() { return recipient; }
-    public void setRecipient(Recipient recipient) { this.recipient = recipient; }
-
-    public BigDecimal getAmount() { return amount; }
-    public void setAmount(BigDecimal amount) { this.amount = amount; }
-
-    public Status getStatus() { return status; }
-    public void setStatus(Status status) { this.status = status; }
-
-    public String getReferenceId() { return referenceId; }
-    public void setReferenceId(String referenceId) { this.referenceId = referenceId; }
-
-    public String getRemarks() { return remarks; }
-    public void setRemarks(String remarks) { this.remarks = remarks; }
-
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public enum TransactionType {
+        GENERAL_WITHDRAWAL,
+        AGGRESSIVE_WITHDRAWAL,
+        DEPOSIT
+    }
 }

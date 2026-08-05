@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useCallback } from "react";
 import Sidebar from "./Sidebar";
 import dynamic from "next/dynamic";
-import { fetchGrahakDashboardData } from "../../../../services/grahakService";
+import {
+  fetchGrahakDashboardData,
+  getAllUsersScheme,
+} from "../../../../services/grahakService";
 import { userContext } from "@/context/UserContext";
 import TabLoader from "../../../loader/TabLoader";
 import { useRouter } from "next/navigation";
+import { allRounderMessage, errorMessage } from "@/components/Message";
 
 const Overview = dynamic(() => import("./Overview"), {
   loading: () => <TabLoader />,
@@ -33,6 +37,10 @@ export default function DashboardPage() {
   const [balance, setBalance] = useState(0);
   const [portfolioValue, setPortfolioValue] = useState(0);
   const [activeTab, setActiveTab] = useState("overview");
+  // const [withdrawData, setWithdrawData] = useState();
+  const [holding, setHolding] = useState();
+
+  const [withdrawType, setWithdrawType] = useState("general");
   const { authUser } = use(userContext);
   const router = useRouter();
 
@@ -75,18 +83,47 @@ export default function DashboardPage() {
     };
   }, []);
 
-  const handleDeposit = () => {
-    const amount = prompt("Enter deposit amount:");
-    if (amount && !isNaN(amount))
-      setBalance((prev) => prev + parseFloat(amount));
-  };
+  function openAggressiveWithdrawal() {
+    // setWithdrawData(holding);
+    setWithdrawType("aggressive");
+    setActiveTab("withdraw");
+  }
+
+  function openGeneralWithdrawModal() {
+    // setWithdrawData(authUser);
+    setWithdrawType("general");
+    setActiveTab("withdraw");
+  }
+  const fetchHoldings = useCallback(async () => {
+    const userId = authUser?.id;
+    if (!userId) return;
+    try {
+      setLoading(true);
+      const response = await getAllUsersScheme(userId);
+      // console.log(response.data);
+      if (response.status === "success" && response.data) {
+        setHolding(response.data);
+      } else {
+        allRounderMessage(response);
+        setHolding([]);
+      }
+    } catch (error) {
+      errorMessage("something went wrong");
+      setHolding([]);
+      console.error("Error fetching holdings:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [authUser?.id]);
 
   const { holdings, transactions, graphDataMap } = dashboardData;
   useEffect(() => {
     if (!authUser) {
       router.replace("/auth");
     }
-  }, [authUser, router]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchHoldings();
+  }, [authUser, fetchHoldings, router]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950 flex flex-col lg:flex-row">
@@ -110,16 +147,16 @@ export default function DashboardPage() {
 
             <div className="flex gap-3 w-full sm:w-auto">
               <button
-                onClick={handleDeposit}
-                className="flex-1 sm:flex-none text-center bg-slate-950 text-white hover:bg-slate-800 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm"
+                onClick={() => openAggressiveWithdrawal()}
+                className="flex-1 sm:flex-none text-center bg-red-600 text-white hover:bg-red-700 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm cursor-pointer"
               >
-                Deposit Funds
+                Agresive Withdraw
               </button>
               <button
-                onClick={() => setActiveTab("withdraw")}
-                className="flex-1 sm:flex-none text-center bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm"
+                onClick={() => openGeneralWithdrawModal()}
+                className="flex-1 sm:flex-none text-center bg-green-500 text-white hover:bg-green-600 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm cursor-pointer"
               >
-                Withdraw
+                General Withdraw
               </button>
             </div>
           </header>
@@ -138,12 +175,19 @@ export default function DashboardPage() {
             {activeTab === "overview" && <Overview userData={authUser} />}
             {activeTab === "withdraw" && (
               <WithDrawFormComponent
-                CURRENT_BALANCE={balance}
                 onCancel={() => setActiveTab("overview")}
                 userData={authUser}
+                holdings={holding}
+                withdrawType={withdrawType}
               />
             )}
-            {activeTab === "portfolio" && <Portfolio />}
+            {activeTab === "portfolio" && (
+              <Portfolio
+                holding={holding}
+                refresh={() => fetchHoldings()}
+                loading={loading}
+              />
+            )}
             {activeTab === "transactions" && (
               <Transactions transactions={transactions} />
             )}

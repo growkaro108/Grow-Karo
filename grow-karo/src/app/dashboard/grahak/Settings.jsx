@@ -3,7 +3,8 @@ import React, { use, useEffect, useRef, useState } from "react";
 import { initials } from "../malik/components/SchemeAproval/components/constants";
 import { allRounderMessage } from "@/components/Message";
 import { updateProfile } from "../../../../services/grahakService";
-
+import { INDIAN_BANKS } from "@/app/utils/constant";
+import BankSelect from "@/components/BankSelect";
 // ---------------------------------------------------------------------------
 // Sanitization
 // ---------------------------------------------------------------------------
@@ -125,55 +126,6 @@ function validateField(name, value, allValues) {
 
 // Indian banks — public sector, private sector, small finance, and major
 // foreign banks operating in India. Kept alphabetical for easy scanning.
-const INDIAN_BANKS = [
-  "Axis Bank",
-  "AU Small Finance Bank",
-  "Bandhan Bank",
-  "Bank of Baroda",
-  "Bank of India",
-  "Bank of Maharashtra",
-  "Canara Bank",
-  "Central Bank of India",
-  "Citibank",
-  "City Union Bank",
-  "CSB Bank",
-  "DBS Bank India",
-  "DCB Bank",
-  "Deutsche Bank",
-  "Dhanlaxmi Bank",
-  "Equitas Small Finance Bank",
-  "ESAF Small Finance Bank",
-  "Federal Bank",
-  "HDFC Bank",
-  "HSBC Bank",
-  "ICICI Bank",
-  "IDBI Bank",
-  "IDFC FIRST Bank",
-  "Indian Bank",
-  "Indian Overseas Bank",
-  "IndusInd Bank",
-  "Jammu & Kashmir Bank",
-  "Jana Small Finance Bank",
-  "Karnataka Bank",
-  "Karur Vysya Bank",
-  "Kotak Mahindra Bank",
-  "Nainital Bank",
-  "North East Small Finance Bank",
-  "Punjab & Sind Bank",
-  "Punjab National Bank",
-  "RBL Bank",
-  "South Indian Bank",
-  "Standard Chartered Bank",
-  "State Bank of India",
-  "Suryoday Small Finance Bank",
-  "Tamilnad Mercantile Bank",
-  "UCO Bank",
-  "Ujjivan Small Finance Bank",
-  "Unity Small Finance Bank",
-  "Union Bank of India",
-  "Utkarsh Small Finance Bank",
-  "Yes Bank",
-];
 
 // Fields required by each tab — used to validate only the relevant slice
 // of state when a given tab is saved.
@@ -528,59 +480,12 @@ export default function SettingsComponent() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div ref={bankFieldRef} className="relative">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bank Name
-                </label>
-                <input
-                  type="text"
-                  name="bankName"
-                  role="combobox"
-                  aria-expanded={bankDropdownOpen}
-                  aria-autocomplete="list"
-                  autoComplete="off"
-                  placeholder="Search your bank..."
-                  value={bankQuery}
-                  onFocus={() => setBankDropdownOpen(true)}
-                  onChange={(e) => {
-                    setBankQuery(
-                      sanitizeText(e.target.value, { maxLength: 60 }),
-                    );
-                    setBankDropdownOpen(true);
-                  }}
-                  className={inputClass("bankName")}
-                />
-                <ErrorText name="bankName" />
-
-                {bankDropdownOpen && (
-                  <ul
-                    role="listbox"
-                    className="absolute z-10 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg text-sm"
-                  >
-                    {filteredBanks.length > 0 ? (
-                      filteredBanks.map((bank) => (
-                        <li
-                          key={bank}
-                          role="option"
-                          aria-selected={profile.bankName === bank}
-                          onClick={() => selectBank(bank)}
-                          className={`px-3 py-2 cursor-pointer hover:bg-indigo-50 ${
-                            profile.bankName === bank
-                              ? "bg-indigo-50 text-indigo-600 font-medium"
-                              : "text-gray-700"
-                          }`}
-                        >
-                          {bank}
-                        </li>
-                      ))
-                    ) : (
-                      <li className="px-3 py-2 text-gray-400">
-                        No matching bank found
-                      </li>
-                    )}
-                  </ul>
-                )}
-              </div>
+              <BankSelect
+                value={profile.bankName}
+                onChange={handleProfileChange}
+                onBlur={handleBlur}
+                error={fieldError("bankName")}
+              />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Account Holder Name

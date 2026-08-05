@@ -24,17 +24,21 @@ public class RemitterAPIController {
         this.remitterAPIService = remitterAPIService;
     }
 
-    @GetMapping("/{remitterId}/dashboard")
-    public ResponseEntity<Map<String, Object>> remitterDashboard(@PathVariable String remitterId,
-            @RequestParam(required = false) String range) {
-        return ResponseEntity.ok(remitterAPIService.remitterDashboard(remitterId, range));
-    }
+    // @GetMapping("/{remitterId}/dashboard")
+    // public ResponseEntity<Map<String, Object>> remitterDashboard(@PathVariable
+    // String remitterId,
+    // @RequestParam(required = false) String range) {
+    // return ResponseEntity.ok(remitterAPIService.remitterDashboard(remitterId,
+    // range));
+    // }
 
-    @GetMapping("/{remitterId}/transactions")
-    public ResponseEntity<Map<String, Object>> remitterTransactions(@PathVariable String remitterId,
-            @RequestParam(required = false) String page) {
-        return ResponseEntity.ok(remitterAPIService.remitterTransactions(remitterId, page));
-    }
+    // @GetMapping("/{remitterId}/transactions")
+    // public ResponseEntity<Map<String, Object>> remitterTransactions(@PathVariable
+    // String remitterId,
+    // @RequestParam(required = false) String page) {
+    // return ResponseEntity.ok(remitterAPIService.remitterTransactions(remitterId,
+    // page));
+    // }
 
     @GetMapping("/{remitterId}/recipients")
     public ResponseEntity<Map<String, Object>> remitterRecipients(@PathVariable String remitterId,

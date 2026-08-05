@@ -13,7 +13,7 @@ import {
 } from "./activityLogShared";
 import { StatusBadge } from "../StatusBadge";
 import { usePaginatedFetch } from "./usePaginatedFetch";
-import Filter from "./Filter";
+import { Filter } from "./Filter";
 
 const PAGE_SIZE = 10;
 

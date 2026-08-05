@@ -7,8 +7,20 @@ import {
   verifyEmailOTP,
 } from "../../services/grahakService";
 import { errorMessage } from "./Message";
-import { userSendOTPMessage, userSignUpMessage, userValidateOTPMessage } from "@/showMessage/grahakMessage";
+import {
+  userSendOTPMessage,
+  userSignUpMessage,
+  userValidateOTPMessage,
+} from "@/showMessage/grahakMessage";
 import { useLoader } from "@/context/LoaderContext";
+import dynamic from "next/dynamic";
+// import BankSelect from "./BankSelect";
+const BankSelect = dynamic(() => import("./BankSelect"), {
+  loading: () => (
+    <div className="animate-pulse w-full px-3 py-2 border rounded-lg text-sm bg-gray-50 text-gray-500 cursor-not-allowed"></div>
+  ),
+  ssr: false,
+});
 
 // Hoisted outside the component so they aren't recreated on every render.
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$/;
@@ -34,7 +46,8 @@ const INITIAL_FORM_DATA = {
 
 const validateEmail = (email) => EMAIL_REGEX.test(email);
 const validateName = (n) => NAME_REGEX.test(n);
-const validatePhone = (p) => /^\+?[1-9]\d{1,14}$/.test(p.replace(/[\s()+-]/g, ""));
+const validatePhone = (p) =>
+  /^\+?[1-9]\d{1,14}$/.test(p.replace(/[\s()+-]/g, ""));
 const validateIfsc = (i) => IFSC_REGEX.test(i);
 
 export default function AuthSignup({ onSwitch }) {
@@ -54,7 +67,7 @@ export default function AuthSignup({ onSwitch }) {
   const [otpError, setOtpError] = useState("");
   const [otpMessage, setOtpMessage] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
-   const { showLoader, hideLoader } = useLoader();
+  const { showLoader, hideLoader } = useLoader();
 
   const cooldownIntervalRef = useRef(null);
 
@@ -104,7 +117,7 @@ export default function AuthSignup({ onSwitch }) {
     try {
       setSendingOtp(true);
       const response = await sendEmailOtp(sanitizedEmail);
-      let status = userSendOTPMessage(response)
+      let status = userSendOTPMessage(response);
       if (status) {
         setOtpSent(true);
         setResendCooldown(RESEND_COOLDOWN_SECONDS);
@@ -128,7 +141,7 @@ export default function AuthSignup({ onSwitch }) {
     try {
       setVerifyingOtp(true);
       const response = await verifyEmailOTP(sanitizedEmail, otp.trim());
-      let status = userValidateOTPMessage(response)
+      let status = userValidateOTPMessage(response);
       if (status) {
         setEmailVerified(true);
         setOtpMessage(response.message || "Email verified successfully.");
@@ -203,7 +216,9 @@ export default function AuthSignup({ onSwitch }) {
         return setError("Please complete all bank account details.");
       }
       if (!validateIfsc(sanitizedIfsc)) {
-        return setError("Enter a valid 11-digit IFSC code (e.g., SBIN0001234).");
+        return setError(
+          "Enter a valid 11-digit IFSC code (e.g., SBIN0001234).",
+        );
       }
     }
 
@@ -427,18 +442,10 @@ export default function AuthSignup({ onSwitch }) {
 
         {showAccountDetails && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-100 col-span-1 sm:col-span-2 transition-all">
-            <div>
-              <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1">
-                Bank Name
-              </label>
-              <input
-                type="text"
-                value={formData.bankName}
-                onChange={(e) => handleInputChange("bankName", e.target.value)}
-                placeholder="State Bank of India"
-                className="w-full h-11 px-4 rounded-xl border border-slate-100 bg-slate-50 text-sm focus:outline-none focus:border-slate-300"
-              />
-            </div>
+            <BankSelect
+              value={formData.bankName}
+              onChange={(e) => handleInputChange("bankName", e.target.value)}
+            />
             <div>
               <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1">
                 Account Holder Name

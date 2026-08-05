@@ -323,33 +323,39 @@ public class AdminAPIService {
     }
 
     // pending
-    @Cacheable(value = "adminDashboard", key = "#range ?: 'default'")
-    @Transactional(readOnly = true)
-    public Map<String, Object> adminDashboard(String range) {
-        Page<WithdrawalRequest> withdrawals = withdrawalRequestRepository.findAllByOrderByCreatedAtDesc(pageable("1"));
-        Page<SupportIssue> issues = supportIssueRepository.findAll(pageable("1"));
-        Page<FundraiserCode> codes = fundraiserCodeRepository.findAll(pageable("1"));
-        Page<User> users = userRepository.findAll(pageable("1"));
+    // @Cacheable(value = "adminDashboard", key = "#range ?: 'default'")
+    // @Transactional(readOnly = true)
+    // public Map<String, Object> adminDashboard(String range) {
+    // Page<WithdrawalRequest> withdrawals =
+    // withdrawalRequestRepository.findAllByOrderByCreatedAtDesc(pageable("1"));
+    // Page<SupportIssue> issues = supportIssueRepository.findAll(pageable("1"));
+    // Page<FundraiserCode> codes = fundraiserCodeRepository.findAll(pageable("1"));
+    // Page<User> users = userRepository.findAll(pageable("1"));
 
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("range", range);
-        data.put("summary", Map.of(
-                "totalUsers", userRepository.count(),
-                "activeUsers", userRepository.countByActive(true),
-                "activeRemitters", remitterRepository.countActive(),
-                "pendingRemitters", remitterRepository.countPending(),
-                "pendingWithdrawals", withdrawalRequestRepository.countByStatus(WithdrawalStatus.PENDING),
-                "openIssues", supportIssueRepository.countOpenIssues(),
-                "successfulVolume", transactionRepository.sumSuccessfulAmountBetween(LocalDateTime.now().minusDays(30),
-                        LocalDateTime.now())));
-        data.put("inflowData", inflowData());
-        data.put("withdrawals", withdrawals.getContent().stream().map(this::toWithdrawalView).toList());
-        data.put("issues", issues.getContent().stream().map(this::toIssueView).toList());
-        data.put("codes", codes.getContent().stream().map(this::toFundraiserCodeView).toList());
-        data.put("eventTemplates", eventTemplates());
-        data.put("names", users.getContent().stream().map(User::getName).toList());
-        return general.response("ok", "Admin dashboard data fetched", data);
-    }
+    // Map<String, Object> data = new LinkedHashMap<>();
+    // data.put("range", range);
+    // data.put("summary", Map.of(
+    // "totalUsers", userRepository.count(),
+    // "activeUsers", userRepository.countByActive(true),
+    // "activeRemitters", remitterRepository.countActive(),
+    // "pendingRemitters", remitterRepository.countPending(),
+    // "pendingWithdrawals",
+    // withdrawalRequestRepository.countByStatus(WithdrawalStatus.PENDING),
+    // "openIssues", supportIssueRepository.countOpenIssues(),
+    // "successfulVolume",
+    // transactionRepository.sumSuccessfulAmountBetween(LocalDateTime.now().minusDays(30),
+    // LocalDateTime.now())));
+    // data.put("inflowData", inflowData());
+    // data.put("withdrawals",
+    // withdrawals.getContent().stream().map(this::toWithdrawalView).toList());
+    // data.put("issues",
+    // issues.getContent().stream().map(this::toIssueView).toList());
+    // data.put("codes",
+    // codes.getContent().stream().map(this::toFundraiserCodeView).toList());
+    // data.put("eventTemplates", eventTemplates());
+    // data.put("names", users.getContent().stream().map(User::getName).toList());
+    // return general.response("ok", "Admin dashboard data fetched", data);
+    // }
 
     @Cacheable(value = "withdrawals", key = "#status ?: 'default'")
     @Transactional(readOnly = true)
@@ -465,55 +471,62 @@ public class AdminAPIService {
         return general.response("ok", "Remitter created", toRemitterView(remitter));
     }
 
-    @Cacheable(value = "fundraiserCodes", key = "#page ?: 'default'")
-    @Transactional(readOnly = true)
-    public Map<String, Object> fundraiserCodes(String page) {
-        Page<FundraiserCode> codes = fundraiserCodeRepository.findAll(pageable(page));
-        Map<String, Object> data = paginatedMeta(codes);
-        data.put("items", codes.getContent().stream().map(this::toFundraiserCodeView).toList());
-        return general.response("ok", "Fundraiser codes fetched", data);
-    }
+    // @Cacheable(value = "fundraiserCodes", key = "#page ?: 'default'")
+    // @Transactional(readOnly = true)
+    // public Map<String, Object> fundraiserCodes(String page) {
+    // Page<FundraiserCode> codes =
+    // fundraiserCodeRepository.findAll(pageable(page));
+    // Map<String, Object> data = paginatedMeta(codes);
+    // data.put("items",
+    // codes.getContent().stream().map(this::toFundraiserCodeView).toList());
+    // return general.response("ok", "Fundraiser codes fetched", data);
+    // }
 
-    @CacheEvict(value = { "adminDashboard", "fundraiserCodes" }, allEntries = true)
-    @Transactional
-    public Map<String, Object> createFundraiserCode(Map<String, Object> payload) {
-        String codeValue = firstString(payload, "code", "trackerCode");
-        String remitterId = firstString(payload, "remitterId");
-        if (codeValue == null || remitterId == null) {
-            return general.response("error", "code and remitterId are required", Map.of());
-        }
-        if (fundraiserCodeRepository.existsByCode(codeValue)) {
-            return general.response("error", "Fundraiser code already exists", Map.of("code", codeValue));
-        }
+    // @CacheEvict(value = { "adminDashboard", "fundraiserCodes" }, allEntries =
+    // true)
+    // @Transactional
+    // public Map<String, Object> createFundraiserCode(Map<String, Object> payload)
+    // {
+    // String codeValue = firstString(payload, "code", "trackerCode");
+    // String remitterId = firstString(payload, "remitterId");
+    // if (codeValue == null || remitterId == null) {
+    // return general.response("error", "code and remitterId are required",
+    // Map.of());
+    // }
+    // if (fundraiserCodeRepository.existsByCode(codeValue)) {
+    // return general.response("error", "Fundraiser code already exists",
+    // Map.of("code", codeValue));
+    // }
 
-        Optional<Remitter> remitterOpt = remitterRepository.findById(remitterId);
-        if (remitterOpt.isEmpty()) {
-            return general.response("error", "Remitter not found", Map.of("remitterId", remitterId));
-        }
+    // Optional<Remitter> remitterOpt = remitterRepository.findById(remitterId);
+    // if (remitterOpt.isEmpty()) {
+    // return general.response("error", "Remitter not found", Map.of("remitterId",
+    // remitterId));
+    // }
 
-        FundraiserCode code = new FundraiserCode();
-        code.setRemitter(remitterOpt.get());
-        code.setCode(codeValue);
-        code.setDescription(firstString(payload, "description"));
-        code.setUsageLimit(intValue(payload.get("usageLimit"), 1));
-        return general.response("ok", "Fundraiser code created",
-                toFundraiserCodeView(fundraiserCodeRepository.save(code)));
-    }
+    // FundraiserCode code = new FundraiserCode();
+    // code.setRemitter(remitterOpt.get());
+    // code.setCode(codeValue);
+    // code.setDescription(firstString(payload, "description"));
+    // code.setUsageLimit(intValue(payload.get("usageLimit"), 1));
+    // return general.response("ok", "Fundraiser code created",
+    // toFundraiserCodeView(fundraiserCodeRepository.save(code)));
+    // }
 
-    private List<Map<String, Object>> inflowData() {
-        LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d");
-        return java.util.stream.IntStream.rangeClosed(0, 13)
-                .mapToObj(daysAgo -> {
-                    LocalDateTime day = now.minusDays(13L - daysAgo);
-                    LocalDateTime start = day.toLocalDate().atStartOfDay();
-                    LocalDateTime end = start.plusDays(1).minusNanos(1);
-                    return Map.<String, Object>of(
-                            "day", formatter.format(day),
-                            "amount", transactionRepository.sumSuccessfulAmountBetween(start, end));
-                })
-                .toList();
-    }
+    // private List<Map<String, Object>> inflowData() {
+    // LocalDateTime now = LocalDateTime.now();
+    // DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d");
+    // return java.util.stream.IntStream.rangeClosed(0, 13)
+    // .mapToObj(daysAgo -> {
+    // LocalDateTime day = now.minusDays(13L - daysAgo);
+    // LocalDateTime start = day.toLocalDate().atStartOfDay();
+    // LocalDateTime end = start.plusDays(1).minusNanos(1);
+    // return Map.<String, Object>of(
+    // "day", formatter.format(day),
+    // "amount", transactionRepository.sumSuccessfulAmountBetween(start, end));
+    // })
+    // .toList();
+    // }
 
     private List<Map<String, Object>> eventTemplates() {
         return List.of(
@@ -552,22 +565,23 @@ public class AdminAPIService {
         return data;
     }
 
-    private Map<String, Object> toFundraiserCodeView(FundraiserCode code) {
-        BigDecimal raised = code.getRemitter() != null
-                ? transactionRepository.sumSuccessfulAmountByRemitter(code.getRemitter().getId())
-                : BigDecimal.ZERO;
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("id", code.getId());
-        data.put("code", code.getCode());
-        data.put("owner", code.getRemitter().getOrganizationName());
-        data.put("raised", raised);
-        data.put("goal", code.getUsageLimit());
-        data.put("referrals", code.getUsageCount());
-        data.put("status", code.isActive() ? "active" : "paused");
-        data.put("description", code.getDescription());
-        data.put("expiresAt", code.getExpiresAt());
-        return data;
-    }
+    // private Map<String, Object> toFundraiserCodeView(FundraiserCode code) {
+    // BigDecimal raised = code.getRemitter() != null
+    // ?
+    // transactionRepository.sumSuccessfulAmountByRemitter(code.getRemitter().getId())
+    // : BigDecimal.ZERO;
+    // Map<String, Object> data = new LinkedHashMap<>();
+    // data.put("id", code.getId());
+    // data.put("code", code.getCode());
+    // data.put("owner", code.getRemitter().getOrganizationName());
+    // data.put("raised", raised);
+    // data.put("goal", code.getUsageLimit());
+    // data.put("referrals", code.getUsageCount());
+    // data.put("status", code.isActive() ? "active" : "paused");
+    // data.put("description", code.getDescription());
+    // data.put("expiresAt", code.getExpiresAt());
+    // return data;
+    // }
 
     private Map<String, Object> toRemitterView(Remitter remitter) {
         Map<String, Object> data = new LinkedHashMap<>();

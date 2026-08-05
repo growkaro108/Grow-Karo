@@ -55,54 +55,72 @@ public class RemitterAPIService {
         return response;
     }
 
-    @Cacheable(value = "remitterDashboard", key = "#remitterId + ':' + (#range ?: 'default')")
-    @Transactional(readOnly = true)
-    public Map<String, Object> remitterDashboard(String remitterId, String range) {
-        Optional<Remitter> remitterOpt = resolveRemitter(remitterId);
-        if (remitterOpt.isEmpty()) {
-            return response("error", "Remitter not found", Map.of("remitterId", remitterId));
-        }
+    // @Cacheable(value = "remitterDashboard", key = "#remitterId + ':' + (#range ?:
+    // 'default')")
+    // @Transactional(readOnly = true)
+    // public Map<String, Object> remitterDashboard(String remitterId, String range)
+    // {
+    // Optional<Remitter> remitterOpt = resolveRemitter(remitterId);
+    // if (remitterOpt.isEmpty()) {
+    // return response("error", "Remitter not found", Map.of("remitterId",
+    // remitterId));
+    // }
 
-        Remitter remitter = remitterOpt.get();
-        Page<Transaction> transactions = transactionRepository.findByRemitterId(remitter.getId(), pageable("1"));
-        Page<Recipient> recipients = recipientService.findByRemitterId(remitter.getId(), 1);
-        Page<WithdrawalRequest> requests = withdrawalRequestRepository.findAll(pageable("1"));
-        BigDecimal totalVolume = transactionRepository.sumSuccessfulAmountByRemitter(remitter.getId());
+    // Remitter remitter = remitterOpt.get();
+    // Page<Transaction> transactions =
+    // transactionRepository.findByRemitterId(remitter.getId(), pageable("1"));
+    // Page<Recipient> recipients =
+    // recipientService.findByRemitterId(remitter.getId(), 1);
+    // Page<WithdrawalRequest> requests =
+    // withdrawalRequestRepository.findAll(pageable("1"));
+    // BigDecimal totalVolume =
+    // transactionRepository.sumSuccessfulAmountByRemitter(remitter.getId());
 
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("remitterId", remitter.getId());
-        data.put("range", range);
-        data.put("dashboardMetrics", Map.of(
-                "totalVolume", totalVolume,
-                "activeCounterparties", recipientRepository.countByRemitterIdAndActive(remitter.getId(), true)));
-        data.put("summary", Map.of(
-                "received", totalVolume,
-                "pending", withdrawalRequestRepository.sumAmountByStatus(WithdrawalStatus.PENDING)));
-        data.put("chartData", transactions.getContent().stream().map(this::toChartPoint).toList());
-        data.put("transactions", transactions.getContent().stream().map(this::toTransactionView).toList());
-        data.put("recipients", recipients.getContent().stream().map(recipientService::toRemitterView).toList());
-        data.put("requests", requests.getContent().stream()
-                .filter(request -> request.getRecipient().getRemitter().getId().equals(remitter.getId()))
-                .map(this::toRequestView)
-                .toList());
-        return response("ok", "Remitter dashboard fetched", data);
-    }
+    // Map<String, Object> data = new LinkedHashMap<>();
+    // data.put("remitterId", remitter.getId());
+    // data.put("range", range);
+    // data.put("dashboardMetrics", Map.of(
+    // "totalVolume", totalVolume,
+    // "activeCounterparties",
+    // recipientRepository.countByRemitterIdAndActive(remitter.getId(), true)));
+    // data.put("summary", Map.of(
+    // "received", totalVolume,
+    // "pending",
+    // withdrawalRequestRepository.sumAmountByStatus(WithdrawalStatus.PENDING)));
+    // data.put("chartData",
+    // transactions.getContent().stream().map(this::toChartPoint).toList());
+    // data.put("transactions",
+    // transactions.getContent().stream().map(this::toTransactionView).toList());
+    // data.put("recipients",
+    // recipients.getContent().stream().map(recipientService::toRemitterView).toList());
+    // data.put("requests", requests.getContent().stream()
+    // .filter(request ->
+    // request.getRecipient().getRemitter().getId().equals(remitter.getId()))
+    // .map(this::toRequestView)
+    // .toList());
+    // return response("ok", "Remitter dashboard fetched", data);
+    // }
 
-    @Cacheable(value = "remitterTransactions", key = "#remitterId + ':' + (#page ?: 'default')")
-    @Transactional(readOnly = true)
-    public Map<String, Object> remitterTransactions(String remitterId, String page) {
-        Optional<Remitter> remitterOpt = resolveRemitter(remitterId);
-        if (remitterOpt.isEmpty()) {
-            return response("error", "Remitter not found", Map.of("remitterId", remitterId));
-        }
+    // @Cacheable(value = "remitterTransactions", key = "#remitterId + ':' + (#page
+    // ?: 'default')")
+    // @Transactional(readOnly = true)
+    // public Map<String, Object> remitterTransactions(String remitterId, String
+    // page) {
+    // Optional<Remitter> remitterOpt = resolveRemitter(remitterId);
+    // if (remitterOpt.isEmpty()) {
+    // return response("error", "Remitter not found", Map.of("remitterId",
+    // remitterId));
+    // }
 
-        Page<Transaction> transactions = transactionRepository.findByRemitterId(remitterOpt.get().getId(),
-                pageable(page));
-        Map<String, Object> data = paginatedMeta(transactions);
-        data.put("remitterId", remitterOpt.get().getId());
-        data.put("items", transactions.getContent().stream().map(this::toTransactionView).toList());
-        return response("ok", "Remitter transactions fetched", data);
-    }
+    // Page<Transaction> transactions =
+    // transactionRepository.findByRemitterId(remitterOpt.get().getId(),
+    // pageable(page));
+    // Map<String, Object> data = paginatedMeta(transactions);
+    // data.put("remitterId", remitterOpt.get().getId());
+    // data.put("items",
+    // transactions.getContent().stream().map(this::toTransactionView).toList());
+    // return response("ok", "Remitter transactions fetched", data);
+    // }
 
     @Cacheable(value = "remitterRecipients", key = "#remitterId + ':' + (#page ?: 'default')")
     @Transactional(readOnly = true)
@@ -220,23 +238,25 @@ public class RemitterAPIService {
         return remitterRepository.findById(remitterId);
     }
 
-    private Map<String, Object> toTransactionView(Transaction transaction) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        String recipientName = transaction.getRecipient() != null ? transaction.getRecipient().getName() : "Recipient";
-        data.put("id", transaction.getId());
-        data.put("name", recipientName);
-        data.put("method", transaction.getRecipient() != null && transaction.getRecipient().getUpiId() != null
-                ? "UPI"
-                : "Bank Transfer");
-        data.put("amount", transaction.getAmount());
-        data.put("foreign", transaction.getAmount());
-        data.put("status", transaction.getStatus().name());
-        data.put("date", transaction.getCreatedAt());
-        data.put("remarks", transaction.getRemarks());
-        data.put("referenceId", transaction.getReferenceId());
-        data.put("color", "blue");
-        return data;
-    }
+    // private Map<String, Object> toTransactionView(Transaction transaction) {
+    // Map<String, Object> data = new LinkedHashMap<>();
+    // String recipientName = transaction.getRecipient() != null ?
+    // transaction.getRecipient().getName() : "Recipient";
+    // data.put("id", transaction.getId());
+    // data.put("name", recipientName);
+    // data.put("method", transaction.getRecipient() != null &&
+    // transaction.getRecipient().getUpiId() != null
+    // ? "UPI"
+    // : "Bank Transfer");
+    // data.put("amount", transaction.getAmount());
+    // data.put("foreign", transaction.getAmount());
+    // data.put("status", transaction.getStatus().name());
+    // data.put("date", transaction.getCreatedAt());
+    // data.put("remarks", transaction.getRemarks());
+    // data.put("referenceId", transaction.getReferenceId());
+    // data.put("color", "blue");
+    // return data;
+    // }
 
     private Map<String, Object> toChartPoint(Transaction transaction) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d");

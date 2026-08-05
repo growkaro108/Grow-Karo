@@ -167,7 +167,7 @@ function DateRangeFilter({ fromDate, toDate, setDateFrom, setToDate }) {
   );
 }
 
-export default function Filter({
+function Filter({
   PROCESS_FILTERS,
   STATUS_FILTERS,
   query,
@@ -242,3 +242,4 @@ export default function Filter({
     </div>
   );
 }
+export { Filter, AnimatedDropdown };
