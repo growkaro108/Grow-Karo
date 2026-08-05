@@ -16,6 +16,7 @@ import com.growkaro.backend.security.NoOpAdminTokenValidator;
 import com.growkaro.backend.service.ActivityLogService;
 
 import java.time.Instant;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/activity-logs")
@@ -70,4 +71,5 @@ public class ActivityLogController {
     public String connectionCount() {
         return "active admin connections: " + broadcaster.activeConnections();
     }
+
 }

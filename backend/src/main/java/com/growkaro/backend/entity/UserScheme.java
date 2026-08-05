@@ -1,7 +1,8 @@
 package com.growkaro.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.growkaro.backend.enums.UserSchemeStatus;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -15,17 +16,18 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
-import jakarta.persistence.CascadeType;
+import org.hibernate.annotations.ColumnDefault;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -68,6 +70,11 @@ public class UserScheme {
     @Column(name = "is_approved", nullable = false)
     private Boolean isApproved = false;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    @ColumnDefault("'PENDING'")
+    private UserSchemeStatus status = UserSchemeStatus.PENDING;
+
     @Column(name = "enrollment_date")
     private LocalDateTime enrollmentDate;
 
@@ -87,6 +94,9 @@ public class UserScheme {
 
     @Column(name = "next_payout_date")
     private LocalDate nextPayoutDate;
+
+    @Column(name = "maturity_date")
+    private LocalDate maturityDate;
 
     @PrePersist
     protected void onCreate() {

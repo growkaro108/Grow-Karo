@@ -24,7 +24,6 @@ import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.common.General;
-import com.growkaro.backend.entity.ActivityLog;
 import com.growkaro.backend.entity.FundraiserCode;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Scheme;
@@ -33,7 +32,9 @@ import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.entity.WithdrawalRequest;
 import com.growkaro.backend.enums.ActivityType;
+import com.growkaro.backend.enums.UserSchemeStatus;
 import com.growkaro.backend.enums.WithdrawalStatus;
+import com.growkaro.backend.repository.ActivityLogRepository;
 import com.growkaro.backend.repository.FundraiserCodeRepository;
 import com.growkaro.backend.repository.RemitterRepository;
 import com.growkaro.backend.repository.SchemeRepository;
@@ -62,6 +63,7 @@ public class AdminAPIService {
     private final ApiService apiService;
     private final ActivityLogService activityLogService;
     private final LocalFileStorageService localFileStorageService;
+    private final ActivityLogRepository activityLogRepository;
     private final General general;
 
     public AdminAPIService(UserRepository userRepository,
@@ -71,7 +73,8 @@ public class AdminAPIService {
             SupportIssueRepository supportIssueRepository,
             FundraiserCodeRepository fundraiserCodeRepository,
             SchemeRepository schemeRepository, UserSchemeRepository userSchemeRepository, @Lazy ApiService apiService,
-            ActivityLogService activityLogService, LocalFileStorageService localFileStorageService, General general) {
+            ActivityLogService activityLogService, LocalFileStorageService localFileStorageService,
+            ActivityLogRepository activityLogRepository, General general) {
         this.userRepository = userRepository;
         this.remitterRepository = remitterRepository;
         this.transactionRepository = transactionRepository;
@@ -83,6 +86,7 @@ public class AdminAPIService {
         this.apiService = apiService;
         this.activityLogService = activityLogService;
         this.localFileStorageService = localFileStorageService;
+        this.activityLogRepository = activityLogRepository;
         this.general = general;
     }
 
@@ -192,13 +196,22 @@ public class AdminAPIService {
             userScheme = (UserScheme) isUserSchemeValid.get("userScheme");
             user = (User) isUserSchemeValid.get("user");
             scheme = (Scheme) isUserSchemeValid.get("scheme");
-
+            // approved user
             userScheme.setIsApproved(true);
+            // set enrollment date
             userScheme.setEnrollmentDate(general.getCurrentDateTime());
+            // set paid amount and date
             userScheme.setPaidAmount(paidAmount);
             userScheme.setPaidDate(paidDate);
+            // set status
+            userScheme.setStatus(UserSchemeStatus.ACTIVE);
+            // set next payout date
             userScheme.setNextPayoutDate(
                     general.calculateNextPayoutDate(userScheme.getEnrollmentDate(), scheme.getPayoutFrequency()));
+            // set maturity date
+            userScheme.setMaturityDate(
+                    general.calculateMaturityDate(userScheme.getEnrollmentDate(), userScheme.getScheme().getTenure()));
+            // save user scheme
             userSchemeRepository.save(userScheme);
             return general.response("success",
                     user.getName() + " is approved for " + scheme.getSchemeName() + " successfully..", userScheme);
@@ -299,6 +312,17 @@ public class AdminAPIService {
         }
     }
 
+    public List<String> getAllStoredActivityTypes() {
+        List<ActivityType> types = activityLogRepository.findDistinctTypes();
+        List<String> typeNames = new ArrayList<>();
+        for (ActivityType type : types) {
+            typeNames.add(type.name());
+        }
+        System.out.println("typeNames" + typeNames);
+        return typeNames;
+    }
+
+    // pending
     @Cacheable(value = "adminDashboard", key = "#range ?: 'default'")
     @Transactional(readOnly = true)
     public Map<String, Object> adminDashboard(String range) {

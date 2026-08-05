@@ -1,12 +1,14 @@
-package com.growkaro.backend.entity;
+package com.growkaro.backend.common;
 
 import java.math.BigDecimal;
 import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import com.growkaro.backend.common.General;
+import com.growkaro.backend.entity.UserScheme;
+import com.growkaro.backend.enums.UserSchemeStatus;
 import com.growkaro.backend.repository.UserSchemeRepository;
 
 import jakarta.transaction.Transactional;

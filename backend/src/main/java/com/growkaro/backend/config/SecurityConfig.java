@@ -41,7 +41,8 @@ public class SecurityConfig {
                                                                 "/api/admin/user-scheme/reject/{userSchemeId}",
                                                                 "/api/admin/activity-logs/**",
                                                                 "/api/admin/user_scheme/add-bond/{userSchemeId}",
-                                                                "/api/uploads/**")
+                                                                "/api/uploads/**",
+                                                                "/api/admin/activity-types")
                                                 .permitAll() // Public endpoints
                                                 .anyRequest().authenticated() // Everything else requires login
                                 )

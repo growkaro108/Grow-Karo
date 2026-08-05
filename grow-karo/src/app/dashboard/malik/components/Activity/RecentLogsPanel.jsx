@@ -6,7 +6,6 @@ import {
   RotateCw,
 } from "lucide-react";
 import {
-  PROCESS_FILTERS,
   STATUS_FILTERS,
   TYPE_DOT,
   mapBackendLog,
@@ -16,7 +15,7 @@ import { StatusBadge } from "../StatusBadge";
 import { usePaginatedFetch } from "./usePaginatedFetch";
 import Filter from "./Filter";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 // Turns a <input type="date"> value ("YYYY-MM-DD") into start/end-of-day
 // ISO strings, since most backends store timestamps, not bare dates.
@@ -50,6 +49,7 @@ export default function RecentLogsPanel({
   setDateTo,
   page,
   setPage,
+  PROCESS_FILTERS,
 }) {
   // NOTE: param names (page/size/sort/from/to/type/status/query) assume a
   // Spring Data-style admin endpoint. Rename these to match your actual
@@ -88,33 +88,20 @@ export default function RecentLogsPanel({
     return items.filter((event) => {
       const matchesQuery = q === "" || event.name?.toLowerCase().includes(q);
       const matchesProcess =
-        processFilter === "all" || event.type === processFilter;
+        processFilter === "all" ||
+        event.type?.toLowerCase() == processFilter.toLowerCase();
       const matchesStatus =
         statusFilter === "all" || event.status === statusFilter;
       return matchesQuery && matchesProcess && matchesStatus;
     });
   }, [items, query, processFilter, statusFilter]);
 
-  //crete dynamic filters by status
-  const dynamicStatusFilters = useMemo(() => {
-    // 1. Extract unique types from filteredItems using a local Set
-    const uniqueTypes = [...new Set(filteredItems.map((item) => item.type))];
-
-    // 2. Format unique types into dropdown options
-    const dynamicOptions = uniqueTypes.map((type) => ({
-      value: type,
-      label: type,
-    }));
-
-    // 3. Combine static "All" filter with the unique dynamic options
-    return [...PROCESS_FILTERS, ...dynamicOptions];
-  }, [filteredItems]);
   const isLoading = status === "loading";
 
   return (
     <div className="space-y-4">
       <Filter
-        PROCESS_FILTERS={dynamicStatusFilters}
+        PROCESS_FILTERS={PROCESS_FILTERS}
         STATUS_FILTERS={STATUS_FILTERS}
         query={query}
         setQuery={setQuery}
@@ -126,6 +113,10 @@ export default function RecentLogsPanel({
         setProcessFilter={setProcessFilter}
         statusFilter={statusFilter}
         setStatusFilter={setStatusFilter}
+        dateFrom={dateFrom}
+        setDateFrom={setDateFrom}
+        dateTo={dateTo}
+        setToDate={setDateTo}
       />
 
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
@@ -210,7 +201,7 @@ export default function RecentLogsPanel({
                   {event.time}
                 </span>
                 <span
-                  className={`h-2 w-2 shrink-0 rounded-full ${TYPE_DOT[event.type] ?? "bg-slate-500"}`}
+                  className={`h-2 w-2 shrink-0 rounded-full ${TYPE_DOT[event.type.toLowerCase()] ?? "bg-slate-500"}`}
                 />
                 <p className="min-w-0 flex-1 truncate text-sm text-slate-300 font-body">
                   <span className="font-medium text-slate-100">
@@ -224,10 +215,12 @@ export default function RecentLogsPanel({
                     </span>
                   ) : null}
                 </p>
-                <span className="hidden shrink-0 rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-mono uppercase text-slate-500 sm:inline">
+                {/* <span className="hidden shrink-0 rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-mono uppercase text-slate-500 sm:inline">
                   {event.type}
-                </span>
-                {event.status && <StatusBadge status={event.status} />}
+                </span> */}
+                {event.type.toLowerCase() && (
+                  <StatusBadge status={event.type.toLowerCase()} />
+                )}
               </div>
             ))}
           </div>

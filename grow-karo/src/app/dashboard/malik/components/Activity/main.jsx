@@ -1,11 +1,21 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Radio, History } from "lucide-react";
-import LiveLogsPanel from "./LiveLogsPanel";
-import RecentLogsPanel from "./RecentLogsPanel";
-import LogDetailsModal from "./LogDetailsModal";
-// import LiveLogsPanel from "./LiveLogsPanel";
-// import RecentLogsPanel from "./RecentLogsPanel";
-// import LogDetailsModal from "./LogDetailsModal";
+import { getAllLogTypes } from "../../../../../../services/malikService";
+import { PROCESS_FILTERS } from "./activityLogShared";
+import dynamic from "next/dynamic";
+import TabLoader from "@/loader/TabLoader";
+const LiveLogsPanel = dynamic(() => import("./LiveLogsPanel"), {
+  loading: () => <TabLoader />,
+  ssr: false,
+});
+const RecentLogsPanel = dynamic(() => import("./RecentLogsPanel"), {
+  loading: () => <TabLoader />,
+  ssr: false,
+});
+const LogDetailsModal = dynamic(() => import("./LogDetailsModal"), {
+  loading: () => <TabLoader />,
+  ssr: false,
+});
 
 const VIEWS = [
   { id: "live", label: "Live", icon: Radio },
@@ -21,13 +31,17 @@ export default function ActivityTab({
   const [activeView, setActiveView] = useState("live");
   const [selectedLog, setSelectedLog] = useState(null);
   const [query, setQuery] = useState("");
-  const [processFilter, setProcessFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(0);
+  //get all distint type from db
+  const [processFilters, setProcessFilters] = useState(PROCESS_FILTERS);
+  //active process filter
+  const [processFilter, setProcessFilter] = useState("all");
 
+  //check if any filter is active
   const hasActiveFilters =
     query.trim() !== "" ||
     processFilter !== "all" ||
@@ -39,30 +53,45 @@ export default function ActivityTab({
     setPage(0);
   }, []);
 
-  const handleQueryChange = useCallback((value) => {
-    setQuery(value);
-    resetPage();
-  }, [resetPage]);
+  const handleQueryChange = useCallback(
+    (value) => {
+      setQuery(value);
+      resetPage();
+    },
+    [resetPage],
+  );
 
-  const handleProcessFilterChange = useCallback((value) => {
-    setProcessFilter(value);
-    resetPage();
-  }, [resetPage]);
+  const handleProcessFilterChange = useCallback(
+    (value) => {
+      setProcessFilter(value);
+      resetPage();
+    },
+    [resetPage],
+  );
 
-  const handleStatusFilterChange = useCallback((value) => {
-    setStatusFilter(value);
-    resetPage();
-  }, [resetPage]);
+  const handleStatusFilterChange = useCallback(
+    (value) => {
+      setStatusFilter(value);
+      resetPage();
+    },
+    [resetPage],
+  );
 
-  const handleDateFromChange = useCallback((value) => {
-    setDateFrom(value);
-    resetPage();
-  }, [resetPage]);
+  const handleDateFromChange = useCallback(
+    (value) => {
+      setDateFrom(value);
+      resetPage();
+    },
+    [resetPage],
+  );
 
-  const handleDateToChange = useCallback((value) => {
-    setDateTo(value);
-    resetPage();
-  }, [resetPage]);
+  const handleDateToChange = useCallback(
+    (value) => {
+      setDateTo(value);
+      resetPage();
+    },
+    [resetPage],
+  );
 
   const clearFilters = useCallback(() => {
     setQuery("");
@@ -73,6 +102,23 @@ export default function ActivityTab({
     setDateTo("");
     resetPage();
   }, [resetPage]);
+
+  //get all filter options from db
+  useEffect(() => {
+    const getAllType = async () => {
+      const response = await getAllLogTypes();
+      const data = response.map((item) => ({
+        id: item,
+        label: item.toUpperCase(),
+      }));
+
+      setProcessFilters((prev) => {
+        const existingIds = new Set(prev.map((f) => f.id));
+        return [...prev, ...data.filter((d) => !existingIds.has(d.id))];
+      });
+    };
+    getAllType();
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -95,10 +141,7 @@ export default function ActivityTab({
         ))}
       </div>
 
-      {/* Both panels stay mounted -- toggled with `hidden` rather than
-          conditionally rendered -- so the live SSE connection and the
-          Recent tab's filters/page don't reset every time you switch. */}
-      <div className={activeView === "live" ? "" : "hidden"}>
+      {activeView === "live" ? (
         <LiveLogsPanel
           initialFeed={initialFeed}
           apiBaseUrl={apiBaseUrl}
@@ -114,9 +157,9 @@ export default function ActivityTab({
           setShowFilters={setShowFilters}
           hasActiveFilters={hasActiveFilters}
           clearFilters={clearFilters}
+          PROCESS_FILTERS={processFilters}
         />
-      </div>
-      <div className={activeView === "recent" ? "" : "hidden"}>
+      ) : (
         <RecentLogsPanel
           apiBaseUrl={apiBaseUrl}
           getToken={getToken}
@@ -138,8 +181,9 @@ export default function ActivityTab({
           setDateTo={handleDateToChange}
           page={page}
           setPage={setPage}
+          PROCESS_FILTERS={processFilters}
         />
-      </div>
+      )}
 
       {selectedLog && (
         <LogDetailsModal

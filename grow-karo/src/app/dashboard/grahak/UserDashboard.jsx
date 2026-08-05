@@ -32,7 +32,7 @@ const Settings = dynamic(() => import("./Settings"), {
 export default function DashboardPage() {
   const [balance, setBalance] = useState(0);
   const [portfolioValue, setPortfolioValue] = useState(0);
-  const [activeTab, setActiveTab] = useState("portfolio");
+  const [activeTab, setActiveTab] = useState("overview");
   const { authUser } = use(userContext);
   const router = useRouter();
 
@@ -140,6 +140,7 @@ export default function DashboardPage() {
               <WithDrawFormComponent
                 CURRENT_BALANCE={balance}
                 onCancel={() => setActiveTab("overview")}
+                userData={authUser}
               />
             )}
             {activeTab === "portfolio" && <Portfolio />}

@@ -32,6 +32,7 @@ import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserProfile;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.enums.ActivityType;
+import com.growkaro.backend.enums.UserSchemeStatus;
 import com.growkaro.backend.repository.NotificationRepository;
 import com.growkaro.backend.repository.SchemeRepository;
 import com.growkaro.backend.repository.TransactionRepository;
@@ -74,9 +75,25 @@ public class UserAPIService {
         this.general = general;
     }
 
-    public List<UserScheme> testApi() {
+    @Transactional
+    public boolean testApi() {
+        try {
+            List<UserScheme> allscheme = userSchemeRepository.findAll();
 
-        return userSchemeRepository.findAllApprovedUserSchemes(general.getCurrentDate());
+            for (UserScheme us : allscheme) {
+                if (us.getIsApproved()) {
+                    us.setMaturityDate(
+                            general.calculateMaturityDate(us.getEnrollmentDate(), us.getScheme().getTenure()));
+                    System.out.println(us.getUser().getId() + " is updated...");
+                }
+            }
+            userSchemeRepository.saveAll(allscheme);
+            System.out.println("All set::");
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to set user status active", e);
+            return false;
+        }
     }
 
     public boolean isUserExists(String email) {

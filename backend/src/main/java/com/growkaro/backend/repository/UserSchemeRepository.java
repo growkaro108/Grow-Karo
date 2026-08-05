@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -13,6 +14,9 @@ import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
+import com.growkaro.backend.enums.UserSchemeStatus;
+
+import jakarta.transaction.Transactional;
 
 @Repository
 public interface UserSchemeRepository extends JpaRepository<UserScheme, String> {
@@ -35,4 +39,5 @@ public interface UserSchemeRepository extends JpaRepository<UserScheme, String> 
             AND us.nextPayoutDate <= :today
             """)
     List<UserScheme> findAllApprovedUserSchemes(@Param("today") LocalDate today);
+
 }

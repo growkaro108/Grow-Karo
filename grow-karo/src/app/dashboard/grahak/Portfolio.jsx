@@ -23,6 +23,7 @@ import {
   errorMessage,
 } from "@/components/Message";
 import { userContext } from "@/context/UserContext";
+import { StatusBadge } from "../malik/components/StatusBadge";
 
 /**
  * Resolves a stored image path to a full URL that the browser can fetch.
@@ -281,7 +282,7 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
   };
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-in fade-in slide-in-from-bottom-3 duration-300 ease-out">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-blue-50/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-in fade-in slide-in-from-bottom-3 duration-300 ease-out">
       <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
         <button
           onClick={onBack}
@@ -297,8 +298,10 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
         <span
           className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${bond.isApproved ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
         >
-          <ShieldCheck size={14} />{" "}
+          {/* <ShieldCheck size={14} />{" "}
           {isApproved ? "Active Asset" : "Pending Approval"}
+           */}
+          <StatusBadge status={bond.status.toLowerCase()} />
         </span>
       </div>
 
@@ -373,10 +376,16 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
                   value={formatDate(bond.requestDate)}
                 />
               ) : (
-                <DetailField
-                  label="Payment Dates"
-                  value={formatDate(bond.paidDate)}
-                />
+                <>
+                  <DetailField
+                    label="Payment Dates"
+                    value={formatDate(bond.paidDate)}
+                  />
+                  <DetailField
+                    label={"Maturity Date"}
+                    value={formatDate(bond.maturityDate)}
+                  />
+                </>
               )}
               <DetailField label={"Cycle"} value={bond.payoutFrequency} />
             </div>
@@ -436,7 +445,7 @@ export default function Portfolio({ holdings = [] }) {
     try {
       setLoading(true);
       const response = await getAllUsersScheme(userId);
-      // console.log(response);
+      // console.log(response.data);
       if (response.status === "success" && response.data) {
         setHolding(response.data);
       } else {
@@ -457,6 +466,7 @@ export default function Portfolio({ holdings = [] }) {
 
     // Only update state if the component hasn't unmounted or user hasn't switched mid-request
     if (isMounted) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchHoldings();
     }
 
@@ -509,10 +519,11 @@ export default function Portfolio({ holdings = [] }) {
                   <th className={tableHeaderStyle}>Bond</th>
                   <th className={tableHeaderStyle}>Bond No.</th>
                   <th className={tableHeaderStyle}>Scheme Name</th>
-                  <th className={tableHeaderStyle}>Invested Amount</th>
+                  {/* <th className={tableHeaderStyle}>Invested Amount</th> */}
                   <th className={tableHeaderStyle}>Payout Cycle</th>
                   <th className={tableHeaderStyle}>Yeild %</th>
                   <th className={tableHeaderStyle}>Profit</th>
+                  <th className={tableHeaderStyle}>Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -566,12 +577,12 @@ export default function Portfolio({ holdings = [] }) {
                       >
                         {bond.schemeName}
                       </td>
-                      <td
+                      {/* <td
                         className={`${tableCellStyle} font-semibold`}
                         style={{ color: "#334155" }}
                       >
                         {currency(bond.paidAmount)}
-                      </td>
+                      </td> */}
                       <td
                         className={tableCellStyle}
                         style={{ color: "#475569" }}
@@ -589,6 +600,9 @@ export default function Portfolio({ holdings = [] }) {
                         style={{ color: "#397299" }}
                       >
                         {bond.profit === 0 ? "⏱️" : bond.profit}
+                      </td>
+                      <td className={`${tableCellStyle}`}>
+                        <StatusBadge status={bond.status.toLowerCase()} />
                       </td>
                     </tr>
                   ))

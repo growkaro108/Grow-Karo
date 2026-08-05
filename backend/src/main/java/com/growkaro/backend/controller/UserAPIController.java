@@ -43,7 +43,7 @@ public class UserAPIController {
     }
 
     @GetMapping("/test")
-    public List<UserScheme> test() {
+    public boolean test() {
         System.out.println(general.getCurrentDateTime());
         return userAPIService.testApi();
     }
@@ -198,8 +198,6 @@ public class UserAPIController {
             return ResponseEntity.internalServerError().body(general.response("error", "Internal Server error", null));
         }
     }
-
-    
 
     @PutMapping("/change_password")
     public ResponseEntity<Map<String, Object>> updateUser(

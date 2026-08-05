@@ -20,7 +20,7 @@ export const TYPE_DOT = {
   kyc: "bg-indigo-500",
   referral: "bg-indigo-500",
   login: "bg-green-500",
-  logout: "bg-fuchia-500",
+  logout: "bg-fuchsia-500",
   password_changed: "bg-yellow-500",
   account_updated: "bg-orange-500",
   scheme_enrolled: "bg-blue-500",

@@ -82,7 +82,7 @@ export default function PlansPage() {
     try {
       const response = await getAllPlans(term ? { search: term } : undefined);
       const data = response.data ?? [];
-      console.log(data);
+      // console.log(data);
       setPlans(data);
       setPage(0);
       // Only refresh the autocomplete universe on unfiltered loads, so

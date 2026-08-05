@@ -58,6 +58,12 @@ export async function addBonds(userSchemeId, payload) {
   });
 }
 
+export async function getAllActivityLogTypes() {
+  return await apiRequest(`${END_POINT}activity-types`, {
+    method: "GET",
+  });
+}
+
 export async function fetchAdminDashboard(params) {
   return await apiRequest(`${END_POINT}dashboard`, { params });
 }

@@ -93,8 +93,11 @@ function SortIcon({ active, direction }) {
 
 export default function Transaction({ transactions }) {
   const data = useMemo(
-    () => (transactions && transactions.length ? transactions : generateDemoTransactions()),
-    [transactions]
+    () =>
+      transactions && transactions.length
+        ? transactions
+        : generateDemoTransactions(),
+    [transactions],
   );
 
   // Filter & search state
@@ -108,7 +111,10 @@ export default function Transaction({ transactions }) {
   const [showFilters, setShowFilters] = useState(false);
 
   // Sorting
-  const [sortConfig, setSortConfig] = useState({ key: "date", direction: "desc" });
+  const [sortConfig, setSortConfig] = useState({
+    key: "date",
+    direction: "desc",
+  });
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -139,14 +145,22 @@ export default function Transaction({ transactions }) {
           !q ||
           txn.description.toLowerCase().includes(q) ||
           txn.id.toLowerCase().includes(q);
-        const matchesStatus = statusFilter === "All" || txn.status === statusFilter;
+        const matchesStatus =
+          statusFilter === "All" || txn.status === statusFilter;
         const matchesType = typeFilter === "All" || txn.type === typeFilter;
         const matchesDate =
-          (!startDate || txn.date >= startDate) && (!endDate || txn.date <= endDate);
+          (!startDate || txn.date >= startDate) &&
+          (!endDate || txn.date <= endDate);
         const matchesAmount =
           (!minAmount || txn.amount >= parseFloat(minAmount)) &&
           (!maxAmount || txn.amount <= parseFloat(maxAmount));
-        return matchesSearch && matchesStatus && matchesType && matchesDate && matchesAmount;
+        return (
+          matchesSearch &&
+          matchesStatus &&
+          matchesType &&
+          matchesDate &&
+          matchesAmount
+        );
       })
       .sort((a, b) => {
         const { key, direction } = sortConfig;
@@ -169,12 +183,27 @@ export default function Transaction({ transactions }) {
   // Reset to page 1 whenever the filtered set or page size changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, typeFilter, startDate, endDate, minAmount, maxAmount, pageSize]);
+  }, [
+    searchTerm,
+    statusFilter,
+    typeFilter,
+    startDate,
+    endDate,
+    minAmount,
+    maxAmount,
+    pageSize,
+  ]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / pageSize));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredTransactions.length / pageSize),
+  );
   const safePage = Math.min(currentPage, totalPages);
   const startIdx = (safePage - 1) * pageSize;
-  const paginatedTransactions = filteredTransactions.slice(startIdx, startIdx + pageSize);
+  const paginatedTransactions = filteredTransactions.slice(
+    startIdx,
+    startIdx + pageSize,
+  );
 
   const activeFilterCount =
     (statusFilter !== "All" ? 1 : 0) +
@@ -194,7 +223,14 @@ export default function Transaction({ transactions }) {
   };
 
   const handleExportCSV = () => {
-    const headers = ["Transaction ID", "Date", "Description", "Type", "Amount ($)", "Status"];
+    const headers = [
+      "Transaction ID",
+      "Date",
+      "Description",
+      "Type",
+      "Amount ($)",
+      "Status",
+    ];
     const rows = filteredTransactions.map((txn) => [
       txn.id,
       txn.date,
@@ -203,14 +239,17 @@ export default function Transaction({ transactions }) {
       txn.amount.toFixed(2),
       txn.status,
     ]);
-    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((r) => r.join(",")),
+    ].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
     link.setAttribute(
       "download",
-      `transactions_export_${new Date().toISOString().split("T")[0]}.csv`
+      `transactions_export_${new Date().toISOString().split("T")[0]}.csv`,
     );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
@@ -254,11 +293,13 @@ export default function Transaction({ transactions }) {
         {/* Header */}
         <div className="p-6 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
               <ArrowRightLeft className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900">Transaction history</h2>
+              <h2 className="text-xl font-bold text-slate-900">
+                Transaction history
+              </h2>
               <p className="text-sm text-slate-500 mt-0.5">
                 Monitor, search, and filter your platform transactions.
               </p>
@@ -277,7 +318,7 @@ export default function Transaction({ transactions }) {
               Filters
               {activeFilterCount > 0 && (
                 <span
-                  className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold ${
+                  className={`inline-flex items-center justify-center min-w-4.5 h-4.5 px-1 rounded-full text-[11px] font-semibold ${
                     showFilters || activeFilterCount > 0
                       ? "bg-white text-indigo-600"
                       : "bg-indigo-600 text-white"
@@ -322,7 +363,7 @@ export default function Transaction({ transactions }) {
         {/* Filter panel */}
         <div
           className={`bg-slate-50 border-slate-200 transition-all duration-300 ease-in-out overflow-hidden ${
-            showFilters ? "max-h-[400px] opacity-100 border-b" : "max-h-0 opacity-0"
+            showFilters ? "max-h-100 opacity-100 border-b" : "max-h-0 opacity-0"
           }`}
         >
           <div className="p-6">
@@ -369,7 +410,9 @@ export default function Transaction({ transactions }) {
                     onChange={(e) => setStartDate(e.target.value)}
                     className="w-full px-2 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   />
-                  <span className="text-slate-400 text-xs flex-shrink-0">to</span>
+                  <span className="text-slate-400 text-xs flex-shrink-0">
+                    to
+                  </span>
                   <input
                     type="date"
                     value={endDate}
@@ -391,7 +434,9 @@ export default function Transaction({ transactions }) {
                     onChange={(e) => setMinAmount(e.target.value)}
                     className="w-full px-2 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   />
-                  <span className="text-slate-400 text-xs flex-shrink-0">to</span>
+                  <span className="text-slate-400 text-xs flex-shrink-0">
+                    to
+                  </span>
                   <input
                     type="number"
                     placeholder="Max"
@@ -406,7 +451,8 @@ export default function Transaction({ transactions }) {
             {activeFilterCount > 0 && (
               <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200">
                 <span className="text-xs text-slate-500">
-                  {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""} active
+                  {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""}{" "}
+                  active
                 </span>
                 <button
                   onClick={clearAllFilters}
@@ -431,7 +477,10 @@ export default function Transaction({ transactions }) {
                 >
                   <div className="flex items-center gap-1.5">
                     Txn ID
-                    <SortIcon active={sortConfig.key === "id"} direction={sortConfig.direction} />
+                    <SortIcon
+                      active={sortConfig.key === "id"}
+                      direction={sortConfig.direction}
+                    />
                   </div>
                 </th>
                 <th
@@ -440,18 +489,28 @@ export default function Transaction({ transactions }) {
                 >
                   <div className="flex items-center gap-1.5">
                     Date
-                    <SortIcon active={sortConfig.key === "date"} direction={sortConfig.direction} />
+                    <SortIcon
+                      active={sortConfig.key === "date"}
+                      direction={sortConfig.direction}
+                    />
                   </div>
                 </th>
-                <th className="p-4 text-xs font-semibold text-slate-600 uppercase">Description</th>
-                <th className="p-4 text-xs font-semibold text-slate-600 uppercase">Status</th>
+                <th className="p-4 text-xs font-semibold text-slate-600 uppercase">
+                  Description
+                </th>
+                <th className="p-4 text-xs font-semibold text-slate-600 uppercase">
+                  Status
+                </th>
                 <th
                   className="p-4 text-xs font-semibold text-slate-600 uppercase cursor-pointer text-right hover:bg-slate-100 select-none"
                   onClick={() => requestSort("amount")}
                 >
                   <div className="flex items-center justify-end gap-1.5">
                     Amount
-                    <SortIcon active={sortConfig.key === "amount"} direction={sortConfig.direction} />
+                    <SortIcon
+                      active={sortConfig.key === "amount"}
+                      direction={sortConfig.direction}
+                    />
                   </div>
                 </th>
               </tr>
@@ -459,13 +518,20 @@ export default function Transaction({ transactions }) {
             <tbody className="divide-y divide-slate-200">
               {paginatedTransactions.length > 0 ? (
                 paginatedTransactions.map((txn) => (
-                  <tr key={txn.id} className="hover:bg-slate-50/80 transition-colors">
+                  <tr
+                    key={txn.id}
+                    className="hover:bg-slate-50/80 transition-colors"
+                  >
                     <td className="p-4 text-sm font-mono text-slate-600 hidden md:table-cell">
                       {txn.id}
                     </td>
-                    <td className="p-4 text-sm text-slate-600 whitespace-nowrap">{txn.date}</td>
+                    <td className="p-4 text-sm text-slate-600 whitespace-nowrap">
+                      {txn.date}
+                    </td>
                     <td className="p-4">
-                      <p className="text-sm font-medium text-slate-900">{txn.description}</p>
+                      <p className="text-sm font-medium text-slate-900">
+                        {txn.description}
+                      </p>
                       <p className="text-xs text-slate-400">{txn.type}</p>
                     </td>
                     <td className="p-4">
@@ -473,7 +539,9 @@ export default function Transaction({ transactions }) {
                     </td>
                     <td
                       className={`p-4 text-sm font-semibold text-right whitespace-nowrap ${
-                        txn.type === "Credit" ? "text-emerald-600" : "text-slate-900"
+                        txn.type === "Credit"
+                          ? "text-emerald-600"
+                          : "text-slate-900"
                       }`}
                     >
                       {txn.type === "Credit" ? "+" : "-"}$
@@ -483,7 +551,10 @@ export default function Transaction({ transactions }) {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="p-12 text-center text-sm text-slate-400">
+                  <td
+                    colSpan="5"
+                    className="p-12 text-center text-sm text-slate-400"
+                  >
                     No transactions found matching the filter criteria.
                   </td>
                 </tr>
@@ -498,7 +569,8 @@ export default function Transaction({ transactions }) {
             <span>
               Showing <b className="text-slate-700">{rangeStart}</b>–
               <b className="text-slate-700">{rangeEnd}</b> of{" "}
-              <b className="text-slate-700">{filteredTransactions.length}</b> entries
+              <b className="text-slate-700">{filteredTransactions.length}</b>{" "}
+              entries
             </span>
             <div className="flex items-center gap-1.5">
               <span>Rows per page</span>
@@ -542,7 +614,7 @@ export default function Transaction({ transactions }) {
                   <button
                     key={p}
                     onClick={() => setCurrentPage(p)}
-                    className={`min-w-[28px] h-7 px-2 rounded-md text-xs font-medium border ${
+                    className={`min-w-7 h-7 px-2 rounded-md text-xs font-medium border ${
                       p === safePage
                         ? "bg-indigo-600 border-indigo-600 text-white"
                         : "bg-white border-slate-300 text-slate-600 hover:bg-slate-100"
@@ -550,11 +622,13 @@ export default function Transaction({ transactions }) {
                   >
                     {p}
                   </button>
-                )
+                ),
               )}
 
               <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
                 disabled={safePage === totalPages}
                 className="p-1.5 rounded-md border border-slate-300 bg-white text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100"
               >

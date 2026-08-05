@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { currency } from "../malik/utils";
 
 // Mock data representing what is already saved in the user's profile
 const USER_PROFILE_BANK_DATA = {
@@ -7,11 +8,7 @@ const USER_PROFILE_BANK_DATA = {
   accountHolderName: "ANAND RAJ",
 };
 
-const CURRENT_BALANCE = 24500.0;
-const MIN_WITHDRAWAL_AMOUNT = 100.0;
-const MAX_WITHDRAWAL_AMOUNT = 1000.0;
-
-export default function WithdrawFormComponent({ onCancel }) {
+export default function WithdrawFormComponent({ onCancel, userData }) {
   const [amount, setAmount] = useState("");
   const [bankAccount, setBankAccount] = useState("");
   const [ifscCode, setIfscCode] = useState("");
@@ -20,6 +17,9 @@ export default function WithdrawFormComponent({ onCancel }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState("");
+  const CURRENT_BALANCE = userData.totalProfit;
+  const MIN_WITHDRAWAL_AMOUNT = 100.0;
+  const MAX_WITHDRAWAL_AMOUNT = 1000.0;
 
   // Handle checking/unchecking the "Same as profile account" box
   const handleCheckboxChange = (e) => {
@@ -28,12 +28,14 @@ export default function WithdrawFormComponent({ onCancel }) {
 
     if (checked) {
       // Automatically autofill with user data from profile
-      setBankAccount(USER_PROFILE_BANK_DATA.accountNumber);
-      setIfscCode(USER_PROFILE_BANK_DATA.ifscCode);
+      setBankAccount(userData.accountNumber);
+      setIfscCode(userData.ifscCode);
+      setAccountHolderName(userData.accountHolderName);
     } else {
       // Clear fields if unchecked so they can write manually
       setBankAccount("");
       setIfscCode("");
+      setAccountHolderName("");
     }
   };
 
@@ -47,9 +49,18 @@ export default function WithdrawFormComponent({ onCancel }) {
       setError("Please enter a valid withdrawal amount.");
       return;
     }
+    if (
+      numericAmount < MIN_WITHDRAWAL_AMOUNT ||
+      numericAmount > MAX_WITHDRAWAL_AMOUNT
+    ) {
+      setError(
+        `Please enter b/w ₹${MIN_WITHDRAWAL_AMOUNT} to ₹${MAX_WITHDRAWAL_AMOUNT}`,
+      );
+      return;
+    }
     if (numericAmount > CURRENT_BALANCE) {
       setError(
-        `Insufficient balance. You can withdraw up to $${CURRENT_BALANCE.toLocaleString()}.`,
+        `Insufficient balance. You can withdraw up to ₹${CURRENT_BALANCE.toLocaleString()}.`,
       );
       return;
     }
@@ -136,10 +147,7 @@ export default function WithdrawFormComponent({ onCancel }) {
       <div className="mb-4 p-3.5 bg-indigo-50/60 rounded-lg flex justify-between items-center text-sm border border-indigo-100/40">
         <span className="text-slate-600 font-medium">Available Balance</span>
         <span className="font-bold text-indigo-700">
-          $
-          {CURRENT_BALANCE.toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-          })}
+          {currency(CURRENT_BALANCE)}
         </span>
       </div>
 
@@ -151,10 +159,7 @@ export default function WithdrawFormComponent({ onCancel }) {
             Min Limit
           </span>
           <span className="font-bold text-yellow-700">
-            $
-            {MIN_WITHDRAWAL_AMOUNT.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-            })}
+            {currency(MIN_WITHDRAWAL_AMOUNT)}
           </span>
         </div>
 
@@ -164,16 +169,19 @@ export default function WithdrawFormComponent({ onCancel }) {
             Max Limit
           </span>
           <span className="font-bold text-green-700">
-            $
-            {MAX_WITHDRAWAL_AMOUNT.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-            })}
+            {currency(MAX_WITHDRAWAL_AMOUNT)}
           </span>
         </div>
       </div>
       {error && (
-        <div className="mb-4 p-3 bg-rose-50 text-rose-700 border border-rose-100 rounded-lg text-xs font-medium">
-          {error}
+        <div className="mb-4 p-3 bg-rose-50 text-rose-700 border border-rose-100 rounded-lg text-xs font-medium justify-between flex items-center">
+          <span>⚠️ {error} </span>{" "}
+          <button
+            className="text-rose-500 mr-1 cursor-pointer"
+            onClick={() => setError("")}
+          >
+            ❌
+          </button>
         </div>
       )}
 
@@ -184,7 +192,7 @@ export default function WithdrawFormComponent({ onCancel }) {
         {/* Amount Input */}
         <div>
           <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-            Amount to Withdraw ($)
+            Amount to Withdraw (₹)
           </label>
           <input
             type="number"
@@ -267,7 +275,7 @@ export default function WithdrawFormComponent({ onCancel }) {
               className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500/20 accent-indigo-600"
             />
             <span className="text-xs font-medium text-slate-600 group-hover:text-slate-800 transition-colors">
-              Use bank details registered in my profile
+              Use Registered Bank Details..
             </span>
           </label>
         </div>

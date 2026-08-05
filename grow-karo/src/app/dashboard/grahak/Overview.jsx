@@ -79,7 +79,7 @@ const Overview = ({ userData }) => {
     // },
     {
       id: "total-profit",
-      title: "Total Profit",
+      title: "Available Balance",
       value: `₹ ${(userData?.totalProfit ?? 0).toLocaleString("en-IN", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,

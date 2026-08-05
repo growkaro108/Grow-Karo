@@ -1,11 +1,6 @@
 import { useMemo } from "react";
 import { AlertTriangle } from "lucide-react";
-import {
-  PROCESS_FILTERS,
-  STATUS_FILTERS,
-  TYPE_DOT,
-  mapBackendLog,
-} from "./activityLogShared";
+import { STATUS_FILTERS, TYPE_DOT, mapBackendLog } from "./activityLogShared";
 import { StatusBadge } from "../StatusBadge";
 import { useEventStream } from "@/api/useEventStream";
 import Filter from "./Filter";
@@ -27,6 +22,7 @@ export default function LiveLogsPanel({
   setShowFilters,
   hasActiveFilters,
   clearFilters,
+  PROCESS_FILTERS,
 }) {
   const { items: feed, connectionStatus } = useEventStream({
     endpoint: `${apiBaseUrl}/api/admin/activity-logs/stream`,
@@ -42,7 +38,8 @@ export default function LiveLogsPanel({
     return feed.filter((event) => {
       const matchesQuery = q === "" || event.name?.toLowerCase().includes(q);
       const matchesProcess =
-        processFilter === "all" || event.type === processFilter;
+        processFilter === "all" ||
+        event.type?.toLowerCase() === processFilter.toLowerCase();
       const matchesStatus =
         statusFilter === "all" || event.status === statusFilter;
       return matchesQuery && matchesProcess && matchesStatus;
@@ -97,7 +94,7 @@ export default function LiveLogsPanel({
             <p className="text-xs text-slate-500 font-body">
               {hasActiveFilters
                 ? `${filtered.length} matching event${filtered.length === 1 ? "" : "s"}`
-                : "Every deposit, withdrawal, signup and referral, as it happens"}
+                : "Every deposit, withdrawal, signup and more action, as it happens"}
             </p>
           </div>
           <span

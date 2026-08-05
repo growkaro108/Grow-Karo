@@ -134,7 +134,8 @@ public class General {
                 us.getIsApproved(),
                 us.getProfit(),
                 us.getNextPayoutDate(),
-                us.getPaidDate());
+                us.getPaidDate(), us.getStatus(),
+                us.getMaturityDate());
     }
 
     public SchemeResponse toSchemeResponse(Scheme scheme) {
@@ -162,8 +163,9 @@ public class General {
         }
     }
 
-    public LocalDate calculateMaturityDate(LocalDate startDate, int tenure) {
-        return startDate.plusDays(tenure);
+    public LocalDate calculateMaturityDate(LocalDateTime startDate, int tenure) {
+        LocalDate date = startDate.toLocalDate();
+        return date.plusDays(tenure);
     }
 
     public BigDecimal calculateProfit(BigDecimal paidAmount, Double profitpercentage, BigDecimal minimumAmount) {
@@ -234,6 +236,18 @@ public class General {
     public UserProfile toUserProfile(User user, String token) {
         BankDetails bankDetails = user.getBankDetails();
 
+        String bankName = null;
+        String accountNumber = null;
+        String ifscCode = null;
+        String accountHolderName = null;
+
+        if (bankDetails != null) {
+            bankName = bankDetails.getBankName();
+            accountNumber = bankDetails.getAccountNumber();
+            ifscCode = bankDetails.getIfscCode();
+            accountHolderName = bankDetails.getAccountHolderName();
+        }
+
         List<UserScheme> totalEnrollScheme = user.getEnrolledSchemes();
 
         int investedSchemeCount = 0;
@@ -261,11 +275,13 @@ public class General {
         }
 
         BigDecimal networth = totalInvestment.add(totalProfit);
+
         return new UserProfile(user.getId(), user.getName(), user.getEmail(), user.getPhone(),
-                bankDetails.getBankName(),
-                bankDetails.getAccountNumber(),
-                bankDetails.getIfscCode(),
-                bankDetails.getAccountHolderName(), user.isSecurityAlerts(), user.isSchemeAlerts(), token,
+                bankName,
+                accountNumber,
+                ifscCode,
+                accountHolderName,
+                user.isSecurityAlerts(), user.isSchemeAlerts(), token,
                 investedSchemeCount,
                 totalInvestment,
                 totalProfit,
