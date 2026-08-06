@@ -1,41 +1,31 @@
-import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Check } from "lucide-react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, Check, Clock } from "lucide-react";
 import { currency } from "../malik/utils";
+import { userContext } from "@/context/UserContext";
 
-/**
- * Controlled: the parent form owns which scheme is selected (`value` /
- * `onChange`), same as the amount and bank fields sitting next to it.
- * This component only owns its own open/close UI state — that's the
- * correct split between "form data" and "widget chrome."
- */
+const TableItem = ({ title, value, LabelColor, ValueColor }) => {
+  return (
+    <div className="p-3.5 rounded-lg flex justify-between items-center text-xs border border-[#EAD9D6] bg-[#FBF3F2]">
+      <span
+        className={`font-medium uppercase tracking-wider text-[${LabelColor}]`}
+      >
+        {title}
+      </span>
+      <span className={`font-bold text-[${ValueColor}] tabular-nums`}>
+        {value}
+      </span>
+    </div>
+  );
+};
 
-export const SCHEMES = [
-  { id: 100, name: "Scheme 1", tenure: "6 months", amount: 5000, penalty: 250 },
-  {
-    id: 200,
-    name: "Scheme 2",
-    tenure: "12 months",
-    amount: 10000,
-    penalty: 400,
-  },
-  {
-    id: 300,
-    name: "Scheme 3",
-    tenure: "24 months",
-    amount: 20000,
-    penalty: 600,
-  },
-];
-
-export default function AggresiveTop({ value, onChange, holdings }) {
+export default function AggresiveTop({ value, onChange, isAggressive }) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const containerRef = useRef(null);
   const triggerRef = useRef(null);
-  const [schemes, setSchemes] = useState();
+  const { holding } = use(userContext);
 
-  const selected = schemes?.find((s) => s.schemeId === value) ?? null;
-  function calculatePenalty(amount, startDate) {
+  function calculatePenalty(amount, profit, redeemed, startDate) {
     const today = new Date();
     const start = new Date(startDate);
 
@@ -50,43 +40,83 @@ export default function AggresiveTop({ value, onChange, holdings }) {
     }
 
     // Determine penalty percentage
-    let penaltyRate = 0;
-
-    if (monthsPassed > 8) {
+    // TODO: confirm intended tier boundaries — original code had a
+    // duplicate `monthsPassed >= 5` branch that was unreachable.
+    // Guessing an even ladder here; replace with your real business rule.
+    let penaltyRate;
+    if (monthsPassed > 11) {
+      penaltyRate = 1;
+    } else if (monthsPassed > 8) {
       penaltyRate = 0.8;
-    } else if (monthsPassed >= 8) {
-      penaltyRate = 0.6;
     } else if (monthsPassed >= 5) {
+      penaltyRate = 0.6;
+    } else if (monthsPassed >= 2) {
       penaltyRate = 0.4;
     } else {
       penaltyRate = 0.2;
     }
 
-    return amount * penaltyRate;
+    const balance = Number(amount) + Number(profit) - Number(redeemed);
+    return balance * penaltyRate;
   }
-  useEffect(() => {
-    // console.log(holdings);
-    //create schemes from holdings
-    const newSchemes = holdings.map((h) => {
-      return {
-        id: h.schemeId,
+
+  const schemes = useMemo(() => {
+    if (isAggressive) {
+      // console.log(holding);
+      return holding
+        .filter((h) => {
+          const balance =
+            Number(h.paidAmount) + Number(h.profit) - Number(h.profitReedemed);
+          const penalty = calculatePenalty(
+            h.paidAmount,
+            h.profit,
+            h.profitReedemed,
+            h.enrollmentDate,
+          );
+          // Don't add to scheme list if penalty equals full balance
+          return penalty !== balance;
+        })
+        .map((h) => ({
+          id: h.userSchemeId,
+          schemeId: h.schemeId,
+          userSchemeId: h.userSchemeId,
+          name: h.schemeName,
+          tenure: h.tenure,
+          amount: h.paidAmount,
+          penalty: calculatePenalty(
+            h.paidAmount,
+            h.profit,
+            h.profitReedemed,
+            h.enrollmentDate,
+          ),
+        }));
+    }
+
+    return holding
+      .filter((h) => Number(h.profit) - Number(h.profitReedemed) > 0)
+      .map((h) => ({
+        id: h.userSchemeId,
+        schemeId: h.schemeId,
+        userSchemeId: h.userSchemeId,
         name: h.schemeName,
         tenure: h.tenure,
-        amount: h.paidAmount,
-        penalty: calculatePenalty(h.paidAmount, h.enrollmentDate),
-      };
-    });
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSchemes(newSchemes);
+        amount: h.profit,
+        invested: h.paidAmount,
+      }));
+  }, [holding, isAggressive]);
 
+  useEffect(() => {
     function onClickOutside(e) {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
         setOpen(false);
       }
     }
+
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [holdings]);
+  }, []);
+
+  const selected = schemes?.find((s) => s.id === value) ?? null;
 
   function selectScheme(scheme) {
     onChange?.(scheme);
@@ -106,7 +136,6 @@ export default function AggresiveTop({ value, onChange, holdings }) {
       );
     }
   }
-
   function onListKeyDown(e) {
     if (e.key === "Escape") {
       e.preventDefault();
@@ -126,9 +155,9 @@ export default function AggresiveTop({ value, onChange, holdings }) {
 
   return (
     <div className="w-full">
-      <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#5B5648]">
+      {/* <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#5B5648]">
         Withdrawal Scheme
-      </div>
+      </div> */}
 
       <div ref={containerRef} className="relative">
         <button
@@ -154,8 +183,8 @@ export default function AggresiveTop({ value, onChange, holdings }) {
           <span className="min-w-0">
             {selected ? (
               <span className="flex flex-col leading-tight">
-                <span className="font-semibold text-[#0B1B2E] text-sm truncate">
-                  {selected.name} · {selected.tenure}
+                <span className="font-semibold text-[#0B1B2E] text-sm truncate flex items-center gap-1">
+                  {selected.name} · <Clock size={12} /> {selected.tenure} days
                 </span>
                 <span className="text-xs text-[#8C8672] tabular-nums">
                   {currency(selected.amount)} withdrawal
@@ -211,8 +240,8 @@ export default function AggresiveTop({ value, onChange, holdings }) {
                       <span className="font-medium text-[#0B1B2E] truncate">
                         {scheme.name}
                       </span>
-                      <span className="text-xs text-[#8C8672]">
-                        {scheme.tenure}
+                      <span className="text-xs text-[#8C8672] flex items-center gap-1">
+                        <Clock size={12} /> {scheme.tenure} days
                       </span>
                     </span>
                   </span>
@@ -220,9 +249,11 @@ export default function AggresiveTop({ value, onChange, holdings }) {
                     <span className="font-semibold text-[#0B1B2E]">
                       {currency(scheme.amount)}
                     </span>
-                    <span className="text-[#8C3B34]">
-                      −{currency(scheme.penalty)} penalty
-                    </span>
+                    {isAggressive && (
+                      <span className="text-[#8C3B34]">
+                        −{currency(scheme.penalty)} penalty
+                      </span>
+                    )}
                   </span>
                 </li>
               );
@@ -232,26 +263,40 @@ export default function AggresiveTop({ value, onChange, holdings }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4 mt-4">
-        <div className="p-3.5 rounded-lg flex justify-between items-center text-xs border border-[#E4DFD3] bg-[#FAF7F0]">
-          <span className="font-medium uppercase tracking-wider text-[#5B5648]">
-            Amount
-          </span>
-          <span className="font-bold text-[#0B1B2E] tabular-nums">
-            {selected ? currency(selected.amount) : "—"}
-          </span>
-        </div>
-
-        <div className="p-3.5 rounded-lg flex justify-between items-center text-xs border border-[#EAD9D6] bg-[#FBF3F2]">
-          <span className="font-medium uppercase tracking-wider text-[#8C3B34]">
-            Penalty
-          </span>
-          <span className="font-bold text-[#8C3B34] tabular-nums">
-            {selected ? currency(selected.penalty) : "—"}
-          </span>
-        </div>
+        {isAggressive ? (
+          <>
+            <TableItem
+              title="Amount"
+              value={selected ? currency(selected.amount) : "—"}
+              LabelColor="#8C3B34"
+              ValueColor="#0B1B2E"
+            />
+            <TableItem
+              title="penalty"
+              value={selected ? selected.penalty : ""}
+              LabelColor="#8C3B34"
+              ValueColor="#0B1B2E"
+            />
+          </>
+        ) : (
+          <>
+            <TableItem
+              title="Invested"
+              value={selected ? currency(selected.invested) : "—"}
+              LabelColor="#1F6F64"
+              ValueColor="#0B1B2E"
+            />
+            <TableItem
+              title="profit"
+              value={selected ? currency(selected.amount) : "—"}
+              LabelColor="#15e851"
+              ValueColor="#2bcc59"
+            />
+          </>
+        )}
       </div>
 
-      {selected && (
+      {selected && isAggressive && (
         <div className="mt-3 flex justify-between items-center px-1 text-xs">
           <span className="text-[#5B5648]">Net payout after penalty</span>
           <span className="font-bold text-[#1F6F54] tabular-nums">

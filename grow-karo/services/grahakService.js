@@ -6,6 +6,8 @@ import {
   getEnrolledScheme,
   getUsersSchemes,
   logoutUser,
+  redeemAggressive,
+  redeemProfit,
   resetPassword,
   sendEmailWithResetLink,
   updateUserProfile,
@@ -196,6 +198,14 @@ export const resetThePassword = async (password, id) => {
 
 export async function updateProfile(userProfile) {
   return await updateUserProfile(userProfile);
+}
+
+export async function withdrawProfit(data) {
+  return await redeemProfit(data);
+}
+
+export async function withdrawProgressScheme(data) {
+  return await redeemAggressive(data);
 }
 
 export async function fetchGrahakDashboardData(userId = "me") {

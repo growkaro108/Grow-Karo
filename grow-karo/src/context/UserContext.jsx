@@ -1,6 +1,7 @@
 "use client";
 import react, { createContext, useCallback, useMemo, useState } from "react";
 import {
+  allRounderMessage,
   confirmMessage,
   errorMessage,
   infoMessage,
@@ -8,16 +9,37 @@ import {
 } from "@/components/Message";
 import { useRouter } from "next/navigation";
 import { deleteSecureCookie, getSecureCookie } from "./cookiesManagement";
-import { logoutApi } from "../../services/grahakService";
+import { getAllUsersScheme, logoutApi } from "../../services/grahakService";
 import { useLoader } from "./LoaderContext";
 
 export const userContext = createContext({});
 export const UserProvider = ({ children }) => {
   const [authUser, setAuthUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [holding, setHolding] = useState([]);
+
   const { showLoader, hideLoader } = useLoader();
 
   const router = useRouter();
+
+  const fetchHoldings = useCallback(async () => {
+    const userId = authUser?.id;
+    if (!userId) return;
+    try {
+      const response = await getAllUsersScheme(authUser?.id);
+      // console.log(response.data);
+      if (response.status === "success" && response.data) {
+        setHolding(response.data);
+      } else {
+        allRounderMessage(response);
+        setHolding([]);
+      }
+    } catch (error) {
+      errorMessage("something went wrong");
+      setHolding([]);
+      console.error("Error fetching holdings:", error);
+    }
+  }, [authUser]);
 
   const logout = useCallback(async () => {
     try {
@@ -77,8 +99,18 @@ export const UserProvider = ({ children }) => {
       setIsLoading,
       logout,
       getUserDataFromContext,
+      holding,
+      setHolding,
+      fetchHoldings,
     }),
-    [authUser, getUserDataFromContext, isLoading, logout],
+    [
+      authUser,
+      fetchHoldings,
+      getUserDataFromContext,
+      holding,
+      isLoading,
+      logout,
+    ],
   );
   return (
     <userContext.Provider value={contexValue}>{children}</userContext.Provider>

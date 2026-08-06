@@ -92,6 +92,11 @@ public class UserScheme {
     @Column(name = "profit", precision = 19, scale = 4)
     private BigDecimal profit = BigDecimal.ZERO;
 
+    @NotNull(message = "Profit Reedemed cannot be null")
+    @DecimalMin(value = "0.0000", message = "Profit Reedemed cannot be negative")
+    @Column(name = "profit_reedemed", precision = 19, scale = 4, nullable = false, columnDefinition = "NUMERIC(19,4) DEFAULT 0.0000")
+    private BigDecimal profitReedemed = BigDecimal.ZERO;
+
     @Column(name = "next_payout_date")
     private LocalDate nextPayoutDate;
 

@@ -338,9 +338,10 @@ export default function Transaction({ transactions }) {
           </div>
         </div>
 
-        {/* Search bar - always visible */}
-        <div className="px-6 py-4 border-b border-slate-200 bg-white">
-          <div className="relative max-w-md">
+        {/* Control Bar: Search + Quick Date Range */}
+        <div className="px-6 py-4 border-b border-slate-200 bg-white flex flex-wrap items-center justify-between gap-7">
+          {/* Search input */}
+          <div className="relative flex-1 min-w-60 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
@@ -358,16 +359,47 @@ export default function Transaction({ transactions }) {
               </button>
             )}
           </div>
-        </div>
 
+          {/* Date Range Controls (Beside Search Bar) */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              Date:
+            </span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <span className="text-slate-400 text-xs">to</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            {(startDate || endDate) && (
+              <button
+                onClick={() => {
+                  setStartDate("");
+                  setEndDate("");
+                }}
+                className="text-xs text-slate-400 hover:text-slate-600 ml-1"
+                title="Clear dates"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
         {/* Filter panel */}
         <div
           className={`bg-slate-50 border-slate-200 transition-all duration-300 ease-in-out overflow-hidden ${
             showFilters ? "max-h-100 opacity-100 border-b" : "max-h-0 opacity-0"
           }`}
         >
-          <div className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               <div>
                 <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
                   Status
@@ -397,29 +429,6 @@ export default function Transaction({ transactions }) {
                   <option value="Credit">Credit</option>
                   <option value="Debit">Debit</option>
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
-                  Date range
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-2 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                  <span className="text-slate-400 text-xs flex-shrink-0">
-                    to
-                  </span>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-2 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
               </div>
 
               <div>

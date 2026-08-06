@@ -30,6 +30,8 @@ public class SecurityConfig {
                                                                 "/api/user/reset_password",
                                                                 "/api/user/{userId}",
                                                                 "/api/user/change_password",
+                                                                "/api/user/redeemProfit",
+                                                                "/api/user/redeemAggressive",
                                                                 "/uploads/bonds/**",
                                                                 "/api/scheme/get",
                                                                 "/api/user/logout/{userID}/{userName}",

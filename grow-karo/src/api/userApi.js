@@ -82,6 +82,19 @@ export async function updateUserProfile(updates) {
   });
 }
 
+export async function redeemProfit(data) {
+  return apiRequest("/user/redeemProfit", {
+    method: "POST",
+    body: data,
+  });
+}
+export async function redeemAggressive(data) {
+  return apiRequest("/user/redeemAggressive", {
+    method: "POST",
+    body: data,
+  });
+}
+
 //pendingg
 export async function fetchUserTransactions(userId, params) {
   return apiRequest(`/users/${userId}/transactions`, { params });

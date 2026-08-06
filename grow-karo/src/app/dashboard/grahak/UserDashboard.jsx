@@ -38,10 +38,9 @@ export default function DashboardPage() {
   const [portfolioValue, setPortfolioValue] = useState(0);
   const [activeTab, setActiveTab] = useState("overview");
   // const [withdrawData, setWithdrawData] = useState();
-  const [holding, setHolding] = useState();
 
   const [withdrawType, setWithdrawType] = useState("general");
-  const { authUser } = use(userContext);
+  const { authUser, holding, fetchHoldings } = use(userContext);
   const router = useRouter();
 
   const [dashboardData, setDashboardData] = useState({
@@ -94,27 +93,6 @@ export default function DashboardPage() {
     setWithdrawType("general");
     setActiveTab("withdraw");
   }
-  const fetchHoldings = useCallback(async () => {
-    const userId = authUser?.id;
-    if (!userId) return;
-    try {
-      setLoading(true);
-      const response = await getAllUsersScheme(userId);
-      // console.log(response.data);
-      if (response.status === "success" && response.data) {
-        setHolding(response.data);
-      } else {
-        allRounderMessage(response);
-        setHolding([]);
-      }
-    } catch (error) {
-      errorMessage("something went wrong");
-      setHolding([]);
-      console.error("Error fetching holdings:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [authUser?.id]);
 
   const { holdings, transactions, graphDataMap } = dashboardData;
   useEffect(() => {

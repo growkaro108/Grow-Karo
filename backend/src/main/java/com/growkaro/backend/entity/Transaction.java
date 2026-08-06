@@ -2,6 +2,8 @@ package com.growkaro.backend.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -19,6 +21,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import lombok.Getter;
@@ -34,7 +37,6 @@ import lombok.Setter;
 public class Transaction {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -48,6 +50,8 @@ public class Transaction {
 
     @Column(nullable = true, length = 100)
     private String schemeName; // or @ManyToOne to a Scheme entity if schemes live in the DB
+
+    // private String description;
 
     // Only populated for AGGRESSIVE_WITHDRAWAL
     @Column(precision = 12, scale = 2)
@@ -96,5 +100,11 @@ public class Transaction {
         GENERAL_WITHDRAWAL,
         AGGRESSIVE_WITHDRAWAL,
         DEPOSIT
+    }
+
+    @PrePersist
+    private void setId() {
+        this.id = "TXN-" + LocalDateTime.now(ZoneId.of("Asia/Kolkata"))
+                .format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
     }
 }

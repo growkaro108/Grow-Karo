@@ -142,6 +142,7 @@ public class General {
                 us.getPaidAmount(),
                 us.getIsApproved(),
                 us.getProfit(),
+                us.getProfitReedemed(),
                 us.getNextPayoutDate(),
                 us.getPaidDate(), us.getStatus(),
                 us.getMaturityDate());
@@ -240,12 +241,14 @@ public class General {
         String accountNumber = null;
         String ifscCode = null;
         String accountHolderName = null;
+        String bankDetailsId = null;
 
         if (bankDetails != null) {
             bankName = bankDetails.getBankName();
             accountNumber = bankDetails.getAccountNumber();
             ifscCode = bankDetails.getIfscCode();
             accountHolderName = bankDetails.getAccountHolderName();
+            bankDetailsId = bankDetails.getBank_details_id();
         }
 
         List<UserScheme> totalEnrollScheme = user.getEnrolledSchemes();
@@ -285,6 +288,6 @@ public class General {
                 investedSchemeCount,
                 totalInvestment,
                 totalProfit,
-                networth);
+                networth, bankDetailsId);
     }
 }

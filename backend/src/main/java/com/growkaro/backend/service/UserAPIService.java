@@ -20,8 +20,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import com.growkaro.backend.DRO.UserRegister;
+import com.growkaro.backend.DRO.WithdrawAmount;
 import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.BankDetails;
@@ -33,6 +35,7 @@ import com.growkaro.backend.entity.UserProfile;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.enums.UserSchemeStatus;
+import com.growkaro.backend.repository.BankDetailsRepository;
 import com.growkaro.backend.repository.NotificationRepository;
 import com.growkaro.backend.repository.SchemeRepository;
 import com.growkaro.backend.repository.TransactionRepository;
@@ -54,6 +57,7 @@ public class UserAPIService {
     private final SchemeRepository schemeRepository;
     private final UserSchemeRepository userSchemeRepository;
     private final ActivityLogService activityLogService;
+    private final BankDetailsRepository bankDetailsRepository;
     private final General general;
 
     public UserAPIService(ApiService apiService,
@@ -62,7 +66,7 @@ public class UserAPIService {
             NotificationRepository notificationRepository,
             WithdrawalRequestRepository withdrawalRequestRepository, SchemeRepository schemeRepository,
             UserSchemeRepository userSchemeRepository,
-            ActivityLogService activityLogService,
+            ActivityLogService activityLogService, BankDetailsRepository bankDetailsRepository,
             General general) {
         this.apiService = apiService;
         this.userRepository = userRepository;
@@ -72,6 +76,7 @@ public class UserAPIService {
         this.schemeRepository = schemeRepository;
         this.userSchemeRepository = userSchemeRepository;
         this.activityLogService = activityLogService;
+        this.bankDetailsRepository = bankDetailsRepository;
         this.general = general;
     }
 
@@ -106,6 +111,14 @@ public class UserAPIService {
 
     public boolean existUserSchemeId(String userSchemeId) {
         return userSchemeRepository.existsById(userSchemeId);
+    }
+
+    public UserScheme getUserSchemeById(String userSchemeId) {
+        if (userSchemeId == null || userSchemeId.isBlank()) {
+            return null;
+        }
+        Optional<UserScheme> userScheme = userSchemeRepository.findById(userSchemeId);
+        return userScheme.isPresent() ? userScheme.get() : null;
     }
 
     public Scheme getSchemeById(String schemeId) {
@@ -392,8 +405,104 @@ public class UserAPIService {
         return general.response("success", "User updated successfully", general.toUserProfile(user, token));
     }
 
-    public Map<String, Object> withdrawAmount(String userId, String schemeId, String amount) {
-        return null;
+    @Transactional
+    public Map<String, Object> redeemAmount(WithdrawAmount wa) {
+
+        // basic amount validation
+        if (wa.amount() == null || wa.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            return general.response("error", "Invalid amount...", null);
+        }
+
+        // is valid user
+        User user = getUserById(wa.userId());
+        if (user == null) {
+            return general.response("error", "wrong userId...", Map.of("id", wa.userId()));
+        }
+
+        // is valid bank details
+        BankDetails bankDetails;
+        if (wa.bankDetailsId() == null) {
+            if (wa.bankDetails() == null) {
+                return general.response("error", "Invalid bankDetails...", null);
+            }
+            bankDetails = wa.bankDetails();
+            bankDetails.setUser(user); // ensure new bank details are tied to the requesting user
+            bankDetails = bankDetailsRepository.save(bankDetails);
+        } else {
+            bankDetails = bankDetailsRepository.findById(wa.bankDetailsId()).orElse(null);
+            if (bankDetails == null) {
+                return general.response("error", "Invalid bankDetailsId...", null);
+            }
+            // ownership check: bank details must belong to this user
+            if (bankDetails.getUser() == null || !bankDetails.getUser().getId().equals(user.getId())) {
+                return general.response("error", "bankDetails does not belong to user...", null);
+            }
+        }
+
+        // check is valid profit or redeem scheme paidAmount
+        // NOTE: switch to a locking fetch (e.g. userSchemeRepository.findByIdForUpdate)
+        // if concurrent redemption of the same scheme is possible in your flow.
+        UserScheme us = getUserSchemeById(wa.userSchemeId());
+        if (us == null) {
+            return general.response("error", "Invalid userSchemeId...", null);
+        }
+
+        // ownership check: scheme must belong to this user
+        if (us.getUser() == null || !us.getUser().getId().equals(user.getId())) {
+            log.info("userScheme does not belong to user..., {}",
+                    Map.of("userSchemeId", us.getUserSchemeId(), "userId", user.getId()));
+            return general.response("error", "userScheme does not belong to user...", null);
+        }
+
+        if (!wa.isAggressive()) { // general withdrawal and redeem profit
+            // guard against re-redeeming the same profit(profit==redeemed)
+            // this check is optional as user can redeem his profit multiple times
+            if (us.getProfit().subtract(us.getProfitReedemed()).compareTo(BigDecimal.ZERO) == 0) {
+                log.info("profit already redeemed..., {}",
+                        Map.of("userSchemeId", us.getUserSchemeId(), "profit", us.getProfit(), "profitRedeemed",
+                                us.getProfitReedemed(), "amount", wa.amount(), "userId", user.getId(),
+                                "redeemed_already",
+                                us.getProfitReedemed()));
+                return general.response("info", "profit already redeemed...", null);
+            }
+            if (us.getProfit() == null
+                    || (us.getProfit().subtract(us.getProfitReedemed())).compareTo(wa.amount()) < 0) {
+                log.info("Insufficient Profit...",
+                        Map.of("userSchemeId", us.getUserSchemeId(), "profit", us.getProfit(), "profitRedeemed",
+                                us.getProfitReedemed(), "amount", wa.amount(), "userId", user.getId()));
+                return general.response("error", "Insufficient Profit...", null);
+            }
+
+        } else { // aggressive withdrawal
+            if (us.getPaidAmount() == null || us.getPaidAmount().compareTo(wa.amount()) != 0) {
+                log.info("paidAmount and amount doesn't match..., {}", Map.of("userSchemeId", us.getUserSchemeId(),
+                        "paidAmount", us.getPaidAmount(), "amount", wa.amount(), "userId", user.getId()));
+                return general.response("error", "paidAmount and amount doesn't match...", null);
+            }
+        }
+
+        Transaction txn = new Transaction();
+        txn.setUser(user);
+        txn.setAmount(wa.amount());
+        txn.setSchemeName(us.getScheme().getSchemeName());
+        txn.setBankDetails(bankDetails);
+        txn.setStatus(Transaction.TransactionStatus.PENDING);
+        txn.setType(wa.isAggressive()
+                ? Transaction.TransactionType.AGGRESSIVE_WITHDRAWAL
+                : Transaction.TransactionType.GENERAL_WITHDRAWAL);
+        transactionRepository.save(txn);
+
+        // update redemption bookkeeping
+        if (!wa.isAggressive()) {
+            us.setProfitReedemed(wa.amount());
+        } else {
+            // if you track aggressive redemptions separately, set that field here instead
+            // e.g. us.setPaidAmountRedeemed(wa.amount());
+            us.setProfitReedemed(wa.amount());
+        }
+        userSchemeRepository.save(us);
+
+        return general.response("success", "Withdraw request placed successfully", null);
     }
 
     //// pending
@@ -461,7 +570,6 @@ public class UserAPIService {
     }
 
     public Map<String, Object> updateNotificationSettings(String userId, Map<String, Boolean> settings) {
-        // TODO: persist settings — currently just echoed back, not saved anywhere
         return general.response("ok", "Notification preferences updated",
                 Map.of("userId", userId, "settings", settings));
     }

@@ -1,5 +1,6 @@
 package com.growkaro.backend.controller;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.growkaro.backend.DRO.EnrollingUser;
 import com.growkaro.backend.DRO.UserRegister;
+import com.growkaro.backend.DRO.WithdrawAmount;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserProfile;
@@ -205,19 +207,23 @@ public class UserAPIController {
         return ResponseEntity.ok(userAPIService.updateUser(userProfile));
     }
 
-    @PostMapping("/withdraw")
-    public ResponseEntity<Map<String, Object>> withdraw(@RequestBody Map<String, Object> payload) {
-        String userId = general.stringValue(payload.get("userId"));
-        String schemeId = general.stringValue(payload.get("schemeId"));
-        String amount = general.stringValue(payload.get("amount"));
+    @PostMapping("/redeemProfit")
+    public ResponseEntity<Map<String, Object>> redeem(@RequestBody WithdrawAmount wa) {
         try {
-            if (userId.isBlank() || general.isValidId(userId) || schemeId.isBlank() || amount.isBlank()) {
+            if (wa.userId().isBlank() || wa.schemeId().isBlank() || wa.amount().compareTo(BigDecimal.ZERO) <= 0
+                    || !general.isValidId(wa.userId())) {
+                log.error("Invalid data for user {} schemeId {} amount {} isAggressive {} isValidId {}", wa.userId(),
+                        wa.schemeId(),
+                        wa.amount(), wa.isAggressive(), general.isValidId(wa.userId()));
                 return ResponseEntity.badRequest().body(general.response("error", "Invalid data...", null));
             }
-            return ResponseEntity.ok(userAPIService.withdrawAmount(userId, schemeId, amount));
+            return ResponseEntity.ok(userAPIService.redeemAmount(wa));
         } catch (Exception e) {
-            log.error("Error withdrawing from scheme {} for user {} with amount {}", schemeId, userId, amount, e);
-            return ResponseEntity.internalServerError().body(general.response("error", "Internal Server error", null));
+            log.error("Error redeeming from scheme {} for user {} with amount {}",
+                    wa.schemeId(), wa.userId(),
+                    wa.amount(), e);
+            return ResponseEntity.internalServerError().body(general.response("error",
+                    "Internal Server error", null));
         }
     }
 
