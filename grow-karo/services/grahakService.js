@@ -208,6 +208,10 @@ export async function withdrawProgressScheme(data) {
   return await redeemAggressive(data);
 }
 
+export async function getAllUserTransaction(userId) {
+  return await fetchUserTransactions(userId);
+}
+
 export async function fetchGrahakDashboardData(userId = "me") {
   if (true) {
     return delay(mockGrahakData);

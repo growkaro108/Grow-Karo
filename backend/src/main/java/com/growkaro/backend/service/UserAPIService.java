@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.DRO.WithdrawAmount;
+import com.growkaro.backend.DTO.TransactionResponse;
+import com.growkaro.backend.DTO.TransactionSummary;
 import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.BankDetails;
@@ -143,6 +145,21 @@ public class UserAPIService {
         }
         Optional<User> user = userRepository.findByEmail(email);
         return user.isPresent() ? user.get() : null;
+    }
+
+    public List<Transaction> getAllUsersTransactions(String userId) {
+        if (userId == null || userId.isBlank() || !(general.isValidId(userId))) {
+            return null;
+        }
+        return transactionRepository.findByUser_IdOrderByCreatedAtDesc(userId);
+    }
+
+    public Transaction getTransactionById(String txnId) {
+        if (txnId == null || txnId.isBlank() || !(general.isValidId(txnId))) {
+            return null;
+        }
+        Optional<Transaction> txn = transactionRepository.findById(txnId);
+        return txn.isEmpty() ? null : txn.get();
     }
 
     @Transactional
@@ -286,7 +303,12 @@ public class UserAPIService {
                     .map(general::toUserPortfolio)
                     .toList();
 
-            return general.response("success", "User portfolios fetched", portfolios);
+            TransactionSummary summary = transactionRepository.getTransactionSummaryByUser(user.getId());
+            BigDecimal pendingSum = summary.getPendingSum();
+            BigDecimal successSum = summary.getSuccessSum();
+
+            return general.response("success", "User portfolios fetched",
+                    Map.of("holdings", portfolios, "pendingSum", pendingSum, "successSum", successSum));
         } catch (Exception e) {
             log.error("Failed to fetch portfolio for user {}", userId, e);
             return general.response("error", "Something went wrong. Please try again.", null);
@@ -503,6 +525,16 @@ public class UserAPIService {
         userSchemeRepository.save(us);
 
         return general.response("success", "Withdraw request placed successfully", null);
+    }
+
+    public Map<String, Object> getTransactionsofUser(String userId) {
+        List<Transaction> transactions = getAllUsersTransactions(userId);
+        if (transactions == null) {
+            return general.response("error", "Invalid requests...", Map.of("id", userId));
+        }
+        return general.response("success", "Transactions fetched", transactions.stream()
+                .map(TransactionResponse::fromEntity)
+                .toList());
     }
 
     //// pending

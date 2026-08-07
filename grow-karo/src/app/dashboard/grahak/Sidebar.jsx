@@ -1,7 +1,6 @@
 "use client";
 
-import { LayoutDashboardIcon } from "lucide-react";
-import Image from "next/image";
+import { ArrowLeft, LayoutDashboardIcon, Menu } from "lucide-react";
 import { useState } from "react";
 
 export default function Sidebar({ activeTab, setActiveTab, userEmail, name }) {
@@ -26,35 +25,9 @@ export default function Sidebar({ activeTab, setActiveTab, userEmail, name }) {
         className="lg:hidden fixed top-4 left-4 z-50 flex items-center justify-center bg-slate-900 text-white p-3 rounded-xl shadow-xl transition-all duration-300 active:scale-95 hover:bg-slate-800"
       >
         {isOpen ? (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2.5}
-            stroke="currentColor"
-            className="w-5 h-5"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
-            />
-          </svg>
+          <ArrowLeft className="w-5 h-5" strokeWidth={2.5} />
         ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2.5}
-            stroke="currentColor"
-            className="w-5 h-5"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-            />
-          </svg>
+          <Menu className="w-5 h-5" strokeWidth={2.5} />
         )}
       </button>
 
@@ -134,7 +107,7 @@ export default function Sidebar({ activeTab, setActiveTab, userEmail, name }) {
 
         {/* User Account Section Footer */}
         <div className="border-t border-slate-200/60 pt-4 px-2 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-700 font-bold text-xs select-none border border-slate-300/40">
+          <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-700 font-bold text-xs select-none border border-slate-300/40 animate-bounce">
             {name?.slice(0, 2).toUpperCase()}
           </div>
           <div className="flex flex-col min-w-0">

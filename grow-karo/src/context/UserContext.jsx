@@ -16,27 +16,27 @@ export const userContext = createContext({});
 export const UserProvider = ({ children }) => {
   const [authUser, setAuthUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [holding, setHolding] = useState([]);
+  const [portfolio, setPortfolio] = useState([]);
 
   const { showLoader, hideLoader } = useLoader();
 
   const router = useRouter();
 
-  const fetchHoldings = useCallback(async () => {
+  const fetchPortfolio = useCallback(async () => {
     const userId = authUser?.id;
     if (!userId) return;
     try {
       const response = await getAllUsersScheme(authUser?.id);
       // console.log(response.data);
       if (response.status === "success" && response.data) {
-        setHolding(response.data);
+        setPortfolio(response.data);
       } else {
         allRounderMessage(response);
-        setHolding([]);
+        setPortfolio([]);
       }
     } catch (error) {
       errorMessage("something went wrong");
-      setHolding([]);
+      setPortfolio([]);
       console.error("Error fetching holdings:", error);
     }
   }, [authUser]);
@@ -99,15 +99,15 @@ export const UserProvider = ({ children }) => {
       setIsLoading,
       logout,
       getUserDataFromContext,
-      holding,
-      setHolding,
-      fetchHoldings,
+      portfolio,
+      setPortfolio,
+      fetchPortfolio,
     }),
     [
       authUser,
-      fetchHoldings,
+      fetchPortfolio,
       getUserDataFromContext,
-      holding,
+      portfolio,
       isLoading,
       logout,
     ],

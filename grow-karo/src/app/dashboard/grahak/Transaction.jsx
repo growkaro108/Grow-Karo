@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, use } from "react";
 import {
   Search,
   SlidersHorizontal,
@@ -16,6 +16,10 @@ import {
   ChevronsRight,
   ArrowRightLeft,
 } from "lucide-react";
+import { errorMessage } from "@/components/Message";
+import { userContext } from "@/context/UserContext";
+import { getAllUserTransaction } from "../../../../services/grahakService";
+import { formatDateTime } from "@/app/plan/utils/planUtils";
 
 // --- demo data (used only when no transactions prop is supplied) ---
 const DEMO_TYPES = ["Credit", "Debit"];
@@ -91,7 +95,22 @@ function SortIcon({ active, direction }) {
   );
 }
 
-export default function Transaction({ transactions }) {
+export default function Transaction() {
+  const [transactions, setTransactions] = useState([]);
+  const { authUser } = use(userContext);
+  useEffect(() => {
+    const LoadTransactions = async () => {
+      const res = await getAllUserTransaction(authUser?.id);
+      if (res.status === "success") {
+        setTransactions(res.data);
+      } else {
+        errorMessage(res.message);
+        console.table(res);
+      }
+    };
+    LoadTransactions();
+  }, []);
+
   const data = useMemo(
     () =>
       transactions && transactions.length
@@ -182,6 +201,7 @@ export default function Transaction({ transactions }) {
 
   // Reset to page 1 whenever the filtered set or page size changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentPage(1);
   }, [
     searchTerm,
@@ -348,7 +368,7 @@ export default function Transaction({ transactions }) {
               placeholder="Search by ID or description..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-9 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white transition"
+              className="w-full pl-9 pr-9 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500  transition"
             />
             {searchTerm && (
               <button
@@ -535,7 +555,7 @@ export default function Transaction({ transactions }) {
                       {txn.id}
                     </td>
                     <td className="p-4 text-sm text-slate-600 whitespace-nowrap">
-                      {txn.date}
+                      {formatDateTime(txn.date)}
                     </td>
                     <td className="p-4">
                       <p className="text-sm font-medium text-slate-900">

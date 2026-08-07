@@ -23,7 +23,8 @@ export default function AggresiveTop({ value, onChange, isAggressive }) {
   const [activeIndex, setActiveIndex] = useState(-1);
   const containerRef = useRef(null);
   const triggerRef = useRef(null);
-  const { holding } = use(userContext);
+  const { portfolio } = use(userContext);
+  const holding = portfolio?.holdings;
 
   function calculatePenalty(amount, profit, redeemed, startDate) {
     const today = new Date();

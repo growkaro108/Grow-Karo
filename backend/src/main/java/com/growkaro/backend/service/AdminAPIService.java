@@ -17,10 +17,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.growkaro.backend.DRO.ReceiveSchemeData;
+import com.growkaro.backend.DTO.AdminTransactionResponse;
+import com.growkaro.backend.DTO.PagedResponse;
 import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.common.General;
@@ -28,9 +31,11 @@ import com.growkaro.backend.entity.FundraiserCode;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.SupportIssue;
+import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.entity.WithdrawalRequest;
+import com.growkaro.backend.entity.Transaction.TransactionStatus;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.enums.UserSchemeStatus;
 import com.growkaro.backend.enums.WithdrawalStatus;
@@ -318,11 +323,53 @@ public class AdminAPIService {
         for (ActivityType type : types) {
             typeNames.add(type.name());
         }
-        System.out.println("typeNames" + typeNames);
         return typeNames;
     }
 
-    // pending
+    public PagedResponse<AdminTransactionResponse> getTransactions(
+            String statusFilter, int offset, int limit) {
+        int pageNumber = offset / limit; // Spring Data pages are page-index based
+        Pageable pageable = PageRequest.of(pageNumber, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
+        List<TransactionStatus> rejectedStatuses = List.of(TransactionStatus.FAILED, TransactionStatus.REFUNDED,
+                TransactionStatus.REJECTED);
+
+        var page = switch (statusFilter) {
+            case "pending" -> transactionRepository.findByStatus(TransactionStatus.PENDING, pageable);
+            case "approved" -> transactionRepository.findByStatus(TransactionStatus.SUCCESS, pageable);
+            case "rejected" -> transactionRepository.findByStatusIn(rejectedStatuses, pageable);
+            default -> transactionRepository.findAll(pageable);
+        };
+
+        var mapped = page.map(AdminTransactionResponse::fromEntity);
+        return PagedResponse.from(mapped, offset, limit);
+    }
+
+    @Transactional
+    public AdminTransactionResponse approve(String txnId) {
+        Transaction txn = getPendingOrThrow(txnId);
+        txn.setStatus(TransactionStatus.SUCCESS);
+
+        return AdminTransactionResponse.fromEntity(transactionRepository.save(txn));
+    }
+
+    @Transactional
+    public AdminTransactionResponse reject(String txnId, String reason) {
+        Transaction txn = getPendingOrThrow(txnId);
+        txn.setStatus(TransactionStatus.REJECTED);
+        txn.setFailureReason(reason != null ? reason : "Rejected by admin");
+        return AdminTransactionResponse.fromEntity(transactionRepository.save(txn));
+    }
+
+    private Transaction getPendingOrThrow(String txnId) {
+        Transaction txn = transactionRepository.findById(txnId).get();
+        if (txn == null || txn.getStatus() != TransactionStatus.PENDING) {
+            throw new IllegalTransactionStateException(
+                    "Transaction " + txnId + " is not pending (current: " + txn.getStatus() + ")");
+        }
+        return txn;
+    }
+
+    // pending--------------------------------------------------------------------------------------------------------
     // @Cacheable(value = "adminDashboard", key = "#range ?: 'default'")
     // @Transactional(readOnly = true)
     // public Map<String, Object> adminDashboard(String range) {

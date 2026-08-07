@@ -95,11 +95,10 @@ export async function redeemAggressive(data) {
   });
 }
 
-//pendingg
-export async function fetchUserTransactions(userId, params) {
-  return apiRequest(`/users/${userId}/transactions`, { params });
+export async function fetchUserTransactions(userId) {
+  return apiRequest(`/user/${userId}/transactions`);
 }
-
+//pending
 export async function fetchUserRecipients(userId, params) {
   return apiRequest(`/users/${userId}/recipients`, { params });
 }

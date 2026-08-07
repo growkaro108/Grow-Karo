@@ -96,7 +96,7 @@ export default function HeroSection() {
 
           {/* Hero Heading - Responsive word wrapping & sizing */}
           <h1 className="text-2xl font-extrabold leading-tight tracking-tight text-slate-900 xs:text-3xl sm:text-5xl lg:text-5xl xl:text-6xl/tight">
-            Invest for Your Future{" "}
+            Invest for Future{" "}
             <span className="inline-block bg-linear-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
               with Confidence.
             </span>

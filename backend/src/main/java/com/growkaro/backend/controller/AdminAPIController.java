@@ -6,8 +6,10 @@ import java.util.Set;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -19,6 +21,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.growkaro.backend.DRO.ApproveUserScheme;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
+import com.growkaro.backend.DTO.AdminTransactionResponse;
+import com.growkaro.backend.DTO.PagedResponse;
 import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.service.ActivityLogService;
@@ -135,6 +139,49 @@ public class AdminAPIController {
     @GetMapping("/activity-types")
     public List<String> getTypes() {
         return adminAPIService.getAllStoredActivityTypes();
+    }
+
+    @GetMapping("/transactions")
+    public ResponseEntity<Map<String, Object>> list(
+            @RequestParam(defaultValue = "pending") String filter,
+            @RequestParam(defaultValue = "0") int offset,
+            @RequestParam(defaultValue = "10") int limit) {
+        // System.out.println(filter + " " + offset + " " + limit);
+        if (filter.isBlank() || offset < 0 || limit > 50
+                || limit < 1) {
+            log.error("Invalid request: " + filter + " " + offset + " " + limit);
+            return ResponseEntity.ok(general.response("error", "Invalid request.", null));
+        }
+        PagedResponse<AdminTransactionResponse> transactions = adminAPIService.getTransactions(
+                filter,
+                offset, limit);
+        if (transactions == null) {
+            return ResponseEntity.ok(general.response("error", "No transactions found", null));
+        }
+        return ResponseEntity.ok(general.response("success", "Transactions fetched successfully", transactions));
+    }
+
+    @PatchMapping("/transactions/{id}/approve")
+    public ResponseEntity<Map<String, Object>> approve(
+            @PathVariable String id) {
+        AdminTransactionResponse transaction = adminAPIService.approve(id);
+        if (transaction == null) {
+            log.error("Transaction(Approve) not found: " + id);
+            return ResponseEntity.ok(general.response("error", "Transaction not found", null));
+        }
+        return ResponseEntity.ok(general.response("success", "Transaction approved successfully", transaction));
+    }
+
+    @PatchMapping("/transactions/{id}/reject")
+    public ResponseEntity<Map<String, Object>> reject(@PathVariable String id, @RequestBody String body) {
+
+        String reason = (body != null && !body.isBlank()) ? body : null;
+        AdminTransactionResponse transaction = adminAPIService.reject(id, reason);
+        if (transaction == null) {
+            log.error("Transaction(Reject) not found: " + id);
+            return ResponseEntity.ok(general.response("error", "Transaction not found", null));
+        }
+        return ResponseEntity.ok(general.response("success", "Transaction rejected successfully", transaction));
     }
 
     // @GetMapping("/dashboard")

@@ -6,14 +6,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Random;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
@@ -251,43 +247,12 @@ public class General {
             bankDetailsId = bankDetails.getBank_details_id();
         }
 
-        List<UserScheme> totalEnrollScheme = user.getEnrolledSchemes();
-
-        int investedSchemeCount = 0;
-        BigDecimal totalInvestment = BigDecimal.ZERO;
-        BigDecimal totalProfit = BigDecimal.ZERO;
-
-        if (totalEnrollScheme != null && !totalEnrollScheme.isEmpty()) {
-
-            investedSchemeCount = totalEnrollScheme.stream()
-                    .filter(us -> Boolean.TRUE.equals(us.getIsApproved()))
-                    .map(UserScheme::getScheme)
-                    .filter(Objects::nonNull)
-                    .map(Scheme::getSchemeName)
-                    .collect(Collectors.toSet()).size();
-
-            totalInvestment = totalEnrollScheme.stream()
-                    .filter(us -> Boolean.TRUE.equals(us.getIsApproved()))
-                    .map(us -> us.getPaidAmount() != null ? us.getPaidAmount() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            totalProfit = totalEnrollScheme.stream()
-                    .filter(us -> Boolean.TRUE.equals(us.getIsApproved()))
-                    .map(us -> us.getProfit() != null ? us.getProfit() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-        }
-
-        BigDecimal networth = totalInvestment.add(totalProfit);
-
         return new UserProfile(user.getId(), user.getName(), user.getEmail(), user.getPhone(),
                 bankName,
                 accountNumber,
                 ifscCode,
                 accountHolderName,
                 user.isSecurityAlerts(), user.isSchemeAlerts(), token,
-                investedSchemeCount,
-                totalInvestment,
-                totalProfit,
-                networth, bankDetailsId);
+                bankDetailsId);
     }
 }

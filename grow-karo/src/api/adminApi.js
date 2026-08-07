@@ -64,6 +64,25 @@ export async function getAllActivityLogTypes() {
   });
 }
 
+export async function getAllTransactions(params) {
+  return await apiRequest(`${END_POINT}transactions?${params}`);
+}
+
+export async function approveUsersTransactions(txnId) {
+  return await apiRequest(`${END_POINT}transactions/${txnId}/approve`, {
+    method: "PATCH",
+  });
+}
+
+export async function rejectUsersTransactions(txnId, reason) {
+  return await apiRequest(`${END_POINT}transactions/${txnId}/reject`, {
+    method: "PATCH",
+    body: reason,
+  });
+}
+
+//pendinng----------------------------------------------------------------------
+
 export async function fetchAdminDashboard(params) {
   return await apiRequest(`${END_POINT}dashboard`, { params });
 }

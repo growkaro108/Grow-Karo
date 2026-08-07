@@ -419,10 +419,11 @@ function BondDetailsPage({ bond, onBack, onExpandImage, onWithdraw }) {
   );
 }
 
-export default function Portfolio({ holding, refresh, loading }) {
+export default function Portfolio({ refresh, loading }) {
   const [selectedBond, setSelectedBond] = useState(null);
   const [lightboxBond, setLightboxBond] = useState(null);
-  const { authUser } = use(userContext);
+  const { authUser, portfolio } = use(userContext);
+  const holding = portfolio?.holdings;
 
   const sortedHoldings = useMemo(
     () =>

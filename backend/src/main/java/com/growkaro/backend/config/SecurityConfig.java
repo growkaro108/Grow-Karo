@@ -32,6 +32,7 @@ public class SecurityConfig {
                                                                 "/api/user/change_password",
                                                                 "/api/user/redeemProfit",
                                                                 "/api/user/redeemAggressive",
+                                                                "/api/user/{userId}/transactions",
                                                                 "/uploads/bonds/**",
                                                                 "/api/scheme/get",
                                                                 "/api/user/logout/{userID}/{userName}",
@@ -44,7 +45,10 @@ public class SecurityConfig {
                                                                 "/api/admin/activity-logs/**",
                                                                 "/api/admin/user_scheme/add-bond/{userSchemeId}",
                                                                 "/api/uploads/**",
-                                                                "/api/admin/activity-types")
+                                                                "/api/admin/activity-types",
+                                                                "/api/admin/transactions",
+                                                                "/api/admin/transactions/{id}/approve",
+                                                                "/api/admin/transactions/{id}/reject")
                                                 .permitAll() // Public endpoints
                                                 .anyRequest().authenticated() // Everything else requires login
                                 )

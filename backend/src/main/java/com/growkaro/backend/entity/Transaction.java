@@ -93,7 +93,7 @@ public class Transaction {
     private LocalDateTime updatedAt;
 
     public enum TransactionStatus {
-        PENDING, SUCCESS, FAILED, REFUNDED
+        PENDING, SUCCESS, FAILED, REFUNDED, REJECTED
     }
 
     public enum TransactionType {

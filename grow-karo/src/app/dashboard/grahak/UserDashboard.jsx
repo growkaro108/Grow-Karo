@@ -40,7 +40,8 @@ export default function DashboardPage() {
   // const [withdrawData, setWithdrawData] = useState();
 
   const [withdrawType, setWithdrawType] = useState("general");
-  const { authUser, holding, fetchHoldings } = use(userContext);
+  const { authUser, portfolio, fetchPortfolio } = use(userContext);
+  const holding = portfolio?.holdings;
   const router = useRouter();
 
   const [dashboardData, setDashboardData] = useState({
@@ -100,8 +101,8 @@ export default function DashboardPage() {
       router.replace("/auth");
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchHoldings();
-  }, [authUser, fetchHoldings, router]);
+    fetchPortfolio();
+  }, [authUser, fetchPortfolio, router]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950 flex flex-col lg:flex-row">
@@ -160,11 +161,7 @@ export default function DashboardPage() {
               />
             )}
             {activeTab === "portfolio" && (
-              <Portfolio
-                holding={holding}
-                refresh={() => fetchHoldings()}
-                loading={loading}
-              />
+              <Portfolio refresh={() => fetchPortfolio()} loading={loading} />
             )}
             {activeTab === "transactions" && (
               <Transactions transactions={transactions} />

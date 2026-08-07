@@ -10,6 +10,9 @@ import {
   activateScheme,
   deactivateScheme,
   getAllActivityLogTypes,
+  getAllTransactions,
+  approveUsersTransactions,
+  rejectUsersTransactions,
 } from "@/api/adminApi";
 
 const USE_MOCK = false;
@@ -223,6 +226,18 @@ export async function addBond(userSchemeId, payload) {
 
 export async function getAllLogTypes() {
   return await getAllActivityLogTypes();
+}
+
+export async function getAllTransaction(params) {
+  return await getAllTransactions(params);
+}
+
+export async function approveUserTranactions(userTranactionId) {
+  return await approveUsersTransactions(userTranactionId);
+}
+
+export async function rejectUserTranactions(userTranactionId, reason) {
+  return await rejectUsersTransactions(userTranactionId, reason);
 }
 
 export async function fetchMalikDashboardData() {

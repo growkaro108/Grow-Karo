@@ -8,7 +8,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import com.growkaro.backend.entity.UserScheme;
-import com.growkaro.backend.enums.UserSchemeStatus;
 import com.growkaro.backend.repository.UserSchemeRepository;
 
 import jakarta.transaction.Transactional;

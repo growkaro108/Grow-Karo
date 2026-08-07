@@ -27,6 +27,8 @@ export function StatusBadge({ status }) {
     matured: "bg-emerald-500/10 text-emerald-400 ring-emerald-500/30",
     scheme_withdrawal: "bg-rose-500/10 text-rose-400 ring-rose-500/30",
     scheme_rejected: "bg-rose-500/10 text-rose-400 ring-rose-500/30",
+    rejected: "bg-rose-500/20 text-rose-500 ring-rose-500/30",
+    failed: "bg-rose-600/20 text-rose-600 ring-rose-600/30",
     open: "bg-amber-500/10 text-amber-400 ring-amber-500/30",
     in_progress: "bg-indigo-500/10 text-indigo-400 ring-indigo-500/30",
     resolved: "bg-emerald-500/10 text-emerald-400 ring-emerald-500/30",
@@ -42,7 +44,7 @@ export function StatusBadge({ status }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium capitalize ring-1 ${map[status]}`}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium capitalize ring-1 ${map[status]}`}
     >
       <CircleDot className="h-3 w-3" />
       {label}

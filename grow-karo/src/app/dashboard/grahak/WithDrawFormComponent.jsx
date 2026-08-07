@@ -63,7 +63,7 @@ export default function WithdrawFormComponent({
   withdrawType,
 }) {
   const isAggressive = withdrawType === "aggressive";
-  const { fetchHoldings } = use(userContext);
+  const { fetchPortfolio } = use(userContext);
   const [payload, setPayload] = useState({
     userId: userData?.id,
     schemeId: "",
@@ -195,7 +195,7 @@ export default function WithdrawFormComponent({
       }
       if (res.status === "success") {
         setIsSuccess(true);
-        fetchHoldings();
+        fetchPortfolio();
         setTimeout(() => {
           setIsSubmitting(false);
         }, 3000);

@@ -227,6 +227,12 @@ public class UserAPIController {
         }
     }
 
+    @GetMapping("/{userId}/transactions")
+    public ResponseEntity<Map<String, Object>> userTransactions(
+            @PathVariable String userId) {
+        return ResponseEntity.ok(userAPIService.getTransactionsofUser(userId));
+    }
+
     /// pending
     // @DeleteMapping("/{userId}")
     // public ResponseEntity<Map<String, Object>> deleteUser(@PathVariable String
