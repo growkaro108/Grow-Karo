@@ -7,16 +7,12 @@ import java.time.format.DateTimeFormatter;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.springframework.security.core.parameters.P;
-
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
@@ -69,7 +65,7 @@ public class Transaction {
     private BankDetails bankDetails;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_scheme_id", referencedColumnName = "user_scheme_id", nullable = false)
+    @JoinColumn(name = "user_scheme_id", referencedColumnName = "user_scheme_id", nullable = false, unique = false)
     private UserScheme userScheme;
 
     @Enumerated(EnumType.STRING)

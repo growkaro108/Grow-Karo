@@ -143,7 +143,7 @@ const TAB_FIELDS = {
 
 export default function SettingsComponent() {
   const [activeTab, setActiveTab] = useState("profile");
-  const { authUser } = use(userContext);
+  const { authUser, updateAuthUser } = use(userContext);
 
   const [profile, setProfile] = useState({
     // profile
@@ -306,12 +306,13 @@ export default function SettingsComponent() {
 
     // At this point every relevant field has been sanitized on input and
     // validated against the regex rules above — safe to send to the API.
-    alert(`${activeTab.toUpperCase()} settings saved successfully!`);
+    // alert(`${activeTab.toUpperCase()} settings saved successfully!`);
     // console.log(profile);
     try {
       const res = await updateProfile(profile, authUser.id);
       // console.log(res);
       setProfile(res.data);
+      updateAuthUser(res.data);
       allRounderMessage(res);
     } catch (error) {
       console.log(error);

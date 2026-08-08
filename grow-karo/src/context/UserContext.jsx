@@ -8,7 +8,11 @@ import {
   successMessage,
 } from "@/components/Message";
 import { useRouter } from "next/navigation";
-import { deleteSecureCookie, getSecureCookie } from "./cookiesManagement";
+import {
+  deleteSecureCookie,
+  getSecureCookie,
+  setSecureCookie,
+} from "./cookiesManagement";
 import {
   getAllUsersScheme,
   getAllUserTransaction,
@@ -26,6 +30,17 @@ export const UserProvider = ({ children }) => {
   const { showLoader, hideLoader } = useLoader();
 
   const router = useRouter();
+
+  const updateAuthUser = useCallback(async (user) => {
+    if (!user) return;
+    const status = await deleteSecureCookie("authUser");
+    if (status.success) {
+      const status = await setSecureCookie("authUser", user);
+      if (status.success) {
+        setAuthUser(user);
+      }
+    }
+  }, []);
 
   const fetchPortfolio = useCallback(async () => {
     const userId = authUser?.id;
@@ -124,7 +139,6 @@ export const UserProvider = ({ children }) => {
   const contexValue = useMemo(
     () => ({
       authUser,
-      setAuthUser,
       isLoading,
       setIsLoading,
       logout,
@@ -133,6 +147,7 @@ export const UserProvider = ({ children }) => {
       fetchPortfolio,
       transactions,
       FetchTransactions,
+      updateAuthUser,
     }),
     [
       authUser,
@@ -143,6 +158,7 @@ export const UserProvider = ({ children }) => {
       fetchPortfolio,
       transactions,
       FetchTransactions,
+      updateAuthUser,
     ],
   );
   return (
