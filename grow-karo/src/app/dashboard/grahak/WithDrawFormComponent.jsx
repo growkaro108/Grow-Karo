@@ -47,7 +47,7 @@ export const FormFields = ({
         value={value}
         onChange={handleInputChange}
         disabled={useProfileAccount}
-        className={`w-full px-3 py-2.5 text-sm border border-[#E4DFD3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#B4893E]/25 focus:border-[#B4893E] transition-all uppercase tracking-wider ${
+        className={`w-full px-3 py-2.5 text-sm border border-[#E4DFD3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#B4893E]/25 focus:border-[#B4893E] transition-all tracking-wider ${
           useProfileAccount
             ? "bg-[#FAF7F0] text-[#8C8672] cursor-not-allowed"
             : "text-[#0B1B2E]"
@@ -213,10 +213,14 @@ export default function WithdrawFormComponent({
   };
 
   const handleInputChange = (e) => {
-    const { name, value, dataset } = e.target;
-
+    const { name, value } = e.target;
     setPayload((prevPayload) => {
-      if (dataset.nested === "bankDetails") {
+      if (
+        name === "bankName" ||
+        name === "accountNumber" ||
+        name === "ifscCode" ||
+        name === "accountHolderName"
+      ) {
         return {
           ...prevPayload,
           bankDetails: {
@@ -399,6 +403,11 @@ export default function WithdrawFormComponent({
               />
             </div>
           )} */}
+          <BankSelect
+            value={payload.bankDetails.bankName}
+            onChange={handleInputChange}
+            disabled={useProfileAccount}
+          />
 
           <FormFields
             label="Bank Account Number"
@@ -419,11 +428,7 @@ export default function WithdrawFormComponent({
             useProfileAccount={useProfileAccount}
             type="text"
           />
-          <BankSelect
-            value={payload.bankDetails.bankName}
-            onChange={handleInputChange}
-            disabled={useProfileAccount}
-          />
+
           <FormFields
             label="Account Holder Name"
             name="accountHolderName"

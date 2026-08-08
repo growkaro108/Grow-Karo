@@ -7,6 +7,7 @@ import java.time.format.DateTimeFormatter;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.security.core.parameters.P;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -67,13 +68,17 @@ public class Transaction {
     @JoinColumn(name = "bank_details_id", referencedColumnName = "bank_details_id", nullable = false)
     private BankDetails bankDetails;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_scheme_id", referencedColumnName = "user_scheme_id", nullable = false)
+    private UserScheme userScheme;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private TransactionStatus status = TransactionStatus.PENDING;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private TransactionType type = TransactionType.GENERAL_WITHDRAWAL;
+    private TransactionType type = TransactionType.GENERAL_WITHDRAWAL; // agrressive or general or deposit
 
     private String failureReason;
 
@@ -93,7 +98,7 @@ public class Transaction {
     private LocalDateTime updatedAt;
 
     public enum TransactionStatus {
-        PENDING, SUCCESS, FAILED, REFUNDED, REJECTED
+        PENDING, PROCESSED, SUCCESS, FAILED, REFUNDED, REJECTED
     }
 
     public enum TransactionType {

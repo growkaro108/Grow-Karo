@@ -335,6 +335,7 @@ public class AdminAPIService {
 
         var page = switch (statusFilter) {
             case "pending" -> transactionRepository.findByStatus(TransactionStatus.PENDING, pageable);
+            case "processed" -> transactionRepository.findByStatus(TransactionStatus.PROCESSED, pageable);
             case "approved" -> transactionRepository.findByStatus(TransactionStatus.SUCCESS, pageable);
             case "rejected" -> transactionRepository.findByStatusIn(rejectedStatuses, pageable);
             default -> transactionRepository.findAll(pageable);
@@ -347,8 +348,7 @@ public class AdminAPIService {
     @Transactional
     public AdminTransactionResponse approve(String txnId) {
         Transaction txn = getPendingOrThrow(txnId);
-        txn.setStatus(TransactionStatus.SUCCESS);
-
+        txn.setStatus(TransactionStatus.PROCESSED);
         return AdminTransactionResponse.fromEntity(transactionRepository.save(txn));
     }
 
@@ -357,6 +357,9 @@ public class AdminAPIService {
         Transaction txn = getPendingOrThrow(txnId);
         txn.setStatus(TransactionStatus.REJECTED);
         txn.setFailureReason(reason != null ? reason : "Rejected by admin");
+        UserScheme userScheme = txn.getUserScheme();
+        userScheme.setProfitReedemed(userScheme.getProfitReedemed().subtract(txn.getAmount()));
+        userSchemeRepository.save(userScheme);
         return AdminTransactionResponse.fromEntity(transactionRepository.save(txn));
     }
 

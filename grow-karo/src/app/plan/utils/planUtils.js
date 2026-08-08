@@ -19,8 +19,11 @@ export const formatDate = (val) => {
 
 export const formatDateTime = (val) => {
   if (!val) return "—";
-  // LocalDateTime has no timezone info — treat as UTC-safe local string
-  const d = new Date(val.endsWith("Z") ? val : val + "Z");
+
+  // Truncate microseconds to 3 decimal places (milliseconds)
+  const normalizedVal = val.replace(/(\.\d{3})\d+/, "$1");
+  const d = new Date(normalizedVal);
+
   return Number.isNaN(d.getTime())
     ? "—"
     : d.toLocaleDateString(undefined, {

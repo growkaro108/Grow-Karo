@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 
 import com.growkaro.backend.entity.Transaction;
 
+import jakarta.persistence.criteria.CriteriaBuilder.Case;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -44,6 +45,7 @@ public class AdminTransactionResponse {
             case SUCCESS -> "approved";
             case FAILED, REJECTED -> "rejected";
             case REFUNDED -> "refunded";
+            case PROCESSED -> "processed";
         };
     }
 }

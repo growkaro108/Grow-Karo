@@ -70,6 +70,7 @@ public class TransactionResponse {
             case SUCCESS -> "Completed";
             case FAILED -> "Failed";
             case REJECTED -> "Rejected";
+            case PROCESSED -> "Processed";
             case REFUNDED -> "Refunded";
         };
     }

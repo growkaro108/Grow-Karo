@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, use } from "react";
+import React, { useState, useMemo, useEffect, use, useCallback } from "react";
 import {
   Search,
   SlidersHorizontal,
@@ -15,46 +15,12 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ArrowRightLeft,
+  RefreshCw,
+  CircleAlert,
 } from "lucide-react";
-import { errorMessage } from "@/components/Message";
 import { userContext } from "@/context/UserContext";
-import { getAllUserTransaction } from "../../../../services/grahakService";
 import { formatDateTime } from "@/app/plan/utils/planUtils";
-
-// --- demo data (used only when no transactions prop is supplied) ---
-const DEMO_TYPES = ["Credit", "Debit"];
-const DEMO_STATUSES = ["Completed", "Pending", "Failed"];
-const DEMO_DESCRIPTIONS = [
-  "Client invoice payment",
-  "Cloud hosting subscription",
-  "Payroll disbursement",
-  "Vendor settlement",
-  "Refund issued",
-  "Software license renewal",
-  "Marketing spend",
-  "Office supplies",
-  "Contractor payout",
-  "Equipment purchase",
-];
-
-function generateDemoTransactions(count = 87) {
-  const out = [];
-  for (let i = 0; i < count; i++) {
-    const daysAgo = Math.floor(Math.random() * 120);
-    const date = new Date();
-    date.setDate(date.getDate() - daysAgo);
-    out.push({
-      id: `TXN-${(100000 + i).toString()}`,
-      date: date.toISOString().split("T")[0],
-      description:
-        DEMO_DESCRIPTIONS[Math.floor(Math.random() * DEMO_DESCRIPTIONS.length)],
-      type: DEMO_TYPES[Math.floor(Math.random() * DEMO_TYPES.length)],
-      amount: Math.round(Math.random() * 480000) / 100 + 10,
-      status: DEMO_STATUSES[Math.floor(Math.random() * DEMO_STATUSES.length)],
-    });
-  }
-  return out;
-}
+import { TableRowLoader } from "@/loader/TableRowLoader";
 
 const STATUS_STYLES = {
   Completed: {
@@ -69,9 +35,13 @@ const STATUS_STYLES = {
     badge: "bg-rose-50 text-rose-700 border-rose-200",
     icon: XCircle,
   },
+  Rejected: {
+    badge: "bg-rose-50 text-rose-700 border-rose-200",
+    icon: CircleAlert,
+  },
 };
 
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
 function StatusBadge({ status }) {
   const cfg = STATUS_STYLES[status] || STATUS_STYLES.Completed;
@@ -96,26 +66,13 @@ function SortIcon({ active, direction }) {
 }
 
 export default function Transaction() {
-  const [transactions, setTransactions] = useState([]);
-  const { authUser } = use(userContext);
+  const { transactions, FetchTransactions, isLoading } = use(userContext);
   useEffect(() => {
-    const LoadTransactions = async () => {
-      const res = await getAllUserTransaction(authUser?.id);
-      if (res.status === "success") {
-        setTransactions(res.data);
-      } else {
-        errorMessage(res.message);
-        console.table(res);
-      }
-    };
-    LoadTransactions();
-  }, []);
+    FetchTransactions();
+  }, [FetchTransactions]);
 
   const data = useMemo(
-    () =>
-      transactions && transactions.length
-        ? transactions
-        : generateDemoTransactions(),
+    () => (transactions && transactions.length ? transactions : []),
     [transactions],
   );
 
@@ -398,6 +355,30 @@ export default function Transaction() {
               onChange={(e) => setEndDate(e.target.value)}
               className="px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
+            {/* //refresh button */}
+            <button
+              onClick={() => {
+                setStartDate("");
+                setEndDate("");
+                FetchTransactions();
+                setSortConfig({ key: "date", direction: "desc" });
+                setPageSize(10);
+                setCurrentPage(1);
+                setSearchTerm("");
+                setStatusFilter("All");
+                setTypeFilter("All");
+                setMinAmount("");
+                setMaxAmount("");
+                setShowFilters(false);
+              }}
+              className="text-xs text-slate-400 hover:text-slate-600 ml-1"
+              title="Refresh"
+              disabled={isLoading}
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+              />
+            </button>
             {(startDate || endDate) && (
               <button
                 onClick={() => {
@@ -545,7 +526,9 @@ export default function Transaction() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {paginatedTransactions.length > 0 ? (
+              {isLoading ? (
+                <TableRowLoader colSpan={5} loading={"Transactions"} />
+              ) : paginatedTransactions.length > 0 ? (
                 paginatedTransactions.map((txn) => (
                   <tr
                     key={txn.id}

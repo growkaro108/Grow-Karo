@@ -9,7 +9,11 @@ import {
 } from "@/components/Message";
 import { useRouter } from "next/navigation";
 import { deleteSecureCookie, getSecureCookie } from "./cookiesManagement";
-import { getAllUsersScheme, logoutApi } from "../../services/grahakService";
+import {
+  getAllUsersScheme,
+  getAllUserTransaction,
+  logoutApi,
+} from "../../services/grahakService";
 import { useLoader } from "./LoaderContext";
 
 export const userContext = createContext({});
@@ -17,6 +21,7 @@ export const UserProvider = ({ children }) => {
   const [authUser, setAuthUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [portfolio, setPortfolio] = useState([]);
+  const [transactions, setTransactions] = useState([]);
 
   const { showLoader, hideLoader } = useLoader();
 
@@ -38,6 +43,31 @@ export const UserProvider = ({ children }) => {
       errorMessage("something went wrong");
       setPortfolio([]);
       console.error("Error fetching holdings:", error);
+    } finally {
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 300);
+    }
+  }, [authUser]);
+
+  const FetchTransactions = useCallback(async () => {
+    const userId = authUser?.id;
+    if (!userId) return;
+    try {
+      setIsLoading(true);
+      const res = await getAllUserTransaction(userId);
+      if (res.status === "success") {
+        setTransactions(res.data);
+      } else {
+        errorMessage(res.message);
+        console.table(res);
+      }
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 300);
     }
   }, [authUser]);
 
@@ -100,16 +130,19 @@ export const UserProvider = ({ children }) => {
       logout,
       getUserDataFromContext,
       portfolio,
-      setPortfolio,
       fetchPortfolio,
+      transactions,
+      FetchTransactions,
     }),
     [
       authUser,
-      fetchPortfolio,
-      getUserDataFromContext,
-      portfolio,
       isLoading,
       logout,
+      getUserDataFromContext,
+      portfolio,
+      fetchPortfolio,
+      transactions,
+      FetchTransactions,
     ],
   );
   return (

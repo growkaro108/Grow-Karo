@@ -22,6 +22,7 @@ import { allRounderMessage, infoMessage } from "@/components/Message";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
 const METHOD_OPTIONS = ["All", "Bank Transfer", "UPI", "Wallet"];
+const NAV_ITEMS = ["pending", "processed", "approved", "rejected", "all"];
 
 export default function WithdrawalsTab({ onDecision }) {
   const [filter, setFilter] = useState("pending");
@@ -204,7 +205,7 @@ export default function WithdrawalsTab({ onDecision }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          {["pending", "approved", "rejected", "all"].map((f) => (
+          {NAV_ITEMS.map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -403,7 +404,7 @@ export default function WithdrawalsTab({ onDecision }) {
                           }
                           className="rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 ring-1 ring-emerald-500/30 hover:bg-emerald-500/20 transition-colors disabled:opacity-40"
                         >
-                          Approve
+                          Processed
                         </button>
                         <button
                           disabled={actionLoadingId === w.id}
@@ -565,15 +566,17 @@ export default function WithdrawalsTab({ onDecision }) {
                 <span className="text-slate-500">Method</span>
                 <span className="text-slate-200">{confirm.row.method}</span>
               </div>
-              <div className="flex justify-between py-1">
-                <span className="text-slate-500">Reason</span>
-                <input
-                  className="text-slate-200 border border-slate-500 rounded-sm p-1.5 text-xs font-medium capitalize font-body transition-colors"
-                  placeholder="Enter reason..."
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                />
-              </div>
+              {confirm.action === "rejected" && (
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-500">Reason</span>
+                  <input
+                    className="text-slate-200 border border-slate-500 rounded-sm p-1.5 text-xs font-medium capitalize font-body transition-colors"
+                    placeholder="Enter reason..."
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                  />
+                </div>
+              )}
             </div>
             <div className="flex gap-3">
               <button

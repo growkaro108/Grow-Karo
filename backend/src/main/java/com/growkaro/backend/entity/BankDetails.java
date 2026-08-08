@@ -46,8 +46,8 @@ public class BankDetails {
     @Pattern(regexp = "^[A-Za-z][A-Za-z\\s.'-]{1,49}$", message = "Enter a valid name (letters only, 2-50 characters)")
     private String accountHolderName;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", unique = true)
+    @OneToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "user_id", nullable = true)
     @JsonIgnoreProperties("bankDetails") // Stops Jackson from looping back to bankDetails
     private User user;
 }

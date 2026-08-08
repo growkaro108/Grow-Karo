@@ -40,8 +40,7 @@ export default function DashboardPage() {
   // const [withdrawData, setWithdrawData] = useState();
 
   const [withdrawType, setWithdrawType] = useState("general");
-  const { authUser, portfolio, fetchPortfolio } = use(userContext);
-  const holding = portfolio?.holdings;
+  const { authUser, fetchPortfolio } = use(userContext);
   const router = useRouter();
 
   const [dashboardData, setDashboardData] = useState({
@@ -156,7 +155,6 @@ export default function DashboardPage() {
               <WithDrawFormComponent
                 onCancel={() => setActiveTab("overview")}
                 userData={authUser}
-                holdings={holding}
                 withdrawType={withdrawType}
               />
             )}

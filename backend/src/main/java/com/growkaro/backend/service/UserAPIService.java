@@ -435,47 +435,17 @@ public class UserAPIService {
             return general.response("error", "Invalid amount...", null);
         }
 
-        // is valid user
-        User user = getUserById(wa.userId());
-        if (user == null) {
-            return general.response("error", "wrong userId...", Map.of("id", wa.userId()));
-        }
-
-        // is valid bank details
-        BankDetails bankDetails;
-        if (wa.bankDetailsId() == null) {
-            if (wa.bankDetails() == null) {
-                return general.response("error", "Invalid bankDetails...", null);
-            }
-            bankDetails = wa.bankDetails();
-            bankDetails.setUser(user); // ensure new bank details are tied to the requesting user
-            bankDetails = bankDetailsRepository.save(bankDetails);
-        } else {
-            bankDetails = bankDetailsRepository.findById(wa.bankDetailsId()).orElse(null);
-            if (bankDetails == null) {
-                return general.response("error", "Invalid bankDetailsId...", null);
-            }
-            // ownership check: bank details must belong to this user
-            if (bankDetails.getUser() == null || !bankDetails.getUser().getId().equals(user.getId())) {
-                return general.response("error", "bankDetails does not belong to user...", null);
-            }
-        }
-
-        // check is valid profit or redeem scheme paidAmount
-        // NOTE: switch to a locking fetch (e.g. userSchemeRepository.findByIdForUpdate)
-        // if concurrent redemption of the same scheme is possible in your flow.
         UserScheme us = getUserSchemeById(wa.userSchemeId());
         if (us == null) {
             return general.response("error", "Invalid userSchemeId...", null);
         }
-
+        User user = us.getUser();
         // ownership check: scheme must belong to this user
-        if (us.getUser() == null || !us.getUser().getId().equals(user.getId())) {
+        if (user == null || !user.getId().equals(wa.userId())) {
             log.info("userScheme does not belong to user..., {}",
-                    Map.of("userSchemeId", us.getUserSchemeId(), "userId", user.getId()));
+                    Map.of("userSchemeId", us.getUserSchemeId(), "userId", wa.userId()));
             return general.response("error", "userScheme does not belong to user...", null);
         }
-
         if (!wa.isAggressive()) { // general withdrawal and redeem profit
             // guard against re-redeeming the same profit(profit==redeemed)
             // this check is optional as user can redeem his profit multiple times
@@ -503,6 +473,25 @@ public class UserAPIService {
             }
         }
 
+        // is valid bank details
+        BankDetails bankDetails;
+        if (wa.bankDetailsId() == null) {
+            if (wa.bankDetails() == null) {
+                return general.response("error", "Invalid bankDetails...", null);
+            }
+            bankDetails = wa.bankDetails();
+            bankDetails.setUser(null); // ensure new bank details are tied to the requesting user
+            bankDetails = bankDetailsRepository.save(bankDetails);
+        } else {
+            bankDetails = bankDetailsRepository.findById(wa.bankDetailsId()).orElse(null);
+            if (bankDetails == null) {
+                return general.response("error", "Invalid bankDetailsId...", null);
+            }
+            // ownership check: bank details must belong to this user
+            if (bankDetails.getUser() == null || !bankDetails.getUser().getId().equals(user.getId())) {
+                return general.response("error", "bankDetails does not belong to user...", null);
+            }
+        }
         Transaction txn = new Transaction();
         txn.setUser(user);
         txn.setAmount(wa.amount());
@@ -512,6 +501,7 @@ public class UserAPIService {
         txn.setType(wa.isAggressive()
                 ? Transaction.TransactionType.AGGRESSIVE_WITHDRAWAL
                 : Transaction.TransactionType.GENERAL_WITHDRAWAL);
+        txn.setUserScheme(us);
         transactionRepository.save(txn);
 
         // update redemption bookkeeping

@@ -4,7 +4,6 @@ import { BASE_URL } from "@/api/apiClient";
 import {
   ArrowLeft,
   ArrowUpRight,
-  ShieldCheck,
   X,
   Download,
   ImageOff,
@@ -14,15 +13,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { TableRowLoader } from "@/loader/TableRowLoader";
-import {
-  getAllUsersScheme,
-  withdrawUserScheme,
-} from "../../../../services/grahakService";
-import {
-  allRounderMessage,
-  confirmMessage,
-  errorMessage,
-} from "@/components/Message";
+import { withdrawUserScheme } from "../../../../services/grahakService";
+import { allRounderMessage, confirmMessage } from "@/components/Message";
 import { userContext } from "@/context/UserContext";
 import { StatusBadge } from "../malik/components/StatusBadge";
 
@@ -67,6 +59,7 @@ function BondThumb({ src, alt, size = 40, onExpand }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setErrored(false);
     setLoading(true);
   }, [src]);
