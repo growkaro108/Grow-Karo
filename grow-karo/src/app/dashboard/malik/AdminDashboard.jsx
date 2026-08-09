@@ -11,6 +11,7 @@ import {
   Contact,
   ScrollText,
   ClipboardCheck,
+  User2Icon,
 } from "lucide-react";
 import {
   Chart as ChartJS,
@@ -27,16 +28,21 @@ import OverviewTab from "./components/OverviewTab";
 import TabLoader from "../../../loader/TabLoader";
 import { fetchMalikDashboardData } from "../../../../services/malikService";
 import dynamic from "next/dynamic";
+
 // import SchemeApproval from "./components/SchemeAproval/SchemeApprovals";
 
+const UserManagement = dynamic(
+  () => import("./components/user-management/UserManagement"),
+  {
+    loading: () => <TabLoader />,
+    ssr: false,
+  },
+);
 const WithdrawalsTab = dynamic(() => import("./components/WithdrawalsTab"), {
   loading: () => <TabLoader />,
   ssr: false,
 });
-const FundraiserCodesTab = dynamic(() => import("./components/Remitter"), {
-  loading: () => <TabLoader />,
-  ssr: false,
-});
+
 const PlanTab = dynamic(() => import("./components/Scheme/PlanTab"), {
   loading: () => <TabLoader />,
   ssr: false,
@@ -61,7 +67,7 @@ const ActivityTab = dynamic(() => import("./components/Activity/main"), {
   ssr: false,
 });
 const AdminRemitterTrackersTab = dynamic(
-  () => import("./components/Remitter"),
+  () => import("./components/Remitter/AdminRemitterTrackersTab"),
   {
     loading: () => <TabLoader />,
     ssr: false,
@@ -85,12 +91,13 @@ ChartJS.register(
 );
 
 const NAV_ITEMS = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "overview", label: "Overview⏱️", icon: LayoutDashboard },
   { id: "activity", label: "Activity Log", icon: Activity },
-  { id: "withdrawals", label: "Withdrawals⏱️", icon: Wallet },
+  { id: "withdrawals", label: "Withdrawals", icon: Wallet },
   { id: "plans", label: "Plans", icon: ScrollText },
   { id: "approvals", label: "Approvals", icon: ClipboardCheck },
-  // { id: "codes", label: "Remitters", icon: Ticket },
+  { id: "codes", label: "Remitter ⏱️", icon: Ticket },
+  { id: "user", label: "User Management ⏱️", icon: User2Icon },
   // { id: "issues", label: "User Issues", icon: AlertTriangle },
   { id: "contacts", label: "Contacts⏱️", icon: Contact },
   { id: "settings", label: "Settings⏱️", icon: Settings2 },
@@ -251,17 +258,17 @@ export default function AdminPanel() {
                 />
               )}
               {activeTab === "plans" && <PlanTab />}
-              {activeTab === "approvals" && <SchemeApproval />}
+              {activeTab === "approvals" && (
+                <SchemeApproval
+                  codes={codes}
+                  onAddRemitterToServer={handleGenerateCode}
+                />
+              )}
               {activeTab === "issues" && (
                 <IssuesTab issues={issues} onResolve={handleResolveIssue} />
               )}
-              {activeTab === "codes" && (
-                <AdminRemitterTrackersTab
-                  codes={codes}
-                  onGenerate={handleGenerateCode}
-                  onCopy={handleCopyCode}
-                />
-              )}
+              {activeTab === "codes" && <AdminRemitterTrackersTab />}
+              {activeTab === "user" && <UserManagement />}
               {activeTab === "contacts" && <ContactsComponent />}
               {activeTab === "settings" && <Settings />}
             </div>

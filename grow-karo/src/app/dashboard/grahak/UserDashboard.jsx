@@ -11,6 +11,7 @@ import { userContext } from "@/context/UserContext";
 import TabLoader from "../../../loader/TabLoader";
 import { useRouter } from "next/navigation";
 import { allRounderMessage, errorMessage } from "@/components/Message";
+import { RefreshCcw } from "lucide-react";
 
 const Overview = dynamic(() => import("./Overview"), {
   loading: () => <TabLoader />,
@@ -37,10 +38,9 @@ export default function DashboardPage() {
   const [balance, setBalance] = useState(0);
   const [portfolioValue, setPortfolioValue] = useState(0);
   const [activeTab, setActiveTab] = useState("overview");
-  // const [withdrawData, setWithdrawData] = useState();
 
   const [withdrawType, setWithdrawType] = useState("general");
-  const { authUser, fetchPortfolio } = use(userContext);
+  const { authUser, fetchPortfolio, isLoading } = use(userContext);
   const router = useRouter();
 
   const [dashboardData, setDashboardData] = useState({
@@ -103,6 +103,13 @@ export default function DashboardPage() {
     fetchPortfolio();
   }, [authUser, fetchPortfolio, router]);
 
+  const handleRefresh = () => {
+    setLoading(true);
+    fetchPortfolio();
+    setTimeout(() => {
+      setLoading(false);
+    }, 2000);
+  };
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950 flex flex-col lg:flex-row">
       <Sidebar
@@ -124,23 +131,36 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex gap-3 w-full sm:w-auto">
-              <button
+              {/* <button
                 onClick={() => openAggressiveWithdrawal()}
                 className="flex-1 sm:flex-none text-center bg-red-600 text-white hover:bg-red-700 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm cursor-pointer"
               >
                 Agresive Withdraw
-              </button>
+              </button> */}
               <button
                 onClick={() => openGeneralWithdrawModal()}
-                className="flex-1 sm:flex-none text-center bg-green-500 text-white hover:bg-green-600 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm cursor-pointer"
+                className="flex-1 sm:flex-none text-center bg-green-500 text-white hover:bg-green-600 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm cursor-pointer focus:cursor-wait"
               >
-                General Withdraw
+                Withdraw
+              </button>
+              {/* refresh dashboard button */}
+              <button
+                onClick={handleRefresh}
+                disabled={loading}
+                className="flex-1 sm:flex-none text-center bg-blue-500 text-white hover:bg-blue-600 px-4 py-2.5 rounded-lg font-light text-sm transition-colors shadow-sm cursor-pointer focus:cursor-wait flex gap-2 items-center"
+              >
+                <RefreshCcw
+                  size={15}
+                  color="white"
+                  className={loading ? "animate-spin" : "backdrop-opacity-80"}
+                />{" "}
+                {loading ? "Refreshing..." : "Refresh"}
               </button>
             </div>
           </header>
         )}
 
-        {loading ? (
+        {isLoading ? (
           <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-8 flex items-center justify-center min-h-[60vh]">
             <TabLoader />
           </div>

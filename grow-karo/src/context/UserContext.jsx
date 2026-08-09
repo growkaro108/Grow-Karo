@@ -46,6 +46,7 @@ export const UserProvider = ({ children }) => {
     const userId = authUser?.id;
     if (!userId) return;
     try {
+      setIsLoading(true);
       const response = await getAllUsersScheme(authUser?.id);
       // console.log(response.data);
       if (response.status === "success" && response.data) {
@@ -139,6 +140,7 @@ export const UserProvider = ({ children }) => {
   const contexValue = useMemo(
     () => ({
       authUser,
+      setAuthUser,
       isLoading,
       setIsLoading,
       logout,

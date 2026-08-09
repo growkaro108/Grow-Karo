@@ -468,7 +468,7 @@ export default function Portfolio({ refresh, loading }) {
               Your Bond Holdings
             </h3>{" "}
             {/* //refesh button */}
-            <button
+            {/* <button
               onClick={refresh}
               className="flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-4 py-2 text-sm font-semibold text-indigo-600 transition-all duration-200 hover:bg-indigo-50 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             >
@@ -478,7 +478,7 @@ export default function Portfolio({ refresh, loading }) {
                 <RefreshCw size={16} />
               )}
               {loading ? "Refreshing..." : "Refresh"}
-            </button>
+            </button> */}
           </div>
           <p className="text-sm mt-1 mb-4" style={{ color: "#64748b" }}>
             Click a row for full details, or click the image to view it

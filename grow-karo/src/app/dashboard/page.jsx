@@ -26,7 +26,8 @@ const Dashboard = () => {
   if (!AdminDashboard || !RemitterDashboard || !UserDashboard) {
     return <Loader />;
   }
-  if (authUser?.email === "wv9304@gmail.com") return <AdminDashboard />;
+  if (process.env.NEXT_PUBLIC_ADMIN_EMAILS?.includes(authUser?.email))
+    return <AdminDashboard />;
   else {
     return (
       <UserDashboard />

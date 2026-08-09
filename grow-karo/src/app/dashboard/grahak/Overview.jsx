@@ -14,10 +14,10 @@ const Overview = () => {
   const { authUser, portfolio } = use(userContext);
   const holding = portfolio?.holdings;
   // console.log(authUser);
-  if (!authUser) {
+  if (!authUser || !holding) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[1, 2, 3].map((card) => (
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+        {[1, 2, 3, 4].map((card) => (
           <div
             key={card}
             className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-end justify-between gap-4 min-h-40"
@@ -38,7 +38,7 @@ const Overview = () => {
             </div>
 
             <div className="shrink-0 select-none pointer-events-none mb-1">
-              <div className="w-14 h-14 bg-slate-100 rounded-xl animate-pulse"></div>
+              <div className="w-14 h-14 bg-slate-200 rounded-xl animate-pulse"></div>
             </div>
           </div>
         ))}

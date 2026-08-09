@@ -60,12 +60,12 @@ public class Transaction {
 
     // Bank details snapshot at time of request — not a live reference to the user's
     // profile
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "bank_details_id", referencedColumnName = "bank_details_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bank_details_id")
     private BankDetails bankDetails;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_scheme_id", referencedColumnName = "user_scheme_id", nullable = false, unique = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_scheme_id", referencedColumnName = "user_scheme_id", nullable = false)
     private UserScheme userScheme;
 
     @Enumerated(EnumType.STRING)
