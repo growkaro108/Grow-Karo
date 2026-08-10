@@ -8,7 +8,7 @@ export default function UserTable({ users, onSelect }) {
     <div className="hidden overflow-hidden rounded-2xl border border-slate-800 bg-[#111827] shadow-lg shadow-black/20 sm:block">
       <table className="w-full text-left">
         <thead>
-          <tr className="border-b border-slate-800 bg-white/[0.02] text-xs uppercase tracking-wide text-slate-500">
+          <tr className="border-b border-slate-800 bg-white/2 text-xs uppercase tracking-wide text-slate-500">
             <th className="px-5 py-3 font-medium">User</th>
             <th className="px-5 py-3 font-medium">Scheme</th>
             <th className="px-5 py-3 font-medium">Bonds</th>
@@ -22,7 +22,7 @@ export default function UserTable({ users, onSelect }) {
             <tr
               key={u.id}
               onClick={() => onSelect(u)}
-              className="cursor-pointer transition hover:bg-white/[0.03]"
+              className="cursor-pointer transition hover:bg-white/3"
             >
               <td className="px-5 py-3.5">
                 <div className="flex items-center gap-3">

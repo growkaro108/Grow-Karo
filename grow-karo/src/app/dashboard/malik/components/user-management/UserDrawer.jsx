@@ -3,7 +3,14 @@ import { X, Mail, Phone, Calendar, Landmark } from "lucide-react";
 import StatusPill from "./StatusPill";
 import BondStub from "./BondStub";
 import { currency, dateFmt, initials } from "./format";
-import CertificateLightbox from "./Certificatelightbox";
+import dynamic from "next/dynamic";
+import TabLoader from "@/loader/TabLoader";
+const CertificateLightbox = dynamic(() => import("./Certificatelightbox"), {
+  loading: () => <TabLoader />,
+
+  ssr: false,
+});
+// import CertificateLightbox from "./Certificatelightbox";
 
 export default function UserDrawer({ user, onClose }) {
   const [viewingBond, setViewingBond] = useState(null);
@@ -17,7 +24,7 @@ export default function UserDrawer({ user, onClose }) {
         className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
         onClick={onClose}
       />
-      <div className="relative flex h-full w-full flex-col bg-[#111827] shadow-2xl shadow-black/50 sm:w-[440px] animate-[slideIn_.25s_ease-out]">
+      <div className="relative flex h-full w-full flex-col bg-[#111827] shadow-2xl shadow-black/50 sm:w-110 animate-[slideIn_.25s_ease-out]">
         <style>{`@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }`}</style>
 
         {/* Header */}
@@ -51,7 +58,7 @@ export default function UserDrawer({ user, onClose }) {
             </span>
           </div>
 
-          <div className="mb-6 space-y-2 rounded-xl border border-slate-800 bg-white/[0.02] p-4">
+          <div className="mb-6 space-y-2 rounded-xl border border-slate-800 bg-white/2 p-4">
             <div className="flex items-center gap-2 text-sm text-slate-300">
               <Mail className="h-4 w-4 text-slate-500" /> {user.email}
             </div>

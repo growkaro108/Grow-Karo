@@ -81,6 +81,18 @@ export async function rejectUsersTransactions(txnId, reason) {
   });
 }
 
+export async function searchUsers(query) {
+  return await apiRequest(`${END_POINT}user/search/${query}`, {
+    method: "GET",
+  });
+}
+
+export async function createRemitterApi(remitterData) {
+  return await apiRequest(`${END_POINT}remitter/add`, {
+    method: "POST",
+    body: remitterData,
+  });
+}
 //pendinng----------------------------------------------------------------------
 
 export async function fetchAdminDashboard(params) {
@@ -110,13 +122,6 @@ export async function resolveIssue(issueId) {
 
 export async function fetchRemitters(params) {
   return await apiRequest(`${END_POINT}remitters`, { params });
-}
-
-export async function createRemitter(remitterData) {
-  return await apiRequest(`${END_POINT}remitters`, {
-    method: "POST",
-    body: remitterData,
-  });
 }
 
 export async function fetchFundraiserCodes(params) {

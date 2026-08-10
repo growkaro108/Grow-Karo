@@ -48,7 +48,9 @@ public class SecurityConfig {
                                                                 "/api/admin/activity-types",
                                                                 "/api/admin/transactions",
                                                                 "/api/admin/transactions/{id}/approve",
-                                                                "/api/admin/transactions/{id}/reject")
+                                                                "/api/admin/transactions/{id}/reject",
+                                                                "/api/admin/user/search/{query}",
+                                                                "/api/admin/remitter/add")
                                                 .permitAll() // Public endpoints
                                                 .anyRequest().authenticated() // Everything else requires login
                                 )

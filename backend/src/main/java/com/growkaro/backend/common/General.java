@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
@@ -22,6 +24,7 @@ import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserProfile;
 import com.growkaro.backend.entity.UserScheme;
+import com.growkaro.backend.repository.UserRepository;
 
 @Component
 public class General {
@@ -29,6 +32,9 @@ public class General {
 
     @Value("${frontend.url}")
     private String baseUrl;
+
+    @Autowired
+    private UserRepository userRepository;
 
     public boolean isValidId(String id) {
         Pattern idPattern = Pattern.compile("^GKUSID\\d{14}$");
@@ -254,5 +260,15 @@ public class General {
                 accountHolderName,
                 user.isSecurityAlerts(), user.isSchemeAlerts(), token,
                 bankDetailsId);
+    }
+
+    public User getUserById(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return null;
+        }
+        if (!isValidId(userId)) {
+            throw new IllegalArgumentException("Invalid user ID");
+        }
+        return userRepository.findById(userId).orElse(null);
     }
 }

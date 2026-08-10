@@ -82,35 +82,41 @@ public class ApiService {
                 Map.of("email", "support@grow-karo.com", "phone", "+91-9000000000"));
     }
 
-    @Cacheable(value = "search", key = "#query")
-    @Transactional(readOnly = true)
-    public Map<String, Object> search(String query) {
-        String safeQuery = query == null ? "" : query.trim();
-        if (safeQuery.isBlank()) {
-            return response("ok", "Search results ready", Map.of("query", safeQuery, "results", List.of()));
-        }
+    // @Cacheable(value = "search", key = "#query")
+    // @Transactional(readOnly = true)
+    // public Map<String, Object> search(String query) {
+    // String safeQuery = query == null ? "" : query.trim();
+    // if (safeQuery.isBlank()) {
+    // return response("ok", "Search results ready", Map.of("query", safeQuery,
+    // "results", List.of()));
+    // }
 
-        List<Map<String, Object>> users = userRepository.searchUsers(safeQuery, PageRequest.of(0, 5))
-                .getContent()
-                .stream()
-                .map(this::userResult)
-                .toList();
-        List<Map<String, Object>> remitters = remitterRepository.searchRemitters(safeQuery, PageRequest.of(0, 5))
-                .getContent()
-                .stream()
-                .map(this::remitterResult)
-                .toList();
-        List<Map<String, Object>> codes = fundraiserCodeRepository.findAllValidCodes(java.time.LocalDateTime.now())
-                .stream()
-                .filter(code -> code.getCode().toLowerCase().contains(safeQuery.toLowerCase()))
-                .limit(5)
-                .map(this::codeResult)
-                .toList();
+    // List<Map<String, Object>> users = userRepository.searchUsers(safeQuery,
+    // PageRequest.of(0, 5))
+    // .getContent()
+    // .stream()
+    // .map(this::userResult)
+    // .toList();
+    // List<Map<String, Object>> remitters =
+    // remitterRepository.searchRemitters(safeQuery, PageRequest.of(0, 5))
+    // .getContent()
+    // .stream()
+    // .map(this::remitterResult)
+    // .toList();
+    // List<Map<String, Object>> codes =
+    // fundraiserCodeRepository.findAllValidCodes(java.time.LocalDateTime.now())
+    // .stream()
+    // .filter(code ->
+    // code.getCode().toLowerCase().contains(safeQuery.toLowerCase()))
+    // .limit(5)
+    // .map(this::codeResult)
+    // .toList();
 
-        return response("ok", "Search results ready", Map.of(
-                "query", safeQuery,
-                "results", java.util.stream.Stream.of(users, remitters, codes).flatMap(List::stream).toList()));
-    }
+    // return response("ok", "Search results ready", Map.of(
+    // "query", safeQuery,
+    // "results", java.util.stream.Stream.of(users, remitters,
+    // codes).flatMap(List::stream).toList()));
+    // }
 
     @Transactional
     public Map<String, Object> contact(Map<String, Object> payload) {

@@ -1,5 +1,6 @@
 package com.growkaro.backend.controller;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -19,11 +20,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.growkaro.backend.DRO.AddRemitter;
 import com.growkaro.backend.DRO.ApproveUserScheme;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DTO.AdminTransactionResponse;
 import com.growkaro.backend.DTO.PagedResponse;
+import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.DTO.SchemeResponse;
+import com.growkaro.backend.DTO.SearchUser;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.service.ActivityLogService;
 import com.growkaro.backend.service.AdminAPIService;
@@ -184,22 +188,41 @@ public class AdminAPIController {
         return ResponseEntity.ok(general.response("success", "Transaction rejected successfully", transaction));
     }
 
-    // @GetMapping("/dashboard")
-    // public ResponseEntity<Map<String, Object>>
-    // adminDashboard(@RequestParam(required = false) String range) {
-    // return ResponseEntity.ok(adminAPIService.adminDashboard(range));
-    // }
-
-    @GetMapping("/withdrawals")
-    public ResponseEntity<Map<String, Object>> withdrawals(@RequestParam(required = false) String status) {
-        return ResponseEntity.ok(adminAPIService.withdrawals(status));
+    @GetMapping("/user/search/{query}")
+    public ResponseEntity<Map<String, Object>> searchUser(@PathVariable String query) {
+        if (query == null || query.isBlank()) {
+            return ResponseEntity.ok(general.response("error", "Invalid request.", null));
+        }
+        List<SearchUser> users = adminAPIService.searchUser(query);
+        if (users == null) {
+            return ResponseEntity.ok(general.response("error", "No users found", null));
+        }
+        return ResponseEntity.ok(general.response("success", "Users fetched successfully", users));
     }
 
-    @PutMapping("/withdrawals/{withdrawalId}")
-    public ResponseEntity<Map<String, Object>> updateWithdrawal(@PathVariable String withdrawalId,
-            @RequestBody Map<String, Object> payload) {
-        return ResponseEntity.ok(adminAPIService.updateWithdrawal(withdrawalId, payload));
+    @PostMapping("/remitter/add")
+    public ResponseEntity<Map<String, Object>> addRemitter(@RequestBody AddRemitter addRemitter) {
+        System.out.println(addRemitter);
+
+        if (addRemitter == null || addRemitter.getUserId().isBlank() || addRemitter.getOrganizationName().isBlank()
+                || addRemitter.getAadharNumber().isBlank() || addRemitter.getPanNumber().isBlank()
+                || addRemitter.getAllocationLimit().compareTo(BigDecimal.ZERO) <= 0
+                || addRemitter.getStatus().isBlank()) {
+            return ResponseEntity.ok(general.response("error", "Invalid request.", null));
+        }
+        System.out.println(addRemitter);
+        return null;
+        // try {
+        // RemitterResponse rr = adminAPIService.createRemitter(addRemitter);
+        // return ResponseEntity.ok(general.response("success", "Remitter added
+        // successfully", rr));
+        // } catch (Exception e) {
+        // log.error("Error while adding remitter: " + e.getMessage());
+        // return ResponseEntity.ok(general.response("error", e.getMessage(), null));
+        // }
+
     }
+    // pendingss
 
     @GetMapping("/issues")
     public ResponseEntity<Map<String, Object>> issues(@RequestParam(required = false) String status) {
@@ -214,11 +237,6 @@ public class AdminAPIController {
     @GetMapping("/remitters")
     public ResponseEntity<Map<String, Object>> remitters(@RequestParam(required = false) String page) {
         return ResponseEntity.ok(adminAPIService.remitters(page));
-    }
-
-    @PostMapping("/remitters")
-    public ResponseEntity<Map<String, Object>> createRemitter(@RequestBody Map<String, Object> payload) {
-        return ResponseEntity.ok(adminAPIService.createRemitter(payload));
     }
 
     // @GetMapping("/fundraiser-codes")

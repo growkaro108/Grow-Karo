@@ -13,7 +13,10 @@ import {
   getAllTransactions,
   approveUsersTransactions,
   rejectUsersTransactions,
+  searchUsers,
+  createRemitterApi,
 } from "@/api/adminApi";
+import { allRounderMessage } from "@/components/Message";
 
 const USE_MOCK = false;
 const NETWORK_DELAY_MS = 1500;
@@ -238,6 +241,24 @@ export async function approveUserTranactions(userTranactionId) {
 
 export async function rejectUserTranactions(userTranactionId, reason) {
   return await rejectUsersTransactions(userTranactionId, reason);
+}
+
+export async function onSearchUsers(query) {
+  const response = await searchUsers(query);
+  if (response.status !== "success") {
+    allRounderMessage(response);
+    return [];
+  }
+  return response.data;
+}
+
+export async function createRemitter(data) {
+  const response = await createRemitterApi(data);
+  if (response.status !== "success") {
+    allRounderMessage(response);
+    return [];
+  }
+  return response.data;
 }
 
 export async function fetchMalikDashboardData() {

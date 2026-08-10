@@ -33,7 +33,7 @@ export default function RootLayout({ children }) {
             <UserProvider>
               <Navbar />
               {children}
-               <GlobalLoader />
+              <GlobalLoader />
             </UserProvider>
           </AdminContextProvider>
         </LoaderProvider>

@@ -1,11 +1,10 @@
 export const EMPTY_REMITTER_FORM = {
-  remitterName: "",
-  remitterEmail: "",
-  remitterPhone: "",
-  trackerCode: "",
+  userId: "",
+  remitterOrganizationName: "",
   allocationLimit: "",
   aadharNumber: "",
   panNumber: "",
+  status: "active",
 };
 
 /**
@@ -15,28 +14,29 @@ export function validateAndSanitizeForm(rawForm) {
   const errors = {};
   const sanitizedData = {};
 
-  sanitizedData.remitterName = rawForm.remitterName?.trim() || "";
-  if (!sanitizedData.remitterName) {
-    errors.remitterName = "Entity name is required.";
+  sanitizedData.remitterOrganizationName =
+    rawForm.remitterOrganizationName?.trim() || "";
+  if (!sanitizedData.remitterOrganizationName) {
+    errors.remitterOrganizationName = "Entity name is required.";
   }
 
-  sanitizedData.remitterEmail =
-    rawForm.remitterEmail?.trim().toLowerCase() || "";
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(sanitizedData.remitterEmail)) {
-    errors.remitterEmail = "Please enter a valid email address.";
-  }
+  // sanitizedData.remitterEmail =
+  //   rawForm.remitterEmail?.trim().toLowerCase() || "";
+  // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // if (!emailRegex.test(sanitizedData.remitterEmail)) {
+  //   errors.remitterEmail = "Please enter a valid email address.";
+  // }
 
-  sanitizedData.remitterPhone = rawForm.remitterPhone?.replace(/\D/g, "") || "";
-  if (sanitizedData.remitterPhone.length !== 10) {
-    errors.remitterPhone = "Phone number must be exactly 10 digits.";
-  }
+  // sanitizedData.remitterPhone = rawForm.remitterPhone?.replace(/\D/g, "") || "";
+  // if (sanitizedData.remitterPhone.length !== 10) {
+  //   errors.remitterPhone = "Phone number must be exactly 10 digits.";
+  // }
 
-  sanitizedData.trackerCode =
-    rawForm.trackerCode?.replace(/\s+/g, "").toUpperCase() || "";
-  if (!sanitizedData.trackerCode || sanitizedData.trackerCode.length < 3) {
-    errors.trackerCode = "Tracker code must be at least 3 characters long.";
-  }
+  // sanitizedData.trackerCode =
+  //   rawForm.trackerCode?.replace(/\s+/g, "").toUpperCase() || "";
+  // if (!sanitizedData.trackerCode || sanitizedData.trackerCode.length < 3) {
+  //   errors.trackerCode = "Tracker code must be at least 3 characters long.";
+  // }
 
   const rawLimit = parseFloat(rawForm.allocationLimit);
   sanitizedData.allocationLimit = isNaN(rawLimit) ? 0 : rawLimit;
@@ -57,6 +57,15 @@ export function validateAndSanitizeForm(rawForm) {
   const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
   if (!panRegex.test(sanitizedData.panNumber)) {
     errors.panNumber = "Invalid format structure code (Expected: ABCDE1234F).";
+  }
+
+  sanitizedData.userId =
+    rawForm.userId?.trim().length == 0 ? null : rawForm.userId.trim();
+  if (
+    sanitizedData.userId != null &&
+    (sanitizedData.userId.length > 20 || sanitizedData.userId.length < 14)
+  ) {
+    errors.userId = "User ID must be between 14 and 20 characters.";
   }
 
   return {

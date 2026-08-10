@@ -8,7 +8,7 @@ export default function BondStub({ bond, userName, scheme, onView }) {
   return (
     <div className="overflow-hidden rounded-xl border border-slate-800">
       {/* counterfoil */}
-      <div className="flex items-center justify-between bg-white/[0.03] px-4 py-2">
+      <div className="flex items-center justify-between bg-white/3 px-4 py-2">
         <span className="font-mono text-[11px] tracking-wide text-slate-500">
           {bond.id}
         </span>
@@ -57,7 +57,7 @@ export default function BondStub({ bond, userName, scheme, onView }) {
             Rate
           </p>
           <p className="text-sm font-medium tabular-nums text-slate-200">
-            {bond.rate}% p.a.
+            {bond.rate}% per {bond.payoutCycle}
           </p>
         </div>
         <div className="col-span-2">

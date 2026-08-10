@@ -18,7 +18,7 @@ public interface RemitterRepository extends JpaRepository<Remitter, String> {
 
     Optional<Remitter> findByUserId(String userId);
 
-    Optional<Remitter> findByGstNumber(String gstNumber);
+    // Optional<Remitter> findByGstNumber(String gstNumber);
 
     Optional<Remitter> findByPanNumber(String panNumber);
 
@@ -26,7 +26,7 @@ public interface RemitterRepository extends JpaRepository<Remitter, String> {
 
     boolean existsByUserId(String userId);
 
-    boolean existsByGstNumber(String gstNumber);
+    // boolean existsByGstNumber(String gstNumber);
 
     boolean existsByPanNumber(String panNumber);
 
@@ -40,11 +40,12 @@ public interface RemitterRepository extends JpaRepository<Remitter, String> {
 
     // ── Search ───────────────────────────────────────────────────────────────
 
-    @Query("SELECT r FROM Remitter r WHERE " +
-            "LOWER(r.organizationName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "r.gstNumber LIKE CONCAT('%', :query, '%') OR " +
-            "r.panNumber LIKE CONCAT('%', :query, '%')")
-    Page<Remitter> searchRemitters(@Param("query") String query, Pageable pageable);
+    // @Query("SELECT r FROM Remitter r WHERE " +
+    // "LOWER(r.organizationName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+    // "r.gstNumber LIKE CONCAT('%', :query, '%') OR " +
+    // "r.panNumber LIKE CONCAT('%', :query, '%')")
+    // Page<Remitter> searchRemitters(@Param("query") String query, Pageable
+    // pageable);
 
     // ── Dashboard stats ──────────────────────────────────────────────────────
 

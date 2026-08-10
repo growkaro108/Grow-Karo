@@ -26,14 +26,14 @@ const Dashboard = () => {
   if (!AdminDashboard || !RemitterDashboard || !UserDashboard) {
     return <Loader />;
   }
-  if (process.env.NEXT_PUBLIC_ADMIN_EMAILS?.includes(authUser?.email))
+  if (process.env.NEXT_PUBLIC_ADMIN_EMAILS?.includes(authUser?.email)) {
     return <AdminDashboard />;
-  else {
-    return (
-      <UserDashboard />
-      // <AdminDashboard />
-      // <RemitterDashboard />
-    );
+  } else if (
+    process.env.NEXT_PUBLIC_REMITTER_EMAILS?.includes(authUser?.email)
+  ) {
+    return <RemitterDashboard />;
+  } else {
+    return <UserDashboard />;
   }
 };
 

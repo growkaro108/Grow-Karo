@@ -68,7 +68,7 @@ export function useRemitterTrackers() {
       loginId: sanitizedData.remitterEmail,
       password: Math.random().toString(36).slice(-8) + "@Vantage",
       emailSent: false,
-      remitterName: sanitizedData.remitterName,
+      remitterOrganizationName: sanitizedData.remitterOrganizationName,
     };
 
     setCodes((prev) => [
@@ -80,7 +80,7 @@ export function useRemitterTrackers() {
         raised: 0,
         goal: sanitizedData.allocationLimit,
         referrals: 0,
-        owner: sanitizedData.remitterName,
+        owner: sanitizedData.remitterOrganizationName,
         remitterEmail: sanitizedData.remitterEmail,
         remitterPhone: sanitizedData.remitterPhone,
         aadharNumber: sanitizedData.aadharNumber,
@@ -102,7 +102,7 @@ export function useRemitterTrackers() {
               ...c,
               code: sanitizedData.trackerCode,
               goal: sanitizedData.allocationLimit,
-              owner: sanitizedData.remitterName,
+              owner: sanitizedData.remitterOrganizationName,
               remitterEmail: sanitizedData.remitterEmail,
               remitterPhone: sanitizedData.remitterPhone,
               aadharNumber: sanitizedData.aadharNumber,

@@ -10,6 +10,7 @@ import { RemitterTrackerCard } from "./RemitterTrackerCard";
 import { SuccessBanner } from "./SuccessBanner";
 import { RemitterFormModal } from "./RemitterFormModal";
 import { DeleteConfirmModal } from "./DeleteConfirmModal";
+import { createRemitter } from "../../../../../../services/malikService";
 
 export default function AdminRemitterTrackersTab() {
   const {
@@ -54,7 +55,7 @@ export default function AdminRemitterTrackersTab() {
   const openEditForm = (tracker) => {
     setEditingId(tracker.id);
     setFormData({
-      remitterName: tracker.owner || "",
+      remitterOrganizationName: tracker.owner || "",
       remitterEmail: tracker.remitterEmail || "",
       remitterPhone: tracker.remitterPhone || "",
       trackerCode: tracker.code || "",
@@ -88,11 +89,11 @@ export default function AdminRemitterTrackersTab() {
       setFormData(EMPTY_REMITTER_FORM);
       return;
     }
-
-    const mockServerResponse = await createTracker(result.data);
-    setSuccessPayload(mockServerResponse);
-    closeForm();
-    setFormData(EMPTY_REMITTER_FORM);
+    console.log("create api data", result.data);
+    // const response = await createRemitter(result.data);
+    // setSuccessPayload(response);
+    // closeForm();
+    // setFormData(EMPTY_REMITTER_FORM);
   };
 
   const handleSendCredentialEmail = async () => {

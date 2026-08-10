@@ -17,6 +17,8 @@ import { withdrawUserScheme } from "../../../../services/grahakService";
 import { allRounderMessage, confirmMessage } from "@/components/Message";
 import { userContext } from "@/context/UserContext";
 import { StatusBadge } from "../malik/components/StatusBadge";
+import BondStub from "../malik/components/user-management/BondStub";
+import CertificateLightbox from "../malik/components/user-management/Certificatelightbox";
 
 /**
  * Resolves a stored image path to a full URL that the browser can fetch.
@@ -587,7 +589,13 @@ export default function Portfolio({ refresh, loading }) {
       )}
 
       {lightboxBond && (
-        <ImageLightbox bond={lightboxBond} onClose={closeLightbox} />
+        <CertificateLightbox
+          bond={lightboxBond}
+          userName={authUser?.name}
+          scheme={lightboxBond?.schemeName}
+          onClose={closeLightbox}
+        />
+        // <ImageLightbox bond={lightboxBond} onClose={closeLightbox} />
       )}
     </div>
   );

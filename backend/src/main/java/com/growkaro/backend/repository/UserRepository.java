@@ -26,6 +26,13 @@ public interface UserRepository extends JpaRepository<User, String> {
     // get all user phone no.
     @Query("SELECT u.phone FROM User u")
     List<String> findAllPhoneNo();
+    // ── Search ───────────────────────────────────────────────────────────────
+
+    @Query("SELECT u FROM User u WHERE " +
+            "LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "LOWER(u.id) LIKE LOWER(CONCAT('%', :query, '%'))")
+    Page<User> searchUsers(@Param("query") String query, Pageable pageable);
 
     // ── Lookup ───────────────────────────────────────────────────────────────
 
@@ -54,14 +61,6 @@ public interface UserRepository extends JpaRepository<User, String> {
     Page<User> findByActive(boolean active, Pageable pageable);
 
     List<User> findByActiveAndRole(boolean active, User.Role role);
-
-    // ── Search ───────────────────────────────────────────────────────────────
-
-    @Query("SELECT u FROM User u WHERE " +
-            "LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "u.phone LIKE CONCAT('%', :query, '%')")
-    Page<User> searchUsers(@Param("query") String query, Pageable pageable);
 
     // ── Date range ───────────────────────────────────────────────────────────
 

@@ -4,7 +4,10 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 @Getter
 @Setter
@@ -13,7 +16,6 @@ import java.time.LocalDateTime;
 public class Remitter {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
     @OneToOne(fetch = FetchType.LAZY)
@@ -23,26 +25,44 @@ public class Remitter {
     @Column(nullable = false)
     private String organizationName;
 
-    private String gstNumber;
+    // private String gstNumber;
 
+    @Column(nullable = false)
     private String panNumber;
+
+    @Column(nullable = false)
+    private String aadharNumber;
+
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal allocationLimit;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Status status = Status.PENDING;
+    private Status status;
 
     @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
 
-    private LocalDateTime updatedAt = LocalDateTime.now();
+    private LocalDateTime updatedAt;
 
     @PreUpdate
     public void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = getTime();
     }
 
     public enum Status {
-        PENDING, ACTIVE, SUSPENDED
+        ACTIVE, INACTIVE
+    }
+
+    @PrePersist
+    private void setId() {
+        this.id = "GKRID-"
+                + LocalDateTime.now(ZoneId.of("Asia/Kolkata")).format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+        this.createdAt = getTime();
+    }
+
+    private LocalDateTime getTime() {
+        return LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
     }
 
 }

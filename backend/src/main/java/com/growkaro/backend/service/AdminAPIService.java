@@ -21,10 +21,13 @@ import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.growkaro.backend.DRO.AddRemitter;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DTO.AdminTransactionResponse;
 import com.growkaro.backend.DTO.PagedResponse;
+import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.DTO.SchemeResponse;
+import com.growkaro.backend.DTO.SearchUser;
 import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.FundraiserCode;
@@ -372,6 +375,31 @@ public class AdminAPIService {
         return txn;
     }
 
+    public List<SearchUser> searchUser(String query) {
+        Pageable pageable = PageRequest.of(0, DEFAULT_PAGE_SIZE);
+        Page<User> users = userRepository.searchUsers(query, pageable);
+        List<SearchUser> searchUsers = new ArrayList<>();
+        for (User user : users) {
+            searchUsers.add(new SearchUser(user.getId(), user.getName(), user.getEmail(), user.getPhone()));
+        }
+        return searchUsers;
+    }
+
+    @Transactional
+    public RemitterResponse createRemitter(AddRemitter addRemitter) {
+        User user = general.getUserById(addRemitter.getUserId());
+        if (user == null) {
+            throw new IllegalArgumentException("User not found");
+        }
+        Remitter remitter = new Remitter();
+        remitter.setOrganizationName(addRemitter.getOrganizationName());
+        // remitter.setGstNumber(addRemitter.getGstNumber());
+        remitter.setPanNumber(addRemitter.getPanNumber());
+        remitter.setAadharNumber(addRemitter.getAadharNumber());
+        remitter.setAllocationLimit(addRemitter.getAllocationLimit());
+        remitter.setUser(user);
+        return RemitterResponse.fromEntity(remitterRepository.save(remitter));
+    }
     // pending--------------------------------------------------------------------------------------------------------
     // @Cacheable(value = "adminDashboard", key = "#range ?: 'default'")
     // @Transactional(readOnly = true)
@@ -476,50 +504,54 @@ public class AdminAPIService {
         return general.response("ok", "Remitters fetched", data);
     }
 
-    @CacheEvict(value = { "adminDashboard", "remitters" }, allEntries = true)
-    @Transactional
-    public Map<String, Object> createRemitter(Map<String, Object> payload) {
-        String email = firstString(payload, "remitterEmail", "email");
-        String phone = firstString(payload, "remitterPhone", "phone");
-        String name = firstString(payload, "remitterName", "name", "organizationName");
+    // @CacheEvict(value = { "adminDashboard", "remitters" }, allEntries = true)
+    // @Transactional
+    // public Map<String, Object> createRemitter(Map<String, Object> payload) {
+    // String email = firstString(payload, "remitterEmail", "email");
+    // String phone = firstString(payload, "remitterPhone", "phone");
+    // String name = firstString(payload, "remitterName", "name",
+    // "organizationName");
 
-        if (email == null || phone == null || name == null) {
-            return general.response("error", "remitterName, remitterEmail, and remitterPhone are required", Map.of());
-        }
-        if (userRepository.existsByEmail(email) || userRepository.existsByPhone(phone)) {
-            return general.response("error", "Remitter user already exists", Map.of("email", email, "phone", phone));
-        }
+    // if (email == null || phone == null || name == null) {
+    // return general.response("error", "remitterName, remitterEmail, and
+    // remitterPhone are required", Map.of());
+    // }
+    // if (userRepository.existsByEmail(email) ||
+    // userRepository.existsByPhone(phone)) {
+    // return general.response("error", "Remitter user already exists",
+    // Map.of("email", email, "phone", phone));
+    // }
 
-        User user = new User();
-        user.setName(name);
-        user.setEmail(email);
-        user.setPhone(phone);
-        user.setPasswordHash(firstString(payload, "password", "passwordHash") != null
-                ? firstString(payload, "password", "passwordHash")
-                : "ChangeMe@123");
-        user.setRole(User.Role.REMITTER);
-        user = userRepository.save(user);
+    // User user = new User();
+    // user.setName(name);
+    // user.setEmail(email);
+    // user.setPhone(phone);
+    // user.setPasswordHash(firstString(payload, "password", "passwordHash") != null
+    // ? firstString(payload, "password", "passwordHash")
+    // : "ChangeMe@123");
+    // user.setRole(User.Role.REMITTER);
+    // user = userRepository.save(user);
 
-        Remitter remitter = new Remitter();
-        remitter.setUser(user);
-        remitter.setOrganizationName(name);
-        remitter.setPanNumber(firstString(payload, "panNumber"));
-        remitter.setGstNumber(firstString(payload, "gstNumber"));
-        remitter.setStatus(Remitter.Status.ACTIVE);
-        remitter = remitterRepository.save(remitter);
+    // Remitter remitter = new Remitter();
+    // remitter.setUser(user);
+    // remitter.setOrganizationName(name);
+    // remitter.setPanNumber(firstString(payload, "panNumber"));
+    // // remitter.setGstNumber(firstString(payload, "gstNumber"));
+    // remitter.setStatus(Remitter.Status.ACTIVE);
+    // remitter = remitterRepository.save(remitter);
 
-        String trackerCode = firstString(payload, "trackerCode", "code");
-        if (trackerCode != null) {
-            FundraiserCode code = new FundraiserCode();
-            code.setRemitter(remitter);
-            code.setCode(trackerCode);
-            code.setDescription("Default tracker for " + name);
-            code.setUsageLimit(intValue(payload.get("allocationLimit"), 1));
-            fundraiserCodeRepository.save(code);
-        }
+    // String trackerCode = firstString(payload, "trackerCode", "code");
+    // if (trackerCode != null) {
+    // FundraiserCode code = new FundraiserCode();
+    // code.setRemitter(remitter);
+    // code.setCode(trackerCode);
+    // code.setDescription("Default tracker for " + name);
+    // code.setUsageLimit(intValue(payload.get("allocationLimit"), 1));
+    // fundraiserCodeRepository.save(code);
+    // }
 
-        return general.response("ok", "Remitter created", toRemitterView(remitter));
-    }
+    // return general.response("ok", "Remitter created", toRemitterView(remitter));
+    // }
 
     // @Cacheable(value = "fundraiserCodes", key = "#page ?: 'default'")
     // @Transactional(readOnly = true)
@@ -640,7 +672,7 @@ public class AdminAPIService {
         data.put("organizationName", remitter.getOrganizationName());
         data.put("email", remitter.getUser().getEmail());
         data.put("phone", remitter.getUser().getPhone());
-        data.put("gstNumber", remitter.getGstNumber());
+        // data.put("gstNumber", remitter.getGstNumber());
         data.put("panNumber", remitter.getPanNumber());
         data.put("status", remitter.getStatus().name().toLowerCase());
         data.put("createdAt", remitter.getCreatedAt());

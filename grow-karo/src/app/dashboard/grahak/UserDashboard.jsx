@@ -131,12 +131,12 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex gap-3 w-full sm:w-auto">
-              {/* <button
+              <button
                 onClick={() => openAggressiveWithdrawal()}
                 className="flex-1 sm:flex-none text-center bg-red-600 text-white hover:bg-red-700 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm cursor-pointer"
               >
                 Agresive Withdraw
-              </button> */}
+              </button>
               <button
                 onClick={() => openGeneralWithdrawModal()}
                 className="flex-1 sm:flex-none text-center bg-green-500 text-white hover:bg-green-600 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm cursor-pointer focus:cursor-wait"
