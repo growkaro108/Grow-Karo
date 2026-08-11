@@ -15,6 +15,7 @@ import {
   rejectUsersTransactions,
   searchUsers,
   createRemitterApi,
+  getAllRemittersApi,
 } from "@/api/adminApi";
 import { allRounderMessage } from "@/components/Message";
 
@@ -254,13 +255,23 @@ export async function onSearchUsers(query) {
 
 export async function createRemitter(data) {
   const response = await createRemitterApi(data);
+  allRounderMessage(response);
   if (response.status !== "success") {
-    allRounderMessage(response);
-    return [];
+    return null;
   }
   return response.data;
 }
 
+export async function getAllRemitter() {
+  const response = await getAllRemittersApi();
+  if (response.status !== "success") {
+    allRounderMessage(response);
+    return null;
+  }
+  return response.data;
+}
+
+//pending
 export async function fetchMalikDashboardData() {
   if (USE_MOCK) {
     return delay(mockMalikData);

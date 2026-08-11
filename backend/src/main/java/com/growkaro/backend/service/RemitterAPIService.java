@@ -5,7 +5,6 @@ import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.WithdrawalRequest;
 import com.growkaro.backend.enums.WithdrawalStatus;
-import com.growkaro.backend.repository.RecipientRepository;
 import com.growkaro.backend.repository.RemitterRepository;
 import com.growkaro.backend.repository.TransactionRepository;
 import com.growkaro.backend.repository.WithdrawalRequestRepository;
@@ -29,20 +28,15 @@ public class RemitterAPIService {
 
     private static final int DEFAULT_PAGE_SIZE = 20;
 
-    private final RecipientService recipientService;
     private final RemitterRepository remitterRepository;
-    private final RecipientRepository recipientRepository;
     private final TransactionRepository transactionRepository;
     private final WithdrawalRequestRepository withdrawalRequestRepository;
 
-    public RemitterAPIService(RecipientService recipientService,
+    public RemitterAPIService(
             RemitterRepository remitterRepository,
-            RecipientRepository recipientRepository,
             TransactionRepository transactionRepository,
             WithdrawalRequestRepository withdrawalRequestRepository) {
-        this.recipientService = recipientService;
         this.remitterRepository = remitterRepository;
-        this.recipientRepository = recipientRepository;
         this.transactionRepository = transactionRepository;
         this.withdrawalRequestRepository = withdrawalRequestRepository;
     }
@@ -68,21 +62,23 @@ public class RemitterAPIService {
 
     // Remitter remitter = remitterOpt.get();
     // Page<Transaction> transactions =
-    // transactionRepository.findByRemitterId(remitter.getId(), pageable("1"));
+    // transactionRepository.findByRemitterId(remitter.getRemitterId(),
+    // pageable("1"));
     // Page<Recipient> recipients =
-    // recipientService.findByRemitterId(remitter.getId(), 1);
+    // recipientService.findByRemitterId(remitter.getRemitterId(), 1);
     // Page<WithdrawalRequest> requests =
     // withdrawalRequestRepository.findAll(pageable("1"));
     // BigDecimal totalVolume =
-    // transactionRepository.sumSuccessfulAmountByRemitter(remitter.getId());
+    // transactionRepository.sumSuccessfulAmountByRemitter(remitter.getRemitterId());
 
     // Map<String, Object> data = new LinkedHashMap<>();
-    // data.put("remitterId", remitter.getId());
+    // data.put("remitterId", remitter.getRemitterId());
     // data.put("range", range);
     // data.put("dashboardMetrics", Map.of(
     // "totalVolume", totalVolume,
     // "activeCounterparties",
-    // recipientRepository.countByRemitterIdAndActive(remitter.getId(), true)));
+    // recipientRepository.countByRemitterIdAndActive(remitter.getRemitterId(),
+    // true)));
     // data.put("summary", Map.of(
     // "received", totalVolume,
     // "pending",
@@ -95,7 +91,7 @@ public class RemitterAPIService {
     // recipients.getContent().stream().map(recipientService::toRemitterView).toList());
     // data.put("requests", requests.getContent().stream()
     // .filter(request ->
-    // request.getRecipient().getRemitter().getId().equals(remitter.getId()))
+    // request.getRecipient().getRemitter().getRemitterId().equals(remitter.getRemitterId()))
     // .map(this::toRequestView)
     // .toList());
     // return response("ok", "Remitter dashboard fetched", data);
@@ -113,120 +109,79 @@ public class RemitterAPIService {
     // }
 
     // Page<Transaction> transactions =
-    // transactionRepository.findByRemitterId(remitterOpt.get().getId(),
+    // transactionRepository.findByRemitterId(remitterOpt.get().getRemitterId(),
     // pageable(page));
     // Map<String, Object> data = paginatedMeta(transactions);
-    // data.put("remitterId", remitterOpt.get().getId());
+    // data.put("remitterId", remitterOpt.get().getRemitterId());
     // data.put("items",
     // transactions.getContent().stream().map(this::toTransactionView).toList());
     // return response("ok", "Remitter transactions fetched", data);
     // }
 
-    @Cacheable(value = "remitterRecipients", key = "#remitterId + ':' + (#page ?: 'default')")
-    @Transactional(readOnly = true)
-    public Map<String, Object> remitterRecipients(String remitterId, String page) {
-        Optional<Remitter> remitterOpt = resolveRemitter(remitterId);
-        if (remitterOpt.isEmpty()) {
-            return response("error", "Remitter not found", Map.of("remitterId", remitterId));
-        }
+    // @Cacheable(value = "paymentRequests", key = "#remitterId + ':' + (#page ?:
+    // 'default')")
+    // @Transactional(readOnly = true)
+    // public Map<String, Object> paymentRequests(String remitterId, String page) {
+    // Optional<Remitter> remitterOpt = resolveRemitter(remitterId);
+    // if (remitterOpt.isEmpty()) {
+    // return response("error", "Remitter not found", Map.of("remitterId",
+    // remitterId));
+    // }
 
-        Page<Recipient> recipients = recipientService.findByRemitterId(remitterOpt.get().getId(), parsePage(page));
-        return response("ok", "Remitter recipients fetched",
-                recipientService.paginatedRemitterResponse(remitterOpt.get().getId(), recipients));
-    }
+    // List<Map<String, Object>> items =
+    // withdrawalRequestRepository.findAll(pageable(page))
+    // .getContent()
+    // .stream()
+    // .filter(request -> request.getRecipient().getRemitter().getRemitterId()
+    // .equals(remitterOpt.get().getRemitterId()))
+    // .map(this::toRequestView)
+    // .toList();
 
-    @Cacheable(value = "paymentRequests", key = "#remitterId + ':' + (#page ?: 'default')")
-    @Transactional(readOnly = true)
-    public Map<String, Object> paymentRequests(String remitterId, String page) {
-        Optional<Remitter> remitterOpt = resolveRemitter(remitterId);
-        if (remitterOpt.isEmpty()) {
-            return response("error", "Remitter not found", Map.of("remitterId", remitterId));
-        }
+    // return response("ok", "Payment requests fetched",
+    // Map.of("remitterId", remitterOpt.get().getRemitterId(), "page",
+    // parsePage(page), "items", items));
+    // }
 
-        List<Map<String, Object>> items = withdrawalRequestRepository.findAll(pageable(page))
-                .getContent()
-                .stream()
-                .filter(request -> request.getRecipient().getRemitter().getId().equals(remitterOpt.get().getId()))
-                .map(this::toRequestView)
-                .toList();
+    // @CacheEvict(value = { "paymentRequests", "remitterDashboard" }, allEntries =
+    // true)
+    // @Transactional
+    // public Map<String, Object> settlements(String remitterId, String requestId,
+    // Map<String, Object> payload) {
+    // Optional<Remitter> remitterOpt = resolveRemitter(remitterId);
+    // Optional<WithdrawalRequest> requestOpt =
+    // withdrawalRequestRepository.findById(requestId);
+    // if (remitterOpt.isEmpty() || requestOpt.isEmpty()
+    // || !requestOpt.get().getRecipient().getRemitter().getRemitterId()
+    // .equals(remitterOpt.get().getRemitterId())) {
+    // return response("error", "Payment request not found",
+    // Map.of("remitterId", remitterId, "requestId", requestId));
+    // }
 
-        return response("ok", "Payment requests fetched",
-                Map.of("remitterId", remitterOpt.get().getId(), "page", parsePage(page), "items", items));
-    }
+    // WithdrawalRequest request = requestOpt.get();
+    // request.setStatus(WithdrawalStatus.PROCESSED);
+    // if (payload.containsKey("proofUrl")) {
+    // request.setProofUrl(stringValue(payload.get("proofUrl")));
+    // }
+    // return response("ok", "Settlement submitted",
+    // toRequestView(withdrawalRequestRepository.save(request)));
+    // }
 
-    @CacheEvict(value = { "paymentRequests", "remitterDashboard" }, allEntries = true)
-    @Transactional
-    public Map<String, Object> settlements(String remitterId, String requestId, Map<String, Object> payload) {
-        Optional<Remitter> remitterOpt = resolveRemitter(remitterId);
-        Optional<WithdrawalRequest> requestOpt = withdrawalRequestRepository.findById(requestId);
-        if (remitterOpt.isEmpty() || requestOpt.isEmpty()
-                || !requestOpt.get().getRecipient().getRemitter().getId().equals(remitterOpt.get().getId())) {
-            return response("error", "Payment request not found",
-                    Map.of("remitterId", remitterId, "requestId", requestId));
-        }
-
-        WithdrawalRequest request = requestOpt.get();
-        request.setStatus(WithdrawalStatus.PROCESSED);
-        if (payload.containsKey("proofUrl")) {
-            request.setProofUrl(stringValue(payload.get("proofUrl")));
-        }
-        return response("ok", "Settlement submitted", toRequestView(withdrawalRequestRepository.save(request)));
-    }
-
-    @CacheEvict(value = { "paymentRequests", "remitterDashboard" }, allEntries = true)
-    @Transactional
-    public Map<String, Object> proof(String remitterId, String requestId, String fileName) {
-        Optional<WithdrawalRequest> requestOpt = withdrawalRequestRepository.findById(requestId);
-        if (requestOpt.isEmpty()) {
-            return response("error", "Payment request not found", Map.of("requestId", requestId));
-        }
-        WithdrawalRequest request = requestOpt.get();
-        request.setProofUrl(fileName);
-        return response("ok", "Proof uploaded", toRequestView(withdrawalRequestRepository.save(request)));
-    }
-
-    @CacheEvict(value = { "remitterRecipients", "remitterDashboard" }, allEntries = true)
-    @Transactional
-    public Map<String, Object> updateRecipient(String remitterId, String recipientId, Map<String, Object> payload) {
-        Optional<Remitter> remitterOpt = resolveRemitter(remitterId);
-        if (remitterOpt.isEmpty()) {
-            return response("error", "Remitter not found", Map.of("remitterId", remitterId));
-        }
-        try {
-            Optional<Recipient> updated = recipientService.updateForRemitter(remitterOpt.get().getId(), recipientId,
-                    payload);
-            if (updated.isEmpty()) {
-                return response("error", "Recipient not found",
-                        Map.of("remitterId", remitterOpt.get().getId(), "recipientId", recipientId));
-            }
-            return response("ok", "Recipient updated",
-                    Map.of("remitterId", remitterOpt.get().getId(), "recipient",
-                            recipientService.toRemitterView(updated.get())));
-        } catch (IllegalStateException | IllegalArgumentException ex) {
-            return response("error", ex.getMessage(),
-                    Map.of("remitterId", remitterOpt.get().getId(), "recipientId", recipientId));
-        }
-    }
-
-    @CacheEvict(value = { "remitterRecipients", "remitterDashboard" }, allEntries = true)
-    @Transactional
-    public Map<String, Object> createRecipient(String remitterId, Map<String, Object> payload) {
-        Optional<Remitter> remitterOpt = resolveRemitter(remitterId);
-        if (remitterOpt.isEmpty()) {
-            return response("error", "Remitter not found", Map.of("remitterId", remitterId));
-        }
-        try {
-            Optional<Recipient> created = recipientService.createForRemitter(remitterOpt.get().getId(), payload);
-            if (created.isEmpty()) {
-                return response("error", "Recipient user not found", Map.of("remitterId", remitterOpt.get().getId()));
-            }
-            return response("ok", "Recipient created",
-                    Map.of("remitterId", remitterOpt.get().getId(), "recipient",
-                            recipientService.toRemitterView(created.get())));
-        } catch (IllegalStateException | IllegalArgumentException ex) {
-            return response("error", ex.getMessage(), Map.of("remitterId", remitterOpt.get().getId()));
-        }
-    }
+    // @CacheEvict(value = { "paymentRequests", "remitterDashboard" }, allEntries =
+    // true)
+    // @Transactional
+    // public Map<String, Object> proof(String remitterId, String requestId, String
+    // fileName) {
+    // Optional<WithdrawalRequest> requestOpt =
+    // withdrawalRequestRepository.findById(requestId);
+    // if (requestOpt.isEmpty()) {
+    // return response("error", "Payment request not found", Map.of("requestId",
+    // requestId));
+    // }
+    // WithdrawalRequest request = requestOpt.get();
+    // request.setProofUrl(fileName);
+    // return response("ok", "Proof uploaded",
+    // toRequestView(withdrawalRequestRepository.save(request)));
+    // }
 
     private Optional<Remitter> resolveRemitter(String remitterId) {
         if (remitterId == null || remitterId.isBlank()) {
@@ -242,7 +197,7 @@ public class RemitterAPIService {
     // Map<String, Object> data = new LinkedHashMap<>();
     // String recipientName = transaction.getRecipient() != null ?
     // transaction.getRecipient().getName() : "Recipient";
-    // data.put("id", transaction.getId());
+    // data.put("id", transaction.getRemitterId());
     // data.put("name", recipientName);
     // data.put("method", transaction.getRecipient() != null &&
     // transaction.getRecipient().getUpiId() != null
@@ -267,18 +222,19 @@ public class RemitterAPIService {
                 "y", 0);
     }
 
-    private Map<String, Object> toRequestView(WithdrawalRequest request) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("id", request.getId());
-        data.put("sender", request.getUser().getName());
-        data.put("note", request.getAdminNote() != null ? request.getAdminNote() : "Withdrawal request");
-        data.put("amount", request.getAmount());
-        data.put("date", request.getCreatedAt());
-        data.put("status", request.getStatus().name());
-        data.put("isSettled", request.getStatus() == WithdrawalStatus.PROCESSED);
-        data.put("proofUrl", request.getProofUrl());
-        return data;
-    }
+    // private Map<String, Object> toRequestView(WithdrawalRequest request) {
+    // Map<String, Object> data = new LinkedHashMap<>();
+    // data.put("id", request.getRemitterId());
+    // data.put("sender", request.getUser().getName());
+    // data.put("note", request.getAdminNote() != null ? request.getAdminNote() :
+    // "Withdrawal request");
+    // data.put("amount", request.getAmount());
+    // data.put("date", request.getCreatedAt());
+    // data.put("status", request.getStatus().name());
+    // data.put("isSettled", request.getStatus() == WithdrawalStatus.PROCESSED);
+    // data.put("proofUrl", request.getProofUrl());
+    // return data;
+    // }
 
     private Map<String, Object> paginatedMeta(Page<?> page) {
         Map<String, Object> data = new LinkedHashMap<>();

@@ -9,11 +9,16 @@ import java.math.BigDecimal;
 @Setter
 public class AddRemitter {
 
-    @NotBlank(message = "Please select a platform user for this remitter")
-    private String userId;
-
     @NotBlank(message = "Remitter entity name is required")
-    private String remitterOrganizationName;
+    private String organizationName;
+
+    @NotBlank(message = "Email is required")
+    @Email(message = "Please enter a valid email address")
+    private String remitterEmail;
+
+    @NotBlank(message = "Phone number is required")
+    @Pattern(regexp = "^\\d{10}$", message = "Phone number must be exactly 10 digits")
+    private String remitterPhone;
 
     @NotBlank(message = "Aadhar number is required")
     @Pattern(regexp = "^\\d{12}$", message = "Aadhar number must be exactly 12 digits")
@@ -29,6 +34,6 @@ public class AddRemitter {
     @DecimalMin(value = "0.0", inclusive = false, message = "Allocation limit must be greater than 0")
     private BigDecimal allocationLimit;
 
-    @NotBlank(message = "Status is required")
-    private String status; // "active" | "inactive" from the form toggle
+    @NotNull(message = "Status is required")
+    private Boolean status; // true = active, false = inactive — matches the frontend toggle
 }

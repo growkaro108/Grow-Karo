@@ -15,9 +15,10 @@ export default function CertificateLightbox({
   }, [onClose]);
 
   if (!bond) return null;
+  // console.log(userName + " " + scheme + " " + bond);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-8">
+    <div className="fixed inset-0 z-60 flex items-center justify-center p-4 sm:p-8">
       <style>{`@keyframes popIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }`}</style>
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
@@ -35,7 +36,7 @@ export default function CertificateLightbox({
 
         <div className="overflow-hidden rounded-2xl shadow-2xl shadow-black/50 ring-1 ring-white/10">
           <BondCertificate
-            bond={bond}
+            bond={bond ?? null}
             userName={userName}
             scheme={scheme}
             className="h-auto w-full"
@@ -43,7 +44,7 @@ export default function CertificateLightbox({
         </div>
 
         <p className="mt-3 text-center font-mono text-xs text-slate-400">
-          Serial {bond.id}
+          Serial {bond.userSchemeId}
         </p>
       </div>
     </div>

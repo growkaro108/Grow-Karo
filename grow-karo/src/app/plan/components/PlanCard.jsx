@@ -64,7 +64,9 @@ export function PlanCard({
         <div>
           <p className="text-2xl font-bold" style={{ color: "#4f46e5" }}>
             {plan.profitPercentage}
-            <span className="text-sm font-medium">% p.a.</span>
+            <span className="text-sm font-medium">
+              % on every {plan.payoutFrequency}
+            </span>
           </p>
           <p className="text-xs mt-0.5" style={{ color: "#94a3b8" }}>
             Min. {currency(plan.minimumAmount)}

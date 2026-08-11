@@ -1,10 +1,11 @@
 export const EMPTY_REMITTER_FORM = {
-  userId: "",
-  remitterOrganizationName: "",
+  organizationName: "",
+  remitterEmail: "",
+  remitterPhone: "",
   allocationLimit: "",
   aadharNumber: "",
   panNumber: "",
-  status: "active",
+  status: true,
 };
 
 /**
@@ -14,23 +15,22 @@ export function validateAndSanitizeForm(rawForm) {
   const errors = {};
   const sanitizedData = {};
 
-  sanitizedData.remitterOrganizationName =
-    rawForm.remitterOrganizationName?.trim() || "";
-  if (!sanitizedData.remitterOrganizationName) {
-    errors.remitterOrganizationName = "Entity name is required.";
+  sanitizedData.organizationName = rawForm.organizationName?.trim() || "";
+  if (!sanitizedData.organizationName) {
+    errors.organizationName = "Entity name is required.";
   }
 
-  // sanitizedData.remitterEmail =
-  //   rawForm.remitterEmail?.trim().toLowerCase() || "";
-  // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  // if (!emailRegex.test(sanitizedData.remitterEmail)) {
-  //   errors.remitterEmail = "Please enter a valid email address.";
-  // }
+  sanitizedData.remitterEmail =
+    rawForm.remitterEmail?.trim().toLowerCase() || "";
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(sanitizedData.remitterEmail)) {
+    errors.remitterEmail = "Please enter a valid email address.";
+  }
 
-  // sanitizedData.remitterPhone = rawForm.remitterPhone?.replace(/\D/g, "") || "";
-  // if (sanitizedData.remitterPhone.length !== 10) {
-  //   errors.remitterPhone = "Phone number must be exactly 10 digits.";
-  // }
+  sanitizedData.remitterPhone = rawForm.remitterPhone?.replace(/\D/g, "") || "";
+  if (sanitizedData.remitterPhone.length !== 10) {
+    errors.remitterPhone = "Phone number must be exactly 10 digits.";
+  }
 
   // sanitizedData.trackerCode =
   //   rawForm.trackerCode?.replace(/\s+/g, "").toUpperCase() || "";
@@ -58,15 +58,7 @@ export function validateAndSanitizeForm(rawForm) {
   if (!panRegex.test(sanitizedData.panNumber)) {
     errors.panNumber = "Invalid format structure code (Expected: ABCDE1234F).";
   }
-
-  sanitizedData.userId =
-    rawForm.userId?.trim().length == 0 ? null : rawForm.userId.trim();
-  if (
-    sanitizedData.userId != null &&
-    (sanitizedData.userId.length > 20 || sanitizedData.userId.length < 14)
-  ) {
-    errors.userId = "User ID must be between 14 and 20 characters.";
-  }
+  sanitizedData.status = rawForm.status;
 
   return {
     isValid: Object.keys(errors).length === 0,

@@ -5,9 +5,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.TransactionStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -23,13 +25,13 @@ import org.springframework.web.multipart.MultipartFile;
 import com.growkaro.backend.DRO.AddRemitter;
 import com.growkaro.backend.DRO.ApproveUserScheme;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
+import com.growkaro.backend.DTO.AddedRemitter;
 import com.growkaro.backend.DTO.AdminTransactionResponse;
 import com.growkaro.backend.DTO.PagedResponse;
 import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.SearchUser;
 import com.growkaro.backend.common.General;
-import com.growkaro.backend.service.ActivityLogService;
 import com.growkaro.backend.service.AdminAPIService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -204,24 +206,45 @@ public class AdminAPIController {
     public ResponseEntity<Map<String, Object>> addRemitter(@RequestBody AddRemitter addRemitter) {
         System.out.println(addRemitter);
 
-        if (addRemitter == null || addRemitter.getUserId().isBlank() || addRemitter.getOrganizationName().isBlank()
+        if (addRemitter == null
+                || addRemitter.getOrganizationName().isBlank()
                 || addRemitter.getAadharNumber().isBlank() || addRemitter.getPanNumber().isBlank()
-                || addRemitter.getAllocationLimit().compareTo(BigDecimal.ZERO) <= 0
-                || addRemitter.getStatus().isBlank()) {
-            return ResponseEntity.ok(general.response("error", "Invalid request.", null));
+                || addRemitter.getAllocationLimit().compareTo(BigDecimal.ZERO) <= 0) {
+            return ResponseEntity.ok(general.response("info", "Invalid request.", null));
         }
-        System.out.println(addRemitter);
-        return null;
-        // try {
-        // RemitterResponse rr = adminAPIService.createRemitter(addRemitter);
-        // return ResponseEntity.ok(general.response("success", "Remitter added
-        // successfully", rr));
-        // } catch (Exception e) {
-        // log.error("Error while adding remitter: " + e.getMessage());
-        // return ResponseEntity.ok(general.response("error", e.getMessage(), null));
-        // }
+
+        try {
+            AddedRemitter ar = adminAPIService.createRemitter(addRemitter);
+            return ResponseEntity.ok(general.response("success", "Remitter added successfully", ar));
+        } catch (Exception e) {
+            log.error("Error while adding remitter: " + e.getMessage(), e);
+            return ResponseEntity.ok(general.response("error",
+                    e.getMessage(), null));
+        }
 
     }
+
+    @GetMapping("/remitters")
+    private ResponseEntity<Map<String, Object>> remitterList(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int limit) {
+        if (limit <= 0 || limit > 10 || page < 0) {
+            return ResponseEntity.ok(general.response("info", "Invalid request.", null));
+        }
+        try {
+            Pageable pageable = PageRequest.of(page, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
+            PagedResponse<RemitterResponse> remitters = adminAPIService.getAllRemitters(pageable);
+            if (remitters == null) {
+                return ResponseEntity.ok(general.response("error", "No remitters found", null));
+            }
+            return ResponseEntity.ok(general.response("success", "Remitters fetched successfully", remitters));
+        } catch (Exception e) {
+            log.error("Error while fetching remitters: " + e.getMessage(), e);
+            return ResponseEntity.ok(general.response("error",
+                    e.getMessage(), null));
+        }
+    }
+
     // pendingss
 
     @GetMapping("/issues")
@@ -234,10 +257,11 @@ public class AdminAPIController {
         return ResponseEntity.ok(adminAPIService.resolveIssue(issueId));
     }
 
-    @GetMapping("/remitters")
-    public ResponseEntity<Map<String, Object>> remitters(@RequestParam(required = false) String page) {
-        return ResponseEntity.ok(adminAPIService.remitters(page));
-    }
+    // @GetMapping("/remitters")
+    // public ResponseEntity<Map<String, Object>> remitters(@RequestParam(required =
+    // false) String page) {
+    // return ResponseEntity.ok(adminAPIService.remitters(page));
+    // }
 
     // @GetMapping("/fundraiser-codes")
     // public ResponseEntity<Map<String, Object>>

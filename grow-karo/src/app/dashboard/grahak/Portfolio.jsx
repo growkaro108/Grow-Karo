@@ -17,9 +17,17 @@ import { withdrawUserScheme } from "../../../../services/grahakService";
 import { allRounderMessage, confirmMessage } from "@/components/Message";
 import { userContext } from "@/context/UserContext";
 import { StatusBadge } from "../malik/components/StatusBadge";
-import BondStub from "../malik/components/user-management/BondStub";
-import CertificateLightbox from "../malik/components/user-management/Certificatelightbox";
+import dynamic from "next/dynamic";
+import TabLoader from "@/loader/TabLoader";
+// import CertificateLightbox from "../malik/components/user-management/Certificatelightbox";
 
+const CertificateLightbox = dynamic(
+  () => import("../malik/components/Certificatelightbox"),
+  {
+    loading: () => <TabLoader />,
+    ssr: false,
+  },
+);
 /**
  * Resolves a stored image path to a full URL that the browser can fetch.
  * - If the path is already absolute (http/https) it is returned as-is.
@@ -432,7 +440,10 @@ export default function Portfolio({ refresh, loading }) {
 
   const openDetails = useCallback((bond) => setSelectedBond(bond), []);
   const closeDetails = useCallback(() => setSelectedBond(null), []);
-  const openLightbox = useCallback((bond) => setLightboxBond(bond), []);
+  const openLightbox = useCallback((bond) => {
+    // console.log(bond);
+    setLightboxBond(bond);
+  }, []);
   const closeLightbox = useCallback(() => setLightboxBond(null), []); // Fixed dependency here
   // Handle asset withdrawal
   const handleWithdrawRequest = useCallback(
@@ -588,11 +599,11 @@ export default function Portfolio({ refresh, loading }) {
         </div>
       )}
 
-      {lightboxBond && (
+      {lightboxBond?.schemeName && (
         <CertificateLightbox
           bond={lightboxBond}
-          userName={authUser?.name}
-          scheme={lightboxBond?.schemeName}
+          userName={authUser?.name || ""}
+          scheme={lightboxBond?.schemeName || ""}
           onClose={closeLightbox}
         />
         // <ImageLightbox bond={lightboxBond} onClose={closeLightbox} />

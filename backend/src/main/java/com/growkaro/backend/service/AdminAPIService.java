@@ -1,10 +1,12 @@
 package com.growkaro.backend.service;
 
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.growkaro.backend.DRO.AddRemitter;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
+import com.growkaro.backend.DTO.AddedRemitter;
 import com.growkaro.backend.DTO.AdminTransactionResponse;
 import com.growkaro.backend.DTO.PagedResponse;
 import com.growkaro.backend.DTO.RemitterResponse;
@@ -30,7 +33,6 @@ import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.SearchUser;
 import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.common.General;
-import com.growkaro.backend.entity.FundraiserCode;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.SupportIssue;
@@ -43,7 +45,6 @@ import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.enums.UserSchemeStatus;
 import com.growkaro.backend.enums.WithdrawalStatus;
 import com.growkaro.backend.repository.ActivityLogRepository;
-import com.growkaro.backend.repository.FundraiserCodeRepository;
 import com.growkaro.backend.repository.RemitterRepository;
 import com.growkaro.backend.repository.SchemeRepository;
 import com.growkaro.backend.repository.SupportIssueRepository;
@@ -54,8 +55,8 @@ import com.growkaro.backend.repository.WithdrawalRequestRepository;
 
 import lombok.extern.slf4j.Slf4j;
 
-@Service
 @Slf4j
+@Service
 public class AdminAPIService {
 
     private static final int DEFAULT_PAGE_SIZE = 20;
@@ -65,7 +66,6 @@ public class AdminAPIService {
     private final TransactionRepository transactionRepository;
     private final WithdrawalRequestRepository withdrawalRequestRepository;
     private final SupportIssueRepository supportIssueRepository;
-    private final FundraiserCodeRepository fundraiserCodeRepository;
     private final SchemeRepository schemeRepository;
     private final UserSchemeRepository userSchemeRepository;
     private final ApiService apiService;
@@ -79,7 +79,6 @@ public class AdminAPIService {
             TransactionRepository transactionRepository,
             WithdrawalRequestRepository withdrawalRequestRepository,
             SupportIssueRepository supportIssueRepository,
-            FundraiserCodeRepository fundraiserCodeRepository,
             SchemeRepository schemeRepository, UserSchemeRepository userSchemeRepository, @Lazy ApiService apiService,
             ActivityLogService activityLogService, LocalFileStorageService localFileStorageService,
             ActivityLogRepository activityLogRepository, General general) {
@@ -88,7 +87,6 @@ public class AdminAPIService {
         this.transactionRepository = transactionRepository;
         this.withdrawalRequestRepository = withdrawalRequestRepository;
         this.supportIssueRepository = supportIssueRepository;
-        this.fundraiserCodeRepository = fundraiserCodeRepository;
         this.schemeRepository = schemeRepository;
         this.userSchemeRepository = userSchemeRepository;
         this.apiService = apiService;
@@ -386,20 +384,105 @@ public class AdminAPIService {
     }
 
     @Transactional
-    public RemitterResponse createRemitter(AddRemitter addRemitter) {
-        User user = general.getUserById(addRemitter.getUserId());
-        if (user == null) {
-            throw new IllegalArgumentException("User not found");
+    public AddedRemitter createRemitter(AddRemitter addRemitter) {
+
+        if (userRepository.existsByEmail(addRemitter.getRemitterEmail())) {
+            log.error("A user already exists with email {}", addRemitter.getRemitterEmail());
+            throw new IllegalArgumentException("A user with this email already exists");
         }
+
+        List<Remitter> conflicts = remitterRepository.findConflicts(
+                addRemitter.getRemitterEmail(),
+                addRemitter.getRemitterPhone(),
+                addRemitter.getAadharNumber(),
+                addRemitter.getPanNumber());
+
+        if (conflicts.size() > 0) {
+            int emailConflict = 0;
+            int phoneConflict = 0;
+            int aadharConflict = 0;
+            int panConflict = 0;
+            for (Remitter existing : conflicts) {
+                if (existing.getRemitterEmail().equals(addRemitter.getRemitterEmail())) {
+                    emailConflict++;
+                }
+                if (existing.getRemitterPhone().equals(addRemitter.getRemitterPhone())) {
+                    phoneConflict++;
+                }
+                if (existing.getAadharNumber().equals(addRemitter.getAadharNumber())) {
+                    aadharConflict++;
+                }
+                if (existing.getPanNumber().equals(addRemitter.getPanNumber())) {
+                    panConflict++;
+                }
+                throw new IllegalArgumentException("A remitter with this " + (emailConflict > 0 ? "email, " : "")
+                        + (phoneConflict > 0 ? "phone, " : "") + (aadharConflict > 0 ? "aadhar, " : "")
+                        + (panConflict > 0 ? "pan " : "") + "number already exists");
+            }
+
+        }
+
+        String rawPassword = generateRandomPassword();
+
         Remitter remitter = new Remitter();
         remitter.setOrganizationName(addRemitter.getOrganizationName());
-        // remitter.setGstNumber(addRemitter.getGstNumber());
-        remitter.setPanNumber(addRemitter.getPanNumber());
-        remitter.setAadharNumber(addRemitter.getAadharNumber());
+        remitter.setRemitterEmail(addRemitter.getRemitterEmail());
+        remitter.setRemitterPhone(addRemitter.getRemitterPhone());
         remitter.setAllocationLimit(addRemitter.getAllocationLimit());
-        remitter.setUser(user);
-        return RemitterResponse.fromEntity(remitterRepository.save(remitter));
+        remitter.setAadharNumber(addRemitter.getAadharNumber());
+        remitter.setPanNumber(addRemitter.getPanNumber());
+        remitter.setStatus(addRemitter.getStatus());
+        remitter.setPassword(apiService.makePasswordHash(rawPassword));
+
+        Remitter saved = remitterRepository.save(remitter);
+
+        log.info("Remitter created successfully with id {}", saved.getRemitterId());
+
+        return new AddedRemitter(
+                saved.getRemitterEmail(), // loginId — remitter logs in with their email
+                rawPassword, // plaintext, returned once so admin can share it
+                saved.getRemitterId());
     }
+
+    private String generateRandomPassword() {
+        String upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+        String lower = "abcdefghijkmnopqrstuvwxyz";
+        String digits = "23456789";
+        String special = "!@#$%^&*";
+        String allChars = upper + lower + digits + special;
+
+        SecureRandom random = new SecureRandom();
+        List<Character> password = new ArrayList<>();
+
+        // Guarantee at least one of each required character type.
+        password.add(upper.charAt(random.nextInt(upper.length())));
+        password.add(lower.charAt(random.nextInt(lower.length())));
+        password.add(digits.charAt(random.nextInt(digits.length())));
+        password.add(special.charAt(random.nextInt(special.length())));
+
+        // Fill the rest randomly to reach 12 characters total.
+        for (int i = password.size(); i < 12; i++) {
+            password.add(allChars.charAt(random.nextInt(allChars.length())));
+        }
+
+        Collections.shuffle(password, random);
+
+        StringBuilder sb = new StringBuilder();
+        for (char c : password) {
+            sb.append(c);
+        }
+        return sb.toString();
+    }
+
+    public PagedResponse<RemitterResponse> getAllRemitters(Pageable pageable) {
+
+        var remitters = remitterRepository.findAll(pageable);
+
+        var mapped = remitters.map(RemitterResponse::fromEntity);
+
+        return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
+    }
+
     // pending--------------------------------------------------------------------------------------------------------
     // @Cacheable(value = "adminDashboard", key = "#range ?: 'default'")
     // @Transactional(readOnly = true)
@@ -495,14 +578,15 @@ public class AdminAPIService {
         return general.response("ok", "Issue resolved", toIssueView(supportIssueRepository.save(issue)));
     }
 
-    @Cacheable(value = "remitters", key = "#page ?: 'default'")
-    @Transactional(readOnly = true)
-    public Map<String, Object> remitters(String page) {
-        Page<Remitter> remitters = remitterRepository.findAll(pageable(page));
-        Map<String, Object> data = paginatedMeta(remitters);
-        data.put("items", remitters.getContent().stream().map(this::toRemitterView).toList());
-        return general.response("ok", "Remitters fetched", data);
-    }
+    // @Cacheable(value = "remitters", key = "#page ?: 'default'")
+    // @Transactional(readOnly = true)
+    // public Map<String, Object> remitters(String page) {
+    // Page<Remitter> remitters = remitterRepository.findAll(pageable(page));
+    // Map<String, Object> data = paginatedMeta(remitters);
+    // data.put("items",
+    // remitters.getContent().stream().map(this::toRemitterView).toList());
+    // return general.response("ok", "Remitters fetched", data);
+    // }
 
     // @CacheEvict(value = { "adminDashboard", "remitters" }, allEntries = true)
     // @Transactional
@@ -665,17 +749,15 @@ public class AdminAPIService {
     // return data;
     // }
 
-    private Map<String, Object> toRemitterView(Remitter remitter) {
+    private Map<String, Object> toRemitterView(AddRemitter remitter) {
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("id", remitter.getId());
         data.put("name", remitter.getOrganizationName());
         data.put("organizationName", remitter.getOrganizationName());
-        data.put("email", remitter.getUser().getEmail());
-        data.put("phone", remitter.getUser().getPhone());
+        data.put("email", remitter.getRemitterEmail());
+        data.put("phone", remitter.getRemitterPhone());
         // data.put("gstNumber", remitter.getGstNumber());
         data.put("panNumber", remitter.getPanNumber());
-        data.put("status", remitter.getStatus().name().toLowerCase());
-        data.put("createdAt", remitter.getCreatedAt());
+        // data.put("status", remitter.getRemitterStatus());
         return data;
     }
 

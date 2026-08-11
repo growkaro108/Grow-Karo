@@ -5,7 +5,7 @@ import BondStub from "./BondStub";
 import { currency, dateFmt, initials } from "./format";
 import dynamic from "next/dynamic";
 import TabLoader from "@/loader/TabLoader";
-const CertificateLightbox = dynamic(() => import("./Certificatelightbox"), {
+const CertificateLightbox = dynamic(() => import("../Certificatelightbox"), {
   loading: () => <TabLoader />,
 
   ssr: false,

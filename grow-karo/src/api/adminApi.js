@@ -93,6 +93,13 @@ export async function createRemitterApi(remitterData) {
     body: remitterData,
   });
 }
+
+export async function getAllRemittersApi() {
+  return await apiRequest(`${END_POINT}remitters`, {
+    method: "GET",
+  });
+}
+
 //pendinng----------------------------------------------------------------------
 
 export async function fetchAdminDashboard(params) {

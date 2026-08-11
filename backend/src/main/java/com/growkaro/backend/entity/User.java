@@ -68,8 +68,8 @@ public class User {
     @Column(nullable = false, columnDefinition = "boolean default true")
     private boolean schemeAlerts = true;
 
-    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
-    private Remitter remitter;
+    @ManyToMany(mappedBy = "users", fetch = FetchType.LAZY)
+    private List<Remitter> remitters = new ArrayList<>();
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = getTime();

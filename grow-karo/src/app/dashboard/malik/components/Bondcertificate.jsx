@@ -1,5 +1,5 @@
 import React from "react";
-import { currency, dateFmt } from "./format";
+import { currency, formatDate } from "@/app/plan/utils/planUtils";
 
 export default function BondCertificate({
   bond,
@@ -7,7 +7,8 @@ export default function BondCertificate({
   scheme,
   className = "",
 }) {
-  const gradId = `paper-${bond.id}`;
+  // console.log(userName + " " + userName + " " + bond);
+  const gradId = `paper-${bond.userSchemeId}`;
   return (
     <svg
       viewBox="0 0 480 300"
@@ -127,7 +128,7 @@ export default function BondCertificate({
         fill="#B98B3E"
         fontWeight="bold"
       >
-        {currency(bond.principal)}
+        {currency(bond.paidAmount)}
       </text>
       <text
         x="240"
@@ -137,7 +138,8 @@ export default function BondCertificate({
         fontSize="11"
         fill="#4B5563"
       >
-        at {bond.rate}% p.a., maturing {dateFmt(bond.maturity)}
+        at {bond.profitPercentage}% on every {bond.payoutFrequency}, maturing on{" "}
+        {formatDate(bond.maturityDate)}
       </text>
 
       <line
@@ -156,7 +158,7 @@ export default function BondCertificate({
         fontSize="10"
         fill="#6B7280"
       >
-        Serial {bond.id}
+        Serial: {bond.userSchemeId}
       </text>
       <text
         x="442"

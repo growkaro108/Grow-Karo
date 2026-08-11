@@ -1,6 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
-import { X, Search, UserRound, CircleX, Loader2 } from "lucide-react";
-import { onSearchUsers } from "../../../../../../services/malikService";
+import React from "react";
+import { X } from "lucide-react";
 
 export function RemitterFormModal({
   isOpen,
@@ -10,87 +9,7 @@ export function RemitterFormModal({
   onChange,
   onSubmit,
   onClose,
-  initialSelectedUser = null,
 }) {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(initialSelectedUser);
-  const debounceRef = useRef(null);
-  const containerRef = useRef(null);
-
-  // Reset local search state whenever the modal opens fresh (e.g. switching
-  // between "add" and "edit", or closing/reopening).
-  useEffect(() => {
-    if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedUser(initialSelectedUser);
-      setQuery("");
-      setResults([]);
-      setShowDropdown(false);
-    }
-  }, [isOpen, initialSelectedUser]);
-
-  useEffect(() => {
-    if (!query.trim() || selectedUser) {
-      setResults([]);
-      return;
-    }
-    //validate and sanitize query IF NOT THEN REPLACE
-    if (query.trim().length > 60) {
-      setQuery(" ");
-      setResults([]);
-      return;
-    }
-    const validQuery = query.trim().replace(/[^a-zA-Z0-9@.\-+\s]/g, "");
-    if (!validQuery) {
-      setResults([]);
-      return;
-    }
-
-    setIsSearching(true);
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const users = await onSearchUsers(query.trim());
-        console.log(users);
-        setResults(users);
-      } catch (err) {
-        console.error("User search failed:", err);
-        setResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    }, 1000);
-
-    return () => clearTimeout(debounceRef.current);
-  }, [query, selectedUser]);
-
-  // Close the dropdown on outside click.
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
-        setShowDropdown(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  function handleSelectUser(user) {
-    setSelectedUser(user);
-    setQuery("");
-    setResults([]);
-    onChange({ target: { name: "userId", value: user.userId } });
-    setShowDropdown(false);
-  }
-
-  function handleClearUser() {
-    setSelectedUser(null);
-    onChange({ target: { name: "userId", value: "" } });
-  }
-
   return (
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs transition-all duration-300 ${
@@ -128,118 +47,66 @@ export function RemitterFormModal({
         <hr className="border-slate-800" />
 
         <form onSubmit={onSubmit} className="space-y-4 text-xs">
-          <div ref={containerRef} className="relative">
-            {/* <input type="hidden" name="userId" value={formData.userId} /> */}
-            <label className="block text-slate-400 font-medium mb-1.5">
-              Linked Platform User
-            </label>
-
-            {selectedUser ? (
-              <div className="flex items-center justify-between gap-2 bg-slate-950 border border-emerald-600/40 rounded-xl px-3.5 py-2.5">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="shrink-0 w-7 h-7 rounded-full bg-emerald-600/20 flex items-center justify-center">
-                    <UserRound className="w-3.5 h-3.5 text-emerald-400" />
-                  </div>
-                  <div className="min-w-0 space-y-1">
-                    <p className="text-slate-100 font-medium truncate">
-                      {selectedUser.fullName}
-                    </p>
-                    <p className="text-slate-500 text-[11px] truncate">
-                      {selectedUser.email} · ID: {selectedUser.userId}
-                    </p>
-                  </div>
-                </div>
-                {!isEditing && (
-                  <button
-                    type="button"
-                    onClick={handleClearUser}
-                    className="shrink-0 text-slate-500 hover:text-slate-300"
-                    aria-label="Clear selected user"
-                  >
-                    <CircleX className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="relative">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
-                  <input
-                    type="text"
-                    placeholder="Search by user ID, name, or email"
-                    value={query}
-                    onChange={(e) => {
-                      setQuery(e.target.value);
-                      setShowDropdown(true);
-                    }}
-                    onFocus={() => setShowDropdown(true)}
-                    className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-xl pl-9 pr-9 py-2.5 outline-none focus:border-emerald-500 transition-colors"
-                  />
-                  {isSearching && (
-                    <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 animate-spin" />
-                  )}
-                </div>
-
-                {showDropdown && query.trim() && (
-                  <div className="absolute z-10 mt-1.5 w-full max-h-52 overflow-y-auto bg-slate-950 border border-slate-800 rounded-xl shadow-xl">
-                    {isSearching ? (
-                      <p className="text-slate-500 px-3.5 py-3">Searching…</p>
-                    ) : results.length > 0 ? (
-                      results.map((user) => (
-                        <button
-                          type="button"
-                          key={user.userId}
-                          onClick={() => handleSelectUser(user)}
-                          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 hover:bg-slate-800 transition-colors text-left"
-                        >
-                          <div className="shrink-0 w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center">
-                            <UserRound className="w-3.5 h-3.5 text-slate-400" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-slate-100 font-medium truncate">
-                              {user.fullName}
-                            </p>
-                            <p className="text-slate-500 text-[11px] truncate">
-                              {user.email} · ID: {user.userId}
-                            </p>
-                          </div>
-                        </button>
-                      ))
-                    ) : (
-                      <p className="text-slate-500 px-3.5 py-3">
-                        No matching users found.
-                      </p>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-
-            {formErrors.userId && (
-              <p className="text-rose-500 text-[11px] mt-1">
-                {formErrors.userId}
-              </p>
-            )}
-          </div>
-
           <div>
             <label className="block text-slate-400 font-medium mb-1.5">
               Remitter Organization Name
             </label>
             <input
               type="text"
-              name="remitterOrganizationName"
+              name="organizationName"
               required
               placeholder="e.g. Neha Payments Ltd"
-              value={formData.remitterOrganizationName}
+              value={formData.organizationName}
               onChange={onChange}
               className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-xl px-3.5 py-2.5 outline-none focus:border-emerald-500 transition-colors"
             />
-            {formErrors.remitterOrganizationName && (
+            {formErrors.organizationName && (
               <p className="text-rose-500 text-[11px] mt-1">
-                {formErrors.remitterOrganizationName}
+                {formErrors.organizationName}
               </p>
             )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-slate-400 font-medium mb-1.5">
+                Remitter Email
+              </label>
+              <input
+                type="email"
+                name="remitterEmail"
+                required
+                placeholder="e.g. neha@payments.com"
+                value={formData.remitterEmail}
+                onChange={onChange}
+                className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-xl px-3.5 py-2.5 outline-none focus:border-emerald-500 transition-colors"
+              />
+              {formErrors.remitterEmail && (
+                <p className="text-rose-500 text-[11px] mt-1">
+                  {formErrors.remitterEmail}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-slate-400 font-medium mb-1.5">
+                Remitter Phone
+              </label>
+              <input
+                type="tel"
+                name="remitterPhone"
+                required
+                maxLength={10}
+                placeholder="e.g. 9876543210"
+                value={formData.remitterPhone}
+                onChange={onChange}
+                className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-xl px-3.5 py-2.5 outline-none focus:border-emerald-500 transition-colors"
+              />
+              {formErrors.remitterPhone && (
+                <p className="text-rose-500 text-[11px] mt-1">
+                  {formErrors.remitterPhone}
+                </p>
+              )}
+            </div>
           </div>
 
           <div>
@@ -250,10 +117,10 @@ export function RemitterFormModal({
               <button
                 type="button"
                 onClick={() =>
-                  onChange({ target: { name: "status", value: "active" } })
+                  onChange({ target: { name: "status", value: true } })
                 }
                 className={`flex-1 py-2 rounded-lg font-semibold transition-colors ${
-                  formData.status === "active"
+                  formData.status === true
                     ? "bg-emerald-600 text-white"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
@@ -263,10 +130,10 @@ export function RemitterFormModal({
               <button
                 type="button"
                 onClick={() =>
-                  onChange({ target: { name: "status", value: "inactive" } })
+                  onChange({ target: { name: "status", value: false } })
                 }
                 className={`flex-1 py-2 rounded-lg font-semibold transition-colors ${
-                  formData.status === "inactive"
+                  formData.status === false
                     ? "bg-slate-700 text-white"
                     : "text-slate-400 hover:text-slate-200"
                 }`}

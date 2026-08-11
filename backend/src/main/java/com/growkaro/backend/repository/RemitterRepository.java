@@ -14,44 +14,45 @@ import java.util.Optional;
 @Repository
 public interface RemitterRepository extends JpaRepository<Remitter, String> {
 
-    // ── Lookup ───────────────────────────────────────────────────────────────
+    Page<Remitter> findAll(Pageable pageable);
 
-    Optional<Remitter> findByUserId(String userId);
+    // // ── Existence checks ─────────────────────────────────────────────────────
 
-    // Optional<Remitter> findByGstNumber(String gstNumber);
+    boolean existsByRemitterEmail(String remitterEmail);
 
-    Optional<Remitter> findByPanNumber(String panNumber);
+    @Query("SELECT r FROM Remitter r WHERE r.remitterEmail = :email " +
+            "OR r.remitterPhone = :phone " +
+            "OR r.aadharNumber = :aadhar " +
+            "OR r.panNumber = :pan")
+    List<Remitter> findConflicts(@Param("email") String email,
+            @Param("phone") String phone,
+            @Param("aadhar") String aadhar,
+            @Param("pan") String pan);
 
-    // ── Existence checks ─────────────────────────────────────────────────────
+    // boolean existsByPanNumber(String panNumber);
 
-    boolean existsByUserId(String userId);
+    // // ── Status filters ───────────────────────────────────────────────────────
 
-    // boolean existsByGstNumber(String gstNumber);
+    // Page<Remitter> findByStatus(Boolean status, Pageable pageable);
 
-    boolean existsByPanNumber(String panNumber);
+    // List<Remitter> findByStatus(Boolean status);
 
-    // ── Status filters ───────────────────────────────────────────────────────
+    // long countByStatus(Boolean status);
 
-    Page<Remitter> findByStatus(Remitter.Status status, Pageable pageable);
+    // // ── Search ───────────────────────────────────────────────────────────────
 
-    List<Remitter> findByStatus(Remitter.Status status);
+    // // @Query("SELECT r FROM Remitter r WHERE " +
+    // // "LOWER(r.organizationName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+    // // "r.gstNumber LIKE CONCAT('%', :query, '%') OR " +
+    // // "r.panNumber LIKE CONCAT('%', :query, '%')")
+    // // Page<Remitter> searchRemitters(@Param("query") String query, Pageable
+    // // pageable);
 
-    long countByStatus(Remitter.Status status);
+    // // ── Dashboard stats ──────────────────────────────────────────────────────
 
-    // ── Search ───────────────────────────────────────────────────────────────
+    // @Query("SELECT COUNT(r) FROM Remitter r WHERE r.status = 'ACTIVE'")
+    // long countActive();
 
-    // @Query("SELECT r FROM Remitter r WHERE " +
-    // "LOWER(r.organizationName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-    // "r.gstNumber LIKE CONCAT('%', :query, '%') OR " +
-    // "r.panNumber LIKE CONCAT('%', :query, '%')")
-    // Page<Remitter> searchRemitters(@Param("query") String query, Pageable
-    // pageable);
-
-    // ── Dashboard stats ──────────────────────────────────────────────────────
-
-    @Query("SELECT COUNT(r) FROM Remitter r WHERE r.status = 'ACTIVE'")
-    long countActive();
-
-    @Query("SELECT COUNT(r) FROM Remitter r WHERE r.status = 'PENDING'")
-    long countPending();
+    // @Query("SELECT COUNT(r) FROM Remitter r WHERE r.status = 'PENDING'")
+    // long countPending();
 }

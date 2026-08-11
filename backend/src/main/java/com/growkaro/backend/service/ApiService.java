@@ -7,12 +7,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.growkaro.backend.common.General;
-import com.growkaro.backend.entity.FundraiserCode;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.SupportIssue;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
-import com.growkaro.backend.repository.FundraiserCodeRepository;
 import com.growkaro.backend.repository.RemitterRepository;
 import com.growkaro.backend.repository.SupportIssueRepository;
 import com.growkaro.backend.repository.UserRepository;
@@ -31,20 +29,17 @@ public class ApiService {
 
     private final UserRepository userRepository;
     private final RemitterRepository remitterRepository;
-    private final FundraiserCodeRepository fundraiserCodeRepository;
     private final SupportIssueRepository supportIssueRepository;
     private final UserSchemeRepository userSchemeRepository;
     private final General general;
 
     public ApiService(UserRepository userRepository,
             RemitterRepository remitterRepository,
-            FundraiserCodeRepository fundraiserCodeRepository,
             SupportIssueRepository supportIssueRepository,
             UserSchemeRepository userSchemeRepository,
             General general) {
         this.userRepository = userRepository;
         this.remitterRepository = remitterRepository;
-        this.fundraiserCodeRepository = fundraiserCodeRepository;
         this.supportIssueRepository = supportIssueRepository;
         this.userSchemeRepository = userSchemeRepository;
         this.general = general;
@@ -67,8 +62,7 @@ public class ApiService {
                 "services", Map.of("postgres", true, "redis", true),
                 "counts", Map.of(
                         "users", userRepository.count(),
-                        "remitters", remitterRepository.count(),
-                        "fundraiserCodes", fundraiserCodeRepository.count())));
+                        "remitters", remitterRepository.count())));
     }
 
     @Cacheable(value = "config", key = "#root.methodName")
@@ -153,11 +147,7 @@ public class ApiService {
     }
 
     private Map<String, Object> remitterResult(Remitter remitter) {
-        return Map.of("id", remitter.getId(), "type", "remitter", "name", remitter.getOrganizationName());
-    }
-
-    private Map<String, Object> codeResult(FundraiserCode code) {
-        return Map.of("id", code.getId(), "type", "fundraiserCode", "name", code.getCode());
+        return Map.of("id", remitter.getRemitterId(), "type", "remitter", "name", remitter.getOrganizationName());
     }
 
     private Map<String, Object> issueResult(SupportIssue issue) {

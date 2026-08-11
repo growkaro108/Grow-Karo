@@ -73,7 +73,7 @@ export function SuccessBanner({ payload, onClose, onSendEmail }) {
           <Mail className="w-3.5 h-3.5" />
           {payload.emailSent
             ? "Credentials Dispatched via Email"
-            : "Email Login Details to Remitter"}
+            : "Email, Login Details to Remitter"}
         </button>
       </div>
     </div>

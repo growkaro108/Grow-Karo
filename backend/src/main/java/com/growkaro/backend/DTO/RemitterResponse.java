@@ -1,6 +1,7 @@
 package com.growkaro.backend.DTO;
 
 import com.growkaro.backend.entity.Remitter;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,27 +14,23 @@ public class RemitterResponse {
 
     private String id;
 
-    private String userId;
-    private String userName;
-    private String userEmail;
+    private String RemitterEmail;
+    private String RemitterPhone;
 
     private String organizationName;
-    // private String gstNumber;
-
-    /** Masked, e.g. "ABCDE****F" — full value is never sent to the client. */
-    private String panNumber;
-
-    /** Masked, e.g. "XXXX XXXX 9012" — full value is never sent to the client. */
-    private String aadharNumber;
-
-    private String contactEmail;
-    private String contactPhone;
-
     private BigDecimal allocationLimit;
-    private String status; // "ACTIVE" | "PENDING" | "SUSPENDED"
-
+    private BigDecimal totalPaid;
+    private String aadharNumber;
+    private String panNumber;
+    private boolean status;
+    private int totalUsers;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // private String gstNumber;
+    /** Masked, e.g. "ABCDE****F" — full value is never sent to the client. */
+
+    /** Masked, e.g. "XXXX XXXX 9012" — full value is never sent to the client. */
 
     /**
      * Maps a Remitter entity to its response representation, masking
@@ -42,23 +39,18 @@ public class RemitterResponse {
     public static RemitterResponse fromEntity(Remitter remitter) {
         RemitterResponse dto = new RemitterResponse();
 
-        dto.setId(remitter.getId());
-
-        if (remitter.getUser() != null) {
-            dto.setUserId(remitter.getUser().getId());
-            // Adjust getName()/getEmail() to whatever accessors your User entity exposes.
-            dto.setUserName(remitter.getUser().getName());
-            dto.setUserEmail(remitter.getUser().getEmail());
-        }
+        dto.setId(remitter.getRemitterId());
 
         dto.setOrganizationName(remitter.getOrganizationName());
         // dto.setGstNumber(remitter.getGstNumber());
         dto.setPanNumber(maskPan(remitter.getPanNumber()));
         dto.setAadharNumber(maskAadhar(remitter.getAadharNumber()));
-        dto.setContactEmail(remitter.getUser().getEmail());
-        dto.setContactPhone(remitter.getUser().getPhone());
+        dto.setRemitterEmail(remitter.getRemitterEmail());
+        dto.setRemitterPhone(remitter.getRemitterPhone());
         dto.setAllocationLimit(remitter.getAllocationLimit());
-        dto.setStatus(remitter.getStatus() != null ? remitter.getStatus().name() : null);
+        dto.setTotalPaid(remitter.getTotalPaid());
+        dto.setTotalUsers(remitter.getUsers().size());
+        dto.setStatus(remitter.getStatus());
         dto.setCreatedAt(remitter.getCreatedAt());
         dto.setUpdatedAt(remitter.getUpdatedAt());
 

@@ -11,6 +11,7 @@ import { SuccessBanner } from "./SuccessBanner";
 import { RemitterFormModal } from "./RemitterFormModal";
 import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import { createRemitter } from "../../../../../../services/malikService";
+import TabLoader from "@/loader/TabLoader";
 
 export default function AdminRemitterTrackersTab() {
   const {
@@ -53,13 +54,14 @@ export default function AdminRemitterTrackersTab() {
   // the card), so those fields start blank in edit mode. A real API response
   // for a single tracker should include them for a fully pre-filled form.
   const openEditForm = (tracker) => {
+    console.log(tracker);
     setEditingId(tracker.id);
     setFormData({
-      remitterOrganizationName: tracker.owner || "",
-      remitterEmail: tracker.remitterEmail || "",
-      remitterPhone: tracker.remitterPhone || "",
-      trackerCode: tracker.code || "",
-      allocationLimit: tracker.goal ?? "",
+      organizationName: tracker.organizationName || "",
+      remitterEmail: tracker.RemitterEmail || "",
+      remitterPhone: tracker.RemitterPhone || "",
+      status: tracker.status || false,
+      allocationLimit: tracker.allocationLimit ?? "",
       aadharNumber: tracker.aadharNumber || "",
       panNumber: tracker.panNumber || "",
     });
@@ -89,11 +91,13 @@ export default function AdminRemitterTrackersTab() {
       setFormData(EMPTY_REMITTER_FORM);
       return;
     }
-    console.log("create api data", result.data);
-    // const response = await createRemitter(result.data);
-    // setSuccessPayload(response);
-    // closeForm();
-    // setFormData(EMPTY_REMITTER_FORM);
+    // console.log("create api data", result.data);
+    const response = await createTracker(result.data);
+    console.log("create api response", response);
+    if (!response) return;
+    setSuccessPayload(response);
+    closeForm();
+    setFormData(EMPTY_REMITTER_FORM);
   };
 
   const handleSendCredentialEmail = async () => {
@@ -159,12 +163,10 @@ export default function AdminRemitterTrackersTab() {
 
       {/* PERFORMANCE GRID */}
       {isLoadingCodes ? (
-        <div className="text-xs text-slate-500 py-8 text-center">
-          Loading trackers…
-        </div>
+        <TabLoader />
       ) : (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {codes.map((c) => (
+          {codes?.map((c) => (
             <RemitterTrackerCard
               key={c.id}
               tracker={c}

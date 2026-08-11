@@ -1,8 +1,8 @@
 import React from "react";
 import { ZoomIn } from "lucide-react";
 import StatusPill from "./StatusPill";
-import BondCertificate from "./BondCertificate";
 import { currency, dateFmt } from "./format";
+import BondCertificate from "../Bondcertificate";
 
 export default function BondStub({ bond, userName, scheme, onView }) {
   return (

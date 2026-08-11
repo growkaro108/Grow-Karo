@@ -55,10 +55,11 @@ public class ApiController {
         return ResponseEntity.ok(apiService.support());
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<Map<String, Object>> search(@RequestParam String query) {
-        return ResponseEntity.ok(apiService.search(query));
-    }
+    // @GetMapping("/search")
+    // public ResponseEntity<Map<String, Object>> search(@RequestParam String query)
+    // {
+    // return ResponseEntity.ok(apiService.search(query));
+    // }
 
     @PostMapping("/contact")
     public ResponseEntity<Map<String, Object>> contact(@RequestBody Map<String, Object> payload) {
