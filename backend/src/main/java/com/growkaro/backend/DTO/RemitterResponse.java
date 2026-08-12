@@ -43,8 +43,8 @@ public class RemitterResponse {
 
         dto.setOrganizationName(remitter.getOrganizationName());
         // dto.setGstNumber(remitter.getGstNumber());
-        dto.setPanNumber(maskPan(remitter.getPanNumber()));
-        dto.setAadharNumber(maskAadhar(remitter.getAadharNumber()));
+        dto.setPanNumber(remitter.getPanNumber());
+        dto.setAadharNumber(remitter.getAadharNumber());
         dto.setRemitterEmail(remitter.getRemitterEmail());
         dto.setRemitterPhone(remitter.getRemitterPhone());
         dto.setAllocationLimit(remitter.getAllocationLimit());

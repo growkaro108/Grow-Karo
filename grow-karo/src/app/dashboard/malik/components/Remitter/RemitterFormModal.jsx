@@ -79,6 +79,12 @@ export function RemitterFormModal({
                 placeholder="e.g. neha@payments.com"
                 value={formData.remitterEmail}
                 onChange={onChange}
+                disabled={isEditing}
+                title={
+                  isEditing
+                    ? "Remitter Email cannot be changed"
+                    : "Remitter Email Address"
+                }
                 className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-xl px-3.5 py-2.5 outline-none focus:border-emerald-500 transition-colors"
               />
               {formErrors.remitterEmail && (

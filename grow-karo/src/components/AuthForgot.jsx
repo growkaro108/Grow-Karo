@@ -4,9 +4,11 @@ import { useState } from "react";
 import { sendResetLink } from "../../services/grahakService";
 import { allRounderMessage } from "./Message";
 import { Loader2 } from "lucide-react";
+import { RemitterResetLink } from "@/api/remitterApi";
 
 export default function AuthForgot({ onSwitch }) {
   const [email, setEmail] = useState("");
+  const [isRemitter, setIsRemitter] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -22,13 +24,16 @@ export default function AuthForgot({ onSwitch }) {
     let response = null;
     try {
       setIsLoading(true);
-      response = await sendResetLink(email);
+      response = isRemitter
+        ? await RemitterResetLink(email)
+        : await sendResetLink(email);
+
       if (response.status !== "success") {
         setError(response.message);
       } else {
         setMessage("Please check your email inbox for a reset link.");
         setTimeout(() => {
-          onSwitch("login");
+          onSwitch && onSwitch("login");
           setIsLoading(false);
         }, 2000);
       }
@@ -74,6 +79,19 @@ export default function AuthForgot({ onSwitch }) {
             disabled={isLoading}
             className="w-full h-11 px-4 rounded-xl border border-slate-100 bg-slate-50 text-sm"
           />
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="remitter"
+            checked={isRemitter}
+            onChange={(e) => setIsRemitter(e.target.checked)}
+            className="w-4 h-4"
+          />
+          <label htmlFor="remitter" className="text-xs text-slate-500">
+            I am a remitter
+          </label>
         </div>
 
         <button

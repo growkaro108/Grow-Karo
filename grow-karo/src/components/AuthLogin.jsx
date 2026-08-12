@@ -2,22 +2,22 @@
 
 import { loginUser } from "@/api/userApi";
 import { EyeClosedIcon, EyeIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { use, useState } from "react";
-import { errorMessage, successMessage } from "./Message";
+import { confirmMessage, errorMessage, successMessage } from "./Message";
 import { userContext } from "@/context/UserContext";
 import { setSecureCookie } from "@/context/cookiesManagement";
 import { useLoader } from "@/context/LoaderContext";
+import { RemitterLogin } from "../../services/remitterService";
 
 export default function AuthLogin({ onSwitch }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isRemitter, setIsRemitter] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const { showLoader, hideLoader } = useLoader();
   // const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
   const { setAuthUser } = use(userContext);
 
   const validateEmail = (email) => {
@@ -40,19 +40,32 @@ export default function AuthLogin({ onSwitch }) {
     if (!validateEmail(sanitizedEmail)) {
       return setError("Enter a valid email address.");
     }
-
-    // Authenticate credentials with service
-    const response = await loginUser({
-      email: sanitizedEmail,
-      password: sanitizedPassword,
-    });
-    // console.log("--------------\n" + response);
-
-    // setIsLoading(true);
-    showLoader("Logging in...");
-
     try {
-      // console.log(response.data.user);
+      if (isRemitter) {
+        const ur = await confirmMessage(
+          "Do you want to login as a remitter?",
+          "Remitter Login",
+        );
+        if (ur) {
+          const response = await RemitterLogin({
+            email: sanitizedEmail,
+            password: sanitizedPassword,
+            role: "remiter",
+          });
+          console.log(response);
+
+          return;
+        } else {
+          return;
+        }
+      }
+      // Authenticate credentials with service
+      const response = await loginUser({
+        email: sanitizedEmail,
+        password: sanitizedPassword,
+      });
+
+      showLoader("Logging in...");
       if (response.status === "ok") {
         successMessage("Signed in successfully", "Congratulation !!");
         const status = await setSecureCookie("authUser", response.data.user);
@@ -144,6 +157,22 @@ export default function AuthLogin({ onSwitch }) {
               )}
             </button>
           </div>
+        </div>
+
+        {/* check box for remiter  */}
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            id="remitter"
+            name="remitter"
+            checked={isRemitter}
+            onChange={(e) => {
+              setIsRemitter(e.target.checked);
+            }}
+          />
+          <label htmlFor="remitter" className="text-xs text-slate-500 ml-2">
+            I want to login as a remitter
+          </label>
         </div>
 
         {/* Login Button */}

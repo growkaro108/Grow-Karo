@@ -51,7 +51,13 @@ public class SecurityConfig {
                                                                 "/api/admin/transactions/{id}/reject",
                                                                 "/api/admin/user/search/{query}",
                                                                 "/api/admin/remitter/add",
-                                                                "/api/admin/remitters")
+                                                                "/api/admin/remitters",
+                                                                "/api/admin/remitter/update/{id}",
+                                                                "/api/admin/remitter/delete/{id}",
+                                                                "/api/admin/remitter/send-crendentials",
+                                                                "/api/remitter/login",
+                                                                "/api/remitter/forgot-password/{email}",
+                                                                "/api/remitter/reset-password/{remitterId}")
                                                 .permitAll() // Public endpoints
                                                 .anyRequest().authenticated() // Everything else requires login
                                 )

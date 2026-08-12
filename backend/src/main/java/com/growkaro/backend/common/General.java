@@ -233,7 +233,15 @@ public class General {
     }
 
     public String generateResetLink(String email, String userId) {
-        return baseUrl + "/reset/" + email + "-" + userId;
+        return baseUrl + "/reset/" + userId + "-user";
+    }
+
+    public String remitterLoginUrl(String remitterId) {
+        return baseUrl + "/auth/" + remitterId;
+    }
+
+    public String generateResetLinkForRemitter(String email, String remitterId) {
+        return baseUrl + "/reset/" + remitterId + "-rem";
     }
 
     public UserProfile toUserProfile(User user, String token) {

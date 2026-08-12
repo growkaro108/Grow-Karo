@@ -1,5 +1,6 @@
 package com.growkaro.backend.service;
 
+import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Transaction;
@@ -13,6 +14,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,24 +31,61 @@ public class RemitterAPIService {
     private static final int DEFAULT_PAGE_SIZE = 20;
 
     private final RemitterRepository remitterRepository;
+    private final EmailService emailService;
+    private final ApiService apiService;
     private final TransactionRepository transactionRepository;
     private final WithdrawalRequestRepository withdrawalRequestRepository;
 
     public RemitterAPIService(
             RemitterRepository remitterRepository,
+            EmailService emailService,
+            ApiService apiService,
             TransactionRepository transactionRepository,
             WithdrawalRequestRepository withdrawalRequestRepository) {
         this.remitterRepository = remitterRepository;
+        this.emailService = emailService;
+        this.apiService = apiService;
         this.transactionRepository = transactionRepository;
         this.withdrawalRequestRepository = withdrawalRequestRepository;
     }
 
-    public Map<String, Object> response(String status, String message, Object data) {
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("status", status);
-        response.put("message", message);
-        response.put("data", data != null ? data : Map.of());
-        return response;
+    private Remitter findByEmail(String email) {
+        Optional<Remitter> remitterOpt = remitterRepository.findByRemitterEmail(email);
+        return remitterOpt.isPresent() ? remitterOpt.get() : null;
+    }
+
+    private Remitter findById(String remitterId) {
+        Optional<Remitter> remitterOpt = remitterRepository.findByRemitterId(remitterId);
+        return remitterOpt.isPresent() ? remitterOpt.get() : null;
+    }
+
+    public RemitterResponse login(String email, String password) {
+        Remitter remitter = findByEmail(email);
+        if (remitter == null || password == null || !BCrypt.checkpw(password, remitter.getPassword())) {
+            return null;
+        }
+        return RemitterResponse.fromEntity(remitter);
+    }
+
+    // forgot password
+    public String forgotPassword(String remitterEmail) {
+        Remitter remitter = findByEmail(remitterEmail);
+        if (remitter == null) {
+            return "Invalid Email... ";
+        }
+        emailService.sendResetLinkToRemitter(remitter.getRemitterEmail(), remitter.getRemitterId());
+        return "OTP sent successfully";
+    }
+
+    public boolean resetPassword(String remitterId, String newPassword) {
+        Remitter remitterOpt = findById(remitterId);
+        if (remitterOpt == null) {
+            return false;
+        }
+        Remitter remitter = remitterOpt;
+        remitter.setPassword(apiService.makePasswordHash(newPassword));
+        remitterRepository.save(remitter);
+        return true;
     }
 
     // @Cacheable(value = "remitterDashboard", key = "#remitterId + ':' + (#range ?:

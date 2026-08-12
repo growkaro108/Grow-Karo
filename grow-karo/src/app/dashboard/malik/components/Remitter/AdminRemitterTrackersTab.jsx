@@ -10,8 +10,9 @@ import { RemitterTrackerCard } from "./RemitterTrackerCard";
 import { SuccessBanner } from "./SuccessBanner";
 import { RemitterFormModal } from "./RemitterFormModal";
 import { DeleteConfirmModal } from "./DeleteConfirmModal";
-import { createRemitter } from "../../../../../../services/malikService";
+// import { createRemitter } from "../../../../../../services/malikService";
 import TabLoader from "@/loader/TabLoader";
+import { errorMessage } from "@/components/Message";
 
 export default function AdminRemitterTrackersTab() {
   const {
@@ -54,7 +55,6 @@ export default function AdminRemitterTrackersTab() {
   // the card), so those fields start blank in edit mode. A real API response
   // for a single tracker should include them for a fully pre-filled form.
   const openEditForm = (tracker) => {
-    console.log(tracker);
     setEditingId(tracker.id);
     setFormData({
       organizationName: tracker.organizationName || "",
@@ -86,14 +86,15 @@ export default function AdminRemitterTrackersTab() {
     setFormErrors({});
 
     if (editingId) {
-      await updateTracker(editingId, result.data);
+      const response = await updateTracker(editingId, result.data);
+      if (!response) return;
       closeForm();
       setFormData(EMPTY_REMITTER_FORM);
       return;
     }
     // console.log("create api data", result.data);
     const response = await createTracker(result.data);
-    console.log("create api response", response);
+    // console.log("create api response", response);
     if (!response) return;
     setSuccessPayload(response);
     closeForm();
@@ -102,18 +103,27 @@ export default function AdminRemitterTrackersTab() {
 
   const handleSendCredentialEmail = async () => {
     if (!successPayload) return;
-    await sendCredentialEmail(successPayload.loginId);
-    setSuccessPayload((prev) => ({ ...prev, emailSent: true }));
+    setSuccessPayload((prev) => ({ ...prev, sendingEmail: true }));
+    const response = await sendCredentialEmail(successPayload);
+    setSuccessPayload((prev) => ({
+      ...prev,
+      emailSent: response,
+      sendingEmail: false,
+    }));
   };
 
   const confirmRemoveTracker = async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
     try {
-      await removeTracker(deleteTarget.id);
+      const response = await removeTracker(deleteTarget.id);
+      if (!response) return;
+      setDeleteTarget(null);
+    } catch (error) {
+      errorMessage(error);
+      console.log(error);
     } finally {
       setIsDeleting(false);
-      setDeleteTarget(null);
     }
   };
 
@@ -126,7 +136,7 @@ export default function AdminRemitterTrackersTab() {
             Remitter Performance Trackers
           </h2>
           <p className="text-xs text-slate-400 font-body mt-0.5">
-            Managing {codes.length} active allocation links assigned to
+            Managing {codes?.length} active allocation links assigned to
             authorized remitters.
           </p>
         </div>
@@ -172,6 +182,7 @@ export default function AdminRemitterTrackersTab() {
               tracker={c}
               onEdit={openEditForm}
               onRemove={setDeleteTarget}
+              isDeleting={isDeleting}
             />
           ))}
         </div>

@@ -25,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.growkaro.backend.DRO.AddRemitter;
 import com.growkaro.backend.DRO.ApproveUserScheme;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
+import com.growkaro.backend.DRO.RemitterCredentials;
 import com.growkaro.backend.DTO.AddedRemitter;
 import com.growkaro.backend.DTO.AdminTransactionResponse;
 import com.growkaro.backend.DTO.PagedResponse;
@@ -33,6 +34,7 @@ import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.SearchUser;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.service.AdminAPIService;
+import com.growkaro.backend.service.EmailService;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -42,13 +44,15 @@ import lombok.extern.slf4j.Slf4j;
 public class AdminAPIController {
 
     private final AdminAPIService adminAPIService;
+    private final EmailService emailService;
     private final General general;
 
     private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of("image/jpeg", "image/png", "image/webp", "image/jpg");
     private static final long MAX_FILE_SIZE_BYTES = 5L * 1024 * 1024;
 
-    public AdminAPIController(AdminAPIService adminAPIService, General general) {
+    public AdminAPIController(AdminAPIService adminAPIService, EmailService emailService, General general) {
         this.adminAPIService = adminAPIService;
+        this.emailService = emailService;
         this.general = general;
 
     }
@@ -240,6 +244,56 @@ public class AdminAPIController {
             return ResponseEntity.ok(general.response("success", "Remitters fetched successfully", remitters));
         } catch (Exception e) {
             log.error("Error while fetching remitters: " + e.getMessage(), e);
+            return ResponseEntity.ok(general.response("error",
+                    e.getMessage(), null));
+        }
+    }
+
+    @PatchMapping("/remitter/update/{id}")
+    public ResponseEntity<Map<String, Object>> updateRemitter(@PathVariable String id,
+            @RequestBody AddRemitter updateRemitter) {
+        if (id == null || id.isBlank() || updateRemitter == null) {
+            return ResponseEntity.ok(general.response("error", "Invalid request.", null));
+        }
+        try {
+            Boolean isupdatedRemitter = adminAPIService.updateRemitter(id, updateRemitter);
+            return ResponseEntity.ok(general.response("success", "Remitter updated successfully", isupdatedRemitter));
+        } catch (Exception e) {
+            log.error("Error while updating remitter: " + e.getMessage());
+            return ResponseEntity.ok(general.response("error",
+                    e.getMessage(), null));
+        }
+    }
+
+    @DeleteMapping("/remitter/delete/{id}")
+    public ResponseEntity<Map<String, Object>> deleteRemitter(@PathVariable String id) {
+        if (id == null || id.isBlank()) {
+            return ResponseEntity.ok(general.response("error", "Invalid request.", null));
+        }
+        try {
+            Boolean isRemoved = adminAPIService.removeRemitter(id);
+            return ResponseEntity.ok(general.response("success", "Remitter removed successfully", isRemoved));
+        } catch (Exception e) {
+            log.error("Error while removing remitter: " + e.getMessage());
+            return ResponseEntity.ok(general.response("error",
+                    e.getMessage(), null));
+        }
+    }
+
+    @PostMapping("/remitter/send-crendentials")
+    public ResponseEntity<Map<String, Object>> sendCrendentials(@RequestBody RemitterCredentials CredentialPayload) {
+        if (CredentialPayload == null) {
+            return ResponseEntity.ok(general.response("error", "Invalid request.", null));
+        }
+        try {
+            // System.out.println(CredentialPayload);
+            // return ResponseEntity.ok(general.response("success", "Crendentials sent
+            // successfully", true));
+
+            emailService.sendCrendentialsToRemitter(CredentialPayload);
+            return ResponseEntity.ok(general.response("success", "Crendentials sent successfully", true));
+        } catch (Exception e) {
+            log.error("Error while sending crendentials: " + e.getMessage());
             return ResponseEntity.ok(general.response("error",
                     e.getMessage(), null));
         }

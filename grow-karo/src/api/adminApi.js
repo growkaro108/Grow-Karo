@@ -100,7 +100,27 @@ export async function getAllRemittersApi() {
   });
 }
 
-//pendinng----------------------------------------------------------------------
+export async function updateRemitterApi(id, data) {
+  return await apiRequest(`${END_POINT}remitter/update/${id}`, {
+    method: "PATCH",
+    body: data,
+  });
+}
+
+export async function removeRemitterApi(id) {
+  return await apiRequest(`${END_POINT}remitter/delete/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function sendCredentialsApi(payload) {
+  return await apiRequest(`${END_POINT}remitter/send-crendentials`, {
+    method: "POST",
+    body: payload,
+  });
+}
+
+//pending----------------------------------------------------------------------
 
 export async function fetchAdminDashboard(params) {
   return await apiRequest(`${END_POINT}dashboard`, { params });

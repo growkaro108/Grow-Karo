@@ -63,9 +63,9 @@ export function SuccessBanner({ payload, onClose, onSendEmail }) {
       <div className="flex items-center justify-end">
         <button
           onClick={onSendEmail}
-          disabled={payload.emailSent}
+          disabled={payload.emailSent || payload.sendingEmail}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold shadow-xs transition-all ${
-            payload.emailSent
+            payload.emailSent || payload.sendingEmail
               ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50"
               : "bg-blue-600 hover:bg-blue-500 text-white active:scale-[0.98]"
           }`}

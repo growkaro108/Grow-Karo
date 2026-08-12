@@ -41,7 +41,7 @@ export function StatusBadge({ status }) {
     create: "bg-blue-500/10 text-blue-400 ring-blue-500/30",
   };
 
-  const label = status === true ? "Active" : status.replace("_", " ");
+  const label = status.replace("_", " ");
 
   return (
     <span

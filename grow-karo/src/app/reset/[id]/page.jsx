@@ -79,15 +79,18 @@ export default function Page({ params }) {
     if (!id) {
       router.push("/auth");
     }
-    const [email, userId] = id.split("-");
+    const [userId, type] = id.split("-");
     window.history.replaceState(null, "", "/reset");
 
-    function isValidId(idStr) {
+    function isValidId(idStr, role) {
       const pattern = /^GKUSID\d{14}$/;
       const new_pattern = /^GKUID\d{14}$/;
-      return pattern.test(idStr) || new_pattern.test(idStr);
+      const rem_patern = /^GKREMID-\d{14}$/;
+      return role === "user"
+        ? pattern.test(idStr) || new_pattern.test(idStr)
+        : rem_patern.test(idStr);
     }
-    if (!isValidId(userId)) {
+    if (!isValidId(userId, type)) {
       router.push("/auth");
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -110,7 +113,10 @@ export default function Page({ params }) {
 
     setStatus("submitting");
     try {
-      const res = await resetThePassword(password, userId);
+      const res =
+        type === "rem"
+          ? await resetPasswordForRemitter(userId, password)
+          : await resetThePassword(password, userId);
       allRounderMessage(res);
       if (res.status !== "success") {
         setError(res.message);

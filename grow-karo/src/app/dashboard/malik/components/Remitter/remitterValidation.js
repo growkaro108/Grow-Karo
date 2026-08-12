@@ -27,9 +27,11 @@ export function validateAndSanitizeForm(rawForm) {
     errors.remitterEmail = "Please enter a valid email address.";
   }
 
-  sanitizedData.remitterPhone = rawForm.remitterPhone?.replace(/\D/g, "") || "";
-  if (sanitizedData.remitterPhone.length !== 10) {
-    errors.remitterPhone = "Phone number must be exactly 10 digits.";
+  const digits = (rawForm.remitterPhone?.replace(/\D/g, "") || "").slice(-10);
+  const remitterPhone = /^[6-9]\d{9}$/.test(digits) ? digits : "";
+  sanitizedData.remitterPhone = remitterPhone;
+  if (!remitterPhone) {
+    errors.remitterPhone = "Please enter a valid phone number.";
   }
 
   // sanitizedData.trackerCode =

@@ -96,7 +96,7 @@ const NAV_ITEMS = [
   { id: "withdrawals", label: "Withdrawals", icon: Wallet },
   { id: "plans", label: "Plans", icon: ScrollText },
   { id: "approvals", label: "Approvals", icon: ClipboardCheck },
-  { id: "codes", label: "Remitter ⏱️", icon: Ticket },
+  { id: "remitter", label: "Remitter", icon: Ticket },
   { id: "user", label: "User Management ⏱️", icon: User2Icon },
   // { id: "issues", label: "User Issues", icon: AlertTriangle },
   { id: "contacts", label: "Contacts⏱️", icon: Contact },
@@ -104,7 +104,7 @@ const NAV_ITEMS = [
 ];
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState("approvals");
+  const [activeTab, setActiveTab] = useState("remitter");
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -267,7 +267,7 @@ export default function AdminPanel() {
               {activeTab === "issues" && (
                 <IssuesTab issues={issues} onResolve={handleResolveIssue} />
               )}
-              {activeTab === "codes" && <AdminRemitterTrackersTab />}
+              {activeTab === "remitter" && <AdminRemitterTrackersTab />}
               {activeTab === "user" && <UserManagement />}
               {activeTab === "contacts" && <ContactsComponent />}
               {activeTab === "settings" && <Settings />}

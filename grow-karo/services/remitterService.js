@@ -1,4 +1,5 @@
-import { fetchRemitterDashboard } from "@/api/remitterApi";
+import { fetchRemitterDashboard, remitterLoginApi } from "@/api/remitterApi";
+import { allRounderMessage } from "@/components/Message";
 
 const USE_MOCK = true;
 const NETWORK_DELAY_MS = 1500;
@@ -7,6 +8,13 @@ function delay(value) {
   return new Promise((resolve) =>
     setTimeout(() => resolve(value), NETWORK_DELAY_MS),
   );
+}
+
+export async function RemitterLogin(payload) {
+  const res = await remitterLoginApi(payload);
+  allRounderMessage(res);
+  if (res.status !== "success") return null;
+  else return res.data;
 }
 
 const mockDashboardData = {

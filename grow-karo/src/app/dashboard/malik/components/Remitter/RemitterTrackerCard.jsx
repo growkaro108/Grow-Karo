@@ -1,21 +1,22 @@
 import React from "react";
 import { ShieldCheck, Users, Pencil, Trash2, Phone } from "lucide-react";
 import { currency } from "../../utils";
-import { StatusBadge } from "../StatusBadge";
 
-export function RemitterTrackerCard({ tracker, onEdit, onRemove }) {
+export function RemitterTrackerCard({ tracker, onEdit, onRemove, isDeleting }) {
   const pct = Math.min(
     100,
     Math.round((tracker.totalPaid / tracker.allocationLimit) * 100),
   );
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 flex flex-col justify-between hover:border-slate-700 transition-colors">
+    <div
+      className={`rounded-2xl border ${tracker.status ? "border-emerald-500" : "border-red-600"} bg-slate-900/60 p-5 flex flex-col justify-between hover:border-${tracker.status ? "green-400" : "red-500"} transition-colors`}
+    >
       <div>
         <div className="mb-4 flex items-center justify-between">
           <div className="space-y-0.5">
             <span className="font-mono  font-medium flex items-center gap-1  text-slate-100">
-              <Phone className="w-4 h-4 text-slate-500" />:{" "}
+              <Phone className="w-4 h-4 text-slate-500" /> : +91{" "}
               {tracker.RemitterPhone}
             </span>
             <p className="text-[12px] text-slate-400 capitalize flex items-center gap-1">
@@ -24,7 +25,6 @@ export function RemitterTrackerCard({ tracker, onEdit, onRemove }) {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <StatusBadge status={tracker.status} />
             <button
               type="button"
               onClick={() => onEdit(tracker)}
@@ -33,14 +33,15 @@ export function RemitterTrackerCard({ tracker, onEdit, onRemove }) {
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
-            {/* <button
+            <button
               type="button"
               onClick={() => onRemove(tracker)}
               title="Remove remitter tracker"
+              disabled={isDeleting}
               className="p-1.5 rounded-lg bg-slate-800/80 text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
-            </button> */}
+            </button>
           </div>
         </div>
         <div className="mb-2 flex items-baseline justify-between text-xs">

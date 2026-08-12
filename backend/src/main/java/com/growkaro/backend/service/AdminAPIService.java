@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -33,6 +32,7 @@ import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.SearchUser;
 import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.common.General;
+import com.growkaro.backend.common.GlobalExceptionHandler.DuplicateResourceException;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.SupportIssue;
@@ -416,8 +416,8 @@ public class AdminAPIService {
                     panConflict++;
                 }
                 throw new IllegalArgumentException("A remitter with this " + (emailConflict > 0 ? "email, " : "")
-                        + (phoneConflict > 0 ? "phone, " : "") + (aadharConflict > 0 ? "aadhar, " : "")
-                        + (panConflict > 0 ? "pan " : "") + "number already exists");
+                        + (phoneConflict > 0 ? "phone number, " : "") + (aadharConflict > 0 ? "aadhar number, " : "")
+                        + (panConflict > 0 ? "pan number " : "") + "already exists");
             }
 
         }
@@ -437,10 +437,14 @@ public class AdminAPIService {
         Remitter saved = remitterRepository.save(remitter);
 
         log.info("Remitter created successfully with id {}", saved.getRemitterId());
+        // write log
+        activityLogService.log("adminId", "AdminName", "admin", ActivityType.REMITTER_ADDED,
+                "Remitter is added by admin", "remitter", saved.getRemitterId(), null);
 
         return new AddedRemitter(
-                saved.getRemitterEmail(), // loginId — remitter logs in with their email
-                rawPassword, // plaintext, returned once so admin can share it
+                saved.getRemitterId(), // loginId — remitter logs in with their email
+                rawPassword,
+                saved.getRemitterEmail(), // plaintext, returned once so admin can share it
                 saved.getRemitterId());
     }
 
@@ -481,6 +485,86 @@ public class AdminAPIService {
         var mapped = remitters.map(RemitterResponse::fromEntity);
 
         return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
+    }
+
+    @Transactional
+    public boolean updateRemitter(String id, AddRemitter updateRemitter) {
+
+        Remitter existing = remitterRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Remitter not found with id " + id));
+
+        List<Remitter> conflicts = remitterRepository.findConflicts(
+                updateRemitter.getRemitterEmail(),
+                updateRemitter.getRemitterPhone(),
+                updateRemitter.getAadharNumber(),
+                updateRemitter.getPanNumber());
+
+        // A conflict against itself (unchanged fields) is not actually a conflict.
+        conflicts.removeIf(r -> r.getRemitterId().equals(id));
+
+        List<String> errors = new ArrayList<>();
+        for (Remitter conflict : conflicts) {
+            if (conflict.getRemitterEmail().equals(updateRemitter.getRemitterEmail())
+                    && !(conflict.getRemitterEmail().equals(existing.getRemitterEmail()))) {
+                errors.add("A remitter with this email already exists");
+            }
+            if (conflict.getRemitterPhone().equals(updateRemitter.getRemitterPhone())
+                    && !(conflict.getRemitterPhone().equals(existing.getRemitterPhone()))) {
+                errors.add("A remitter with this phone number already exists");
+            }
+            if (conflict.getAadharNumber().equals(updateRemitter.getAadharNumber())
+                    && !(conflict.getAadharNumber().equals(existing.getAadharNumber()))) {
+                errors.add("A remitter with this Aadhar number already exists");
+            }
+            if (conflict.getPanNumber().equals(updateRemitter.getPanNumber())) {
+                errors.add("A remitter with this PAN number already exists");
+            }
+        }
+
+        if (!errors.isEmpty()) {
+            throw new DuplicateResourceException(errors);
+        }
+
+        existing.setOrganizationName(updateRemitter.getOrganizationName());
+        existing.setRemitterPhone(updateRemitter.getRemitterPhone());
+        existing.setAllocationLimit(updateRemitter.getAllocationLimit());
+        existing.setAadharNumber(updateRemitter.getAadharNumber());
+        existing.setPanNumber(updateRemitter.getPanNumber());
+        existing.setStatus(updateRemitter.getStatus());
+        // remitterEmail intentionally left untouched — entity marks it `updatable =
+        // false`
+
+        Remitter saved = remitterRepository.save(existing);
+        // write log
+        activityLogService.log("adminId", "AdminName", "admin", ActivityType.REMITTER_UPDATED,
+                "Remitter is updated by admin", "remitter", id, null);
+
+        log.info("Remitter updated successfully with id {}", saved.getRemitterId());
+
+        return true;
+    }
+
+    public boolean removeRemitter(String id) {
+        if (id == null || id.isBlank()) {
+            return false;
+        }
+        try {
+            Thread.sleep(3000);
+            boolean isDeleted = remitterRepository.existsById(id);
+
+            if (!isDeleted)
+                return false;
+            remitterRepository.deleteById(id);
+            // write log
+            activityLogService.log("adminId", "AdminName", "admin", ActivityType.REMITTER_DELETED,
+                    "Remitter is removed by admin", "remitter", id, null);
+            log.info("Remitter deleted successfully with id {}", id);
+
+            return true;
+        } catch (Exception e) {
+            log.error("Error while deleting remitter: " + e.getMessage());
+            return false;
+        }
     }
 
     // pending--------------------------------------------------------------------------------------------------------

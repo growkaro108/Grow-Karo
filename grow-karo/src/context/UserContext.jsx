@@ -105,7 +105,7 @@ export const UserProvider = ({ children }) => {
           const status = await deleteSecureCookie("authUser");
           if (status.success) {
             setAuthUser(null);
-            router.push("/auth");
+            router.replace("/auth");
             router.refresh();
             // console.log(authUser)
             successMessage("Logout successfully", "Logout");

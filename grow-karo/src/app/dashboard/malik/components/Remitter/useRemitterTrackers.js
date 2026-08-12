@@ -2,53 +2,26 @@ import { useState, useEffect } from "react";
 import {
   createRemitter,
   getAllRemitter,
+  removeRemitter,
+  sendCredentials,
+  updateRemitter,
 } from "../../../../../../services/malikService";
 
-// ---- DUMMY DATA (replace with API fetch once backend is ready) ----
-const DUMMY_CODES = [
-  {
-    id: "dummy-1",
-    code: "NEHA-BOOST",
-    status: "active",
-    raised: 62000,
-    goal: 100000,
-    referrals: 14,
-    owner: "Neha Payments Ltd",
-  },
-  {
-    id: "dummy-2",
-    code: "RAVI-EXPRESS",
-    status: "pending",
-    raised: 15000,
-    goal: 50000,
-    referrals: 4,
-    owner: "Ravi Express Remit",
-  },
-];
-// ---------------------------------------------------------------
-
-/**
- * Owns all remitter tracker data + CRUD side effects.
- * Swap the TODO(backend) blocks for real API calls when ready;
- * the calling component's interface stays the same.
- */
 export function useRemitterTrackers() {
-  const [codes, setCodes] = useState(DUMMY_CODES);
+  const [codes, setCodes] = useState();
   const [isLoadingCodes, setIsLoadingCodes] = useState(false);
+  const [wantReload, setWantReload] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadTrackers() {
-      setIsLoadingCodes(true);
       try {
         // TODO(backend): GET /api/admin/remitter-trackers
         const data = await getAllRemitter();
-        console.log(data.content);
+        // console.log(data.content);
         if (!data) return false;
         if (!cancelled) setCodes(data.content);
-        // await new Promise((resolve) => setTimeout(resolve, 300));
-        // if (!cancelled) setCodes(DUMMY_CODES);
       } catch (err) {
         console.error("Failed to load remitter trackers", err);
       } finally {
@@ -60,78 +33,77 @@ export function useRemitterTrackers() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [wantReload]);
 
   const createTracker = async (sanitizedData) => {
     // TODO(backend): POST /api/admin/remitter-trackers
-    console.log(
-      "Dispatching secure sanitized payload to remote server node...",
-      sanitizedData,
-    );
+    // console.log(
+    //   "Dispatching secure sanitized payload to remote server node...",
+    //   sanitizedData,
+    // );
     const response = await createRemitter(sanitizedData);
 
     if (!response) return false;
-
+    // console.log(response);
     const mockServerResponse = {
       loginId: response.loginId,
       password: response.password,
+      email: response.email,
+      remitterId: response.remitterId,
       emailSent: false,
+      sendingEmail: false,
       organizationName: sanitizedData.organizationName,
     };
-
-    setCodes((prev) => [
-      ...prev,
-      {
-        id: response.remitterId,
-        code: sanitizedData.trackerCode,
-        status: "pending",
-        raised: 0,
-        goal: sanitizedData.allocationLimit,
-        referrals: 0,
-        owner: sanitizedData.organizationName,
-        remitterEmail: sanitizedData.remitterEmail,
-        remitterPhone: sanitizedData.remitterPhone,
-        aadharNumber: sanitizedData.aadharNumber,
-        panNumber: sanitizedData.panNumber,
-      },
-    ]);
+    // console.log(codes);
+    //RELOAD REMITEERS
+    setWantReload(!wantReload);
 
     return mockServerResponse;
   };
 
-  // pending
   const updateTracker = async (id, sanitizedData) => {
-    // TODO(backend): PATCH /api/admin/remitter-trackers/:id
-    console.log("Dispatching update for tracker", id, sanitizedData);
+    // console.log("Dispatching update for tracker", id, sanitizedData);
+    const response = await updateRemitter(id, sanitizedData);
+    // console.log("update response: ", response);
+    if (!response) return false;
 
     setCodes((prev) =>
       prev.map((c) =>
         c.id === id
           ? {
               ...c,
-              code: sanitizedData.trackerCode,
               goal: sanitizedData.allocationLimit,
-              owner: sanitizedData.organizationName,
+              organizationName: sanitizedData.organizationName,
               remitterEmail: sanitizedData.remitterEmail,
               remitterPhone: sanitizedData.remitterPhone,
               aadharNumber: sanitizedData.aadharNumber,
               panNumber: sanitizedData.panNumber,
+              status: sanitizedData.status,
             }
           : c,
       ),
     );
+    return true;
   };
-  // pending
+
   const removeTracker = async (id) => {
     // TODO(backend): DELETE /api/admin/remitter-trackers/:id
-    console.log("Dispatching removal for tracker", id);
-    await new Promise((resolve) => setTimeout(resolve, 250)); // simulate latency
+    // console.log("Dispatching removal for tracker", id);
+    const response = await removeRemitter(id);
+    if (!response) return false;
     setCodes((prev) => prev.filter((c) => c.id !== id));
+    return response;
   };
   //pending
-  const sendCredentialEmail = async (loginId) => {
+  const sendCredentialEmail = async (payload) => {
     // TODO(backend): POST /api/admin/remitter-trackers/send-credentials
-    console.log("Dispatching credential email for", loginId);
+
+    const response = await sendCredentials(payload);
+
+    if (!response) return false;
+
+    // console.log("Dispatching credential email for", payload);
+    return response;
   };
 
   return {

@@ -16,7 +16,6 @@ import com.growkaro.backend.DRO.WithdrawAmount;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserProfile;
-import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.enums.Remark;
 import com.growkaro.backend.service.ApiService;
 import com.growkaro.backend.service.EmailService;
@@ -63,10 +62,8 @@ public class UserAPIController {
                     .body(general.response("present", "Email already exists", null));
         }
 
-        boolean sent = emailService.sendOtp(email, Remark.SIGNUP.getValue());
-        return sent
-                ? ResponseEntity.ok(general.response("success", "Otp sent successfully", null))
-                : ResponseEntity.internalServerError().body(general.response("error", "Internal Server error", null));
+        emailService.sendOtp(email, Remark.SIGNUP.getValue());
+        return ResponseEntity.ok(general.response("success", "Otp sent successfully", null));
     }
 
     @PostMapping("/validateEmailOtp")

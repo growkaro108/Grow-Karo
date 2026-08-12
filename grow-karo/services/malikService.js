@@ -16,6 +16,9 @@ import {
   searchUsers,
   createRemitterApi,
   getAllRemittersApi,
+  updateRemitterApi,
+  removeRemitterApi,
+  sendCredentialsApi,
 } from "@/api/adminApi";
 import { allRounderMessage } from "@/components/Message";
 
@@ -269,6 +272,33 @@ export async function getAllRemitter() {
     return null;
   }
   return response.data;
+}
+
+export async function updateRemitter(id, data) {
+  const response = await updateRemitterApi(id, data);
+  allRounderMessage(response);
+  if (response.status !== "success") {
+    return null;
+  }
+  return response.data;
+}
+
+export async function removeRemitter(id) {
+  const response = await removeRemitterApi(id);
+  allRounderMessage(response);
+  if (response.status !== "success") {
+    return false;
+  }
+  return true;
+}
+
+export async function sendCredentials(payload) {
+  const res = await sendCredentialsApi(payload);
+  allRounderMessage(res);
+  if (res.status !== "success") {
+    return false;
+  }
+  return true;
 }
 
 //pending
