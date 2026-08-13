@@ -68,10 +68,13 @@ export async function getAllTransactions(params) {
   return await apiRequest(`${END_POINT}transactions?${params}`);
 }
 
-export async function approveUsersTransactions(txnId) {
-  return await apiRequest(`${END_POINT}transactions/${txnId}/approve`, {
-    method: "PATCH",
-  });
+export async function approveUsersTransactions(txnId, remId) {
+  return await apiRequest(
+    `${END_POINT}transactions/${txnId}/approve/${remId}`,
+    {
+      method: "PATCH",
+    },
+  );
 }
 
 export async function rejectUsersTransactions(txnId, reason) {

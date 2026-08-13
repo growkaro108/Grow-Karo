@@ -239,12 +239,22 @@ export async function getAllTransaction(params) {
   return await getAllTransactions(params);
 }
 
-export async function approveUserTranactions(userTranactionId) {
-  return await approveUsersTransactions(userTranactionId);
+export async function approveUserTranactions(userTranactionId, remId) {
+  const res = await approveUsersTransactions(userTranactionId, remId);
+  allRounderMessage(res);
+  if (res.status !== "success") {
+    return false;
+  }
+  return res.data;
 }
 
 export async function rejectUserTranactions(userTranactionId, reason) {
-  return await rejectUsersTransactions(userTranactionId, reason);
+  const res = await rejectUsersTransactions(userTranactionId, reason);
+  allRounderMessage(res);
+  if (res.status !== "success") {
+    return false;
+  }
+  return res.data;
 }
 
 export async function onSearchUsers(query) {

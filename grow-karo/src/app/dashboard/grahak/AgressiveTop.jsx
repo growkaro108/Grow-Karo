@@ -101,7 +101,7 @@ export default function AggresiveTop({ value, onChange, isAggressive }) {
         userSchemeId: h.userSchemeId,
         name: h.schemeName,
         tenure: h.tenure,
-        amount: h.profit,
+        amount: h.profit - h - profitReedemed,
         invested: h.paidAmount,
       }));
   }, [holding, isAggressive]);
@@ -152,6 +152,22 @@ export default function AggresiveTop({ value, onChange, isAggressive }) {
       e.preventDefault();
       selectScheme(schemes[activeIndex]);
     }
+  }
+  if (schemes?.length == 0) {
+    return (
+      <button
+        className="w-full h-14 flex items-center justify-between gap-3 rounded-lg border border-[#E4DFD3] bg-white px-4 text-left
+                     transition-colors motion-reduce:transition-none
+                     hover:border-[#B4893E]/50
+                     focus:outline-none focus-visible:ring-2 focus-visible:ring-[#B4893E] focus-visible:ring-offset-2"
+      >
+        <span className="min-w-0">
+          <span className="text-sm text-[#8C8672]">
+            No scheme eligible for withdrawal
+          </span>
+        </span>
+      </button>
+    );
   }
 
   return (

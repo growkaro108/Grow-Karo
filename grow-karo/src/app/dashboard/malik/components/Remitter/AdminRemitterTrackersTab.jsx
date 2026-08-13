@@ -17,7 +17,7 @@ import { errorMessage } from "@/components/Message";
 export default function AdminRemitterTrackersTab() {
   const {
     codes,
-    isLoadingCodes,
+    isLoading,
     createTracker,
     updateTracker,
     removeTracker,
@@ -172,7 +172,7 @@ export default function AdminRemitterTrackersTab() {
       />
 
       {/* PERFORMANCE GRID */}
-      {isLoadingCodes ? (
+      {isLoading ? (
         <TabLoader />
       ) : (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">

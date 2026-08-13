@@ -1,0 +1,3 @@
+//  when ever add a new enum type in ActivityType \\
+ALTER TABLE public.activity_log 
+DROP CONSTRAINT activity_log_type_check;

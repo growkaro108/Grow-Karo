@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import {
   createRemitter,
   getAllRemitter,
@@ -6,34 +6,19 @@ import {
   sendCredentials,
   updateRemitter,
 } from "../../../../../../services/malikService";
+import { adminContext } from "@/context/AdminContext";
 
 export function useRemitterTrackers() {
-  const [codes, setCodes] = useState();
-  const [isLoadingCodes, setIsLoadingCodes] = useState(false);
+  const { codes, setCodes, isLoading, LoadCodes } = use(adminContext);
   const [wantReload, setWantReload] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-
-    async function loadTrackers() {
-      try {
-        // TODO(backend): GET /api/admin/remitter-trackers
-        const data = await getAllRemitter();
-        // console.log(data.content);
-        if (!data) return false;
-        if (!cancelled) setCodes(data.content);
-      } catch (err) {
-        console.error("Failed to load remitter trackers", err);
-      } finally {
-        if (!cancelled) setIsLoadingCodes(false);
-      }
-    }
-
-    loadTrackers();
+    LoadCodes();
     return () => {
       cancelled = true;
     };
-  }, [wantReload]);
+  }, [LoadCodes]);
 
   const createTracker = async (sanitizedData) => {
     // TODO(backend): POST /api/admin/remitter-trackers
@@ -56,7 +41,7 @@ export function useRemitterTrackers() {
     };
     // console.log(codes);
     //RELOAD REMITEERS
-    setWantReload(!wantReload);
+    LoadCodes();
 
     return mockServerResponse;
   };
@@ -108,7 +93,7 @@ export function useRemitterTrackers() {
 
   return {
     codes,
-    isLoadingCodes,
+    isLoading,
     createTracker,
     updateTracker,
     removeTracker,

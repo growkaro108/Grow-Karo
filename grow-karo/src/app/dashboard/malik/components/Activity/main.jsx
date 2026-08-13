@@ -107,7 +107,7 @@ export default function ActivityTab({
   useEffect(() => {
     const getAllType = async () => {
       const response = await getAllLogTypes();
-      const data = response.map((item) => ({
+      const data = response?.map((item) => ({
         id: item,
         label: item.toUpperCase(),
       }));

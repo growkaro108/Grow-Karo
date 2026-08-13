@@ -347,8 +347,11 @@ public class AdminAPIService {
     }
 
     @Transactional
-    public AdminTransactionResponse approve(String txnId) {
+    public AdminTransactionResponse approve(String txnId, String remId) {
         Transaction txn = getPendingOrThrow(txnId);
+        Remitter rr = remitterRepository.findByRemitterId(remId)
+                .orElseThrow(() -> new RuntimeException("Remitter not found"));
+        txn.setRemitter(rr);
         txn.setStatus(TransactionStatus.PROCESSED);
         return AdminTransactionResponse.fromEntity(transactionRepository.save(txn));
     }

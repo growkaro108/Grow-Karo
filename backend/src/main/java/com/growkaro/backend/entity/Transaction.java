@@ -40,6 +40,10 @@ public class Transaction {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "remitter_id")
+    private Remitter remitter;
+
     // Gross amount requested (scheme amount for aggressive, typed amount for
     // general)
     @Column(nullable = false, precision = 12, scale = 2)

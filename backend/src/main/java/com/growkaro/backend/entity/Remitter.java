@@ -14,7 +14,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.hibernate.validator.constraints.UniqueElements;
+
 
 @Getter
 @Setter
@@ -63,7 +63,11 @@ public class Remitter {
     private Boolean status = true;
 
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "user_remitters", joinColumns = @JoinColumn(name = "remitter_id"), inverseJoinColumns = @JoinColumn(name = "id"))
+    @JoinTable(
+            name = "remitter_users",
+            joinColumns = @JoinColumn(name = "remitter_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
     private List<User> users = new ArrayList<>();
 
     @Column(nullable = false, updatable = false)
@@ -81,6 +85,7 @@ public class Remitter {
         this.remitterId = "GKREMID-"
                 + LocalDateTime.now(ZoneId.of("Asia/Kolkata")).format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
         this.createdAt = getTime();
+        this.updatedAt = getTime();
         if (this.totalPaid == null) {
             this.totalPaid = BigDecimal.ZERO;
         }

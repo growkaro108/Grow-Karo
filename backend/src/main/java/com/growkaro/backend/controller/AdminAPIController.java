@@ -171,10 +171,10 @@ public class AdminAPIController {
         return ResponseEntity.ok(general.response("success", "Transactions fetched successfully", transactions));
     }
 
-    @PatchMapping("/transactions/{id}/approve")
+    @PatchMapping("/transactions/{id}/approve/{remId}")
     public ResponseEntity<Map<String, Object>> approve(
-            @PathVariable String id) {
-        AdminTransactionResponse transaction = adminAPIService.approve(id);
+            @PathVariable String id, @PathVariable String remId) {
+        AdminTransactionResponse transaction = adminAPIService.approve(id, remId);
         if (transaction == null) {
             log.error("Transaction(Approve) not found: " + id);
             return ResponseEntity.ok(general.response("error", "Transaction not found", null));

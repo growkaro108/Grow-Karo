@@ -47,7 +47,7 @@ public class SecurityConfig {
                                                                 "/api/uploads/**",
                                                                 "/api/admin/activity-types",
                                                                 "/api/admin/transactions",
-                                                                "/api/admin/transactions/{id}/approve",
+                                                                "/api/admin/transactions/{id}/approve/{remid}",
                                                                 "/api/admin/transactions/{id}/reject",
                                                                 "/api/admin/user/search/{query}",
                                                                 "/api/admin/remitter/add",

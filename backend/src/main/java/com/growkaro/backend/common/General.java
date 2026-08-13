@@ -237,7 +237,7 @@ public class General {
     }
 
     public String remitterLoginUrl(String remitterId) {
-        return baseUrl + "/auth/" + remitterId;
+        return baseUrl + "/auth";
     }
 
     public String generateResetLinkForRemitter(String email, String remitterId) {

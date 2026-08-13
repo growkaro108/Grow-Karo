@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, use } from "react";
 import {
   LayoutDashboard,
   Activity,
@@ -28,6 +28,7 @@ import OverviewTab from "./components/OverviewTab";
 import TabLoader from "../../../loader/TabLoader";
 import { fetchMalikDashboardData } from "../../../../services/malikService";
 import dynamic from "next/dynamic";
+import { adminContext } from "@/context/AdminContext";
 
 // import SchemeApproval from "./components/SchemeAproval/SchemeApprovals";
 
@@ -38,10 +39,13 @@ const UserManagement = dynamic(
     ssr: false,
   },
 );
-const WithdrawalsTab = dynamic(() => import("./components/WithdrawalsTab"), {
-  loading: () => <TabLoader />,
-  ssr: false,
-});
+const WithdrawalsTab = dynamic(
+  () => import("./components/Withdrawals/WithdrawalsTab"),
+  {
+    loading: () => <TabLoader />,
+    ssr: false,
+  },
+);
 
 const PlanTab = dynamic(() => import("./components/Scheme/PlanTab"), {
   loading: () => <TabLoader />,
@@ -104,47 +108,14 @@ const NAV_ITEMS = [
 ];
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState("remitter");
+  const [activeTab, setActiveTab] = useState("withdrawals");
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const { LoadCodes } = use(adminContext);
 
   const [withdrawals, setWithdrawals] = useState([]);
   const [issues, setIssues] = useState([]);
-  const [codes, setCodes] = useState([]);
-  const [inflowData, setInflowData] = useState([]);
-
-  useEffect(() => {
-    let active = true;
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    // setInitialLoading(true);
-    fetchMalikDashboardData()
-      .then((data) => {
-        if (!active) return;
-        const withdrawalData = Array.isArray(data.withdrawals)
-          ? data.withdrawals
-          : [];
-        const issueData = Array.isArray(data.issues) ? data.issues : [];
-        const codeData = Array.isArray(data.codes) ? data.codes : [];
-        const inflowDataSet = Array.isArray(data.inflowData)
-          ? data.inflowData
-          : [];
-
-        setWithdrawals(withdrawalData);
-        setIssues(issueData);
-        setCodes(codeData);
-        setInflowData(inflowDataSet);
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -159,6 +130,11 @@ export default function AdminPanel() {
       setLoading(false);
     }, 350);
   };
+
+  //load esentaial data for each tab
+  useEffect(() => {
+    LoadCodes(); //loading all remitters on mount
+  }, [LoadCodes]);
 
   const handleWithdrawalDecision = (id, action) => {
     setWithdrawals((prev) =>
@@ -175,24 +151,6 @@ export default function AdminPanel() {
       prev.map((i) => (i.id === id ? { ...i, status: "resolved" } : i)),
     );
     showToast(`Issue ${id} marked as resolved.`);
-  };
-
-  const handleGenerateCode = () => {
-    const code = "FR-" + (100 + codes.length + Math.floor(Math.random() * 90));
-    const word = "NEW" + Math.floor(1000 + Math.random() * 8999);
-    setCodes((prev) => [
-      {
-        id: code,
-        code: word,
-        owner: "Unassigned",
-        raised: 0,
-        goal: 100000,
-        referrals: 0,
-        status: "active",
-      },
-      ...prev,
-    ]);
-    showToast(`Fundraiser code ${word} generated.`);
   };
 
   const handleCopyCode = (code) => {
@@ -244,11 +202,7 @@ export default function AdminPanel() {
           ) : (
             <div className="animate-fade-slide-in">
               {activeTab === "overview" && (
-                <OverviewTab
-                  withdrawals={withdrawals}
-                  issues={issues}
-                  inflowData={inflowData}
-                />
+                <OverviewTab withdrawals={withdrawals} issues={issues} />
               )}
               {activeTab === "activity" && <ActivityTab />}
               {activeTab === "withdrawals" && (
@@ -258,12 +212,7 @@ export default function AdminPanel() {
                 />
               )}
               {activeTab === "plans" && <PlanTab />}
-              {activeTab === "approvals" && (
-                <SchemeApproval
-                  codes={codes}
-                  onAddRemitterToServer={handleGenerateCode}
-                />
-              )}
+              {activeTab === "approvals" && <SchemeApproval />}
               {activeTab === "issues" && (
                 <IssuesTab issues={issues} onResolve={handleResolveIssue} />
               )}
