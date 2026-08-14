@@ -223,7 +223,7 @@ public class UserAPIService {
                 "USER", user.getId(),
                 Map.of("email", user.getEmail()));
 
-        return general.response("ok", "Login successful", Map.of("user", finalUser));
+        return general.response("success", "Login successful", finalUser);
     }
 
     public Map<String, Object> logout(String userId, String userName) {

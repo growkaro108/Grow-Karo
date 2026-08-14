@@ -28,11 +28,13 @@ public interface RemitterRepository extends JpaRepository<Remitter, String> {
         @Query("SELECT r FROM Remitter r WHERE r.remitterEmail = :email " +
                         "OR r.remitterPhone = :phone " +
                         "OR r.aadharNumber = :aadhar " +
+                        "OR r.remitterCode = :remitterCode " +
                         "OR r.panNumber = :pan")
         List<Remitter> findConflicts(@Param("email") String email,
                         @Param("phone") String phone,
                         @Param("aadhar") String aadhar,
-                        @Param("pan") String pan);
+                        @Param("pan") String pan,
+                        @Param("remitterCode") String remitterCode);
 
         // boolean existsByPanNumber(String panNumber);
 

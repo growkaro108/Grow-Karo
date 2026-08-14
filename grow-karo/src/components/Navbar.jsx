@@ -17,11 +17,13 @@ import {
   ScrollText,
 } from "lucide-react";
 import { userContext } from "@/context/UserContext";
+import { remitterContext } from "@/context/RemitterContext";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
   const { authUser, logout, getUserDataFromContext } = useContext(userContext);
+  const { authRemitter, logoutRemitter } = useContext(remitterContext);
   useEffect(() => {
     const getUser = async () => {
       if (!authUser) {
@@ -36,9 +38,9 @@ export default function Navbar() {
   const navLinks = [
     { href: "/", label: "Home", icon: Home },
     {
-      href: authUser ? "/dashboard" : "/about",
-      label: authUser ? "Dashboard" : "About Us",
-      icon: authUser ? LayoutDashboardIcon : NotebookPen,
+      href: authUser || authRemitter ? "/dashboard" : "/about",
+      label: authUser || authRemitter ? "Dashboard" : "About Us",
+      icon: authUser || authRemitter ? LayoutDashboardIcon : NotebookPen,
     },
     { href: "/plan", label: "Scheme", icon: ScrollText },
     { href: "/solution", label: "Solutions", icon: Send },
@@ -94,19 +96,22 @@ export default function Navbar() {
         </nav>
 
         {/* Desktop CTA */}
-        {authUser ? (
+        {authUser || authRemitter ? (
           <div className="hidden md:flex items-center gap-3 text-sm">
             <div className="flex items-center gap-2 border border-slate-200 px-3 py-2 rounded-lg">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-950 text-white text-xs font-semibold">
                 {authUser?.name?.charAt(0).toUpperCase()}
               </div>
               <span className="font-medium text-slate-700">
-                Hi, {authUser?.name?.split(" ")[0]}
+                Hi,{" "}
+                {authRemitter
+                  ? authRemitter?.organizationName?.split(" ")[0]
+                  : authUser?.name?.split(" ")[0]}
               </span>
             </div>
 
             <button
-              onClick={logout}
+              onClick={authRemitter ? logoutRemitter : logout}
               className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-slate-200 px-5 font-semibold text-slate-600 transition duration-300 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100"
             >
               Logout <LogOut className="h-4 w-4" />
@@ -179,7 +184,7 @@ export default function Navbar() {
               <button
                 onClick={() => {
                   setIsOpen(false);
-                  logout();
+                  authRemitter ? logoutRemitter() : logout();
                 }}
                 className="flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 transition hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100"
               >

@@ -12,6 +12,9 @@ public class AddRemitter {
     @NotBlank(message = "Remitter entity name is required")
     private String organizationName;
 
+    @NotBlank(message = "Remitter code is required")
+    private String remitterCode;
+
     @NotBlank(message = "Email is required")
     @Email(message = "Please enter a valid email address")
     private String remitterEmail;

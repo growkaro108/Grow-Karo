@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Loader from "@/loader/Loader";
 import SidebarNavigation from "./components/SidebarNavigation";
@@ -8,6 +8,7 @@ import DashboardView from "./components/DashboardView";
 import { fetchRemitterDashboardData } from "../../../../services/remitterService";
 import { Menu } from "lucide-react";
 import TabLoader from "@/loader/TabLoader";
+import { remitterContext } from "@/context/RemitterContext";
 const TransactionsView = dynamic(
   () => import("./components/TransactionsView"),
   {
@@ -31,6 +32,7 @@ const SettingsView = dynamic(() => import("./components/SettingsView"), {
 export default function RemitterDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { authRemitter } = use(remitterContext);
   const [dashboardData, setDashboardData] = useState({
     dashboardMetrics: { totalVolume: "₹0.00", activeCounterparties: 0 },
     chartData: [],
@@ -97,7 +99,7 @@ export default function RemitterDashboard() {
             </h1>
           </div>
           <div className="hidden md:flex items-center space-x-2 bg-green-50 border border-green-200 px-3 py-1.5 rounded-lg text-sm text-green-700 font-medium">
-            <span>1 USD = 83.42 INR</span>
+            <span>{authRemitter.organizationName}</span>
           </div>
         </header>
 

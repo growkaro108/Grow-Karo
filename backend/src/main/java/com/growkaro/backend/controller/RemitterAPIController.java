@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.common.General;
+import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.service.RemitterAPIService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -45,13 +46,13 @@ public class RemitterAPIController {
             }
             RemitterResponse rr = remitterAPIService.login(email, password);
             if (rr != null) {
-                return general.response("ok", "Login successful", rr);
+                return general.response("success", "Login successful", rr);
             } else {
                 return general.response("error", "Invalid credentials...", null);
             }
         } catch (Exception e) {
             log.error("Error in remitter login: email {} role {} because {} ", email, role, e.getMessage());
-            return general.response("error", "Something went wrong..", null);
+            return general.response("error", "Something went wrongs..", null);
         }
     }
 
@@ -75,24 +76,38 @@ public class RemitterAPIController {
     }
 
     @PatchMapping("/reset-password/{remitterId}")
-    public Map<String, Object> resetPassword(@PathVariable String remitterId, @RequestBody String passWord) {
-        System.out.println(remitterId + " " + passWord);
-        return null;
-        // try {
-        // if (remitterId == null || remitterId.isEmpty() || payload == null) {
-        // return general.response("error", "Invalid request", null);
-        // }
-        // String message = remitterAPIService.resetPassword(remitterId, payload);
-        // if (message != null) {
-        // return general.response("success", message, null);
-        // } else {
-        // return general.response("error", "Something went wrong..", null);
-        // }
-        // } catch (Exception e) {
-        // log.error("Error in remitter reset password: remitterId {} because {} ",
-        // remitterId, e.getMessage());
-        // return general.response("error", "Something went wrong..", null);
-        // }
+    public Map<String, Object> resetPassword(@PathVariable String remitterId, @RequestBody Map<String, String> body) {
+        String passWord = body.get("password");
+
+        try {
+            if (remitterId == null || remitterId.isEmpty() || passWord == null || !general.validatePassword(passWord)) {
+                return general.response("info", "Invalid request", null);
+            }
+            boolean success = remitterAPIService.resetPassword(remitterId, passWord);
+            if (success) {
+                return general.response("success", "Password reset successful", null);
+            } else {
+                return general.response("error", "Something went wrong..", null);
+            }
+        } catch (Exception e) {
+            log.error("Error in remitter reset password: remitterId {} because {} ",
+                    remitterId, e.getMessage());
+            return general.response("error", "Something went wrong..", null);
+        }
+    }
+
+    @GetMapping("/{remitterId}/txncounts")
+    public Map<String, Object> getAllTransactionCounts(@PathVariable String remitterId) {
+        try {
+            if (remitterId == null || remitterId.isEmpty()) {
+                return general.response("error", "Invalid request", null);
+            }
+            Map<String, Long> txnCounts = remitterAPIService.txnCounts(remitterId);
+            return general.response("success", "Transaction counts fetched successfully", txnCounts);
+        } catch (Exception e) {
+            log.error("Error in remitter transactions: remitterId {} because {}", remitterId, e.getMessage());
+            return general.response("error", "Something went wrong..", null);
+        }
     }
 
     // @GetMapping("/{remitterId}/dashboard")

@@ -5,6 +5,7 @@ import { UserProvider } from "@/context/UserContext";
 import { AdminContextProvider } from "@/context/AdminContext";
 import { LoaderProvider } from "@/context/LoaderContext";
 import GlobalLoader from "@/loader/GlobalLoader";
+import { RemitterProvider } from "@/context/RemitterContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,11 +31,13 @@ export default function RootLayout({ children }) {
       <body className="min-h-full flex flex-col">
         <LoaderProvider>
           <AdminContextProvider>
-            <UserProvider>
-              <Navbar />
-              {children}
-              <GlobalLoader />
-            </UserProvider>
+            <RemitterProvider>
+              <UserProvider>
+                <Navbar />
+                {children}
+                <GlobalLoader />
+              </UserProvider>
+            </RemitterProvider>
           </AdminContextProvider>
         </LoaderProvider>
       </body>

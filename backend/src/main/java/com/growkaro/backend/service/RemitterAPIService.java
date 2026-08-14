@@ -5,10 +5,15 @@ import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.WithdrawalRequest;
+import com.growkaro.backend.entity.Transaction.TransactionStatus;
 import com.growkaro.backend.enums.WithdrawalStatus;
 import com.growkaro.backend.repository.RemitterRepository;
 import com.growkaro.backend.repository.TransactionRepository;
 import com.growkaro.backend.repository.WithdrawalRequestRepository;
+
+import lombok.extern.slf4j.Slf4j;
+import software.amazon.awssdk.auth.credentials.SystemPropertyCredentialsProvider;
+
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -26,6 +31,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @Service
+@Slf4j
 public class RemitterAPIService {
 
     private static final int DEFAULT_PAGE_SIZE = 20;
@@ -60,11 +66,16 @@ public class RemitterAPIService {
     }
 
     public RemitterResponse login(String email, String password) {
-        Remitter remitter = findByEmail(email);
-        if (remitter == null || password == null || !BCrypt.checkpw(password, remitter.getPassword())) {
+        try {
+            Remitter remitter = findByEmail(email);
+            if (remitter == null || password == null || !BCrypt.checkpw(password, remitter.getPassword())) {
+                return null;
+            }
+            return RemitterResponse.fromEntity(remitter);
+        } catch (Exception e) {
+            log.error("Error in login : email=" + email + " error:" + e.getMessage());
             return null;
         }
-        return RemitterResponse.fromEntity(remitter);
     }
 
     // forgot password
@@ -86,6 +97,25 @@ public class RemitterAPIService {
         remitter.setPassword(apiService.makePasswordHash(newPassword));
         remitterRepository.save(remitter);
         return true;
+    }
+
+    public Map<String, Long> txnCounts(String remitterId) {
+        try {
+            Remitter remitter = findById(remitterId);
+            if (remitter == null) {
+                return null;
+            }
+
+            Map<String, Long> counts = new LinkedHashMap<>();
+            counts.put("success", transactionRepository.countByRemitter_RemitterIdAndStatus(remitter.getRemitterId(),
+                    TransactionStatus.SUCCESS));
+            counts.put("processed", transactionRepository.countByRemitter_RemitterIdAndStatus(remitter.getRemitterId(),
+                    TransactionStatus.PROCESSED));
+            return counts;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     // @Cacheable(value = "remitterDashboard", key = "#remitterId + ':' + (#range ?:

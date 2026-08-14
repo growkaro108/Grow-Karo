@@ -8,6 +8,7 @@ import { userContext } from "@/context/UserContext";
 import { setSecureCookie } from "@/context/cookiesManagement";
 import { useLoader } from "@/context/LoaderContext";
 import { RemitterLogin } from "../../services/remitterService";
+import { remitterContext } from "@/context/RemitterContext";
 
 export default function AuthLogin({ onSwitch }) {
   const [email, setEmail] = useState("");
@@ -19,8 +20,10 @@ export default function AuthLogin({ onSwitch }) {
   const { showLoader, hideLoader } = useLoader();
   // const [isLoading, setIsLoading] = useState(false);
   const { setAuthUser } = use(userContext);
+  const { setAuthRemitter } = use(remitterContext);
 
   const validateEmail = (email) => {
+    if (email.length < 10 || email.length > 100) return false;
     return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$/.test(email);
   };
 
@@ -47,42 +50,60 @@ export default function AuthLogin({ onSwitch }) {
           "Remitter Login",
         );
         if (ur) {
-          const response = await RemitterLogin({
-            email: sanitizedEmail,
-            password: sanitizedPassword,
-            role: "remiter",
-          });
-          console.log(response);
-
+          showLoader("Checking remitter credential...");
+          try {
+            const response = await RemitterLogin({
+              email: sanitizedEmail,
+              password: sanitizedPassword,
+              role: "remiter", // confirm with backend: "remiter" or "remitter"
+            });
+            // console.log(response);
+            if (response) {
+              const status = await setSecureCookie("authRemitter", response);
+              if (status.success) {
+                setAuthRemitter(response);
+                setMessage("Signed in — redirecting...");
+                // router.push("/dashboard");
+              } else {
+                setError(status.message);
+              }
+            } else {
+              setError("Invalid remitter credentials.");
+            }
+          } finally {
+            hideLoader();
+          }
           return;
         } else {
           return;
         }
       }
       // Authenticate credentials with service
-      const response = await loginUser({
-        email: sanitizedEmail,
-        password: sanitizedPassword,
-      });
+      else {
+        const response = await loginUser({
+          email: sanitizedEmail,
+          password: sanitizedPassword,
+        });
 
-      showLoader("Logging in...");
-      if (response.status === "ok") {
-        successMessage("Signed in successfully", "Congratulation !!");
-        const status = await setSecureCookie("authUser", response.data.user);
-        if (status.success) {
-          setAuthUser(response.data.user);
-          setMessage("Signed in — redirecting...");
-          //router.push("/dashboard");
+        showLoader("Logging in...");
+        if (response.status === "success") {
+          successMessage("Signed in successfully", "Congratulation !!");
+          const status = await setSecureCookie("authUser", response.data);
+          if (status.success) {
+            setAuthUser(response.data);
+            setMessage("Signed in — redirecting...");
+            //router.push("/dashboard");
+          } else {
+            setError(status.message);
+          }
+        } else if (response.status === "error") {
+          errorMessage(response.message);
         } else {
-          setError(status.message);
+          errorMessage("Invalid username or password");
         }
-      } else if (response.status === "error") {
-        errorMessage(response.message);
-      } else {
-        errorMessage("Invalid username or password");
       }
     } catch (error) {
-      errorMessage("Something went wrong");
+      errorMessage("Somthing went wrong...");
       console.error(error);
     } finally {
       // setIsLoading(false);

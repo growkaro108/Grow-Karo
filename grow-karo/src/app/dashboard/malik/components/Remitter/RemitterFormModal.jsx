@@ -66,30 +66,54 @@ export function RemitterFormModal({
               </p>
             )}
           </div>
-
+          <div>
+            <label className="block text-slate-400 font-medium mb-1.5">
+              Remitter Email
+            </label>
+            <input
+              type="email"
+              name="remitterEmail"
+              required
+              placeholder="e.g. neha@payments.com"
+              value={formData.remitterEmail}
+              onChange={onChange}
+              disabled={isEditing}
+              title={
+                isEditing
+                  ? "Remitter Email cannot be changed"
+                  : "Remitter Email Address"
+              }
+              className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-xl px-3.5 py-2.5 outline-none focus:border-emerald-500 transition-colors"
+            />
+            {formErrors.remitterEmail && (
+              <p className="text-rose-500 text-[11px] mt-1">
+                {formErrors.remitterEmail}
+              </p>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-slate-400 font-medium mb-1.5">
-                Remitter Email
+                Remitter Code
               </label>
               <input
-                type="email"
-                name="remitterEmail"
+                type="text"
+                name="remitterCode"
                 required
-                placeholder="e.g. neha@payments.com"
-                value={formData.remitterEmail}
+                placeholder="e.g. GK-REM-001"
+                value={formData.remitterCode}
                 onChange={onChange}
                 disabled={isEditing}
                 title={
                   isEditing
-                    ? "Remitter Email cannot be changed"
-                    : "Remitter Email Address"
+                    ? "Remitter Code cannot be changed"
+                    : "Remitter Code Address"
                 }
                 className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-xl px-3.5 py-2.5 outline-none focus:border-emerald-500 transition-colors"
               />
-              {formErrors.remitterEmail && (
+              {formErrors.remitterCode && (
                 <p className="text-rose-500 text-[11px] mt-1">
-                  {formErrors.remitterEmail}
+                  {formErrors.remitterCode}
                 </p>
               )}
             </div>

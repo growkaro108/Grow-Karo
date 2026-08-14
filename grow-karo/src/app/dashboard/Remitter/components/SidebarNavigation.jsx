@@ -20,9 +20,9 @@ export default function SidebarNavigation({
 }) {
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "requests", label: "Payment Requests", icon: FileText },
     { id: "transactions", label: "Transactions", icon: ArrowLeftRight },
     { id: "recipients", label: "Recipients", icon: Users },
-    { id: "requests", label: "Payment Requests", icon: FileText },
     { id: "settings", label: "Settings", icon: Settings },
   ];
 

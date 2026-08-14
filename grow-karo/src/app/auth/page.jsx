@@ -6,6 +6,7 @@ import AuthForm from "@/components/AuthForm";
 import Loader from "@/loader/Loader";
 import { userContext } from "@/context/UserContext";
 import { use, useEffect } from "react";
+import { remitterContext } from "@/context/RemitterContext";
 
 function AuthFormContent() {
   const searchParams = useSearchParams();
@@ -27,12 +28,13 @@ const AuthFormWithParams = dynamic(
 export default function LoginPage() {
   const router = useRouter();
   const { authUser } = use(userContext);
+  const { authRemitter } = use(remitterContext);
   useEffect(() => {
     //  SAFE: This runs strictly AFTER the component finishes rendering
-    if (authUser) {
+    if (authUser || authRemitter) {
       router.replace("/dashboard");
     }
-  }, [authUser, router]); // Run whenever these variables change else
+  }, [authUser, authRemitter, router]); // Run whenever these variables change else
   return (
     <div className="max-h-screen bg-slate-50 text-slate-950 flex flex-col">
       <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex flex-col gap-8 grow">

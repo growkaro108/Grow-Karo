@@ -46,7 +46,8 @@ public class General {
     }
 
     public boolean validateEmail(String email) {
-        return email != null && EMAIL_PATTERN.matcher(email).matches();
+        return email != null && !email.trim().isEmpty() && email.length() <= 100
+                && EMAIL_PATTERN.matcher(email).matches();
     }
 
     public boolean validatePassword(String password) {

@@ -5,10 +5,15 @@ import { useRouter } from "next/navigation";
 import { resetThePassword } from "../../../../services/grahakService";
 import Link from "next/link";
 import { allRounderMessage } from "@/components/Message";
+import { resetPasswordForRemitter } from "@/api/remitterApi";
 
 // Pure, reusable — no reason for these to live inside the component body.
 const PASSWORD_RULES = [
-  { key: "length", label: "8+ characters", test: (pw) => pw.length >= 8 },
+  {
+    key: "length",
+    label: "8+ characters and max 64",
+    test: (pw) => pw.length >= 8 && pw.length <= 64,
+  },
   {
     key: "uppercase",
     label: "1 uppercase letter",
@@ -63,8 +68,8 @@ export default function Page({ params }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [status, setStatus] = useState("idle"); // idle | submitting | success | error
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [userId, setUserId] = useState("");
 
   const isPasswordValid = useMemo(
     () => PASSWORD_RULES.every(({ test }) => test(password)),
@@ -75,28 +80,32 @@ export default function Page({ params }) {
   const canSubmit =
     isPasswordValid && passwordsMatch && status !== "submitting";
 
+  const [userId, type] = id.split("_");
   useEffect(() => {
     if (!id) {
-      router.push("/auth");
+      router.replace("/auth");
     }
-    const [userId, type] = id.split("-");
     window.history.replaceState(null, "", "/reset");
 
     function isValidId(idStr, role) {
       const pattern = /^GKUSID\d{14}$/;
-      const new_pattern = /^GKUID\d{14}$/;
-      const rem_patern = /^GKREMID-\d{14}$/;
-      return role === "user"
-        ? pattern.test(idStr) || new_pattern.test(idStr)
-        : rem_patern.test(idStr);
+      const newPattern = /^GKUID\d{14}$/;
+      const remPattern = /^GKREMID-\d{17}$/;
+
+      if (role === "user") {
+        return pattern.test(idStr) || newPattern.test(idStr);
+      } else if (role === "rem") {
+        return remPattern.test(idStr);
+      }
+
+      return false;
     }
     if (!isValidId(userId, type)) {
-      router.push("/auth");
+      router.replace("/auth");
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setUserId(userId);
+
     // console.log(email, userId);
-  }, [id, router]);
+  }, [id, router, type, userId]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -158,7 +167,7 @@ export default function Page({ params }) {
               <input
                 id="new-password"
                 name="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -179,7 +188,7 @@ export default function Page({ params }) {
               <input
                 id="confirm-password"
                 name="confirmPassword"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -193,6 +202,23 @@ export default function Page({ params }) {
                   Passwords don&apos;t match.
                 </p>
               )}
+            </div>
+            {/*  show password checKbox */}
+            <div className="flex items-center">
+              <input
+                id="show-password"
+                name="showPassword"
+                type="checkbox"
+                value={showPassword}
+                onChange={(e) => setShowPassword(e.target.checked)}
+                className="h-4 w-4 text-black border-gray-300 rounded"
+              />
+              <label
+                htmlFor="show-password"
+                className="ml-2 block text-sm text-gray-900"
+              >
+                Show Password
+              </label>
             </div>
           </div>
 

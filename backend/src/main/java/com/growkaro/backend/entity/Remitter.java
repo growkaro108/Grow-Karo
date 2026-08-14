@@ -14,8 +14,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-
-
 @Getter
 @Setter
 @Entity
@@ -33,6 +31,9 @@ public class Remitter {
     @Email(message = "Please provide a valid email address")
     @Column(updatable = false, nullable = false, unique = true)
     private String remitterEmail;
+
+    @Column(nullable = false, unique = true, length = 10)
+    private String remitterCode;
 
     @NotBlank(message = "Phone number is required")
     @Pattern(regexp = "^[6-9]\\d{9}$", message = "Please provide a valid 10-digit phone number")
@@ -63,11 +64,7 @@ public class Remitter {
     private Boolean status = true;
 
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "remitter_users",
-            joinColumns = @JoinColumn(name = "remitter_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
+    @JoinTable(name = "remitter_users", joinColumns = @JoinColumn(name = "remitter_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
     private List<User> users = new ArrayList<>();
 
     @Column(nullable = false, updatable = false)

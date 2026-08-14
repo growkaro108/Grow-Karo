@@ -1,6 +1,7 @@
 export const EMPTY_REMITTER_FORM = {
   organizationName: "",
   remitterEmail: "",
+  remitterCode: "",
   remitterPhone: "",
   allocationLimit: "",
   aadharNumber: "",
@@ -16,8 +17,12 @@ export function validateAndSanitizeForm(rawForm) {
   const sanitizedData = {};
 
   sanitizedData.organizationName = rawForm.organizationName?.trim() || "";
-  if (!sanitizedData.organizationName) {
-    errors.organizationName = "Entity name is required.";
+  if (
+    !sanitizedData.organizationName ||
+    sanitizedData.organizationName.length > 100
+  ) {
+    errors.organizationName =
+      "Entity name is required and must be less than 100 characters.";
   }
 
   sanitizedData.remitterEmail =
@@ -25,6 +30,12 @@ export function validateAndSanitizeForm(rawForm) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(sanitizedData.remitterEmail)) {
     errors.remitterEmail = "Please enter a valid email address.";
+  }
+
+  sanitizedData.remitterCode = rawForm.remitterCode?.trim() || "";
+  const remitterCodeRegex = /^GK-REM-[0-9]{3}$/;
+  if (!remitterCodeRegex.test(sanitizedData.remitterCode)) {
+    errors.remitterCode = "Remitter code must be in the format GK-REM-001.";
   }
 
   const digits = (rawForm.remitterPhone?.replace(/\D/g, "") || "").slice(-10);

@@ -57,7 +57,9 @@ public class SecurityConfig {
                                                                 "/api/admin/remitter/send-crendentials",
                                                                 "/api/remitter/login",
                                                                 "/api/remitter/forgot-password/{email}",
-                                                                "/api/remitter/reset-password/{remitterId}")
+                                                                "/api/remitter/reset-password/{remitterId}",
+                                                                "/api/remitter/{remitterId}/txncounts",
+                                                                "/api/remitter/{remitterId}/transactions")
                                                 .permitAll() // Public endpoints
                                                 .anyRequest().authenticated() // Everything else requires login
                                 )

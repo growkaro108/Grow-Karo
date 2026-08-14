@@ -1,4 +1,9 @@
-import { fetchRemitterDashboard, remitterLoginApi } from "@/api/remitterApi";
+import {
+  fetchRemitterDashboard,
+  fetchTransactions,
+  fetchTransactionsCounts,
+  remitterLoginApi,
+} from "@/api/remitterApi";
 import { allRounderMessage } from "@/components/Message";
 
 const USE_MOCK = true;
@@ -15,6 +20,14 @@ export async function RemitterLogin(payload) {
   allRounderMessage(res);
   if (res.status !== "success") return null;
   else return res.data;
+}
+
+export async function RemRequestsCounts(remId) {
+  const res = await fetchTransactionsCounts(remId);
+  if (res.status !== "success") {
+    allRounderMessage(res);
+    return null;
+  } else return res.data;
 }
 
 const mockDashboardData = {
@@ -113,6 +126,10 @@ const mockDashboardData = {
       amount: "₹350.00",
       date: "2 hours ago",
       isSettled: false,
+      accountHolderName: "Rahul Sharma",
+      bankName: "HDFC Bank",
+      accountNumber: "2345 2345 4321",
+      ifscCode: "HDFC0001234",
     },
     {
       id: "REQ02",
@@ -121,6 +138,10 @@ const mockDashboardData = {
       amount: "₹125.50",
       date: "Yesterday",
       isSettled: false,
+      accountHolderName: "Jane Doe",
+      bankName: "Barclays PLC",
+      accountNumber: "1234 1234 5543",
+      ifscCode: "BARC0001234",
     },
   ],
 };

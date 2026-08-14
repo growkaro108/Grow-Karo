@@ -1,6 +1,7 @@
 import { apiRequest } from "./apiClient";
 
 const BASE = "/remitter";
+
 export async function remitterLoginApi(payload) {
   return apiRequest(`${BASE}/login`, { method: "POST", body: payload });
 }
@@ -8,20 +9,24 @@ export async function remitterLoginApi(payload) {
 export async function RemitterResetLink(email) {
   return apiRequest(`${BASE}/forgot-password/${email}`, { method: "POST" });
 }
+
 export async function resetPasswordForRemitter(remitterId, password) {
   return apiRequest(`${BASE}/reset-password/${remitterId}`, {
     method: "PATCH",
-    body: { password },
+    body: { password: password },
   });
 }
 
-//pending
-export async function fetchRemitterDashboard(remitterId, params) {
-  return apiRequest(`/remitters/${remitterId}/dashboard`, { params });
+export async function fetchTransactionsCounts(remitterId) {
+  return apiRequest(`/remitter/${remitterId}/txncounts`, {});
 }
+//pending
 
 export async function fetchTransactions(remitterId, params) {
-  return apiRequest(`/remitters/${remitterId}/transactions`, { params });
+  return apiRequest(`${BASE}/${remitterId}/transactions`, { params });
+}
+export async function fetchRemitterDashboard(remitterId, params) {
+  return apiRequest(`/remitters/${remitterId}/dashboard`, { params });
 }
 
 export async function fetchRecipients(remitterId, params) {

@@ -398,19 +398,24 @@ public class AdminAPIService {
                 addRemitter.getRemitterEmail(),
                 addRemitter.getRemitterPhone(),
                 addRemitter.getAadharNumber(),
-                addRemitter.getPanNumber());
+                addRemitter.getPanNumber(),
+                addRemitter.getRemitterCode());
 
         if (conflicts.size() > 0) {
             int emailConflict = 0;
             int phoneConflict = 0;
             int aadharConflict = 0;
             int panConflict = 0;
+            int codeConflict = 0;
             for (Remitter existing : conflicts) {
                 if (existing.getRemitterEmail().equals(addRemitter.getRemitterEmail())) {
                     emailConflict++;
                 }
                 if (existing.getRemitterPhone().equals(addRemitter.getRemitterPhone())) {
                     phoneConflict++;
+                }
+                if (existing.getRemitterCode().equals(addRemitter.getRemitterCode())) {
+                    codeConflict++;
                 }
                 if (existing.getAadharNumber().equals(addRemitter.getAadharNumber())) {
                     aadharConflict++;
@@ -420,7 +425,8 @@ public class AdminAPIService {
                 }
                 throw new IllegalArgumentException("A remitter with this " + (emailConflict > 0 ? "email, " : "")
                         + (phoneConflict > 0 ? "phone number, " : "") + (aadharConflict > 0 ? "aadhar number, " : "")
-                        + (panConflict > 0 ? "pan number " : "") + "already exists");
+                        + (panConflict > 0 ? "pan number " : "") + (codeConflict > 0 ? "remitter code " : "")
+                        + "already exists");
             }
 
         }
@@ -430,6 +436,7 @@ public class AdminAPIService {
         Remitter remitter = new Remitter();
         remitter.setOrganizationName(addRemitter.getOrganizationName());
         remitter.setRemitterEmail(addRemitter.getRemitterEmail());
+        remitter.setRemitterCode(addRemitter.getRemitterCode());
         remitter.setRemitterPhone(addRemitter.getRemitterPhone());
         remitter.setAllocationLimit(addRemitter.getAllocationLimit());
         remitter.setAadharNumber(addRemitter.getAadharNumber());
@@ -500,7 +507,8 @@ public class AdminAPIService {
                 updateRemitter.getRemitterEmail(),
                 updateRemitter.getRemitterPhone(),
                 updateRemitter.getAadharNumber(),
-                updateRemitter.getPanNumber());
+                updateRemitter.getPanNumber(),
+                updateRemitter.getRemitterCode());
 
         // A conflict against itself (unchanged fields) is not actually a conflict.
         conflicts.removeIf(r -> r.getRemitterId().equals(id));
@@ -521,6 +529,9 @@ public class AdminAPIService {
             }
             if (conflict.getPanNumber().equals(updateRemitter.getPanNumber())) {
                 errors.add("A remitter with this PAN number already exists");
+            }
+            if (conflict.getRemitterCode().equals(updateRemitter.getRemitterCode())) {
+                errors.add("A remitter with this remitter code already exists");
             }
         }
 
@@ -552,7 +563,7 @@ public class AdminAPIService {
             return false;
         }
         try {
-            Thread.sleep(3000);
+            Thread.sleep(2000);
             boolean isDeleted = remitterRepository.existsById(id);
 
             if (!isDeleted)

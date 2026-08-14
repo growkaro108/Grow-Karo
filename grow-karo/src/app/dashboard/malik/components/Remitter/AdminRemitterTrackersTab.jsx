@@ -59,6 +59,7 @@ export default function AdminRemitterTrackersTab() {
     setFormData({
       organizationName: tracker.organizationName || "",
       remitterEmail: tracker.RemitterEmail || "",
+      remitterCode: tracker.remitterCode || "",
       remitterPhone: tracker.RemitterPhone || "",
       status: tracker.status || false,
       allocationLimit: tracker.allocationLimit ?? "",
