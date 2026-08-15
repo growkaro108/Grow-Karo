@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { X } from "lucide-react";
-import BondCertificate from "./BondCertificate";
+import BondCertificate from "./BondCertificate.jsx";
 
 export default function CertificateLightbox({
   bond,
