@@ -2,7 +2,7 @@ import React from "react";
 import { ZoomIn } from "lucide-react";
 import StatusPill from "./StatusPill";
 import { currency, dateFmt } from "./format";
-import BondCertificate from "../BondCertificate.jsx";
+import BondCertificate from "../Bondcertificate.jsx";
 
 export default function BondStub({ bond, userName, scheme, onView }) {
   return (
@@ -26,7 +26,7 @@ export default function BondStub({ bond, userName, scheme, onView }) {
       {/* certificate thumbnail */}
       <button
         onClick={() => onView(bond)}
-        className="group relative block h-28 w-full overflow-hidden border-b border-slate-800 bg-[#F3ECD9] focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-inset"
+        className="group relative block h-28 w-full overflow-hidden border-b border-slate-800 bg-[#F3ECD9] focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-in[...]"
         aria-label={`View certificate for bond ${bond.id}`}
       >
         <BondCertificate
