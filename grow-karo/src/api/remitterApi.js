@@ -20,6 +20,10 @@ export async function resetPasswordForRemitter(remitterId, password) {
 export async function fetchTransactionsCounts(remitterId) {
   return apiRequest(`/remitter/${remitterId}/txncounts`, {});
 }
+
+export async function fetchRemittersPendingRequests(remId) {
+  return apiRequest(`/remitter/${remId}/pending-payments`);
+}
 //pending
 
 export async function fetchTransactions(remitterId, params) {

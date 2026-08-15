@@ -1,8 +1,10 @@
 "use client";
 
+import { remitterContext } from "@/context/RemitterContext";
 import TabLoader from "@/loader/TabLoader";
 import dynamic from "next/dynamic";
-import React, { useState } from "react";
+import React, { use, useEffect, useState } from "react";
+import { getRemittersPendingRequests } from "../../../../../services/remitterService";
 // import { SettlementForm } from "./SettlementForm";
 
 const SettlementForm = dynamic(() => import("./SettlementForm"), {
@@ -10,7 +12,7 @@ const SettlementForm = dynamic(() => import("./SettlementForm"), {
   ssr: false,
 });
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_FILE_SIZE = 3 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = [
   "image/jpeg",
   "image/png",
@@ -18,7 +20,7 @@ const ALLOWED_FILE_TYPES = [
   "application/pdf",
 ];
 
-function sanitizeText(value, maxLength = 240) {
+function sanitizeText(value, maxLength = 100) {
   return String(value ?? "")
     .replace(/[\u0000-\u001F\u007F]/g, "")
     .trim()
@@ -33,6 +35,19 @@ export default function RequestsView({ requests = [] }) {
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
+  const { authRemitter } = use(remitterContext);
+
+  const [pendingRemittanceRequests, setPendingRemittanceRequests] =
+    useState(null);
+  useEffect(() => {
+    const getPendingRemittanceRequests = async () => {
+      const response = await getRemittersPendingRequests(authRemitter?.id);
+      // console.log(response);
+      if (response) setPendingRemittanceRequests(response);
+      return;
+    };
+    getPendingRemittanceRequests();
+  }, [authRemitter]);
 
   const handleCopy = async (value, field) => {
     if (!value) return;
@@ -45,10 +60,12 @@ export default function RequestsView({ requests = [] }) {
     }
   };
 
-  const safeRequests = Array.isArray(requests) ? requests : [];
+  const safeRequests = Array.isArray(pendingRemittanceRequests)
+    ? pendingRemittanceRequests
+    : [];
 
   const handleOpenSettlement = (req) => {
-    if (!req?.id || !req?.sender) return;
+    if (!req?.txnId || !req?.username) return;
 
     setActiveSettlement(req);
     const numericAmount = Number.parseFloat(
@@ -88,7 +105,7 @@ export default function RequestsView({ requests = [] }) {
 
     if (selectedFile.size > MAX_FILE_SIZE) {
       setProofFile(null);
-      setFormError("Proof file must be 5MB or smaller.");
+      setFormError("Proof file must be 3MB or smaller.");
       return;
     }
 
@@ -96,11 +113,12 @@ export default function RequestsView({ requests = [] }) {
       name: selectedFile.name,
       size: selectedFile.size,
       type: selectedFile.type,
+      url: URL.createObjectURL(selectedFile),
     });
     setFormError("");
   };
 
-  const handleSubmitSettlement = (e) => {
+  const handleSubmitSettlement = async (e) => {
     e.preventDefault();
 
     if (!activeSettlement) {
@@ -126,15 +144,32 @@ export default function RequestsView({ requests = [] }) {
     }
 
     const sanitizedMessage = sanitizeText(remitterMessage);
-    if (sanitizedMessage.length > 240) {
+    if (sanitizedMessage.length > 100) {
       setFormError(
-        "Your message is too long. Please keep it under 240 characters.",
+        "Your message is too long. Please keep it under 100 characters.",
       );
       return;
     }
 
     setIsSubmitting(true);
     setFormError("");
+
+    const settlementPayload = {
+      remitterId: authRemitter?.id,
+      requestId: activeSettlement.txnId,
+      amount: parsedAmount,
+      proofFile,
+      remitterMessage: sanitizedMessage,
+    };
+
+    console.log("settlementPayload", settlementPayload); //pending⏱️
+    // const res = await submitSettlement(settlementPayload);
+    // if (res) {
+    //   toast.success("Settlement submitted successfully");
+    //   handleCloseSettlement();
+    // } else {
+    //   toast.error("Failed to submit settlement");
+    // }
 
     window.setTimeout(() => {
       setIsSubmitting(false);
@@ -162,16 +197,16 @@ export default function RequestsView({ requests = [] }) {
           <div className="space-y-4">
             {safeRequests.map((req) => (
               <div
-                key={req.id}
+                key={req.txnId}
                 className="p-4 rounded-xl border border-gray-100 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-gray-200"
               >
                 <div>
                   <div className="flex items-center space-x-2">
                     <span className="font-bold text-gray-900 text-sm">
-                      {sanitizeText(req.sender)}
+                      {sanitizeText(req.username)}
                     </span>
                     <span className="text-xs text-gray-400">
-                      • {sanitizeText(req.date)}
+                      • {sanitizeText(req.time)}
                     </span>
                   </div>
                   {/* <p className="text-xs text-gray-600 mt-0.5 italic">"{sanitizeText(req.note)}"</p> */}
@@ -189,7 +224,7 @@ export default function RequestsView({ requests = [] }) {
                   <button
                     type="button"
                     onClick={() => handleOpenSettlement(req)}
-                    className="px-3.5 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 shadow-sm transition-all"
+                    className="px-3.5 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 shadow-sm transition-all duration-300 cursor-pointer"
                   >
                     Settle Request
                   </button>
@@ -209,6 +244,7 @@ export default function RequestsView({ requests = [] }) {
           settlementAmount={settlementAmount}
           setSettlementAmount={setSettlementAmount}
           proofFile={proofFile}
+          setProofFile={setProofFile}
           formError={formError}
           isSubmitting={isSubmitting}
           copiedField={copiedField}

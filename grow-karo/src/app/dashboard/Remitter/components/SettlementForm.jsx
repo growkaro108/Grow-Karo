@@ -1,4 +1,5 @@
 import { Check, Copy, ImageUp, Landmark, X } from "lucide-react";
+import Image from "next/image";
 import React from "react";
 
 export default function SettlementForm({
@@ -9,6 +10,7 @@ export default function SettlementForm({
   settlementAmount,
   setSettlementAmount,
   proofFile,
+  setProofFile,
   formError,
   isSubmitting,
   copiedField,
@@ -35,7 +37,7 @@ export default function SettlementForm({
             onClick={handleCloseSettlement}
             className="text-gray-400 hover:text-gray-600 bg-gray-50 p-1.5 rounded-lg transition-colors"
           >
-            <X className="w-4 h-4" />
+            <X className="w-6 h-6 cursor-pointer hover:text-red-600 hover:rotate-180 transition-all duration-500" />
           </button>
         </div>
 
@@ -159,17 +161,35 @@ export default function SettlementForm({
                 onChange={handleFileChange}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
-              <div className="space-y-1">
-                <ImageUp className="w-6 h-6 mx-auto text-gray-400 group-hover:text-blue-500 transition-colors" />
-                <p className="text-xs font-medium text-gray-600 truncate">
-                  {proofFile
-                    ? `Attached: ${proofFile.name}`
-                    : "Click or drag to upload transaction proof"}
-                </p>
-                <p className="text-[10px] text-gray-400">
-                  Supports PNG, JPG, WEBP, PDF up to 5MB
-                </p>
-              </div>
+              {proofFile ? (
+                //show image preview and cross button to remove it
+                <div className="">
+                  <Image
+                    src={proofFile.url}
+                    alt="Transaction proof"
+                    className="w-48 h-58 object-cover p-2 mx-auto rounded-xl"
+                    width={100}
+                    height={100}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setProofFile(null)}
+                    className="absolute top-2 right-2 text-slate-400 hover:text-red-700"
+                  >
+                    <X className="w-7 h-7 cursor-pointer hover:text-red-600 hover:rotate-180 transition-all duration-500 hover:bg-red-50 hover:rounded-full p-1" />
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <ImageUp className="w-6 h-6 mx-auto text-gray-400 group-hover:text-blue-500 transition-colors" />
+                  <p className="text-xs font-medium text-gray-600 truncate">
+                    &quot;Click or drag to upload transaction proof&quot;
+                  </p>
+                  <p className="text-[10px] text-gray-400">
+                    Supports PNG, JPG, WEBP, PDF up to 3MB
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

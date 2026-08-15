@@ -1,22 +1,20 @@
 package com.growkaro.backend.controller;
 
+import java.util.List;
 import java.util.Map;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.growkaro.backend.DTO.Payee;
 import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.common.General;
-import com.growkaro.backend.entity.Remitter;
+import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.service.RemitterAPIService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -41,18 +39,21 @@ public class RemitterAPIController {
         String role = general.stringValue(credentials.get("role"));
         try {
             if (password == null || password.isEmpty() || email == null || email.isEmpty() || role == null
-                    || role.isEmpty() || !role.equals("remiter")) {
-                return general.response("error", "Invalid request", null);
+                    || role.isEmpty() || !role.equals("remiter") || !general.validateEmail(email)
+                    || !general.validatePassword(password)) {
+                log.info("Invalid request: email {} role {}", email, role);
+                return general.response("info", "Invalid request", null);
             }
             RemitterResponse rr = remitterAPIService.login(email, password);
             if (rr != null) {
                 return general.response("success", "Login successful", rr);
             } else {
+                log.info("Invalid credentials: email {} role {}", email, role);
                 return general.response("error", "Invalid credentials...", null);
             }
         } catch (Exception e) {
             log.error("Error in remitter login: email {} role {} because {} ", email, role, e.getMessage());
-            return general.response("error", "Something went wrongs..", null);
+            return general.response("error", "Something went wrong..", null);
         }
     }
 
@@ -106,6 +107,24 @@ public class RemitterAPIController {
             return general.response("success", "Transaction counts fetched successfully", txnCounts);
         } catch (Exception e) {
             log.error("Error in remitter transactions: remitterId {} because {}", remitterId, e.getMessage());
+            return general.response("error", "Something went wrong..", null);
+        }
+    }
+
+    @GetMapping("/{remitterId}/pending-payments")
+    public Map<String, Object> PaymentRequests(@PathVariable String remitterId) {
+        try {
+            if (remitterId == null || remitterId.isEmpty()) {
+                log.info("Invalid request: remitterId {}", remitterId);
+                return general.response("error", "Invalid request", null);
+            }
+            List<Payee> payees = remitterAPIService.pendingPayments(remitterId);
+            if (payees == null || payees.isEmpty()) {
+                return general.response("error", "Payee not found", null);
+            }
+            return general.response("success", "Payee fetched successfully", payees);
+        } catch (Exception e) {
+            log.error("Error in remitter payees: remitterId {} because {}", remitterId, e.getMessage());
             return general.response("error", "Something went wrong..", null);
         }
     }

@@ -1,6 +1,8 @@
 package com.growkaro.backend.service;
 
+import com.growkaro.backend.DTO.Payee;
 import com.growkaro.backend.DTO.RemitterResponse;
+import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Transaction;
@@ -39,6 +41,7 @@ public class RemitterAPIService {
     private final RemitterRepository remitterRepository;
     private final EmailService emailService;
     private final ApiService apiService;
+    private final General general;
     private final TransactionRepository transactionRepository;
     private final WithdrawalRequestRepository withdrawalRequestRepository;
 
@@ -46,11 +49,13 @@ public class RemitterAPIService {
             RemitterRepository remitterRepository,
             EmailService emailService,
             ApiService apiService,
+            General general,
             TransactionRepository transactionRepository,
             WithdrawalRequestRepository withdrawalRequestRepository) {
         this.remitterRepository = remitterRepository;
         this.emailService = emailService;
         this.apiService = apiService;
+        this.general = general;
         this.transactionRepository = transactionRepository;
         this.withdrawalRequestRepository = withdrawalRequestRepository;
     }
@@ -114,6 +119,19 @@ public class RemitterAPIService {
             return counts;
         } catch (Exception e) {
             e.printStackTrace();
+            return null;
+        }
+    }
+
+    public List<Payee> pendingPayments(String remitterId) {
+
+        try {
+            List<Transaction> pendingRequests = transactionRepository.findAllByRemitter_RemitterIdAndStatus(remitterId,
+                    TransactionStatus.PROCESSED);
+
+            return pendingRequests.stream().map(general::toPayee).toList();
+        } catch (Exception e) {
+            log.error("Error in pendingPayments : remitterId=" + remitterId + " error:" + e.getMessage());
             return null;
         }
     }

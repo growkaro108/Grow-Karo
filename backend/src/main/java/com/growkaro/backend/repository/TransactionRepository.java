@@ -32,6 +32,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, String
     Page<Transaction> findAll(Pageable pageable); // already provided by JpaRepository
 
     long countByRemitter_RemitterIdAndStatus(String remitterId, TransactionStatus status);
+
+    List<Transaction> findAllByRemitter_RemitterIdAndStatus(String remitterId, TransactionStatus status);
     // Page<Transaction> findByUserIdAndStatus(String userId, Transaction.Status
     // status, Pageable pageable);
 

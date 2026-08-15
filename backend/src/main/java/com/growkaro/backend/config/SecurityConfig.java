@@ -59,7 +59,8 @@ public class SecurityConfig {
                                                                 "/api/remitter/forgot-password/{email}",
                                                                 "/api/remitter/reset-password/{remitterId}",
                                                                 "/api/remitter/{remitterId}/txncounts",
-                                                                "/api/remitter/{remitterId}/transactions")
+                                                                "/api/remitter/{remitterId}/transactions",
+                                                                "/api/remitter/{remitterId}/pending-payments")
                                                 .permitAll() // Public endpoints
                                                 .anyRequest().authenticated() // Everything else requires login
                                 )

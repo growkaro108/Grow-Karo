@@ -1,6 +1,6 @@
 import { Loader2, ShieldCheck } from "lucide-react";
 
-export default function TabLoader() {
+export default function TabLoader({ message }) {
   return (
     <div className="flex h-[50vh] flex-col items-center justify-center gap-3 animate-fade-slide-in z-40">
       <div className="relative flex h-14 w-14 items-center justify-center">
@@ -12,7 +12,7 @@ export default function TabLoader() {
         <ShieldCheck className="absolute h-5 w-5 text-emerald-400" />
       </div>
       <p className="font-mono text-xs tracking-wider text-slate-500">
-        VERIFYING SESSION…
+        {message ?? "VERIFYING SESSION…"}
       </p>
     </div>
   );

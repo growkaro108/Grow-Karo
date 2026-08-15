@@ -1,5 +1,6 @@
 import {
   fetchRemitterDashboard,
+  fetchRemittersPendingRequests,
   fetchTransactions,
   fetchTransactionsCounts,
   remitterLoginApi,
@@ -24,6 +25,14 @@ export async function RemitterLogin(payload) {
 
 export async function RemRequestsCounts(remId) {
   const res = await fetchTransactionsCounts(remId);
+  if (res.status !== "success") {
+    allRounderMessage(res);
+    return null;
+  } else return res.data;
+}
+
+export async function getRemittersPendingRequests(remId) {
+  const res = await fetchRemittersPendingRequests(remId);
   if (res.status !== "success") {
     allRounderMessage(res);
     return null;

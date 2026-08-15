@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Random;
@@ -16,11 +17,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DRO.UserRegister;
+import com.growkaro.backend.DTO.Payee;
 import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.Scheme;
+import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserProfile;
 import com.growkaro.backend.entity.UserScheme;
@@ -280,4 +283,18 @@ public class General {
         }
         return userRepository.findById(userId).orElse(null);
     }
+
+    public Payee toPayee(Transaction request) {
+        BankDetails bd = request.getBankDetails();
+        return new Payee(
+                request.getId(),
+                request.getUser().getName(),
+                request.getAmount().toPlainString(),
+                request.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")),
+                bd.getAccountHolderName(),
+                bd.getBankName(),
+                bd.getAccountNumber(),
+                bd.getIfscCode());
+    }
+
 }
