@@ -1,6 +1,7 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import BondCertificate from "./BondCertificate.jsx";
+import BondDownloadButton from "./BondDownloadButton.jsx";
 
 export default function CertificateLightbox({
   bond,
@@ -8,6 +9,7 @@ export default function CertificateLightbox({
   scheme,
   onClose,
 }) {
+  const certRef = useRef(null);
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
@@ -18,7 +20,7 @@ export default function CertificateLightbox({
   // console.log(userName + " " + scheme + " " + bond);
 
   return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center p-4 sm:p-8">
+    <div className="fixed inset-0 z-60 flex items-center justify-center p-4 sm:p-8 ">
       <style>{`@keyframes popIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }`}</style>
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
@@ -34,12 +36,21 @@ export default function CertificateLightbox({
           <X className="h-6 w-6" />
         </button>
 
-        <div className="overflow-hidden rounded-2xl shadow-2xl shadow-black/50 ring-1 ring-white/10">
+        <div
+          className="overflow-hidden rounded-2xl shadow-2xl shadow-black/50 ring-1 ring-white/10"
+          style={{ width: 380, margin: "0 auto" }}
+        >
           <BondCertificate
             bond={bond ?? null}
             userName={userName}
             scheme={scheme}
             className="h-auto w-full"
+            logoUrl={"/logo.jpg"}
+          />
+          <BondDownloadButton
+            className="absolute right-2 bottom-2"
+            certRef={certRef}
+            filename={`bond-${bond.userSchemeId}`}
           />
         </div>
 

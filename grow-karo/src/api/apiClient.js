@@ -7,6 +7,13 @@ const BASE_URL =
 //|| "http://localhost:9090/api"; //for development
 // "/api"; // for production
 
+export const resolveMediaUrl = (path) => {
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) return path; // already absolute
+  // Strip the trailing /api suffix so we get just the origin+port
+  const apiBase = BASE_URL.replace(/\/api\/?$/, "");
+  return apiBase + (path.startsWith("/") ? path : "/" + path);
+};
 // --- Rate Limiter Setup ---
 // Adjust these values based on your API requirements
 const MAX_REQUESTS = 5; // Max number of requests allowed in the window

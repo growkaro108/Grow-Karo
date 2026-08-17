@@ -84,6 +84,11 @@ public class Transaction {
     @JoinColumn(name = "approved_by")
     private User approvedBy;
 
+    @Column(length = 255, nullable = true)
+    private String proofUrl;
+
+    private LocalDateTime settlementDate;
+
     @Version
     private Long version;
 

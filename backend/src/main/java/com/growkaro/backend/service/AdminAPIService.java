@@ -39,7 +39,6 @@ import com.growkaro.backend.entity.SupportIssue;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
-import com.growkaro.backend.entity.WithdrawalRequest;
 import com.growkaro.backend.entity.Transaction.TransactionStatus;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.enums.UserSchemeStatus;
@@ -51,7 +50,6 @@ import com.growkaro.backend.repository.SupportIssueRepository;
 import com.growkaro.backend.repository.TransactionRepository;
 import com.growkaro.backend.repository.UserRepository;
 import com.growkaro.backend.repository.UserSchemeRepository;
-import com.growkaro.backend.repository.WithdrawalRequestRepository;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -64,7 +62,6 @@ public class AdminAPIService {
     private final UserRepository userRepository;
     private final RemitterRepository remitterRepository;
     private final TransactionRepository transactionRepository;
-    private final WithdrawalRequestRepository withdrawalRequestRepository;
     private final SupportIssueRepository supportIssueRepository;
     private final SchemeRepository schemeRepository;
     private final UserSchemeRepository userSchemeRepository;
@@ -77,7 +74,6 @@ public class AdminAPIService {
     public AdminAPIService(UserRepository userRepository,
             RemitterRepository remitterRepository,
             TransactionRepository transactionRepository,
-            WithdrawalRequestRepository withdrawalRequestRepository,
             SupportIssueRepository supportIssueRepository,
             SchemeRepository schemeRepository, UserSchemeRepository userSchemeRepository, @Lazy ApiService apiService,
             ActivityLogService activityLogService, LocalFileStorageService localFileStorageService,
@@ -85,7 +81,6 @@ public class AdminAPIService {
         this.userRepository = userRepository;
         this.remitterRepository = remitterRepository;
         this.transactionRepository = transactionRepository;
-        this.withdrawalRequestRepository = withdrawalRequestRepository;
         this.supportIssueRepository = supportIssueRepository;
         this.schemeRepository = schemeRepository;
         this.userSchemeRepository = userSchemeRepository;
@@ -616,39 +611,6 @@ public class AdminAPIService {
     // return general.response("ok", "Admin dashboard data fetched", data);
     // }
 
-    @Cacheable(value = "withdrawals", key = "#status ?: 'default'")
-    @Transactional(readOnly = true)
-    public Map<String, Object> withdrawals(String status) {
-        Page<WithdrawalRequest> page = parseWithdrawalStatus(status)
-                .map(value -> withdrawalRequestRepository.findByStatus(value, pageable("1")))
-                .orElseGet(() -> withdrawalRequestRepository.findAllByOrderByCreatedAtDesc(pageable("1")));
-
-        Map<String, Object> data = paginatedMeta(page);
-        data.put("status", status);
-        data.put("items", page.getContent().stream().map(this::toWithdrawalView).toList());
-        return general.response("ok", "Withdrawal requests fetched", data);
-    }
-
-    @CacheEvict(value = { "adminDashboard", "withdrawals" }, allEntries = true)
-    @Transactional
-    public Map<String, Object> updateWithdrawal(String withdrawalId, Map<String, Object> payload) {
-        Optional<WithdrawalRequest> withdrawalOpt = withdrawalRequestRepository.findById(withdrawalId);
-        if (withdrawalOpt.isEmpty()) {
-            return general.response("error", "Withdrawal not found", Map.of("id", withdrawalId));
-        }
-
-        WithdrawalRequest withdrawal = withdrawalOpt.get();
-        parseWithdrawalStatus(stringValue(payload.get("status"))).ifPresent(withdrawal::setStatus);
-        if (payload.containsKey("adminNote")) {
-            withdrawal.setAdminNote(stringValue(payload.get("adminNote")));
-        }
-        if (payload.containsKey("proofUrl")) {
-            withdrawal.setProofUrl(stringValue(payload.get("proofUrl")));
-        }
-        return general.response("ok", "Withdrawal updated",
-                toWithdrawalView(withdrawalRequestRepository.save(withdrawal)));
-    }
-
     @Cacheable(value = "issues", key = "#status ?: 'default'")
     @Transactional(readOnly = true)
     public Map<String, Object> issues(String status) {
@@ -799,20 +761,6 @@ public class AdminAPIService {
                 Map.of("type", "signup", "text", "created a new account"),
                 Map.of("type", "kyc", "text", "completed KYC verification"),
                 Map.of("type", "referral", "text", "joined via fundraiser code"));
-    }
-
-    private Map<String, Object> toWithdrawalView(WithdrawalRequest withdrawal) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("id", withdrawal.getId());
-        data.put("user", withdrawal.getUser().getName());
-        data.put("email", withdrawal.getUser().getEmail());
-        data.put("amount", withdrawal.getAmount());
-        data.put("method", withdrawal.getRecipient().getUpiId() != null ? "UPI" : "Bank Transfer");
-        data.put("requestedAt", withdrawal.getCreatedAt());
-        data.put("status", withdrawal.getStatus().name().toLowerCase());
-        data.put("adminNote", withdrawal.getAdminNote());
-        data.put("proofUrl", withdrawal.getProofUrl());
-        return data;
     }
 
     private Map<String, Object> toIssueView(SupportIssue issue) {

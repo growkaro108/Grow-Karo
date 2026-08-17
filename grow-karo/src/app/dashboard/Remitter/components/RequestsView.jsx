@@ -3,8 +3,13 @@
 import { remitterContext } from "@/context/RemitterContext";
 import TabLoader from "@/loader/TabLoader";
 import dynamic from "next/dynamic";
-import React, { use, useEffect, useState } from "react";
-import { getRemittersPendingRequests } from "../../../../../services/remitterService";
+import React, { use, useEffect, useMemo, useState } from "react";
+import {
+  getRemittersPendingRequests,
+  submitSettlement,
+} from "../../../../../services/remitterService";
+import { errorMessage } from "@/components/Message";
+import { resolveMediaUrl } from "@/api/apiClient";
 // import { SettlementForm } from "./SettlementForm";
 
 const SettlementForm = dynamic(() => import("./SettlementForm"), {
@@ -35,8 +40,8 @@ export default function RequestsView({ requests = [] }) {
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
   const { authRemitter } = use(remitterContext);
-
   const [pendingRemittanceRequests, setPendingRemittanceRequests] =
     useState(null);
   useEffect(() => {
@@ -60,9 +65,11 @@ export default function RequestsView({ requests = [] }) {
     }
   };
 
-  const safeRequests = Array.isArray(pendingRemittanceRequests)
-    ? pendingRemittanceRequests
-    : [];
+  const safeRequests = useMemo(
+    () =>
+      Array.isArray(pendingRemittanceRequests) ? pendingRemittanceRequests : [],
+    [pendingRemittanceRequests],
+  );
 
   const handleOpenSettlement = (req) => {
     if (!req?.txnId || !req?.username) return;
@@ -100,6 +107,7 @@ export default function RequestsView({ requests = [] }) {
     if (!ALLOWED_FILE_TYPES.includes(selectedFile.type)) {
       setProofFile(null);
       setFormError("Only JPG, PNG, WEBP, or PDF files are supported.");
+      errorMessage("Only JPG, PNG, WEBP, or PDF files are supported.");
       return;
     }
 
@@ -114,6 +122,7 @@ export default function RequestsView({ requests = [] }) {
       size: selectedFile.size,
       type: selectedFile.type,
       url: URL.createObjectURL(selectedFile),
+      file: selectedFile,
     });
     setFormError("");
   };
@@ -154,27 +163,37 @@ export default function RequestsView({ requests = [] }) {
     setIsSubmitting(true);
     setFormError("");
 
-    const settlementPayload = {
-      remitterId: authRemitter?.id,
-      requestId: activeSettlement.txnId,
-      amount: parsedAmount,
-      proofFile,
-      remitterMessage: sanitizedMessage,
-    };
+    const formData = new FormData();
+    formData.append("remitterId", authRemitter?.id);
+    formData.append("txnId", activeSettlement.txnId);
+    formData.append("amount", parsedAmount);
+    formData.append("file", proofFile?.file);
+    // formData.append("remitterMessage", sanitizedMessage);
 
-    console.log("settlementPayload", settlementPayload); //pending⏱️
-    // const res = await submitSettlement(settlementPayload);
-    // if (res) {
-    //   toast.success("Settlement submitted successfully");
-    //   handleCloseSettlement();
-    // } else {
-    //   toast.error("Failed to submit settlement");
-    // }
+    // const settlementPayload = {
+    //   remitterId: authRemitter?.id,
+    //   txnId: activeSettlement.txnId,
+    //   amount: parsedAmount,
+    //   file: proofFile?.file,
+    //   // remitterMessage: sanitizedMessage,
+    // };
 
-    window.setTimeout(() => {
-      setIsSubmitting(false);
-      handleCloseSettlement();
-    }, 600);
+    console.log("settlementPayload", formData); //pending⏱️
+    const res = await submitSettlement(formData);
+    if (res) {
+      //add image url to table row
+      const updatedRequests = pendingRemittanceRequests.map((req) =>
+        req.txnId === activeSettlement.txnId
+          ? { ...req, proofImage: res }
+          : req,
+      );
+      setPendingRemittanceRequests(updatedRequests);
+      // toast.success("Settlement submitted successfully");
+      window.setTimeout(() => {
+        setIsSubmitting(false);
+        handleCloseSettlement();
+      }, 300);
+    }
   };
 
   return (
@@ -200,37 +219,63 @@ export default function RequestsView({ requests = [] }) {
                 key={req.txnId}
                 className="p-4 rounded-xl border border-gray-100 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-gray-200"
               >
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <span className="font-bold text-gray-900 text-sm">
-                      {sanitizeText(req.username)}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      • {sanitizeText(req.time)}
-                    </span>
+                <div className="flex items-center gap-3">
+                  {req.proofImage && (
+                    <img
+                      src={resolveMediaUrl(req.proofImage)}
+                      alt="Payment proof"
+                      onClick={() => setPreviewImage(req.proofImage)}
+                      className="w-12 h-12 rounded-lg object-cover border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
+                      loading="lazy"
+                    />
+                  )}
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-bold text-gray-900 text-sm">
+                        {sanitizeText(req.username)}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        • {sanitizeText(req.time)}
+                      </span>
+                    </div>
+                    {/* <p className="text-xs text-gray-600 mt-0.5 italic">"{sanitizeText(req.note)}"</p> */}
+                    <p className="text-sm font-bold text-blue-600 mt-1">
+                      {sanitizeText(req.amount)}
+                    </p>
                   </div>
-                  {/* <p className="text-xs text-gray-600 mt-0.5 italic">"{sanitizeText(req.note)}"</p> */}
-                  <p className="text-sm font-bold text-blue-600 mt-1">
-                    {sanitizeText(req.amount)}
-                  </p>
                 </div>
                 <div className="flex items-center space-x-2 self-end sm:self-center">
-                  <button
+                  {/* <button
                     type="button"
                     className="px-3.5 py-2 border border-gray-200 text-gray-600 rounded-xl text-xs font-semibold hover:bg-gray-100 transition-all"
                   >
                     Decline
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleOpenSettlement(req)}
-                    className="px-3.5 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 shadow-sm transition-all duration-300 cursor-pointer"
-                  >
-                    Settle Request
-                  </button>
+                  </button> */}
+                  {!req.proofImage && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenSettlement(req)}
+                      className="px-3.5 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 shadow-sm transition-all duration-300 cursor-pointer"
+                    >
+                      Settle Request
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
+
+            {previewImage && (
+              <div
+                className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+                onClick={() => setPreviewImage(null)}
+              >
+                <img
+                  src={resolveMediaUrl(previewImage)}
+                  alt="Payment proof full view"
+                  className="max-w-full max-h-full rounded-xl shadow-2xl"
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

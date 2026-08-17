@@ -43,7 +43,6 @@ import com.growkaro.backend.repository.SchemeRepository;
 import com.growkaro.backend.repository.TransactionRepository;
 import com.growkaro.backend.repository.UserRepository;
 import com.growkaro.backend.repository.UserSchemeRepository;
-import com.growkaro.backend.repository.WithdrawalRequestRepository;
 
 @Service
 public class UserAPIService {
@@ -55,7 +54,6 @@ public class UserAPIService {
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final NotificationRepository notificationRepository;
-    private final WithdrawalRequestRepository withdrawalRequestRepository;
     private final SchemeRepository schemeRepository;
     private final UserSchemeRepository userSchemeRepository;
     private final ActivityLogService activityLogService;
@@ -66,15 +64,14 @@ public class UserAPIService {
             UserRepository userRepository,
             TransactionRepository transactionRepository,
             NotificationRepository notificationRepository,
-            WithdrawalRequestRepository withdrawalRequestRepository, SchemeRepository schemeRepository,
             UserSchemeRepository userSchemeRepository,
+            SchemeRepository schemeRepository,
             ActivityLogService activityLogService, BankDetailsRepository bankDetailsRepository,
             General general) {
         this.apiService = apiService;
         this.userRepository = userRepository;
         this.transactionRepository = transactionRepository;
         this.notificationRepository = notificationRepository;
-        this.withdrawalRequestRepository = withdrawalRequestRepository;
         this.schemeRepository = schemeRepository;
         this.userSchemeRepository = userSchemeRepository;
         this.activityLogService = activityLogService;

@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.function.Consumer;
@@ -22,6 +23,7 @@ import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.entity.BankDetails;
+import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
@@ -237,7 +239,7 @@ public class General {
     }
 
     public String generateResetLink(String email, String userId) {
-        return baseUrl + "/reset/" + userId + "-user";
+        return baseUrl + "/reset/" + userId + "_user";
     }
 
     public String remitterLoginUrl(String remitterId) {
@@ -245,7 +247,7 @@ public class General {
     }
 
     public String generateResetLinkForRemitter(String email, String remitterId) {
-        return baseUrl + "/reset/" + remitterId + "-rem";
+        return baseUrl + "/reset/" + remitterId + "_rem";
     }
 
     public UserProfile toUserProfile(User user, String token) {
@@ -291,10 +293,37 @@ public class General {
                 request.getUser().getName(),
                 request.getAmount().toPlainString(),
                 request.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")),
+                request.getProofUrl() != null && !request.getProofUrl().isBlank() ? request.getProofUrl()
+                        : null,
+                request.getSettlementDate() != null
+                        ? request.getSettlementDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+                        : "Not Yet Settled",
                 bd.getAccountHolderName(),
                 bd.getBankName(),
                 bd.getAccountNumber(),
                 bd.getIfscCode());
     }
 
+    public Recipient toRecipient(List<Transaction> userTransactions) {
+        Transaction latest = userTransactions.get(0); // newest, per the pre-sorted query
+        User user = latest.getUser();
+
+        List<Recipient.Transfer> transfers = userTransactions.stream()
+                .map(t -> new Recipient.Transfer(
+                        t.getId(),
+                        t.getAmount(),
+                        t.getCreatedAt(),
+                        t.getBankDetails().getBankName(),
+                        t.getBankDetails().getAccountNumber(),
+                        t.getBankDetails().getIfscCode(),
+                        t.getBankDetails().getAccountHolderName()))
+                .toList();
+
+        return new Recipient(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getPhone(),
+                transfers);
+    }
 }

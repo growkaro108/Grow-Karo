@@ -2,6 +2,7 @@ package com.growkaro.backend.repository;
 
 import com.growkaro.backend.DTO.TransactionSummary;
 import com.growkaro.backend.entity.Transaction;
+import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.Transaction.TransactionStatus;
 
 import org.springframework.data.domain.Page;
@@ -34,6 +35,16 @@ public interface TransactionRepository extends JpaRepository<Transaction, String
     long countByRemitter_RemitterIdAndStatus(String remitterId, TransactionStatus status);
 
     List<Transaction> findAllByRemitter_RemitterIdAndStatus(String remitterId, TransactionStatus status);
+
+    Page<Transaction> findByRemitter_RemitterId(String remitterId, Pageable pageable);
+
+    // fetch all user and its transaction in which status is success and remiiter is
+    // this
+    @Query("SELECT t FROM Transaction t " +
+            "WHERE t.remitter.remitterId = :remitterId And t.status = 'SUCCESS'" +
+            "ORDER BY t.createdAt DESC")
+    List<Transaction> findAllByRemitter_RemitterId(@Param("remitterId") String remitterId);
+
     // Page<Transaction> findByUserIdAndStatus(String userId, Transaction.Status
     // status, Pageable pageable);
 

@@ -3,7 +3,9 @@ import {
   fetchRemittersPendingRequests,
   fetchTransactions,
   fetchTransactionsCounts,
+  getRecipientApi,
   remitterLoginApi,
+  submitSettlementApi,
 } from "@/api/remitterApi";
 import { allRounderMessage } from "@/components/Message";
 
@@ -33,6 +35,30 @@ export async function RemRequestsCounts(remId) {
 
 export async function getRemittersPendingRequests(remId) {
   const res = await fetchRemittersPendingRequests(remId);
+  if (res.status !== "success") {
+    allRounderMessage(res);
+    return null;
+  } else return res.data;
+}
+
+export async function submitSettlement(payload) {
+  const res = await submitSettlementApi(payload);
+  console.log(payload);
+  allRounderMessage(res);
+  if (res.status !== "success") return null;
+  else return res.data;
+}
+
+export async function getRemittersAllTransactions(remId, offset, limit) {
+  const res = await fetchTransactions(remId, offset, limit);
+  if (res.status !== "success") {
+    allRounderMessage(res);
+    return null;
+  } else return res.data;
+}
+
+export async function getRecipient(remId) {
+  const res = await getRecipientApi(remId);
   if (res.status !== "success") {
     allRounderMessage(res);
     return null;

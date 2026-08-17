@@ -3,17 +3,26 @@ package com.growkaro.backend.controller;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.growkaro.backend.DRO.PaymentSettlement;
+import com.growkaro.backend.DTO.PagedResponse;
 import com.growkaro.backend.DTO.Payee;
 import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.common.General;
+import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.service.RemitterAPIService;
 
@@ -119,7 +128,7 @@ public class RemitterAPIController {
                 return general.response("error", "Invalid request", null);
             }
             List<Payee> payees = remitterAPIService.pendingPayments(remitterId);
-            if (payees == null || payees.isEmpty()) {
+            if (payees == null) {
                 return general.response("error", "Payee not found", null);
             }
             return general.response("success", "Payee fetched successfully", payees);
@@ -129,13 +138,70 @@ public class RemitterAPIController {
         }
     }
 
-    // @GetMapping("/{remitterId}/dashboard")
-    // public ResponseEntity<Map<String, Object>> remitterDashboard(@PathVariable
-    // String remitterId,
-    // @RequestParam(required = false) String range) {
-    // return ResponseEntity.ok(remitterAPIService.remitterDashboard(remitterId,
-    // range));
-    // }
+    @PostMapping("/settlements")
+    public Map<String, Object> settlements(@ModelAttribute PaymentSettlement paymentSettlement) {
+        try {
+            if (paymentSettlement.remitterId() == null || paymentSettlement.remitterId().isEmpty()) {
+                log.info("Invalid request: remitterId {}", paymentSettlement.remitterId());
+                return general.response("error", "Invalid request", null);
+            }
+            String success = remitterAPIService.settlements(paymentSettlement);
+            if (success != null) {
+                return general.response("success", "Settlement submitted successfully", success);
+            } else {
+                return general.response("error", "Something went wrong..", null);
+            }
+        } catch (Exception e) {
+            log.error("Error in remitter settlements: remitterId {} because {}", paymentSettlement.remitterId(),
+                    e.getMessage());
+            return general.response("error", "Internal server error..", null);
+        }
+    }
+
+    @GetMapping("/{remitterId}/transactions")
+    public Map<String, Object> getRemitterTransactions(
+            @PathVariable String remitterId,
+            @RequestParam(defaultValue = "0") int offset,
+            @RequestParam(defaultValue = "5") int limit) {
+        try {
+            if (remitterId == null || remitterId.isEmpty() || limit <= 0 || limit > 10 || offset < 0) {
+                log.info("Invalid request: remitterId {} limit {} offset {}", remitterId, limit, offset);
+                return general.response("error", "Invalid request", null);
+            }
+
+            int pageNumber = offset / limit;
+            Pageable pageable = PageRequest.of(pageNumber, limit, Sort.by("createdAt").descending());
+
+            Page<Payee> transactionPage = remitterAPIService.getRemitterTransactions(remitterId, pageable);
+            if (transactionPage == null) {
+                return general.response("error", "Transactions not found", null);
+            }
+
+            PagedResponse<Payee> pagedResponse = PagedResponse.from(transactionPage, offset, limit);
+            return general.response("success", "Transactions fetched successfully", pagedResponse);
+        } catch (Exception e) {
+            log.error("Error in remitter transactions: remitterId {} because {}", remitterId, e.getMessage());
+            return general.response("error", "Internal server error..", null);
+        }
+    }
+
+    @GetMapping("/{remitterId}/recipients")
+    public Map<String, Object> getRecipient(@PathVariable String remitterId) {
+        try {
+            if (remitterId == null || remitterId.isEmpty()) {
+                log.info("Invalid request: remitterId {}", remitterId);
+                return general.response("error", "Invalid request", null);
+            }
+            List<Recipient> recipients = remitterAPIService.getRecipient(remitterId);
+            if (recipients == null) {
+                return general.response("error", "Recipients not found", null);
+            }
+            return general.response("success", "Recipients fetched successfully", recipients);
+        } catch (Exception e) {
+            log.error("Error in remitter recipients: remitterId {} because {}", remitterId, e.getMessage());
+            return general.response("error", "Internal server error..", null);
+        }
+    }
 
     // @GetMapping("/{remitterId}/transactions")
     // public ResponseEntity<Map<String, Object>> remitterTransactions(@PathVariable
@@ -143,6 +209,14 @@ public class RemitterAPIController {
     // @RequestParam(required = false) String page) {
     // return ResponseEntity.ok(remitterAPIService.remitterTransactions(remitterId,
     // page));
+    // }
+
+    // @GetMapping("/{remitterId}/dashboard")
+    // public ResponseEntity<Map<String, Object>> remitterDashboard(@PathVariable
+    // String remitterId,
+    // @RequestParam(required = false) String range) {
+    // return ResponseEntity.ok(remitterAPIService.remitterDashboard(remitterId,
+    // range));
     // }
 
     // @GetMapping("/{remitterId}/recipients")

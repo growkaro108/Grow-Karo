@@ -34,6 +34,7 @@ public class SecurityConfig {
                                                                 "/api/user/redeemAggressive",
                                                                 "/api/user/{userId}/transactions",
                                                                 "/uploads/bonds/**",
+                                                                "/uploads/settlements/**",
                                                                 "/api/scheme/get",
                                                                 "/api/user/logout/{userID}/{userName}",
                                                                 "/api/admin/scheme/create",
@@ -60,7 +61,10 @@ public class SecurityConfig {
                                                                 "/api/remitter/reset-password/{remitterId}",
                                                                 "/api/remitter/{remitterId}/txncounts",
                                                                 "/api/remitter/{remitterId}/transactions",
-                                                                "/api/remitter/{remitterId}/pending-payments")
+                                                                "/api/remitter/{remitterId}/pending-payments",
+                                                                "/api/remitter/settlements",
+                                                                "/api/remitter/transactions",
+                                                                "/api/remitter/{remitterId}/recipients")
                                                 .permitAll() // Public endpoints
                                                 .anyRequest().authenticated() // Everything else requires login
                                 )

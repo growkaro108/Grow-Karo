@@ -1,36 +1,30 @@
 package com.growkaro.backend.service;
 
+import com.growkaro.backend.DRO.PaymentSettlement;
 import com.growkaro.backend.DTO.Payee;
 import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Transaction;
-import com.growkaro.backend.entity.WithdrawalRequest;
+import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.Transaction.TransactionStatus;
-import com.growkaro.backend.enums.WithdrawalStatus;
 import com.growkaro.backend.repository.RemitterRepository;
 import com.growkaro.backend.repository.TransactionRepository;
-import com.growkaro.backend.repository.WithdrawalRequestRepository;
-
 import lombok.extern.slf4j.Slf4j;
-import software.amazon.awssdk.auth.credentials.SystemPropertyCredentialsProvider;
-
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -43,7 +37,11 @@ public class RemitterAPIService {
     private final ApiService apiService;
     private final General general;
     private final TransactionRepository transactionRepository;
-    private final WithdrawalRequestRepository withdrawalRequestRepository;
+    private final LocalFileStorageService localFileStorageService;
+
+    private static final Set<String> ALLOWED_DOCUMENT_TYPES = Set.of("application/pdf", "image/jpeg", "image/png",
+            "image/webp");
+    private static final long MAX_DOCUMENT_SIZE_BYTES = 3 * 1024 * 1024; // 3MB in bytes
 
     public RemitterAPIService(
             RemitterRepository remitterRepository,
@@ -51,13 +49,13 @@ public class RemitterAPIService {
             ApiService apiService,
             General general,
             TransactionRepository transactionRepository,
-            WithdrawalRequestRepository withdrawalRequestRepository) {
+            LocalFileStorageService localFileStorageService) {
         this.remitterRepository = remitterRepository;
         this.emailService = emailService;
         this.apiService = apiService;
         this.general = general;
         this.transactionRepository = transactionRepository;
-        this.withdrawalRequestRepository = withdrawalRequestRepository;
+        this.localFileStorageService = localFileStorageService;
     }
 
     private Remitter findByEmail(String email) {
@@ -133,6 +131,90 @@ public class RemitterAPIService {
         } catch (Exception e) {
             log.error("Error in pendingPayments : remitterId=" + remitterId + " error:" + e.getMessage());
             return null;
+        }
+    }
+
+    public String settlements(PaymentSettlement paymentSettlement) {
+        try {
+
+            Transaction transaction = transactionRepository.findById(paymentSettlement.txnId()).orElse(null);
+            if (transaction == null // check is valid transaction id
+                    || !transaction.getRemitter().getRemitterId().equals(paymentSettlement.remitterId()) // check is
+                                                                                                         // valid
+                                                                                                         // remitter
+                    || transaction.getStatus() != TransactionStatus.PROCESSED // check is valid status
+                    || transaction.getAmount().compareTo(paymentSettlement.amount()) != 0) { // check is valid amount
+                log.error("Error in remitter settlements: remitterId {}", paymentSettlement.remitterId());
+                return null;
+            }
+            // validate file
+            if (paymentSettlement.file() == null || paymentSettlement.file().isEmpty() // check is valid file
+                    || !ALLOWED_DOCUMENT_TYPES.contains(paymentSettlement.file().getContentType()) // check is valid
+                                                                                                   // file type
+                    || paymentSettlement.file().getSize() > MAX_DOCUMENT_SIZE_BYTES) { // check is valid file size
+                log.error("Error in remitter settlements: remitterId {}", paymentSettlement.remitterId());
+                return null;
+            }
+            String uploadedUrl = localFileStorageService.store(paymentSettlement.file(),
+                    "settlements/" + paymentSettlement.txnId());
+            if (uploadedUrl == null || uploadedUrl.isEmpty()) {
+                log.error("Error in remitter settlements: remitterId {}", paymentSettlement.remitterId());
+                return null;
+            }
+            transaction.setStatus(TransactionStatus.SUCCESS);
+            transaction.setProofUrl(uploadedUrl);
+            transaction.setSettlementDate(general.getCurrentDateTime());
+            transactionRepository.save(transaction);
+
+            return uploadedUrl;
+        } catch (Exception e) {
+            log.error("Error in remitter settlements: remitterId {} because {}", paymentSettlement.remitterId(),
+                    e.getMessage());
+            return null;
+        }
+    }
+
+    public Page<Payee> getRemitterTransactions(String remitterId, Pageable pageable) {
+        try {
+            Remitter remitter = findById(remitterId);
+            if (remitter == null) {
+                return null;
+            }
+            Page<Transaction> transactionPage = transactionRepository.findByRemitter_RemitterId(remitterId, pageable);
+            return transactionPage.map(general::toPayee);
+        } catch (Exception e) {
+            log.error("Error in remitter transactions: remitterId {} because {}", remitterId, e.getMessage());
+            return null;
+        }
+    }
+
+    public List<Recipient> getRecipient(String remitterId) {
+        Remitter remitter = findById(remitterId);
+        if (remitter == null) {
+            log.warn("No remitter found for remitterId {}", remitterId);
+            return List.of();
+        }
+
+        try {
+            List<Transaction> transactions = transactionRepository
+                    .findAllByRemitter_RemitterId(remitter.getRemitterId());
+
+            // group by user, preserving encounter order (newest-first, since the
+            // query is ORDER BY transactionDate DESC) — so the first transaction
+            // seen for each user is their most recent one.
+            Map<String, List<Transaction>> byUser = transactions.stream()
+                    .collect(Collectors.groupingBy(
+                            t -> t.getUser().getId(),
+                            LinkedHashMap::new,
+                            Collectors.toList()));
+
+            return byUser.values().stream()
+                    .map(general::toRecipient) // updated signature below: List<Transaction> -> Recipient
+                    .toList();
+
+        } catch (Exception e) {
+            log.error("Error fetching remitter recipients: remitterId {} because {}", remitterId, e.getMessage());
+            return List.of();
         }
     }
 

@@ -1,82 +1,65 @@
 package com.growkaro.backend.entity;
 
-import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
-@Entity
-@Table(
-    name = "recipients",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"remitter_id", "user_id"})
-)
-public class Recipient {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "remitter_id", nullable = false)
-    private Remitter remitter;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-
-    @Column(nullable = false)
-    private String name;
-
-    @Column(nullable = false)
-    private String accountNumber;
-
-    @Column(nullable = false)
-    private String ifscCode;
-
-    private String bankName;
-
-    private String upiId;
-
-    @Column(nullable = false)
-    private boolean active = true;
-
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
-
-    private LocalDateTime updatedAt = LocalDateTime.now();
-
-    @PreUpdate
-    public void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+/**
+ * Response DTO for the recipients grid: one entry per person the remitter
+ * has sent money to, with every individual transfer nested inside.
+ *
+ * NOTE: this is a read-model DTO, not a JPA entity — records can't be
+ * entities (no mutable state / no no-arg constructor), so keep it in
+ * `dto`, not `entity`, to avoid confusion with your real JPA entities.
+ */
+public record Recipient(
+        String userId,
+        String name,
+        String email,
+        String phone,
+        List<Transfer> transfers) {
+    // must be public (or package-private at least) — a private nested type
+    // can't be referenced from your service/controller/repository, and
+    // Jackson can run into accessibility issues serializing it.
+    public record Transfer(
+            String transactionId,
+            BigDecimal amount,
+            LocalDateTime date,
+            String bankName,
+            String accountNumber,
+            String ifscCode,
+            String accountHolderName) {
     }
 
-    // ── Getters & Setters ────────────────────────────────────────────────────
+    /**
+     * Total sent across all transfers to this recipient.
+     * 
+     * @JsonProperty needed: this is a derived method, not a record component,
+     *               so Jackson won't include it in the response JSON without this
+     *               annotation.
+     */
+    @JsonProperty
+    public BigDecimal totalAmount() {
+        return transfers.stream()
+                .map(Transfer::amount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    /** How many times money has been sent to this recipient. */
+    @JsonProperty
+    public int transactionCount() {
+        return transfers.size();
+    }
 
-    public Remitter getRemitter() { return remitter; }
-    public void setRemitter(Remitter remitter) { this.remitter = remitter; }
-
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
-
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-
-    public String getAccountNumber() { return accountNumber; }
-    public void setAccountNumber(String accountNumber) { this.accountNumber = accountNumber; }
-
-    public String getIfscCode() { return ifscCode; }
-    public void setIfscCode(String ifscCode) { this.ifscCode = ifscCode; }
-
-    public String getBankName() { return bankName; }
-    public void setBankName(String bankName) { this.bankName = bankName; }
-
-    public String getUpiId() { return upiId; }
-    public void setUpiId(String upiId) { this.upiId = upiId; }
-
-    public boolean isActive() { return active; }
-    public void setActive(boolean active) { this.active = active; }
-
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    /**
+     * Bank name from the most recent transfer — shown as "payment method" on the
+     * card.
+     */
+    @JsonProperty
+    public String paymentMethod() {
+        return transfers.isEmpty() ? null : transfers.get(0).bankName();
+        // relies on transfers being pre-sorted newest-first when this record is built
+    }
 }

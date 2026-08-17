@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, use } from "react";
 import Image from "next/image";
-import { BASE_URL } from "@/api/apiClient";
+import { BASE_URL, resolveMediaUrl } from "@/api/apiClient";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -34,13 +34,6 @@ const CertificateLightbox = dynamic(
  * - If the path is relative (e.g. /uploads/bonds/...) the API base URL is prepended.
  * - If the path is empty / null, returns an empty string.
  */
-const resolveMediaUrl = (path) => {
-  if (!path) return "";
-  if (/^https?:\/\//i.test(path)) return path; // already absolute
-  // Strip the trailing /api suffix so we get just the origin+port
-  const apiBase = BASE_URL.replace(/\/api\/?$/, "");
-  return apiBase + (path.startsWith("/") ? path : "/" + path);
-};
 
 const currency = (n) => {
   return n !== undefined && n !== null
