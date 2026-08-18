@@ -106,7 +106,7 @@ export default function RemitterDashboard() {
         <main className="p-6 max-w-7xl w-full mx-auto space-y-6">
           {loading ? (
             <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-8 flex items-center justify-center min-h-[60vh]">
-              <TabLoader />
+              <TabLoader message="Loading remitter data..." />
             </div>
           ) : (
             <>

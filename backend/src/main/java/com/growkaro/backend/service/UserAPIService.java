@@ -1,12 +1,12 @@
 package com.growkaro.backend.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
@@ -20,8 +20,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.RequestBody;
-
 import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.DRO.WithdrawAmount;
 import com.growkaro.backend.DTO.TransactionResponse;
@@ -29,6 +27,8 @@ import com.growkaro.backend.DTO.TransactionSummary;
 import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.BankDetails;
+import com.growkaro.backend.entity.Guardian;
+import com.growkaro.backend.entity.Nominee;
 import com.growkaro.backend.entity.Notification;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.Transaction;
@@ -36,7 +36,6 @@ import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserProfile;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.enums.ActivityType;
-import com.growkaro.backend.enums.UserSchemeStatus;
 import com.growkaro.backend.repository.BankDetailsRepository;
 import com.growkaro.backend.repository.NotificationRepository;
 import com.growkaro.backend.repository.SchemeRepository;
@@ -79,24 +78,23 @@ public class UserAPIService {
         this.general = general;
     }
 
+    @Cacheable(value = "testApis", key = "#id")
     @Transactional
-    public boolean testApi() {
+    public UserScheme testApis(String id) {
         try {
-            List<UserScheme> allscheme = userSchemeRepository.findAll();
+            System.out.println("test api hit" + id);
+            UserScheme u = getUserSchemeById(id);
+            // System.out.println("db hit");
+            if (u == null) {
+                System.out.println("no Scheme found");
+                return null;
 
-            for (UserScheme us : allscheme) {
-                if (us.getIsApproved()) {
-                    us.setMaturityDate(
-                            general.calculateMaturityDate(us.getEnrollmentDate(), us.getScheme().getTenure()));
-                    System.out.println(us.getUser().getId() + " is updated...");
-                }
             }
-            userSchemeRepository.saveAll(allscheme);
-            System.out.println("All set::");
-            return true;
+            return u;
+
         } catch (Exception e) {
             log.error("Failed to set user status active", e);
-            return false;
+            return null;
         }
     }
 
@@ -112,6 +110,7 @@ public class UserAPIService {
         return userSchemeRepository.existsById(userSchemeId);
     }
 
+    // @Cacheable(value = "getUserSchemeById", key = "'userSchemeId'")
     public UserScheme getUserSchemeById(String userSchemeId) {
         if (userSchemeId == null || userSchemeId.isBlank()) {
             return null;
@@ -165,8 +164,12 @@ public class UserAPIService {
         String phone = stringValue(user.phone());
         String name = stringValue(user.name());
         String passwordHash = stringValue(user.passwordHash());
+        String dob = stringValue(user.dob());
+        String maritalStatus = stringValue(user.maritalStatus());
+        String aadharNo = stringValue(user.aadharNo());
 
-        if (name == null || email == null || phone == null || passwordHash == null) {
+        if (name == null || email == null || phone == null || passwordHash == null || dob == null
+                || maritalStatus == null || aadharNo == null) {
             return false;
         }
 
@@ -178,6 +181,36 @@ public class UserAPIService {
         newUser.setEmail(email);
         newUser.setPhone(phone);
         newUser.setPasswordHash(apiService.makePasswordHash(passwordHash));
+        newUser.setDob(LocalDate.parse(dob));
+        newUser.setMaritalStatus(maritalStatus);
+        newUser.setAadharNo(aadharNo);
+
+        if (user.guardian() != null) {
+            Guardian guardian = new Guardian();
+            guardian.setName(stringValue(user.guardian().get("name")));
+            guardian.setRelation(stringValue(user.guardian().get("relation")));
+            guardian.setUser(newUser);
+            newUser.setGuardian(guardian);
+        }
+
+        if (user.address() != null) {
+            newUser.setStreet(stringValue(user.address().get("street")));
+            newUser.setVillage(stringValue(user.address().get("village")));
+            newUser.setCity(stringValue(user.address().get("city")));
+            newUser.setState(stringValue(user.address().get("state")));
+            newUser.setPincode(stringValue(user.address().get("pincode")));
+        }
+
+        if (user.nominee() != null) {
+            Nominee nominee = new Nominee();
+            nominee.setName(stringValue(user.nominee().get("name")));
+            nominee.setAadharNo(stringValue(user.nominee().get("aadharNo")));
+            nominee.setMobileNo(stringValue(user.nominee().get("mobileNo")));
+            nominee.setRelation(stringValue(user.nominee().get("relation")));
+            nominee.setUser(newUser);
+            newUser.setNominee(nominee);
+        }
+
         newUser.setEmailVerified(true);
 
         BankDetails bankDetails = new BankDetails();
@@ -287,6 +320,7 @@ public class UserAPIService {
         }
     }
 
+    // @Cacheable(value = "getUserPortfolio", key = "#userId")
     @Transactional(readOnly = true)
     public Map<String, Object> getUserPortfolio(String userId) {
         try {

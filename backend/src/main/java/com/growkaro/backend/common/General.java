@@ -90,15 +90,35 @@ public class General {
             passwordHash = stringValue(payload.get("password"));
         }
 
+        Map<String, Object> guardian = asMap(payload.get("guardian"));
+        Map<String, Object> address = asMap(payload.get("address"));
+        Map<String, Object> nominee = asMap(payload.get("nominee"));
+
         return new UserRegister(
                 name,
                 stringValue(payload.get("email")),
                 stringValue(payload.get("phone")),
                 passwordHash,
+                stringValue(payload.get("dob")),
+                stringValue(payload.get("maritalStatus")),
+                stringValue(payload.get("aadharNo")),
+                guardian,
+                address,
+                nominee,
                 stringValue(payload.get("bankName")),
                 stringValue(payload.get("accountHolderName")),
                 stringValue(payload.get("accountNumber")),
                 stringValue(payload.get("ifscCode")));
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> asMap(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> converted = new LinkedHashMap<>();
+            map.forEach((key, val) -> converted.put(String.valueOf(key), val));
+            return converted;
+        }
+        return null;
     }
 
     public String stringValue(Object value) {

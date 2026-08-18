@@ -5,15 +5,15 @@ import { PROCESS_FILTERS } from "./activityLogShared";
 import dynamic from "next/dynamic";
 import TabLoader from "@/loader/TabLoader";
 const LiveLogsPanel = dynamic(() => import("./LiveLogsPanel"), {
-  loading: () => <TabLoader />,
+  loading: () => <TabLoader message="Loading live logs..." />,
   ssr: false,
 });
 const RecentLogsPanel = dynamic(() => import("./RecentLogsPanel"), {
-  loading: () => <TabLoader />,
+  loading: () => <TabLoader message="Loading recent logs..." />,
   ssr: false,
 });
 const LogDetailsModal = dynamic(() => import("./LogDetailsModal"), {
-  loading: () => <TabLoader />,
+  loading: () => <TabLoader message="Loading log details..." />,
   ssr: false,
 });
 

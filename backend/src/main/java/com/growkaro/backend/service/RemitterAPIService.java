@@ -8,6 +8,7 @@ import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
+import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.entity.Transaction.TransactionStatus;
 import com.growkaro.backend.repository.RemitterRepository;
 import com.growkaro.backend.repository.TransactionRepository;
@@ -38,6 +39,7 @@ public class RemitterAPIService {
     private final EmailService emailService;
     private final ApiService apiService;
     private final General general;
+    private final ActivityLogService activityLogService;
     private final TransactionRepository transactionRepository;
     private final LocalFileStorageService localFileStorageService;
 
@@ -50,14 +52,20 @@ public class RemitterAPIService {
             EmailService emailService,
             ApiService apiService,
             General general,
+            ActivityLogService activityLogService,
             TransactionRepository transactionRepository,
             LocalFileStorageService localFileStorageService) {
         this.remitterRepository = remitterRepository;
         this.emailService = emailService;
         this.apiService = apiService;
         this.general = general;
+        this.activityLogService = activityLogService;
         this.transactionRepository = transactionRepository;
         this.localFileStorageService = localFileStorageService;
+    }
+
+    public boolean isRemitterExists(String email) {
+        return remitterRepository.findByRemitterEmail(email).isPresent();
     }
 
     private Remitter findByEmail(String email) {
@@ -232,6 +240,26 @@ public class RemitterAPIService {
         } catch (Exception e) {
             log.error("Error fetching remitter recipients: remitterId {} because {}", remitterId, e.getMessage());
             return List.of();
+        }
+    }
+
+    public boolean logoutRemitter(String remitterId, String remitterCode) {
+        try {
+            Remitter remitter = findById(remitterId);
+            if (remitter == null) {
+                log.error("Error in remitter logout: remitterId {}", remitterId);
+                return false;
+            }
+            activityLogService.log(
+                    remitterId, remitterCode, "USER",
+                    ActivityType.LOGOUT,
+                    remitterCode + " logged out",
+                    "USER", "",
+                    Map.of());
+            return true;
+        } catch (Exception e) {
+            log.error("Error in remitter logout: remitterId {}", remitterId);
+            return false;
         }
     }
 

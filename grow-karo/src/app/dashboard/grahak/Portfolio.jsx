@@ -593,13 +593,13 @@ export default function Portfolio({ refresh, loading }) {
       )}
 
       {lightboxBond?.schemeName && (
-        <CertificateLightbox
-          bond={lightboxBond}
-          userName={authUser?.name || ""}
-          scheme={lightboxBond?.schemeName || ""}
-          onClose={closeLightbox}
-        />
-        // <ImageLightbox bond={lightboxBond} onClose={closeLightbox} />
+        // <CertificateLightbox
+        //   bond={lightboxBond}
+        //   userName={authUser?.name || ""}
+        //   scheme={lightboxBond?.schemeName || ""}
+        //   onClose={closeLightbox}
+        // />
+        <ImageLightbox bond={lightboxBond} onClose={closeLightbox} />
       )}
     </div>
   );

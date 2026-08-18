@@ -14,23 +14,23 @@ import { allRounderMessage, errorMessage } from "@/components/Message";
 import { RefreshCcw } from "lucide-react";
 
 const Overview = dynamic(() => import("./Overview"), {
-  loading: () => <TabLoader />,
+  loading: () => <TabLoader message={"Loading overview..."} />,
   ssr: false,
 });
 const WithDrawFormComponent = dynamic(() => import("./WithDrawFormComponent"), {
-  loading: () => <TabLoader />,
+  loading: () => <TabLoader message={"Loading withdrawal form..."} />,
   ssr: false,
 });
 const Portfolio = dynamic(() => import("./Portfolio"), {
-  loading: () => <TabLoader />,
+  loading: () => <TabLoader message={"Loading portfolio..."} />,
   ssr: false,
 });
 const Transactions = dynamic(() => import("./Transaction"), {
-  loading: () => <TabLoader />,
+  loading: () => <TabLoader message={"Loading transactions..."} />,
   ssr: false,
 });
 const Settings = dynamic(() => import("./Settings"), {
-  loading: () => <TabLoader />,
+  loading: () => <TabLoader message={"Loading settings..."} />,
   ssr: false,
 });
 
@@ -162,7 +162,7 @@ export default function DashboardPage() {
 
         {isLoading ? (
           <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-8 flex items-center justify-center min-h-[60vh]">
-            <TabLoader />
+            <TabLoader message="Fetching details..."  />
           </div>
         ) : error ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50 text-rose-700 p-4 text-sm">

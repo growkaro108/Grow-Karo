@@ -13,13 +13,16 @@ import org.springframework.web.bind.annotation.*;
 import com.growkaro.backend.DRO.EnrollingUser;
 import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.DRO.WithdrawAmount;
+import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserProfile;
+import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.enums.Remark;
 import com.growkaro.backend.service.ApiService;
 import com.growkaro.backend.service.EmailService;
 import com.growkaro.backend.service.RedisService;
+import com.growkaro.backend.service.RemitterAPIService;
 import com.growkaro.backend.service.UserAPIService;
 
 @RestController
@@ -31,22 +34,25 @@ public class UserAPIController {
     private final UserAPIService userAPIService;
     private final EmailService emailService;
     private final RedisService redisService;
+    private final RemitterAPIService remitterAPIService;
     private final General general;
     private final ApiService apiService;
 
     public UserAPIController(UserAPIService userAPIService, EmailService emailService, RedisService redisService,
-            ApiService apiService, General general) {
+            RemitterAPIService remitterAPIService, General general, ApiService apiService) {
         this.userAPIService = userAPIService;
         this.emailService = emailService;
         this.redisService = redisService;
-        this.apiService = apiService;
+        this.remitterAPIService = remitterAPIService;
         this.general = general;
+        this.apiService = apiService;
     }
 
-    @GetMapping("/test")
-    public boolean test() {
-        System.out.println(general.getCurrentDateTime());
-        return userAPIService.testApi();
+    @GetMapping("/test/{id}")
+    public Map<String, Object> test(@PathVariable String id) {
+        System.out.println("test api hit" + id);
+        return userAPIService.getMyScheme(id);
+        // return null;
     }
 
     @PostMapping("/getEmailOtp/{email}")
@@ -57,9 +63,10 @@ public class UserAPIController {
             return ResponseEntity.badRequest()
                     .body(general.response("invalid", "Enter a valid email address.", null));
         }
-        if (userAPIService.isUserExists(email)) {
+        // check if user or remitter with same email exists
+        if (userAPIService.isUserExists(email) || remitterAPIService.isRemitterExists(email)) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(general.response("present", "Email already exists", null));
+                    .body(general.response("info", "Email already registered..", null));
         }
 
         emailService.sendOtp(email, Remark.SIGNUP.getValue());

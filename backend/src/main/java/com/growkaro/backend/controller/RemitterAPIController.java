@@ -203,6 +203,11 @@ public class RemitterAPIController {
         }
     }
 
+    @GetMapping("/logout")
+    public boolean logout(@RequestParam String remitterId, @RequestParam String remitterCode) {
+        return remitterAPIService.logoutRemitter(remitterId, remitterCode);
+    }
+
     // @GetMapping("/{remitterId}/transactions")
     // public ResponseEntity<Map<String, Object>> remitterTransactions(@PathVariable
     // String remitterId,

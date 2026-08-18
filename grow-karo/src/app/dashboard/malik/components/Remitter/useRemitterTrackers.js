@@ -10,7 +10,6 @@ import { adminContext } from "@/context/AdminContext";
 
 export function useRemitterTrackers() {
   const { codes, setCodes, isLoading, LoadCodes } = use(adminContext);
-  const [wantReload, setWantReload] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,6 +60,7 @@ export function useRemitterTrackers() {
               organizationName: sanitizedData.organizationName,
               remitterEmail: sanitizedData.remitterEmail,
               remitterPhone: sanitizedData.remitterPhone,
+              allocationLimit: sanitizedData.allocationLimit,
               aadharNumber: sanitizedData.aadharNumber,
               panNumber: sanitizedData.panNumber,
               status: sanitizedData.status,

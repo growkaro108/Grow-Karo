@@ -6,7 +6,7 @@ import { userContext } from "@/context/UserContext";
 
 //dynamic import for Overview component to avoid SSR issues with Chart.js
 const StockGraph = dynamic(() => import("./StockGraph"), {
-  loading: () => <TabLoader />,
+  loading: () => <TabLoader message="Loading stock graph..." />,
   ssr: false,
 });
 

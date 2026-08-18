@@ -174,7 +174,7 @@ export default function AdminRemitterTrackersTab() {
 
       {/* PERFORMANCE GRID */}
       {isLoading ? (
-        <TabLoader />
+        <TabLoader message="Loading remitter ..." />
       ) : (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {codes?.map((c) => (

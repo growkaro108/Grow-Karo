@@ -6,7 +6,7 @@ import { currency, dateFmt, initials } from "./format";
 import dynamic from "next/dynamic";
 import TabLoader from "@/loader/TabLoader";
 const CertificateLightbox = dynamic(() => import("../Certificatelightbox"), {
-  loading: () => <TabLoader />,
+  loading: () => <TabLoader message="Loading certificate..." />,
 
   ssr: false,
 });

@@ -64,7 +64,8 @@ public class SecurityConfig {
                                                                 "/api/remitter/{remitterId}/pending-payments",
                                                                 "/api/remitter/settlements",
                                                                 "/api/remitter/transactions",
-                                                                "/api/remitter/{remitterId}/recipients")
+                                                                "/api/remitter/{remitterId}/recipients",
+                                                                "/api/remitter/logout")
                                                 .permitAll() // Public endpoints
                                                 .anyRequest().authenticated() // Everything else requires login
                                 )

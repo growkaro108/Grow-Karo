@@ -7,8 +7,11 @@ import {
   useMemo,
   useState,
 } from "react";
-import { getSecureCookie } from "./cookiesManagement";
+import { deleteSecureCookie, getSecureCookie } from "./cookiesManagement";
 import { RemRequestsCounts } from "../../services/remitterService";
+import { useLoader } from "./LoaderContext";
+import { errorMessage, successMessage } from "@/components/Message";
+import { logoutRemitterApi } from "@/api/remitterApi";
 
 export const remitterContext = createContext({});
 
@@ -16,7 +19,7 @@ export const RemitterProvider = ({ children }) => {
   const [authRemitter, setAuthRemitter] = useState(null);
   const [requestsCounts, setRequestsCounts] = useState([]);
   const [remLoading, setRemLoading] = useState(true);
-
+  const { showLoader, hideLoader } = useLoader();
   const fetchRequestsCounts = useCallback(async () => {
     if (!authRemitter?.id) return;
     try {
@@ -50,16 +53,31 @@ export const RemitterProvider = ({ children }) => {
   }, []);
 
   const logoutRemitter = useCallback(async () => {
+    if (!authRemitter) return;
     try {
-      // const res = await logoutUserApi();
-      // if (!res) {
-      //   throw new Error("Failed to logout");
-      // }
-      setAuthRemitter(null);
+      showLoader("Logout in progress...");
+      const res = await logoutRemitterApi(
+        authRemitter.id,
+        authRemitter.remitterCode,
+      );
+      if (!res) {
+        errorMessage("Failed to logout..");
+        return;
+      }
+      const status = await deleteSecureCookie("authRemitter");
+      if (status.success) {
+        setAuthRemitter(null);
+        successMessage("Logout successfully");
+      } else {
+        errorMessage(status.message);
+      }
     } catch (error) {
-      throw error;
+      console.log(error);
+      errorMessage(error.message || "Failed to logout");
+    } finally {
+      hideLoader();
     }
-  }, []);
+  }, [authRemitter, hideLoader, showLoader]);
 
   const contextValue = useMemo(
     () => ({

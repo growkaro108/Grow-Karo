@@ -24,7 +24,7 @@ import { PlanStatusBadge } from "../StatusBadge";
 import { Suggestion } from "./Suggestion";
 // import { FormModal } from "./Form";
 const FormModal = dynamic(() => import("./Form"), {
-  loading: () => <TabLoader />,
+  loading: () => <TabLoader message={"Loading form..."}/>,
   ssr: false,
 });
 

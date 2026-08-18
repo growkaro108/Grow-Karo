@@ -35,31 +35,31 @@ import { adminContext } from "@/context/AdminContext";
 const UserManagement = dynamic(
   () => import("./components/user-management/UserManagement"),
   {
-    loading: () => <TabLoader />,
+    loading: () => <TabLoader message={"Loading users..."} />,
     ssr: false,
   },
 );
 const WithdrawalsTab = dynamic(
   () => import("./components/Withdrawals/WithdrawalsTab"),
   {
-    loading: () => <TabLoader />,
+    loading: () => <TabLoader message={"Loading withdrawals..."} />,
     ssr: false,
   },
 );
 
 const PlanTab = dynamic(() => import("./components/Scheme/PlanTab"), {
-  loading: () => <TabLoader />,
+  loading: () => <TabLoader message={"Loading plans..."} />,
   ssr: false,
 });
 const SchemeApproval = dynamic(
   () => import("./components/SchemeAproval/SchemeApprovals"),
   {
-    loading: () => <TabLoader />,
+    loading: () => <TabLoader message={"Loading approvals..."} />,
     ssr: false,
   },
 );
 const IssuesTab = dynamic(() => import("./components/IssuesTab"), {
-  loading: () => <TabLoader />,
+  loading: () => <TabLoader message={"Loading issues..."} />,
   ssr: false,
 });
 const Toast = dynamic(() => import("./components/Toast"), {
@@ -67,22 +67,22 @@ const Toast = dynamic(() => import("./components/Toast"), {
   ssr: false,
 });
 const ActivityTab = dynamic(() => import("./components/Activity/main"), {
-  loading: () => <TabLoader />,
+  loading: () => <TabLoader message={"Loading activity..."} />,
   ssr: false,
 });
 const AdminRemitterTrackersTab = dynamic(
   () => import("./components/Remitter/AdminRemitterTrackersTab"),
   {
-    loading: () => <TabLoader />,
+    loading: () => <TabLoader message={"Loading remitters..."} />,
     ssr: false,
   },
 );
 const ContactsComponent = dynamic(() => import("./components/Contact"), {
-  loading: () => <TabLoader />,
+  loading: () => <TabLoader message={"Loading contacts..."} />,
   ssr: false,
 });
 const Settings = dynamic(() => import("./components/Settings"), {
-  loading: () => <TabLoader />,
+  loading: () => <TabLoader message={"Loading settings..."} />,
   ssr: false,
 });
 ChartJS.register(
@@ -102,7 +102,7 @@ const NAV_ITEMS = [
   { id: "approvals", label: "Approvals", icon: ClipboardCheck },
   { id: "remitter", label: "Remitter", icon: Ticket },
   { id: "user", label: "User Management ⏱️", icon: User2Icon },
-  // { id: "issues", label: "User Issues", icon: AlertTriangle },
+  { id: "issues", label: "User Issues", icon: AlertTriangle },
   { id: "contacts", label: "Contacts⏱️", icon: Contact },
   { id: "settings", label: "Settings⏱️", icon: Settings2 },
 ];
@@ -198,7 +198,7 @@ export default function AdminPanel() {
 
         <main className="scrollbar-thin flex-1 overflow-y-auto px-4 py-6 sm:px-6">
           {loading ? (
-            <TabLoader />
+            <TabLoader message="Fetching details..." />
           ) : (
             <div className="animate-fade-slide-in">
               {activeTab === "overview" && (

@@ -13,7 +13,7 @@ import { resolveMediaUrl } from "@/api/apiClient";
 // import { SettlementForm } from "./SettlementForm";
 
 const SettlementForm = dynamic(() => import("./SettlementForm"), {
-  loading: () => <TabLoader />,
+  loading: () => <TabLoader message="Loading settlement form..." />,
   ssr: false,
 });
 

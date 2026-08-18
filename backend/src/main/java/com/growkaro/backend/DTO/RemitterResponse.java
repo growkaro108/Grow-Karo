@@ -16,6 +16,7 @@ public class RemitterResponse {
 
     private String RemitterEmail;
     private String RemitterPhone;
+    private String remitterCode;
 
     private String organizationName;
     private BigDecimal allocationLimit;
@@ -47,6 +48,7 @@ public class RemitterResponse {
         dto.setAadharNumber(remitter.getAadharNumber());
         dto.setRemitterEmail(remitter.getRemitterEmail());
         dto.setRemitterPhone(remitter.getRemitterPhone());
+        dto.setRemitterCode(remitter.getRemitterCode());
         dto.setAllocationLimit(remitter.getAllocationLimit());
         dto.setTotalPaid(remitter.getTotalPaid());
         dto.setTotalUsers(remitter.getUsers().size());

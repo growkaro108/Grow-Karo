@@ -5,15 +5,15 @@ import dynamic from "next/dynamic";
 import TabLoader from "@/loader/TabLoader";
 
 const AuthLogin = dynamic(() => import("./AuthLogin"), {
-  loading: () => <TabLoader />,
+  loading: () => <TabLoader message="Loading login form..." />,
   ssr: false
 });
-const AuthSignup = dynamic(() => import("./AuthSignup"), {
-  loading: () => <TabLoader />,
+const AuthSignup = dynamic(() => import("./signup/AuthSignup"), {
+  loading: () => <TabLoader message="Loading signup form..." />,
   ssr: false
 });
 const AuthForgot = dynamic(() => import("./AuthForgot"), {
-  loading: () => <TabLoader />,
+  loading: () => <TabLoader message="Loading forgot password form..." />,
   ssr: false
 });
 

@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -34,8 +35,38 @@ public class User {
     @Column(nullable = false)
     private String passwordHash;
 
+    @Column
+    private LocalDate dob;
+
+    @Column(length = 30)
+    private String maritalStatus;
+
+    @Column(length = 12)
+    private String aadharNo;
+
+    @Column(length = 120)
+    private String street;
+
+    @Column(length = 120)
+    private String village;
+
+    @Column(length = 80)
+    private String city;
+
+    @Column(length = 80)
+    private String state;
+
+    @Column(length = 10)
+    private String pincode;
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY, optional = true)
     private BankDetails bankDetails;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY, optional = true)
+    private Guardian guardian;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY, optional = true)
+    private Nominee nominee;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserScheme> enrolledSchemes = new ArrayList<>();

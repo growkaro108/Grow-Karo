@@ -42,6 +42,13 @@ export async function fetchTransactions(remitterId, offset, limit) {
 export async function getRecipientApi(remId) {
   return apiRequest(`${BASE}/${remId}/recipients`);
 }
+
+export async function logoutRemitterApi(remitterId, remitterCode) {
+  return apiRequest(
+    `${BASE}/logout?remitterId=${remitterId}&remitterCode=${remitterCode}`,
+  );
+}
+
 //pending
 
 // export async function fetchRemitterDashboard(remitterId, params) {
