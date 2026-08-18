@@ -12,7 +12,9 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -65,7 +67,7 @@ public class Remitter {
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "remitter_users", joinColumns = @JoinColumn(name = "remitter_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
-    private List<User> users = new ArrayList<>();
+    private Set<User> users = new HashSet<>();
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

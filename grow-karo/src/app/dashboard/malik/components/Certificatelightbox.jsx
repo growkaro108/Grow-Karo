@@ -37,8 +37,8 @@ export default function CertificateLightbox({
         </button>
 
         <div
-          className="overflow-hidden rounded-2xl shadow-2xl shadow-black/50 ring-1 ring-white/10"
-          style={{ width: 380, margin: "0 auto" }}
+          className="overflow-hidden rounded-md shadow-2xl shadow-black/50 ring-1 ring-white/10"
+          style={{ width: 400, margin: "0 auto" }}
         >
           <BondCertificate
             bond={bond ?? null}
@@ -47,6 +47,7 @@ export default function CertificateLightbox({
             className="h-auto w-full"
             logoUrl={"/logo.jpg"}
           />
+
           <BondDownloadButton
             className="absolute right-2 bottom-2"
             certRef={certRef}

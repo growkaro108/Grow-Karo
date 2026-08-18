@@ -20,7 +20,7 @@ export default function UserTable({ users, onSelect }) {
         <tbody className="divide-y divide-slate-800">
           {users.map((u) => (
             <tr
-              key={u.id}
+              key={u.userSchemeId}
               onClick={() => onSelect(u)}
               className="cursor-pointer transition hover:bg-white/3"
             >
@@ -45,7 +45,7 @@ export default function UserTable({ users, onSelect }) {
                 <StatusPill status={u.status} />
               </td>
               <td className="px-5 py-3.5 text-sm text-slate-500">
-                {dateFmt(u.joined)}
+                {dateFmt(u.maturityDate)}
               </td>
               <td className="px-5 py-3.5 text-right">
                 <ChevronRight className="ml-auto h-4 w-4 text-slate-600" />

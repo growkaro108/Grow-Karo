@@ -100,7 +100,7 @@ export default function UserDrawer({ user, onClose }) {
             <div className="space-y-3">
               {user.bonds.map((b) => (
                 <BondStub
-                  key={b.id}
+                  key={b.userSchemeId}
                   bond={b}
                   userName={user.name}
                   scheme={user.scheme}

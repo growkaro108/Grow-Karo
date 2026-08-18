@@ -17,8 +17,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -155,6 +157,16 @@ public class RemitterAPIService {
                 log.error("Error in remitter settlements: remitterId {}", paymentSettlement.remitterId());
                 return null;
             }
+            Remitter remitter = transaction.getRemitter();
+            BigDecimal remitterCurrentBalance = remitter.getTotalPaid();
+
+            User user = transaction.getUser();
+            Set<User> users = remitter.getUsers();
+            if (users == null) {
+                users = new HashSet<>();
+            }
+            users.add(user);
+
             String uploadedUrl = localFileStorageService.store(paymentSettlement.file(),
                     "settlements/" + paymentSettlement.txnId());
             if (uploadedUrl == null || uploadedUrl.isEmpty()) {
@@ -165,6 +177,11 @@ public class RemitterAPIService {
             transaction.setProofUrl(uploadedUrl);
             transaction.setSettlementDate(general.getCurrentDateTime());
             transactionRepository.save(transaction);
+            if (!users.contains(user)) {
+                remitter.setUsers(users);
+            }
+            remitter.setTotalPaid(remitterCurrentBalance.add(transaction.getAmount()));
+            remitterRepository.save(remitter);
 
             return uploadedUrl;
         } catch (Exception e) {

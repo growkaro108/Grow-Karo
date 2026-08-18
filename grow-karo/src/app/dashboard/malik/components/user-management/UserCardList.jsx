@@ -8,7 +8,7 @@ export default function UserCardList({ users, onSelect }) {
     <div className="space-y-3 sm:hidden">
       {users.map((u) => (
         <button
-          key={u.id}
+          key={u.userSchemeId}
           onClick={() => onSelect(u)}
           className="flex w-full items-center gap-3 rounded-xl border border-slate-800 bg-[#111827] p-4 text-left shadow-lg shadow-black/20 active:bg-white/[0.03]"
         >
@@ -27,7 +27,7 @@ export default function UserCardList({ users, onSelect }) {
               <span className="inline-flex items-center gap-1">
                 <Wallet className="h-3 w-3" /> {u.bonds.length} bonds
               </span>
-              <span>{dateFmt(u.joined)}</span>
+              <span>{dateFmt(u.maturityDate)}</span>
             </div>
           </div>
           <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />

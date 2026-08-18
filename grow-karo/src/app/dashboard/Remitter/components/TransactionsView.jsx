@@ -121,7 +121,9 @@ export default function TransactionsView() {
                         className="relative w-10 h-10 rounded-lg overflow-hidden border border-gray-200 cursor-pointer transition-all duration-300 ease-in-out hover:scale-110"
                       >
                         <img
-                          src={resolveMediaUrl(tx.proofUrl)}
+                          src={
+                            tx.proofUrl ? resolveMediaUrl(tx.proofUrl) : null
+                          }
                           alt="Payment proof"
                           fill
                           className="object-fit"
