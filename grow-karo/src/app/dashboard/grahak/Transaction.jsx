@@ -41,7 +41,7 @@ const STATUS_STYLES = {
   },
 };
 
-const PAGE_SIZE_OPTIONS = [10, 25, 50];
+const PAGE_SIZE_OPTIONS = [5, 10, 25, 50];
 
 function StatusBadge({ status }) {
   const cfg = STATUS_STYLES[status] || STATUS_STYLES.Completed;
@@ -525,7 +525,7 @@ export default function Transaction() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
+            <tbody className="divide-y divide-slate-200 h-[100px] overflow-y-scroll">
               {isLoading ? (
                 <TableRowLoader colSpan={5} loading={"Transactions"} />
               ) : paginatedTransactions.length > 0 ? (
@@ -556,7 +556,7 @@ export default function Transaction() {
                           : "text-slate-900"
                       }`}
                     >
-                      {txn.type === "Credit" ? "+" : "-"}$
+                      {txn.type === "Credit" ? "+" : "-"}₹{" "}
                       {txn.amount.toFixed(2)}
                     </td>
                   </tr>

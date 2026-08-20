@@ -16,6 +16,7 @@ import {
 import {
   getAllUsersScheme,
   getAllUserTransaction,
+  getNominees,
   logoutApi,
 } from "../../services/grahakService";
 import { useLoader } from "./LoaderContext";
@@ -26,6 +27,8 @@ export const UserProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [portfolio, setPortfolio] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [nominees, setNominees] = useState(null);
+  const [nomineeId, setNomineeId] = useState("");
 
   const { showLoader, hideLoader } = useLoader();
 
@@ -137,6 +140,19 @@ export const UserProvider = ({ children }) => {
     }
   }, [authUser]);
 
+  const FetchNominees = useCallback(async () => {
+    if (!authUser?.id) return;
+    try {
+      // setIsLoading(true);
+      const res = await getNominees(authUser?.id);
+      // console.log(res);
+      res ? setNominees(res) : setNominees([]);
+    } catch (error) {
+      console.log(error);
+      setNominees([]);
+    }
+  }, [authUser]);
+
   const contexValue = useMemo(
     () => ({
       authUser,
@@ -150,6 +166,10 @@ export const UserProvider = ({ children }) => {
       transactions,
       FetchTransactions,
       updateAuthUser,
+      nominees,
+      FetchNominees,
+      nomineeId,
+      setNomineeId,
     }),
     [
       authUser,
@@ -161,6 +181,9 @@ export const UserProvider = ({ children }) => {
       transactions,
       FetchTransactions,
       updateAuthUser,
+      nominees,
+      FetchNominees,
+      nomineeId,
     ],
   );
   return (

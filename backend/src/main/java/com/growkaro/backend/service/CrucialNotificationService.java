@@ -87,11 +87,12 @@ public class CrucialNotificationService {
 
         // 1. Persist in-app notification
         Notification notification = new Notification();
-        notification.setUser(user);
+        notification.setReceiverType(Notification.ReceiverType.User);
+        notification.setReceiverId(user.getId());
+        notification.setTitle(contentBuilder.buildSubject(action));
         notification.setMessage(contentBuilder.buildPlainMessage(action, recipientName, params));
-        notification.setType(contentBuilder.toNotificationType(action));
+        notification.setNotificationType(contentBuilder.toNotificationType(action));
         notification.setActionUrl(actionUrl);
-        notification.setCreatedAt(LocalDateTime.now());
         notificationRepository.save(notification);
 
         // 2. Send email

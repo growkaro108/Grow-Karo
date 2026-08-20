@@ -11,9 +11,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 @Getter
@@ -81,8 +79,11 @@ public class Remitter {
 
     @PrePersist
     private void prePersist() {
-        this.remitterId = "GKREMID-"
-                + LocalDateTime.now(ZoneId.of("Asia/Kolkata")).format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+        if (this.remitterId == null) {
+            this.remitterId = "GKREMID-"
+                    + LocalDateTime.now(ZoneId.of("Asia/Kolkata"))
+                            .format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+        }
         this.createdAt = getTime();
         this.updatedAt = getTime();
         if (this.totalPaid == null) {

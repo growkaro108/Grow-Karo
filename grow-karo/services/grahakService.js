@@ -1,9 +1,13 @@
 import {
+  addNomineeApi,
+  deleteNomineeApi,
+  updateNomineeApi,
   enrollUser,
   fetchUserProfile,
   fetchUserTransactions,
   getEmailOtp,
   getEnrolledScheme,
+  getNomineesApi,
   getUsersSchemes,
   logoutUser,
   redeemAggressive,
@@ -15,6 +19,7 @@ import {
   userSchemeWithdraw,
   validateEmailOtp,
 } from "@/api/userApi";
+import { allRounderMessage } from "@/components/Message";
 
 const USE_MOCK = false;
 const NETWORK_DELAY_MS = 1000;
@@ -163,11 +168,12 @@ export async function verifyEmailOTP(email, otp) {
   return await validateEmailOtp(email, otp);
 }
 
-export async function enrollInPlan(schemeId, userId, amount) {
+export async function enrollInPlan(schemeId, userId, amount, nomineeId) {
   const payload = {
     schemeId: schemeId,
     userId: userId,
     amount: amount,
+    nomineeId: nomineeId,
   };
   return await enrollUser(payload);
 }
@@ -210,6 +216,42 @@ export async function withdrawProgressScheme(data) {
 
 export async function getAllUserTransaction(userId) {
   return await fetchUserTransactions(userId);
+}
+
+export async function getNominees(userId) {
+  const res = await getNomineesApi(userId);
+  if (res.status == "success") {
+    return res.data;
+  }
+  allRounderMessage(res);
+  return null;
+}
+
+export async function addNominee(nominee) {
+  const res = await addNomineeApi(nominee);
+  if (res.status == "success") {
+    return res.data;
+  }
+  allRounderMessage(res);
+  return null;
+}
+
+export async function deleteNominee(userId, nomineeId) {
+  const res = await deleteNomineeApi(userId, nomineeId);
+  if (res.status === "success") {
+    return res;
+  }
+  allRounderMessage(res);
+  return null;
+}
+
+export async function updateNominee(userId, nomineeId, nominee) {
+  const res = await updateNomineeApi(userId, nomineeId, nominee);
+  if (res.status === "success") {
+    return res.data;
+  }
+  allRounderMessage(res);
+  return null;
 }
 
 export async function fetchGrahakDashboardData(userId = "me") {

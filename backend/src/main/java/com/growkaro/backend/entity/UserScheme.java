@@ -26,6 +26,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.DecimalMin;
@@ -55,6 +56,11 @@ public class UserScheme {
     @JoinColumn(name = "user_id", nullable = false)
     @JsonBackReference(value = "user-schemes")
     private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "nominee_id")
+    @JsonBackReference
+    private Nominee nominee;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "scheme_id", nullable = false)

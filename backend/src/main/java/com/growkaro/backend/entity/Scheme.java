@@ -31,7 +31,7 @@ import java.util.Objects;
 @ToString(exclude = "joinedUsers")
 @Entity
 @Table(name = "schemes", indexes = {
-        @Index(name = "idx_scheme_status", columnList = "status"),
+        @Index(name = "idx_scheme_id", columnList = "schemeId"),
         @Index(name = "idx_scheme_category", columnList = "scheme_category")
 })
 public class Scheme {

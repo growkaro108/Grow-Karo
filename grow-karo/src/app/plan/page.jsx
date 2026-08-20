@@ -18,6 +18,7 @@ import { PlanCard } from "./components/PlanCard";
 import dynamic from "next/dynamic";
 import TabLoader from "@/loader/TabLoader";
 import { useLoader } from "@/context/LoaderContext";
+import { remitterContext } from "@/context/RemitterContext";
 
 const EnrollConfirmModal = dynamic(
   () => import("./components/EnrollConfirmModal"),
@@ -39,7 +40,8 @@ export default function Plans({ initialPlans = EMPTY_ARRAY }) {
   const [confirmPlan, setConfirmPlan] = useState(null);
   const [enrolledSchemeIds, setEnrolledSchemeIds] = useState([]);
   const [enrolling, setEnrolling] = useState(false);
-  const { authUser } = use(userContext);
+  const { authUser, nomineeId } = use(userContext);
+  const { authRemitter } = use(remitterContext);
   const { showLoader, hideLoader } = useLoader();
   const router = useRouter();
   const enrolledMap = useMemo(() => {
@@ -74,7 +76,7 @@ export default function Plans({ initialPlans = EMPTY_ARRAY }) {
     };
 
     const getAllEnrolledScheme = async (userId) => {
-      if (!userId) return;
+      if (!userId || authRemitter) return;
       try {
         const response = await getAllUserSchemeIds(userId);
 
@@ -98,7 +100,7 @@ export default function Plans({ initialPlans = EMPTY_ARRAY }) {
     return () => {
       isMounted = false;
     };
-  }, [authUser, hideLoader, showLoader]);
+  }, [authRemitter, authUser, hideLoader, showLoader]);
 
   const enrolledSet = useMemo(() => {
     // 1. If it's already an Array, use it directly.
@@ -158,6 +160,10 @@ export default function Plans({ initialPlans = EMPTY_ARRAY }) {
         infoMessage("Amount should be greater than or equal to minimum amount");
         return;
       }
+      if (!nomineeId || nomineeId === "") {
+        infoMessage("Please select a nominee");
+        return;
+      }
       // console.log(confirmPlan.schemeId, amount, authUser?.id);
 
       setEnrolling(true);
@@ -166,6 +172,7 @@ export default function Plans({ initialPlans = EMPTY_ARRAY }) {
           confirmPlan.schemeId,
           authUser?.id,
           amount,
+          nomineeId,
         );
 
         // 2. Sanitize and normalise the response status
@@ -212,7 +219,7 @@ export default function Plans({ initialPlans = EMPTY_ARRAY }) {
       }
       // 5. Complete and correct dependency array preventing stale closures
     },
-    [authUser, confirmPlan],
+    [authUser, confirmPlan, nomineeId],
   );
   return (
     <div className="flex flex-col gap-6 p-6 bg-slate-50 min-h-screen font-sans">

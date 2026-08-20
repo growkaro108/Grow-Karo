@@ -2,6 +2,7 @@ package com.growkaro.backend.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,8 +21,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.growkaro.backend.DRO.NewNominee;
 import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.DRO.WithdrawAmount;
+import com.growkaro.backend.DTO.NomineeResponse;
 import com.growkaro.backend.DTO.TransactionResponse;
 import com.growkaro.backend.DTO.TransactionSummary;
 import com.growkaro.backend.DTO.UserPortfolio;
@@ -78,23 +82,23 @@ public class UserAPIService {
         this.general = general;
     }
 
-    @Cacheable(value = "testApis", key = "#id")
+    // @Cacheable(value = "testApis", key = "#id")
     @Transactional
-    public UserScheme testApis(String id) {
+    public boolean testApis() {
         try {
-            System.out.println("test api hit" + id);
-            UserScheme u = getUserSchemeById(id);
-            // System.out.println("db hit");
-            if (u == null) {
-                System.out.println("no Scheme found");
-                return null;
-
+            // User u = userRepository.findById("GKUSID20260731180215").get();
+            // System.out.println(u.getNominees().get(0).getName());
+            List<UserScheme> users = userSchemeRepository.findByUser_UserId("GKUSID20260731180215");
+            for (UserScheme userScheme : users) {
+                Nominee n = userScheme.getUser().getNominees().get(0);
+                userScheme.setNominee(n);
+                userSchemeRepository.save(userScheme);
+                System.out.println(userScheme.getUser().getName() + " " + userScheme.getNominee().getName());
             }
-            return u;
-
+            return true;
         } catch (Exception e) {
             log.error("Failed to set user status active", e);
-            return null;
+            return false;
         }
     }
 
@@ -208,7 +212,9 @@ public class UserAPIService {
             nominee.setMobileNo(stringValue(user.nominee().get("mobileNo")));
             nominee.setRelation(stringValue(user.nominee().get("relation")));
             nominee.setUser(newUser);
-            newUser.setNominee(nominee);
+            List<Nominee> nominees = new ArrayList<>();
+            nominees.add(nominee);
+            newUser.setNominees(nominees);
         }
 
         newUser.setEmailVerified(true);
@@ -271,7 +277,8 @@ public class UserAPIService {
         }
     }
 
-    public Map<String, Object> enrollInScheme(String schemeId, String userId, BigDecimal amount) {
+    @Transactional
+    public Map<String, Object> enrollInScheme(String schemeId, String userId, BigDecimal amount, String nomineId) {
         try {
             if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
                 return general.response("error", "Invalid request...", null);
@@ -280,8 +287,28 @@ public class UserAPIService {
             User user = getUserById(userId);
             Scheme scheme = getSchemeById(schemeId);
 
+            // check nominee is related to user
+            boolean isNomineeRelated = false;
+            Nominee selectedNominee = null;
+            List<Nominee> nominees = user.getNominees();
+            for (Nominee nominee : nominees) {
+                if (nominee.getNomineeId().equals(nomineId)) {
+                    isNomineeRelated = true;
+                    selectedNominee = nominee;
+                    break;
+                }
+            }
+
+            if (!isNomineeRelated) {
+                return general.response("error", "Nominee not related to user", null);
+            }
+
             if (user == null || scheme == null || amount.compareTo(scheme.getMinimumAmount()) < 0) {
                 return general.response("error", "Invalid request...", null);
+            }
+            // retrn if slot full
+            if (scheme.getMaxInvestorsAllowed() - scheme.getJoinedUsers().size() < 0) {
+                return general.response("error", "Scheme is full...", null);
             }
 
             UserScheme newUserScheme = new UserScheme();
@@ -289,7 +316,7 @@ public class UserAPIService {
             newUserScheme.setPaidAmount(amount); // <-- was validated but never persisted
             scheme.enrollUserInScheme(newUserScheme); // sets scheme + adds to scheme's joinedUsers
             user.enrollInScheme(newUserScheme); // if you keep this method, make sure it doesn't create a second
-                                                // UserScheme — see note below
+            newUserScheme.setNominee(selectedNominee);
             userSchemeRepository.save(newUserScheme);
 
             activityLogService.log(
@@ -558,6 +585,94 @@ public class UserAPIService {
                 .toList());
     }
 
+    public List<NomineeResponse> getNominees(String userId) {
+        if (userId == null || userId.isEmpty() || !general.isValidId(userId)) {
+            return null;
+        }
+        User user = getUserById(userId);
+        if (user == null) {
+            return null;
+        }
+        List<Nominee> nominees = user.getNominees();
+        return nominees == null ? null
+                : nominees.stream()
+                        .map(NomineeResponse::fromEntity)
+                        .toList();
+    }
+
+    public NomineeResponse addNominee(NewNominee nominee) {
+        try {
+            User user = getUserById(nominee.userId());
+            if (user == null) {
+                return null;
+            }
+            List<Nominee> nominees = user.getNominees();
+            if (nominees == null) {
+                nominees = new ArrayList<>();
+            }
+            Nominee newNominee = new Nominee();
+            newNominee.setUser(user);
+            newNominee.setName(nominee.name());
+            newNominee.setRelation(nominee.relation());
+            newNominee.setAadharNo(nominee.aadhaarNo());
+            newNominee.setMobileNo(nominee.phone());
+            nominees.add(newNominee);
+            user.setNominees(nominees);
+            userRepository.save(user);
+            return NomineeResponse.fromEntity(newNominee);
+        } catch (Exception e) {
+            log.error("Error adding nominee for user {}", nominee.userId(), e);
+            return null;
+        }
+    }
+
+    @Transactional
+    public Map<String, Object> deleteNominee(String userId, String nomineeId) {
+        User user = getUserById(userId);
+        if (user == null || nomineeId == null || nomineeId.isBlank()) {
+            return general.response("error", "Invalid nominee request", null);
+        }
+
+        Nominee nominee = user.getNominees().stream()
+                .filter(item -> nomineeId.equals(item.getNomineeId()))
+                .findFirst()
+                .orElse(null);
+        if (nominee == null) {
+            return general.response("error", "Nominee not found", null);
+        }
+        if (userSchemeRepository.existsByNomineeNomineeId(nomineeId)) {
+            return general.response("error", "This nominee is linked to an investment and cannot be deleted", null);
+        }
+
+        user.getNominees().remove(nominee);
+        userRepository.save(user);
+        return general.response("success", "Nominee deleted successfully", null);
+    }
+
+    @Transactional
+    public Map<String, Object> updateNominee(String userId, String nomineeId, NewNominee details) {
+        User user = getUserById(userId);
+        if (user == null || nomineeId == null || nomineeId.isBlank()
+                || details == null || !userId.equals(details.userId())) {
+            return general.response("error", "Invalid nominee request", null);
+        }
+
+        Nominee nominee = user.getNominees().stream()
+                .filter(item -> nomineeId.equals(item.getNomineeId()))
+                .findFirst()
+                .orElse(null);
+        if (nominee == null) {
+            return general.response("error", "Nominee not found", null);
+        }
+
+        nominee.setName(details.name().trim());
+        nominee.setRelation(details.relation().trim());
+        nominee.setAadharNo(details.aadhaarNo().trim());
+        nominee.setMobileNo(details.phone().trim());
+        userRepository.save(user);
+        return general.response("success", "Nominee updated successfully", NomineeResponse.fromEntity(nominee));
+    }
+
     //// pending
     @Caching(evict = {
             @CacheEvict(value = "userProfile", key = "#userId"),
@@ -592,35 +707,42 @@ public class UserAPIService {
     // paginatedTransactions(transactions, "clientId", user.getId()));
     // }
 
-    @Cacheable(value = "userNotifications", key = "#userId")
-    @Transactional(readOnly = true)
-    public Map<String, Object> userNotifications(String userId) {
-        User user = getUserById(userId);
-        if (user == null) {
-            return general.response("error", "Invalid requests...", Map.of("id", userId));
-        }
+    // @Cacheable(value = "userNotifications", key = "#userId")
+    // @Transactional(readOnly = true)
+    // public Map<String, Object> userNotifications(String userId) {
+    // User user = getUserById(userId);
+    // if (user == null) {
+    // return general.response("error", "Invalid requests...", Map.of("id",
+    // userId));
+    // }
 
-        Page<Notification> notifications = notificationRepository.findByUserId(user.getId(), pageable("1"));
-        Map<String, Object> data = paginatedMeta(notifications);
-        data.put("userId", user.getId());
-        data.put("unreadCount", notificationRepository.countByUserIdAndRead(user.getId(), false));
-        data.put("items", notifications.getContent().stream().map(this::toNotificationView).toList());
-        return general.response("ok", "User notifications fetched", data);
-    }
+    // Page<Notification> notifications =
+    // notificationRepository.findByUserId(user.getId(), pageable("1"));
+    // Map<String, Object> data = paginatedMeta(notifications);
+    // data.put("userId", user.getId());
+    // data.put("unreadCount",
+    // notificationRepository.countByUserIdAndRead(user.getId(), false));
+    // data.put("items",
+    // notifications.getContent().stream().map(this::toNotificationView).toList());
+    // return general.response("ok", "User notifications fetched", data);
+    // }
 
-    @CacheEvict(value = "userNotifications", key = "#userId")
-    @Transactional
-    public Map<String, Object> markNotificationsAsRead(String userId, List<String> notificationIds) {
-        User user = getUserById(userId);
-        if (user == null) {
-            return general.response("error", "Invalid requests...", Map.of("id", userId));
-        }
+    // @CacheEvict(value = "userNotifications", key = "#userId")
+    // @Transactional
+    // public Map<String, Object> markNotificationsAsRead(String userId,
+    // List<String> notificationIds) {
+    // User user = getUserById(userId);
+    // if (user == null) {
+    // return general.response("error", "Invalid requests...", Map.of("id",
+    // userId));
+    // }
 
-        int updated = notificationIds == null || notificationIds.isEmpty()
-                ? notificationRepository.markAllAsRead(user.getId())
-                : notificationRepository.markAsRead(user.getId(), notificationIds);
-        return general.response("ok", "Notifications marked as read", Map.of("updatedCount", updated));
-    }
+    // int updated = notificationIds == null || notificationIds.isEmpty()
+    // ? notificationRepository.markAllAsRead(user.getId())
+    // : notificationRepository.markAsRead(user.getId(), notificationIds);
+    // return general.response("ok", "Notifications marked as read",
+    // Map.of("updatedCount", updated));
+    // }
 
     public Map<String, Object> updateNotificationSettings(String userId, Map<String, Boolean> settings) {
         return general.response("ok", "Notification preferences updated",
@@ -658,16 +780,16 @@ public class UserAPIService {
     // return data;
     // }
 
-    private Map<String, Object> toNotificationView(Notification notification) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("id", notification.getId());
-        data.put("message", notification.getMessage());
-        data.put("type", notification.getType());
-        data.put("read", notification.isRead());
-        data.put("actionUrl", notification.getActionUrl());
-        data.put("createdAt", notification.getCreatedAt());
-        return data;
-    }
+    // private Map<String, Object> toNotificationView(Notification notification) {
+    // Map<String, Object> data = new LinkedHashMap<>();
+    // data.put("id", notification.getId());
+    // data.put("message", notification.getMessage());
+    // data.put("type", notification.getType());
+    // data.put("read", notification.isRead());
+    // data.put("actionUrl", notification.getActionUrl());
+    // data.put("createdAt", notification.getCreatedAt());
+    // return data;
+    // }
 
     private Map<String, Object> paginatedMeta(Page<?> page) {
         Map<String, Object> data = new LinkedHashMap<>();

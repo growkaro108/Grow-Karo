@@ -23,7 +23,6 @@ import com.growkaro.backend.DTO.Payee;
 import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.Recipient;
-import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.service.RemitterAPIService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +54,9 @@ public class RemitterAPIController {
             }
             RemitterResponse rr = remitterAPIService.login(email, password);
             if (rr != null) {
+                if (!rr.isStatus()) {
+                    return general.response("info", "Account is not active", null);
+                }
                 return general.response("success", "Login successful", rr);
             } else {
                 log.info("Invalid credentials: email {} role {}", email, role);

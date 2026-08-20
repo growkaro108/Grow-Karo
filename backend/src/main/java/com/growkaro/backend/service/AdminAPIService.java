@@ -33,17 +33,22 @@ import com.growkaro.backend.DTO.SearchUser;
 import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.common.GlobalExceptionHandler.DuplicateResourceException;
+import com.growkaro.backend.entity.Notification;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.SupportIssue;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
+import com.growkaro.backend.entity.Notification.ActionType;
+import com.growkaro.backend.entity.Notification.NotificationType;
+import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.entity.Transaction.TransactionStatus;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.enums.UserSchemeStatus;
 import com.growkaro.backend.enums.WithdrawalStatus;
 import com.growkaro.backend.repository.ActivityLogRepository;
+import com.growkaro.backend.repository.NotificationRepository;
 import com.growkaro.backend.repository.RemitterRepository;
 import com.growkaro.backend.repository.SchemeRepository;
 import com.growkaro.backend.repository.SupportIssueRepository;
@@ -69,6 +74,7 @@ public class AdminAPIService {
     private final ActivityLogService activityLogService;
     private final LocalFileStorageService localFileStorageService;
     private final ActivityLogRepository activityLogRepository;
+    private final NotificationRepository notificationRepository;
     private final General general;
 
     public AdminAPIService(UserRepository userRepository,
@@ -77,7 +83,8 @@ public class AdminAPIService {
             SupportIssueRepository supportIssueRepository,
             SchemeRepository schemeRepository, UserSchemeRepository userSchemeRepository, @Lazy ApiService apiService,
             ActivityLogService activityLogService, LocalFileStorageService localFileStorageService,
-            ActivityLogRepository activityLogRepository, General general) {
+            ActivityLogRepository activityLogRepository, NotificationRepository notificationRepository,
+            General general) {
         this.userRepository = userRepository;
         this.remitterRepository = remitterRepository;
         this.transactionRepository = transactionRepository;
@@ -88,6 +95,7 @@ public class AdminAPIService {
         this.activityLogService = activityLogService;
         this.localFileStorageService = localFileStorageService;
         this.activityLogRepository = activityLogRepository;
+        this.notificationRepository = notificationRepository;
         this.general = general;
     }
 
@@ -533,14 +541,27 @@ public class AdminAPIService {
         if (!errors.isEmpty()) {
             throw new DuplicateResourceException(errors);
         }
+        if (!existing.getAllocationLimit().equals(updateRemitter.getAllocationLimit())) {
+            Notification n = new Notification();
+            n.setReceiverType(ReceiverType.Remitter);
+            n.setReceiverId(id);
+            n.setTitle("Allocation Limit Updated");
+            n.setMessage("Your allocation limit has been updated from " + existing.getAllocationLimit() + " to "
+                    + updateRemitter.getAllocationLimit());
+            n.setNotificationType(NotificationType.LIMIT_UPDATED);
+            n.setActionType(ActionType.ALLOCATION_LIMIT_UPDATED);
+            n.setRead(false);
+            notificationRepository.save(n);
+            existing.setAllocationLimit(updateRemitter.getAllocationLimit());
+        }
 
         existing.setOrganizationName(updateRemitter.getOrganizationName());
         existing.setRemitterPhone(updateRemitter.getRemitterPhone());
-        existing.setAllocationLimit(updateRemitter.getAllocationLimit());
         existing.setAadharNumber(updateRemitter.getAadharNumber());
         existing.setPanNumber(updateRemitter.getPanNumber());
         existing.setStatus(updateRemitter.getStatus());
-        // remitterEmail intentionally left untouched — entity marks it `updatable =
+        // remitterEmail intentionally left untouched — entity marks it
+        // `updatable =
         // false`
 
         Remitter saved = remitterRepository.save(existing);

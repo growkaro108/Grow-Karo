@@ -98,6 +98,31 @@ export async function redeemAggressive(data) {
 export async function fetchUserTransactions(userId) {
   return apiRequest(`/user/${userId}/transactions`);
 }
+
+export async function getNomineesApi(userId) {
+  return apiRequest(`/user/${userId}/nominees`);
+}
+
+export async function addNomineeApi(nominee) {
+  return apiRequest(`/user/addNominee`, {
+    method: "POST",
+    body: nominee,
+  });
+}
+
+export async function deleteNomineeApi(userId, nomineeId) {
+  return apiRequest(`/user/${userId}/nominees/${nomineeId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function updateNomineeApi(userId, nomineeId, nominee) {
+  return apiRequest(`/user/${userId}/nominees/${nomineeId}`, {
+    method: "PUT",
+    body: nominee,
+  });
+}
+
 //pending
 export async function fetchUserRecipients(userId, params) {
   return apiRequest(`/users/${userId}/recipients`, { params });

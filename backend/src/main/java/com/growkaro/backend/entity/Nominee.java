@@ -1,5 +1,6 @@
 package com.growkaro.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.*;
@@ -30,8 +31,8 @@ public class Nominee {
     @Column(nullable = false, length = 30)
     private String relation;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
-    @JsonIgnoreProperties({"guardian", "nominee", "bankDetails", "enrolledSchemes"})
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnoreProperties({ "guardian", "nominees", "bankDetails", "enrolledSchemes" })
     private User user;
 }

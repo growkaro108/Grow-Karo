@@ -2,18 +2,13 @@ package com.growkaro.backend.entity;
 
 import org.springframework.stereotype.Component;
 
-import com.growkaro.backend.enums.NotificationType;
+import com.growkaro.backend.entity.Notification.NotificationType;
 
 import java.util.Map;
 
-/**
- * Centralizes copywriting for crucial-action emails.
- * Swap the body-building for a Thymeleaf/Freemarker template later if you
- * want richer HTML - the rest of the pipeline (sending + persistence)
- * doesn't need to change.
- */
 @Component
 public class NotificationContentBuilder {
+
     public enum EssentialActionType {
         FUND_TRANSFER_INITIATED,
         FUND_TRANSFER_COMPLETED,
@@ -71,10 +66,6 @@ public class NotificationContentBuilder {
         return params != null && params.containsKey(key) ? String.valueOf(params.get(key)) : "-";
     }
 
-    /**
-     * Maps a business action to the severity/category shown in your
-     * NotificationType UI badge.
-     */
     public NotificationType toNotificationType(EssentialActionType action) {
         return switch (action) {
             case FUND_TRANSFER_INITIATED, WITHDRAWAL_REQUESTED, KYC_UPDATED ->

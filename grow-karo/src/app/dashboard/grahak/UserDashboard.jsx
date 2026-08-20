@@ -12,6 +12,7 @@ import TabLoader from "../../../loader/TabLoader";
 import { useRouter } from "next/navigation";
 import { allRounderMessage, errorMessage } from "@/components/Message";
 import { RefreshCcw } from "lucide-react";
+import NotificationPanel from "./Notification/NotificationPanel";
 
 const Overview = dynamic(() => import("./Overview"), {
   loading: () => <TabLoader message={"Loading overview..."} />,
@@ -131,12 +132,12 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex gap-3 w-full sm:w-auto">
-              <button
+              {/* <button
                 onClick={() => openAggressiveWithdrawal()}
                 className="flex-1 sm:flex-none text-center bg-red-600 text-white hover:bg-red-700 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm cursor-pointer"
               >
                 Agresive Withdraw
-              </button>
+              </button> */}
               <button
                 onClick={() => openGeneralWithdrawModal()}
                 className="flex-1 sm:flex-none text-center bg-green-500 text-white hover:bg-green-600 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm cursor-pointer focus:cursor-wait"
@@ -156,13 +157,14 @@ export default function DashboardPage() {
                 />{" "}
                 {loading ? "Refreshing..." : "Refresh"}
               </button>
+              <NotificationPanel />
             </div>
           </header>
         )}
 
         {isLoading ? (
           <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-8 flex items-center justify-center min-h-[60vh]">
-            <TabLoader message="Fetching details..."  />
+            <TabLoader message="Fetching details..." />
           </div>
         ) : error ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50 text-rose-700 p-4 text-sm">
@@ -184,6 +186,7 @@ export default function DashboardPage() {
             {activeTab === "transactions" && (
               <Transactions transactions={transactions} />
             )}
+            {/* {activeTab === "notification" && <NotificationPanel />} */}
             {activeTab === "settings" && <Settings />}
           </>
         )}

@@ -11,13 +11,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.growkaro.backend.DRO.EnrollingUser;
+import com.growkaro.backend.DRO.NewNominee;
 import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.DRO.WithdrawAmount;
-import com.growkaro.backend.DTO.UserPortfolio;
+import com.growkaro.backend.DTO.NomineeResponse;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserProfile;
-import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.enums.Remark;
 import com.growkaro.backend.service.ApiService;
 import com.growkaro.backend.service.EmailService;
@@ -48,10 +48,9 @@ public class UserAPIController {
         this.apiService = apiService;
     }
 
-    @GetMapping("/test/{id}")
-    public Map<String, Object> test(@PathVariable String id) {
-        System.out.println("test api hit" + id);
-        return userAPIService.getMyScheme(id);
+    @GetMapping("/test")
+    public boolean test() {
+        return userAPIService.testApis();
         // return null;
     }
 
@@ -133,11 +132,13 @@ public class UserAPIController {
     @PutMapping("/scheme/enroll")
     public ResponseEntity<Map<String, Object>> enrollScheme(@RequestBody EnrollingUser enrollingUser) {
         try {
-            if (enrollingUser.schemeId().isBlank() || enrollingUser.userId().isBlank()) {
+            if (enrollingUser.schemeId().isBlank() || enrollingUser.userId().isBlank()
+                    || enrollingUser.nomineeId().isBlank() || enrollingUser.amount() == null) {
                 return ResponseEntity.badRequest().body(general.response("error", "Invalid data", null));
             }
             return ResponseEntity.ok(userAPIService.enrollInScheme(enrollingUser.schemeId(), enrollingUser.userId(),
-                    enrollingUser.amount()));
+                    enrollingUser.amount(), enrollingUser.nomineeId()));
+
         } catch (Exception e) {
             log.error("Error enrolling scheme {} for user {} with amount {}", enrollingUser.schemeId(),
                     enrollingUser.userId(), enrollingUser.amount(), e);
@@ -237,6 +238,51 @@ public class UserAPIController {
         return ResponseEntity.ok(userAPIService.getTransactionsofUser(userId));
     }
 
+    @GetMapping("/{userId}/nominees")
+    public ResponseEntity<Map<String, Object>> fetchNominees(@PathVariable String userId) {
+        List<NomineeResponse> nominees = userAPIService.getNominees(userId);
+        return nominees == null
+                ? ResponseEntity.badRequest().body(general.response("error", "Invalid data...", null))
+                : ResponseEntity.ok(general.response("success", "Nominees fetched", nominees));
+    }
+
+    @PostMapping("/addNominee")
+    public ResponseEntity<Map<String, Object>> addNominee(@RequestBody NewNominee nominee) {
+        try {
+            if (nominee.userId().isBlank() || nominee.name().isBlank() || nominee.relation().isBlank()
+                    || nominee.aadhaarNo().isBlank() || nominee.phone().isBlank()) {
+                log.error("Invalid data for user {}", nominee.userId());
+                return ResponseEntity.badRequest().body(general.response("error", "Invalid data...", null));
+            }
+            NomineeResponse newNominee = userAPIService.addNominee(nominee);
+            return newNominee == null
+                    ? ResponseEntity.badRequest().body(general.response("error", "Failed to add nominee", null))
+                    : ResponseEntity.ok(general.response("success", "Nominee added successfully", newNominee));
+        } catch (Exception e) {
+            log.error("Error adding nominee for user {}", nominee.userId(), e);
+            return ResponseEntity.internalServerError().body(general.response("error", "Internal Server error", null));
+        }
+    }
+
+    @DeleteMapping("/{userId}/nominees/{nomineeId}")
+    public ResponseEntity<Map<String, Object>> deleteNominee(
+            @PathVariable String userId, @PathVariable String nomineeId) {
+        Map<String, Object> response = userAPIService.deleteNominee(userId, nomineeId);
+        return "success".equals(response.get("status"))
+                ? ResponseEntity.ok(response)
+                : ResponseEntity.badRequest().body(response);
+    }
+
+    @PutMapping("/{userId}/nominees/{nomineeId}")
+    public ResponseEntity<Map<String, Object>> updateNominee(
+            @PathVariable String userId, @PathVariable String nomineeId,
+            @RequestBody NewNominee nominee) {
+        Map<String, Object> response = userAPIService.updateNominee(userId, nomineeId, nominee);
+        return "success".equals(response.get("status"))
+                ? ResponseEntity.ok(response)
+                : ResponseEntity.badRequest().body(response);
+    }
+
     /// pending
     // @DeleteMapping("/{userId}")
     // public ResponseEntity<Map<String, Object>> deleteUser(@PathVariable String
@@ -251,17 +297,19 @@ public class UserAPIController {
     // return ResponseEntity.ok(userAPIService.userTransactions(userId, page));
     // }
 
-    @GetMapping("/{userId}/notifications")
-    public ResponseEntity<Map<String, Object>> userNotifications(@PathVariable String userId) {
-        return ResponseEntity.ok(userAPIService.userNotifications(userId));
-    }
+    // @GetMapping("/{userId}/notifications")
+    // public ResponseEntity<Map<String, Object>> userNotifications(@PathVariable
+    // String userId) {
+    // return ResponseEntity.ok(userAPIService.userNotifications(userId));
+    // }
 
-    @PostMapping("/{userId}/notifications/read")
-    public ResponseEntity<Map<String, Object>> markNotificationsAsRead(
-            @PathVariable String userId,
-            @RequestBody List<String> notificationIds) {
-        return ResponseEntity.ok(userAPIService.markNotificationsAsRead(userId, notificationIds));
-    }
+    // @PostMapping("/{userId}/notifications/read")
+    // public ResponseEntity<Map<String, Object>> markNotificationsAsRead(
+    // @PathVariable String userId,
+    // @RequestBody List<String> notificationIds) {
+    // return ResponseEntity.ok(userAPIService.markNotificationsAsRead(userId,
+    // notificationIds));
+    // }
 
     @PutMapping("/{userId}/notifications/settings")
     public ResponseEntity<Map<String, Object>> updateNotificationSettings(

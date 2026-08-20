@@ -1,7 +1,8 @@
-import React from "react";
+import React, { use } from "react";
 import { Tab } from "./Tab";
 import { RiskBadge, StatusBadge, EnrolledBadge } from "./Badges";
 import { currency } from "../utils/planUtils";
+import { remitterContext } from "@/context/RemitterContext";
 
 export function PlanCard({
   plan,
@@ -15,6 +16,7 @@ export function PlanCard({
   );
   const isFull = plan.maxInvestorsAllowed != null && slotsLeft <= 0;
   const enrolledCount = enrolledMap.get(plan.schemeId) ?? 0;
+  const { authRemitter } = use(remitterContext);
 
   return (
     <div
@@ -53,7 +55,7 @@ export function PlanCard({
             e.stopPropagation();
             onOpenDetails(plan);
           }}
-          className="text-xs font-medium whitespace-nowrap flex-shrink-0 hover:underline"
+          className="text-xs font-medium whitespace-nowrap shrink-0 hover:underline"
           style={{ color: "#4f46e5" }}
         >
           See more
@@ -73,25 +75,27 @@ export function PlanCard({
           </p>
         </div>
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRequestEnroll(plan);
-          }}
-          disabled={isFull || !plan.status}
-          className="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ backgroundColor: "#4f46e5" }}
-          onMouseEnter={(e) =>
-            !e.currentTarget.disabled &&
-            (e.currentTarget.style.backgroundColor = "#4338ca")
-          }
-          onMouseLeave={(e) =>
-            !e.currentTarget.disabled &&
-            (e.currentTarget.style.backgroundColor = "#4f46e5")
-          }
-        >
-          {isFull ? "Full" : !plan.status ? "Closed" : "Enroll"}
-        </button>
+        {!authRemitter && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onRequestEnroll(plan);
+            }}
+            disabled={isFull || !plan.status}
+            className="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: "#4f46e5" }}
+            onMouseEnter={(e) =>
+              !e.currentTarget.disabled &&
+              (e.currentTarget.style.backgroundColor = "#4338ca")
+            }
+            onMouseLeave={(e) =>
+              !e.currentTarget.disabled &&
+              (e.currentTarget.style.backgroundColor = "#4f46e5")
+            }
+          >
+            {isFull ? "Full" : !plan.status ? "Closed" : "Enroll"}
+          </button>
+        )}
       </div>
     </div>
   );
