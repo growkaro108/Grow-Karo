@@ -12,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -39,6 +38,7 @@ import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserProfile;
 import com.growkaro.backend.entity.UserScheme;
+import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.repository.BankDetailsRepository;
 import com.growkaro.backend.repository.NotificationRepository;
@@ -47,7 +47,10 @@ import com.growkaro.backend.repository.TransactionRepository;
 import com.growkaro.backend.repository.UserRepository;
 import com.growkaro.backend.repository.UserSchemeRepository;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
 public class UserAPIService {
 
     private static final Logger log = LoggerFactory.getLogger(UserAPIService.class);
@@ -62,25 +65,8 @@ public class UserAPIService {
     private final ActivityLogService activityLogService;
     private final BankDetailsRepository bankDetailsRepository;
     private final General general;
-
-    public UserAPIService(ApiService apiService,
-            UserRepository userRepository,
-            TransactionRepository transactionRepository,
-            NotificationRepository notificationRepository,
-            UserSchemeRepository userSchemeRepository,
-            SchemeRepository schemeRepository,
-            ActivityLogService activityLogService, BankDetailsRepository bankDetailsRepository,
-            General general) {
-        this.apiService = apiService;
-        this.userRepository = userRepository;
-        this.transactionRepository = transactionRepository;
-        this.notificationRepository = notificationRepository;
-        this.schemeRepository = schemeRepository;
-        this.userSchemeRepository = userSchemeRepository;
-        this.activityLogService = activityLogService;
-        this.bankDetailsRepository = bankDetailsRepository;
-        this.general = general;
-    }
+    private final CrucialNotificationService crucialNotificationService;
+    private final EmailService emailService;
 
     // @Cacheable(value = "testApis", key = "#id")
     @Transactional
@@ -88,12 +74,13 @@ public class UserAPIService {
         try {
             // User u = userRepository.findById("GKUSID20260731180215").get();
             // System.out.println(u.getNominees().get(0).getName());
-            List<UserScheme> users = userSchemeRepository.findByUser_UserId("GKUSID20260731180215");
+            List<UserScheme> users = userSchemeRepository.findAllByMaturityDate(general.getCurrentDate(),
+                    general.getCurrentDate().plusDays(15));
             for (UserScheme userScheme : users) {
-                Nominee n = userScheme.getUser().getNominees().get(0);
-                userScheme.setNominee(n);
-                userSchemeRepository.save(userScheme);
-                System.out.println(userScheme.getUser().getName() + " " + userScheme.getNominee().getName());
+                System.out.println(userScheme.getUser().getName());
+                System.out.println(userScheme.getMaturityDate());
+                emailService.sendSchemeMaturityEmailtoUser(userScheme);
+
             }
             return true;
         } catch (Exception e) {
@@ -252,6 +239,8 @@ public class UserAPIService {
         }
         String token = "local-dev-token";
         UserProfile finalUser = general.toUserProfile(user, token);
+        // notifyUser
+        crucialNotificationService.notifyUser(EssentialActionType.LOGIN, user, "", null);
         activityLogService.log(
                 user.getId(), user.getName(), "USER",
                 ActivityType.LOGIN,
@@ -318,6 +307,13 @@ public class UserAPIService {
             user.enrollInScheme(newUserScheme); // if you keep this method, make sure it doesn't create a second
             newUserScheme.setNominee(selectedNominee);
             userSchemeRepository.save(newUserScheme);
+
+            crucialNotificationService.notifyUser(
+                    EssentialActionType.INVESTMENT_CONFIRMED,
+                    user,
+                    "/dashboard/portfolio",
+                    Map.of("amount", amount.toString(), "schemeName", scheme.getSchemeName(), "txnId",
+                            newUserScheme.getUserSchemeId() != null ? newUserScheme.getUserSchemeId() : ""));
 
             activityLogService.log(
                     user.getId(), user.getName(), "USER",
@@ -430,6 +426,9 @@ public class UserAPIService {
 
             user.setPasswordHash(apiService.makePasswordHash(password));
             userRepository.save(user);
+
+            crucialNotificationService.notifyUser(EssentialActionType.PASSWORD_CHANGED, user, "/auth", null);
+
             activityLogService.log(
                     user.getId(), user.getName(), "USER",
                     ActivityType.PASSWORD_CHANGED,
@@ -481,6 +480,9 @@ public class UserAPIService {
         user.setSchemeAlerts(up.schemeAlerts());
         user.setSecurityAlerts(up.securityAlerts());
         userRepository.save(user);
+
+        crucialNotificationService.notifyUser(EssentialActionType.BANK_DETAILS_UPDATED, user, "/dashboard/settings",
+                null);
 
         return general.response("success", "User updated successfully", general.toUserProfile(user, token));
     }
@@ -560,7 +562,15 @@ public class UserAPIService {
                 ? Transaction.TransactionType.AGGRESSIVE_WITHDRAWAL
                 : Transaction.TransactionType.GENERAL_WITHDRAWAL);
         txn.setUserScheme(us);
-        transactionRepository.save(txn);
+        Transaction savedTxn = transactionRepository.save(txn);
+
+        crucialNotificationService.notifyAllForEssentialAction(
+                EssentialActionType.WITHDRAWAL_REQUESTED,
+                user,
+                List.of(),
+                null,
+                "/dashboard/requests",
+                Map.of("amount", wa.amount().toString(), "txnId", savedTxn.getId() != null ? savedTxn.getId() : ""));
 
         // update redemption bookkeeping
         if (!wa.isAggressive()) {
@@ -707,42 +717,50 @@ public class UserAPIService {
     // paginatedTransactions(transactions, "clientId", user.getId()));
     // }
 
-    // @Cacheable(value = "userNotifications", key = "#userId")
-    // @Transactional(readOnly = true)
-    // public Map<String, Object> userNotifications(String userId) {
-    // User user = getUserById(userId);
-    // if (user == null) {
-    // return general.response("error", "Invalid requests...", Map.of("id",
-    // userId));
-    // }
+    @Transactional(readOnly = true)
+    public Map<String, Object> userNotifications(String userId, String page) {
+        User user = getUserById(userId);
+        if (user == null) {
+            return general.response("error", "Invalid requests...", Map.of("id", userId));
+        }
 
-    // Page<Notification> notifications =
-    // notificationRepository.findByUserId(user.getId(), pageable("1"));
-    // Map<String, Object> data = paginatedMeta(notifications);
-    // data.put("userId", user.getId());
-    // data.put("unreadCount",
-    // notificationRepository.countByUserIdAndRead(user.getId(), false));
-    // data.put("items",
-    // notifications.getContent().stream().map(this::toNotificationView).toList());
-    // return general.response("ok", "User notifications fetched", data);
-    // }
+        Page<Notification> notifications = notificationRepository.findByReceiverIdAndReceiverType(
+                user.getId(), Notification.ReceiverType.User, pageable(page));
+        Map<String, Object> data = paginatedMeta(notifications);
+        data.put("userId", user.getId());
+        data.put("unreadCount",
+                notificationRepository.countByReceiverIdAndReceiverTypeAndRead(user.getId(),
+                        Notification.ReceiverType.User, false));
+        data.put("items", notifications.getContent().stream().map(this::toNotificationView).toList());
+        return general.response("ok", "User notifications fetched", data);
+    }
 
-    // @CacheEvict(value = "userNotifications", key = "#userId")
-    // @Transactional
-    // public Map<String, Object> markNotificationsAsRead(String userId,
-    // List<String> notificationIds) {
-    // User user = getUserById(userId);
-    // if (user == null) {
-    // return general.response("error", "Invalid requests...", Map.of("id",
-    // userId));
-    // }
+    @Transactional
+    public Map<String, Object> markNotificationsAsRead(String userId, List<String> notificationIds) {
+        User user = getUserById(userId);
+        if (user == null) {
+            return general.response("error", "Invalid requests...", Map.of("id", userId));
+        }
 
-    // int updated = notificationIds == null || notificationIds.isEmpty()
-    // ? notificationRepository.markAllAsRead(user.getId())
-    // : notificationRepository.markAsRead(user.getId(), notificationIds);
-    // return general.response("ok", "Notifications marked as read",
-    // Map.of("updatedCount", updated));
-    // }
+        int updated = (notificationIds == null || notificationIds.isEmpty())
+                ? notificationRepository.markAllAsRead(user.getId(), Notification.ReceiverType.User)
+                : notificationRepository.markAsRead(user.getId(), Notification.ReceiverType.User, notificationIds);
+        return general.response("ok", "Notifications marked as read", Map.of("updatedCount", updated));
+    }
+
+    private Map<String, Object> toNotificationView(Notification notification) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("id", notification.getId());
+        data.put("title", notification.getTitle());
+        data.put("message", notification.getMessage());
+        data.put("type", notification.getNotificationType());
+        data.put("actionType", notification.getActionType());
+        data.put("read", notification.isRead());
+        data.put("actionUrl", notification.getActionUrl());
+        data.put("createdAt", notification.getCreatedAt());
+        data.put("updatedAt", notification.getUpdatedAt());
+        return data;
+    }
 
     public Map<String, Object> updateNotificationSettings(String userId, Map<String, Boolean> settings) {
         return general.response("ok", "Notification preferences updated",

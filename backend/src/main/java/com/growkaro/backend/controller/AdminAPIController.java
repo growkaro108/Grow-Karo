@@ -33,8 +33,15 @@ import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.SearchUser;
 import com.growkaro.backend.common.General;
+import com.growkaro.backend.common.NotificationBroadcaster;
+import com.growkaro.backend.entity.Notification.ReceiverType;
+import com.growkaro.backend.entity.User;
+import com.growkaro.backend.entity.Remitter;
+import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.service.AdminAPIService;
 import com.growkaro.backend.service.EmailService;
+import com.growkaro.backend.service.CrucialNotificationService;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -46,15 +53,19 @@ public class AdminAPIController {
     private final AdminAPIService adminAPIService;
     private final EmailService emailService;
     private final General general;
+    private final NotificationBroadcaster notificationBroadcaster;
+    private final CrucialNotificationService crucialNotificationService;
 
     private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of("image/jpeg", "image/png", "image/webp", "image/jpg");
     private static final long MAX_FILE_SIZE_BYTES = 5L * 1024 * 1024;
 
-    public AdminAPIController(AdminAPIService adminAPIService, EmailService emailService, General general) {
+    public AdminAPIController(AdminAPIService adminAPIService, EmailService emailService, General general,
+            NotificationBroadcaster notificationBroadcaster, CrucialNotificationService crucialNotificationService) {
         this.adminAPIService = adminAPIService;
         this.emailService = emailService;
         this.general = general;
-
+        this.notificationBroadcaster = notificationBroadcaster;
+        this.crucialNotificationService = crucialNotificationService;
     }
 
     @PostMapping("/scheme/create")
@@ -328,5 +339,54 @@ public class AdminAPIController {
     // Map<String, Object> payload) {
     // return ResponseEntity.ok(adminAPIService.createFundraiserCode(payload));
     // }
+
+    @GetMapping("/notifications")
+    public ResponseEntity<Map<String, Object>> getNotifications(
+            @RequestParam(required = false, defaultValue = "1") int page,
+            @RequestParam(required = false, defaultValue = "20") int size) {
+        return ResponseEntity.ok(adminAPIService.getAdminNotifications(page, size));
+    }
+
+    @PostMapping("/notifications/read")
+    public ResponseEntity<Map<String, Object>> markNotificationsAsRead(
+            @RequestBody(required = false) List<String> notificationIds) {
+        return ResponseEntity.ok(adminAPIService.markAdminNotificationsAsRead(notificationIds));
+    }
+
+    @GetMapping(value = "/notifications/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamAdminNotifications(@RequestParam(required = false, defaultValue = "GLOBAL") String adminId) {
+        return notificationBroadcaster.subscribe(ReceiverType.Admin, adminId);
+    }
+
+    @PostMapping("/notifications/send-essential")
+    public ResponseEntity<Map<String, Object>> sendEssentialNotification(
+            @RequestBody Map<String, Object> payload) {
+        try {
+            String actionStr = general.stringValue(payload.get("action"));
+            String userId = general.stringValue(payload.get("userId"));
+            String remitterId = general.stringValue(payload.get("remitterId"));
+            String actionUrl = general.stringValue(payload.get("actionUrl"));
+            @SuppressWarnings("unchecked")
+            Map<String, Object> params = (Map<String, Object>) payload.getOrDefault("params", Map.of());
+
+            EssentialActionType action = EssentialActionType.valueOf(actionStr);
+            User user = userId != null ? adminAPIService.getUserById(userId) : null;
+            Remitter remitter = remitterId != null ? adminAPIService.getRemitterById(remitterId) : null;
+
+            crucialNotificationService.notifyAllForEssentialAction(
+                    action,
+                    user,
+                    List.of(), // default to broadcast via SSE to all admins
+                    remitter,
+                    actionUrl,
+                    params
+            );
+
+            return ResponseEntity.ok(general.response("ok", "Essential notifications dispatched successfully", null));
+        } catch (Exception e) {
+            log.error("Failed to send essential notifications: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(general.response("error", e.getMessage(), null));
+        }
+    }
 
 }

@@ -22,8 +22,13 @@ import com.growkaro.backend.DTO.PagedResponse;
 import com.growkaro.backend.DTO.Payee;
 import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.common.General;
+import com.growkaro.backend.common.NotificationBroadcaster;
+import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.service.RemitterAPIService;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -34,10 +39,13 @@ public class RemitterAPIController {
 
     private final RemitterAPIService remitterAPIService;
     private final General general;
+    private final NotificationBroadcaster notificationBroadcaster;
 
-    public RemitterAPIController(RemitterAPIService remitterAPIService, General general) {
+    public RemitterAPIController(RemitterAPIService remitterAPIService, General general,
+            NotificationBroadcaster notificationBroadcaster) {
         this.remitterAPIService = remitterAPIService;
         this.general = general;
+        this.notificationBroadcaster = notificationBroadcaster;
     }
 
     @PostMapping("/login")
@@ -257,5 +265,25 @@ public class RemitterAPIController {
     // return ResponseEntity.ok(remitterAPIService.proof(remitterId, requestId,
     // fileName));
     // }
+
+    @GetMapping("/{remitterId}/notifications")
+    public ResponseEntity<Map<String, Object>> getNotifications(
+            @PathVariable String remitterId,
+            @RequestParam(required = false, defaultValue = "1") int page,
+            @RequestParam(required = false, defaultValue = "20") int size) {
+        return ResponseEntity.ok(remitterAPIService.getRemitterNotifications(remitterId, page, size));
+    }
+
+    @PostMapping("/{remitterId}/notifications/read")
+    public ResponseEntity<Map<String, Object>> markNotificationsAsRead(
+            @PathVariable String remitterId,
+            @RequestBody(required = false) List<String> notificationIds) {
+        return ResponseEntity.ok(remitterAPIService.markRemitterNotificationsAsRead(remitterId, notificationIds));
+    }
+
+    @GetMapping(value = "/{remitterId}/notifications/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamRemitterNotifications(@PathVariable String remitterId) {
+        return notificationBroadcaster.subscribe(ReceiverType.Remitter, remitterId);
+    }
 
 }

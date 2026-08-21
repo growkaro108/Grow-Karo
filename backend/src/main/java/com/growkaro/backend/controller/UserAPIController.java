@@ -22,6 +22,10 @@ import com.growkaro.backend.enums.Remark;
 import com.growkaro.backend.service.ApiService;
 import com.growkaro.backend.service.EmailService;
 import com.growkaro.backend.service.RedisService;
+import com.growkaro.backend.common.NotificationBroadcaster;
+import com.growkaro.backend.entity.Notification.ReceiverType;
+import org.springframework.http.MediaType;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.growkaro.backend.service.RemitterAPIService;
 import com.growkaro.backend.service.UserAPIService;
 
@@ -37,19 +41,23 @@ public class UserAPIController {
     private final RemitterAPIService remitterAPIService;
     private final General general;
     private final ApiService apiService;
+    private final NotificationBroadcaster notificationBroadcaster;
 
     public UserAPIController(UserAPIService userAPIService, EmailService emailService, RedisService redisService,
-            RemitterAPIService remitterAPIService, General general, ApiService apiService) {
+            RemitterAPIService remitterAPIService, General general, ApiService apiService,
+            NotificationBroadcaster notificationBroadcaster) {
         this.userAPIService = userAPIService;
         this.emailService = emailService;
         this.redisService = redisService;
         this.remitterAPIService = remitterAPIService;
         this.general = general;
         this.apiService = apiService;
+        this.notificationBroadcaster = notificationBroadcaster;
     }
 
     @GetMapping("/test")
     public boolean test() {
+
         return userAPIService.testApis();
         // return null;
     }
@@ -297,19 +305,24 @@ public class UserAPIController {
     // return ResponseEntity.ok(userAPIService.userTransactions(userId, page));
     // }
 
-    // @GetMapping("/{userId}/notifications")
-    // public ResponseEntity<Map<String, Object>> userNotifications(@PathVariable
-    // String userId) {
-    // return ResponseEntity.ok(userAPIService.userNotifications(userId));
-    // }
+    @GetMapping("/{userId}/notifications")
+    public ResponseEntity<Map<String, Object>> userNotifications(
+            @PathVariable String userId,
+            @RequestParam(required = false, defaultValue = "1") String page) {
+        return ResponseEntity.ok(userAPIService.userNotifications(userId, page));
+    }
 
-    // @PostMapping("/{userId}/notifications/read")
-    // public ResponseEntity<Map<String, Object>> markNotificationsAsRead(
-    // @PathVariable String userId,
-    // @RequestBody List<String> notificationIds) {
-    // return ResponseEntity.ok(userAPIService.markNotificationsAsRead(userId,
-    // notificationIds));
-    // }
+    @PostMapping("/{userId}/notifications/read")
+    public ResponseEntity<Map<String, Object>> markNotificationsAsRead(
+            @PathVariable String userId,
+            @RequestBody(required = false) List<String> notificationIds) {
+        return ResponseEntity.ok(userAPIService.markNotificationsAsRead(userId, notificationIds));
+    }
+
+    @GetMapping(value = "/{userId}/notifications/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamUserNotifications(@PathVariable String userId) {
+        return notificationBroadcaster.subscribe(ReceiverType.User, userId);
+    }
 
     @PutMapping("/{userId}/notifications/settings")
     public ResponseEntity<Map<String, Object>> updateNotificationSettings(

@@ -21,7 +21,7 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "notifications", indexes = {
-        @Index(name = "idx_notifications_receiver_read", columnList = "receiverId, receiverType, read"),
+        @Index(name = "idx_notifications_receiver_read", columnList = "receiverId, receiverType, is_read"),
         @Index(name = "idx_notifications_created_at", columnList = "createdAt")
 })
 public class Notification {
@@ -68,18 +68,32 @@ public class Notification {
     }
 
     public enum ReceiverType {
-        Remitter, User
+        Remitter, User, Admin
     }
 
     public enum ActionType {
         FUND_TRANSFER_INITIATED,
         FUND_TRANSFER_COMPLETED,
+        PAYMENT_FAILED,
         WITHDRAWAL_REQUESTED,
         WITHDRAWAL_APPROVED,
-        KYC_UPDATED,
+        WITHDRAWAL_REJECTED,
+        WITHDRAWAL_DISBURSED,
         INVESTMENT_CONFIRMED,
-        PAYMENT_FAILED,
-        ALLOCATION_LIMIT_UPDATED
+        PROFIT_CREDITED,
+        SCHEME_MATURITY_REMINDER,
+        SCHEME_MATURED,
+        KYC_SUBMITTED,
+        KYC_APPROVED,
+        KYC_REJECTED,
+        BANK_DETAILS_UPDATED,
+        REMITTER_ONBOARDED,
+        ALLOCATION_LIMIT_UPDATED,
+        LOW_ALLOCATION_BALANCE,
+        SETTLEMENT_SUBMITTED,
+        LOGIN,
+        PASSWORD_CHANGED,
+        SYSTEM_ALERT
     }
 
     @PrePersist

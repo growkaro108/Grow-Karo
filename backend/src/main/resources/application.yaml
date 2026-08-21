@@ -52,7 +52,7 @@ spring:
     host: smtp.gmail.com
     port: 587
     username: ${MAIL_USERNAME:growkaroanand@gmail.com}
-    password: ${MAIL_PASSWORD:rbkg mucs oxkl oqcp} # Removed plain-text app password
+    password: ${MAIL_PASSWORD:rbkg mucs oxkl oqcp}
     properties:
       mail:
         smtp:
@@ -79,6 +79,10 @@ app:
 frontend:
   url: ${FRONTEND_URL:http://localhost:3000}
   # url: ${FRONTEND_URL:https://deer-queen-antiques-luther.trycloudflare.com}
+
+admin:
+  email: ${ADMIN_EMAIL:"wv9304@gmail.com"}
+
 # s3 storage
 #   storage:
 #     type: s3

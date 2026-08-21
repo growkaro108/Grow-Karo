@@ -99,6 +99,20 @@ export async function fetchUserTransactions(userId) {
   return apiRequest(`/user/${userId}/transactions`);
 }
 
+export async function fetchUserNotifications(userId, page = 1) {
+  return apiRequest(`${base}/${userId}/notifications?page=${page}`);
+}
+
+export async function markUserNotificationsAsRead(
+  userId,
+  notificationIds = [],
+) {
+  return apiRequest(`${base}/${userId}/notifications/read`, {
+    method: "POST",
+    body: notificationIds,
+  });
+}
+
 export async function getNomineesApi(userId) {
   return apiRequest(`/user/${userId}/nominees`);
 }
@@ -132,8 +146,4 @@ export async function deleteUserAccount(userId) {
   return apiRequest(`/users/${userId}`, {
     method: "DELETE",
   });
-}
-
-export async function fetchUserNotifications(userId) {
-  return apiRequest(`/users/${userId}/notifications`);
 }

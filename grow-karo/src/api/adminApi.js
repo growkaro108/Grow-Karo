@@ -164,3 +164,22 @@ export async function createFundraiserCode(codeData) {
     body: codeData,
   });
 }
+
+export async function fetchAdminNotifications(page = 1, size = 20) {
+  return await apiRequest(`${END_POINT}notifications?page=${page}&size=${size}`);
+}
+
+export async function markAdminNotificationsAsRead(notificationIds = []) {
+  return await apiRequest(`${END_POINT}notifications/read`, {
+    method: "POST",
+    body: notificationIds,
+  });
+}
+
+export async function triggerEssentialNotification(payload) {
+  return await apiRequest(`${END_POINT}notifications/send-essential`, {
+    method: "POST",
+    body: payload,
+  });
+}
+

@@ -29,6 +29,8 @@ const SettingsView = dynamic(() => import("./components/SettingsView"), {
   ssr: false,
 });
 
+import RemitterNotificationDropdown from "./components/RemitterNotificationDropdown";
+
 export default function RemitterDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -98,8 +100,11 @@ export default function RemitterDashboard() {
               {activeTab === "requests" ? "Payment Requests" : activeTab}
             </h1>
           </div>
-          <div className="hidden md:flex items-center space-x-2 bg-green-50 border border-green-200 px-3 py-1.5 rounded-lg text-sm text-green-700 font-medium">
-            <span>{authRemitter.organizationName}</span>
+          <div className="flex items-center space-x-3">
+            <RemitterNotificationDropdown remitterId={authRemitter?.remitterId} />
+            <div className="hidden md:flex items-center space-x-2 bg-green-50 border border-green-200 px-3 py-1.5 rounded-lg text-sm text-green-700 font-medium">
+              <span>{authRemitter?.organizationName}</span>
+            </div>
           </div>
         </header>
 

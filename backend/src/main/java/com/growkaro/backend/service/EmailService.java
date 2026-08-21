@@ -1,5 +1,7 @@
 package com.growkaro.backend.service;
 
+import java.math.BigDecimal;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -9,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import com.growkaro.backend.DRO.RemitterCredentials;
 import com.growkaro.backend.common.General;
+import com.growkaro.backend.entity.UserScheme;
 
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
@@ -117,7 +120,7 @@ public class EmailService {
                     "<p><strong>EMAIL:</strong> " + remitterCredentials.getEmail() + "</p>" +
                     "<p><strong>Password:</strong> " + remitterCredentials.getPassword() + "</p>" +
                     "<p>This is your initial password. You will be prompted to change it upon your first login.</p>" +
-                    "<a href='" + general.remitterLoginUrl(remitterCredentials.getRemitterId())
+                    "<a href='" + general.loginUrl()
                     + "' style='display: inline-block; background-color: #006633; color: white; padding: 10px 20px; margin: 15px 0; text-decoration: none; border-radius: 5px;'>"
                     +
                     "Login to Platform" +
@@ -163,6 +166,76 @@ public class EmailService {
         } catch (Exception e) {
             log.error("Failed to send reset link to user {}", email, e);
 
+        }
+    }
+
+    @Async
+    public void sendSchemeMaturityEmailtoUser(UserScheme userScheme) {
+        // send email: scheme will mature in 10-15 days; if user wants to redeem,
+        // they must add a withdrawal request, otherwise it'll be auto-reinvested in the
+        // same scheme
+        try {
+            String subject = "Scheme Maturity Reminder";
+            BigDecimal totalAmount = userScheme.getProfit().add(userScheme.getPaidAmount())
+                    .subtract(userScheme.getProfitReedemed());
+            String body = "<div style='font-family: Arial, sans-serif; margin: 0; padding: 0;'>" +
+                    "<div style='background-color: #f0f8ff; padding: 20px;'>" +
+                    "<h1 style='color: #004d40;'>GrowKaro</h1>" +
+                    "</div>" +
+                    "<div style='padding: 20px;'>" +
+                    "<p>Dear " + userScheme.getUser().getName() + ",</p>" +
+                    "<p>Your scheme " + userScheme.getScheme().getSchemeName() +
+                    " is set to mature in the next 10-15 days.</p>" +
+                    "<p><strong>Maturity Date:</strong> " + userScheme.getMaturityDate() + "</p>" +
+                    "<p><strong>Total Profit:</strong> " + userScheme.getProfit() + "</p>" +
+                    "<p><strong>Amount Reedeemed So Far:</strong> " + userScheme.getProfitReedemed() + "</p>" +
+                    "<p><strong>Amount To Be Credited at Maturity:</strong> " + totalAmount + "</p>" +
+                    "<p>If you wish to redeem this amount, please add a withdrawal request before the maturity date. " +
+                    "If no request is made, the amount will be <strong>automatically reinvested</strong> in the same scheme.</p>"
+                    +
+                    "<a href='" + general.loginUrl() +
+                    "' style='display: inline-block; background-color: #006633; color: white; padding: 10px 20px; margin: 15px 0; text-decoration: none; border-radius: 5px;'>"
+                    +
+                    "Login to Platform" +
+                    "</a>" +
+                    "<p>Best regards,<br/>GrowwKaro Team</p>" +
+                    "</div>" +
+                    "</div>";
+            sendHtml(userScheme.getUser().getEmail(), subject, body);
+        } catch (Exception e) {
+            log.error("Failed to send scheme maturity email to user {}", userScheme.getUser().getEmail(), e);
+        }
+    }
+
+    @Async
+    public void sendSchemeMaturityEmailtoAdmin(UserScheme userScheme, String adminEmail) {
+        try {
+            String subject = "Upcoming Scheme Maturity for User " + userScheme.getUser().getName();
+            BigDecimal totalAmount = userScheme.getProfit().add(userScheme.getPaidAmount())
+                    .subtract(userScheme.getProfitReedemed());
+            String body = "<div style='font-family: Arial, sans-serif; margin: 0; padding: 0;'>" +
+                    "<div style='background-color: #f0f8ff; padding: 20px;'>" +
+                    "<h1 style='color: #004d40;'>GrowKaro</h1>" +
+                    "</div>" +
+                    "<div style='padding: 20px;'>" +
+                    "<p>Dear Admin,</p>" +
+                    "<p>Scheme " + userScheme.getScheme().getSchemeName() + " for user "
+                    + userScheme.getUser().getName() + " is set to mature in the next 10-15 days.</p>" +
+                    "<p><strong>Total Profit:</strong> " + userScheme.getProfit() + "</p>" +
+                    "<p><strong>Amount Reedeemed So Far:</strong> " + userScheme.getProfitReedemed() + "</p>" +
+                    "<p><strong>Amount To Be Paid at Maturity:</strong> " + totalAmount + "</p>" +
+                    "<p><strong>Maturity Date:</strong> " + userScheme.getMaturityDate() + "</p>" +
+                    "<a href='" + general.loginUrl() +
+                    "' style='display: inline-block; background-color: #006633; color: white; padding: 10px 20px; margin: 15px 0; text-decoration: none; border-radius: 5px;'>"
+                    +
+                    "Login to Platform" +
+                    "</a>" +
+                    "<p>Best regards,<br/>GrowwKaro Team</p>" +
+                    "</div>" +
+                    "</div>";
+            sendHtml(adminEmail, subject, body);
+        } catch (Exception e) {
+            log.error("Failed to send scheme maturity email to admin {}", adminEmail, e);
         }
     }
 }

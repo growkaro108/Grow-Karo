@@ -34,6 +34,7 @@ import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.common.GlobalExceptionHandler.DuplicateResourceException;
 import com.growkaro.backend.entity.Notification;
+import com.growkaro.backend.entity.NotificationContentBuilder;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.SupportIssue;
@@ -43,6 +44,7 @@ import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.entity.Notification.ActionType;
 import com.growkaro.backend.entity.Notification.NotificationType;
 import com.growkaro.backend.entity.Notification.ReceiverType;
+import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.entity.Transaction.TransactionStatus;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.enums.UserSchemeStatus;
@@ -75,7 +77,9 @@ public class AdminAPIService {
     private final LocalFileStorageService localFileStorageService;
     private final ActivityLogRepository activityLogRepository;
     private final NotificationRepository notificationRepository;
+    private final NotificationContentBuilder contentBuilder;
     private final General general;
+    private final CrucialNotificationService crucialNotificationService;
 
     public AdminAPIService(UserRepository userRepository,
             RemitterRepository remitterRepository,
@@ -84,7 +88,9 @@ public class AdminAPIService {
             SchemeRepository schemeRepository, UserSchemeRepository userSchemeRepository, @Lazy ApiService apiService,
             ActivityLogService activityLogService, LocalFileStorageService localFileStorageService,
             ActivityLogRepository activityLogRepository, NotificationRepository notificationRepository,
-            General general) {
+            NotificationContentBuilder contentBuilder,
+            General general,
+            CrucialNotificationService crucialNotificationService) {
         this.userRepository = userRepository;
         this.remitterRepository = remitterRepository;
         this.transactionRepository = transactionRepository;
@@ -96,7 +102,9 @@ public class AdminAPIService {
         this.localFileStorageService = localFileStorageService;
         this.activityLogRepository = activityLogRepository;
         this.notificationRepository = notificationRepository;
+        this.contentBuilder = contentBuilder;
         this.general = general;
+        this.crucialNotificationService = crucialNotificationService;
     }
 
     // create a new scheme
@@ -356,7 +364,17 @@ public class AdminAPIService {
                 .orElseThrow(() -> new RuntimeException("Remitter not found"));
         txn.setRemitter(rr);
         txn.setStatus(TransactionStatus.PROCESSED);
-        return AdminTransactionResponse.fromEntity(transactionRepository.save(txn));
+        Transaction saved = transactionRepository.save(txn);
+
+        crucialNotificationService.notifyAllForEssentialAction(
+                EssentialActionType.WITHDRAWAL_APPROVED,
+                txn.getUser(),
+                List.of(),
+                rr,
+                "/dashboard/transactions",
+                Map.of("amount", txn.getAmount() != null ? txn.getAmount().toString() : "0", "txnId", txn.getId()));
+
+        return AdminTransactionResponse.fromEntity(saved);
     }
 
     @Transactional
@@ -367,7 +385,16 @@ public class AdminAPIService {
         UserScheme userScheme = txn.getUserScheme();
         userScheme.setProfitReedemed(userScheme.getProfitReedemed().subtract(txn.getAmount()));
         userSchemeRepository.save(userScheme);
-        return AdminTransactionResponse.fromEntity(transactionRepository.save(txn));
+        Transaction saved = transactionRepository.save(txn);
+
+        crucialNotificationService.notifyUser(
+                EssentialActionType.WITHDRAWAL_REJECTED,
+                txn.getUser(),
+                "/dashboard/transactions",
+                Map.of("amount", txn.getAmount() != null ? txn.getAmount().toString() : "0", "txnId", txn.getId(),
+                        "reason", reason != null ? reason : "Rejected by admin"));
+
+        return AdminTransactionResponse.fromEntity(saved);
     }
 
     private Transaction getPendingOrThrow(String txnId) {
@@ -448,6 +475,12 @@ public class AdminAPIService {
         remitter.setPassword(apiService.makePasswordHash(rawPassword));
 
         Remitter saved = remitterRepository.save(remitter);
+
+        crucialNotificationService.notifyRemitter(
+                EssentialActionType.REMITTER_ONBOARDED,
+                saved,
+                "/remitter/login",
+                Map.of("limit", saved.getAllocationLimit() != null ? saved.getAllocationLimit().toString() : "0"));
 
         log.info("Remitter created successfully with id {}", saved.getRemitterId());
         // write log
@@ -542,16 +575,12 @@ public class AdminAPIService {
             throw new DuplicateResourceException(errors);
         }
         if (!existing.getAllocationLimit().equals(updateRemitter.getAllocationLimit())) {
-            Notification n = new Notification();
-            n.setReceiverType(ReceiverType.Remitter);
-            n.setReceiverId(id);
-            n.setTitle("Allocation Limit Updated");
-            n.setMessage("Your allocation limit has been updated from " + existing.getAllocationLimit() + " to "
-                    + updateRemitter.getAllocationLimit());
-            n.setNotificationType(NotificationType.LIMIT_UPDATED);
-            n.setActionType(ActionType.ALLOCATION_LIMIT_UPDATED);
-            n.setRead(false);
-            notificationRepository.save(n);
+            crucialNotificationService.notifyRemitter(
+                    EssentialActionType.LIMIT_UPDATED,
+                    existing,
+                    "/remitter/dashboard",
+                    Map.of("old", existing.getAllocationLimit().toString(), "new",
+                            updateRemitter.getAllocationLimit().toString()));
             existing.setAllocationLimit(updateRemitter.getAllocationLimit());
         }
 
@@ -895,5 +924,57 @@ public class AdminAPIService {
         } catch (NumberFormatException ex) {
             return fallback;
         }
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getAdminNotifications(int page, int size) {
+        Pageable pageable = PageRequest.of(Math.max(0, page - 1), size > 0 ? size : DEFAULT_PAGE_SIZE,
+                Sort.by("createdAt").descending());
+        Page<Notification> result = notificationRepository.findByReceiverType(ReceiverType.Admin, pageable);
+        long unreadCount = notificationRepository.countByReceiverTypeAndRead(ReceiverType.Admin, false);
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("currentPage", page);
+        data.put("totalPages", result.getTotalPages());
+        data.put("totalItems", result.getTotalElements());
+        data.put("unreadCount", unreadCount);
+        data.put("items", result.getContent().stream().map(this::toAdminNotificationView).toList());
+        return general.response("ok", "Admin notifications fetched", data);
+    }
+
+    @Transactional
+    public Map<String, Object> markAdminNotificationsAsRead(List<String> notificationIds) {
+        int updated = (notificationIds == null || notificationIds.isEmpty())
+                ? notificationRepository.markAllAdminAsRead(ReceiverType.Admin)
+                : notificationRepository.markAdminAsRead(ReceiverType.Admin, notificationIds);
+        return general.response("ok", "Admin notifications marked as read", Map.of("updatedCount", updated));
+    }
+
+    private Map<String, Object> toAdminNotificationView(Notification n) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("id", n.getId());
+        data.put("receiverId", n.getReceiverId());
+        data.put("receiverType", n.getReceiverType());
+        data.put("title", n.getTitle());
+        data.put("message", n.getMessage());
+        data.put("type", n.getNotificationType());
+        data.put("actionType", n.getActionType());
+        data.put("read", n.isRead());
+        data.put("actionUrl", n.getActionUrl());
+        data.put("createdAt", n.getCreatedAt());
+        data.put("updatedAt", n.getUpdatedAt());
+        return data;
+    }
+
+    public User getUserById(String id) {
+        if (id == null || id.isBlank())
+            return null;
+        return userRepository.findById(id).orElse(null);
+    }
+
+    public Remitter getRemitterById(String id) {
+        if (id == null || id.isBlank())
+            return null;
+        return remitterRepository.findById(id).orElse(null);
     }
 }

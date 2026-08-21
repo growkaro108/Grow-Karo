@@ -262,7 +262,7 @@ public class General {
         return baseUrl + "/reset/" + userId + "_user";
     }
 
-    public String remitterLoginUrl(String remitterId) {
+    public String loginUrl() {
         return baseUrl + "/auth";
     }
 

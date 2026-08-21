@@ -10,14 +10,20 @@ import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.entity.Transaction.TransactionStatus;
+import com.growkaro.backend.entity.Notification;
+import com.growkaro.backend.entity.NotificationContentBuilder;
+import com.growkaro.backend.entity.Notification.ReceiverType;
+import com.growkaro.backend.repository.NotificationRepository;
 import com.growkaro.backend.repository.RemitterRepository;
 import com.growkaro.backend.repository.TransactionRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
@@ -42,6 +48,9 @@ public class RemitterAPIService {
     private final ActivityLogService activityLogService;
     private final TransactionRepository transactionRepository;
     private final LocalFileStorageService localFileStorageService;
+    private final NotificationRepository notificationRepository;
+    private final CrucialNotificationService crucialNotificationService;
+    private final NotificationContentBuilder notificationContentBuilder;
 
     private static final Set<String> ALLOWED_DOCUMENT_TYPES = Set.of("application/pdf", "image/jpeg", "image/png",
             "image/webp");
@@ -54,7 +63,10 @@ public class RemitterAPIService {
             General general,
             ActivityLogService activityLogService,
             TransactionRepository transactionRepository,
-            LocalFileStorageService localFileStorageService) {
+            LocalFileStorageService localFileStorageService,
+            NotificationRepository notificationRepository,
+            CrucialNotificationService crucialNotificationService,
+            NotificationContentBuilder notificationContentBuilder) {
         this.remitterRepository = remitterRepository;
         this.emailService = emailService;
         this.apiService = apiService;
@@ -62,6 +74,9 @@ public class RemitterAPIService {
         this.activityLogService = activityLogService;
         this.transactionRepository = transactionRepository;
         this.localFileStorageService = localFileStorageService;
+        this.notificationRepository = notificationRepository;
+        this.crucialNotificationService = crucialNotificationService;
+        this.notificationContentBuilder = notificationContentBuilder;
     }
 
     public boolean isRemitterExists(String email) {
@@ -109,6 +124,11 @@ public class RemitterAPIService {
         Remitter remitter = remitterOpt;
         remitter.setPassword(apiService.makePasswordHash(newPassword));
         remitterRepository.save(remitter);
+        crucialNotificationService.notifyRemitter(
+                NotificationContentBuilder.EssentialActionType.PASSWORD_CHANGED,
+                remitter,
+                "/remitter/login",
+                null);
         return true;
     }
 
@@ -190,6 +210,14 @@ public class RemitterAPIService {
             }
             remitter.setTotalPaid(remitterCurrentBalance.add(transaction.getAmount()));
             remitterRepository.save(remitter);
+
+            crucialNotificationService.notifyAllForEssentialAction(
+                    NotificationContentBuilder.EssentialActionType.WITHDRAWAL_DISBURSED,
+                    user,
+                    List.of(),
+                    remitter,
+                    "/dashboard/transactions",
+                    Map.of("amount", paymentSettlement.amount().toString(), "txnId", transaction.getId()));
 
             return uploadedUrl;
         } catch (Exception e) {
@@ -479,5 +507,45 @@ public class RemitterAPIService {
         }
         String text = value.toString().trim();
         return text.isEmpty() ? null : text;
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getRemitterNotifications(String remitterId, int page, int size) {
+        Pageable pageable = PageRequest.of(Math.max(0, page - 1), size > 0 ? size : DEFAULT_PAGE_SIZE,
+                Sort.by("createdAt").descending());
+        Page<Notification> result = notificationRepository.findByReceiverIdAndReceiverType(
+                remitterId, ReceiverType.Remitter, pageable);
+        long unreadCount = notificationRepository.countByReceiverIdAndReceiverTypeAndRead(
+                remitterId, ReceiverType.Remitter, false);
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("currentPage", page);
+        data.put("totalPages", result.getTotalPages());
+        data.put("totalItems", result.getTotalElements());
+        data.put("unreadCount", unreadCount);
+        data.put("items", result.getContent().stream().map(this::toRemitterNotificationView).toList());
+        return general.response("ok", "Remitter notifications fetched", data);
+    }
+
+    @Transactional
+    public Map<String, Object> markRemitterNotificationsAsRead(String remitterId, List<String> notificationIds) {
+        int updated = (notificationIds == null || notificationIds.isEmpty())
+                ? notificationRepository.markAllAsRead(remitterId, ReceiverType.Remitter)
+                : notificationRepository.markAsRead(remitterId, ReceiverType.Remitter, notificationIds);
+        return general.response("ok", "Remitter notifications marked as read", Map.of("updatedCount", updated));
+    }
+
+    private Map<String, Object> toRemitterNotificationView(Notification n) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("id", n.getId());
+        data.put("title", n.getTitle());
+        data.put("message", n.getMessage());
+        data.put("type", n.getNotificationType());
+        data.put("actionType", n.getActionType());
+        data.put("read", n.isRead());
+        data.put("actionUrl", n.getActionUrl());
+        data.put("createdAt", n.getCreatedAt());
+        data.put("updatedAt", n.getUpdatedAt());
+        return data;
     }
 }
