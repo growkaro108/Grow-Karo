@@ -28,6 +28,7 @@ import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DRO.RemitterCredentials;
 import com.growkaro.backend.DTO.AddedRemitter;
 import com.growkaro.backend.DTO.AdminTransactionResponse;
+import com.growkaro.backend.DTO.AdminUser;
 import com.growkaro.backend.DTO.PagedResponse;
 import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.DTO.SchemeResponse;
@@ -310,6 +311,46 @@ public class AdminAPIController {
         }
     }
 
+    @GetMapping("/notifications")
+    public ResponseEntity<Map<String, Object>> getNotifications(
+            @RequestParam(required = false, defaultValue = "1") int page,
+            @RequestParam(required = false, defaultValue = "20") int size) {
+        return ResponseEntity.ok(adminAPIService.getAdminNotifications(page, size));
+    }
+
+    @PostMapping("/notifications/read")
+    public ResponseEntity<Map<String, Object>> markNotificationsAsRead(
+            @RequestBody(required = false) List<String> notificationIds) {
+        return ResponseEntity.ok(adminAPIService.markAdminNotificationsAsRead(notificationIds));
+    }
+
+    @GetMapping(value = "/notifications/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamAdminNotifications(
+            @RequestParam(required = false, defaultValue = "GLOBAL") String adminId) {
+        return notificationBroadcaster.subscribe(ReceiverType.Admin, adminId);
+    }
+
+    @GetMapping("/user/all")
+    public ResponseEntity<Map<String, Object>> getAllUser(@RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int limit) {
+        if (page < 0 || limit <= 0 || limit > 20 || page > 100) {
+            page = 0;
+            limit = 10;
+        }
+        Pageable pageable = PageRequest.of(page, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
+        try {
+            PagedResponse<AdminUser> users = adminAPIService.getAllUsers(pageable);
+            if (users == null) {
+                return ResponseEntity.ok(general.response("error", "No users found", null));
+            }
+            return ResponseEntity.ok(general.response("success", "Users fetched successfully", users));
+        } catch (Exception e) {
+            log.error("Error while fetching users: " + e.getMessage());
+            return ResponseEntity.ok(general.response("error",
+                    e.getMessage(), null));
+        }
+    }
+
     // pendingss
 
     @GetMapping("/issues")
@@ -340,24 +381,6 @@ public class AdminAPIController {
     // return ResponseEntity.ok(adminAPIService.createFundraiserCode(payload));
     // }
 
-    @GetMapping("/notifications")
-    public ResponseEntity<Map<String, Object>> getNotifications(
-            @RequestParam(required = false, defaultValue = "1") int page,
-            @RequestParam(required = false, defaultValue = "20") int size) {
-        return ResponseEntity.ok(adminAPIService.getAdminNotifications(page, size));
-    }
-
-    @PostMapping("/notifications/read")
-    public ResponseEntity<Map<String, Object>> markNotificationsAsRead(
-            @RequestBody(required = false) List<String> notificationIds) {
-        return ResponseEntity.ok(adminAPIService.markAdminNotificationsAsRead(notificationIds));
-    }
-
-    @GetMapping(value = "/notifications/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter streamAdminNotifications(@RequestParam(required = false, defaultValue = "GLOBAL") String adminId) {
-        return notificationBroadcaster.subscribe(ReceiverType.Admin, adminId);
-    }
-
     @PostMapping("/notifications/send-essential")
     public ResponseEntity<Map<String, Object>> sendEssentialNotification(
             @RequestBody Map<String, Object> payload) {
@@ -379,8 +402,7 @@ public class AdminAPIController {
                     List.of(), // default to broadcast via SSE to all admins
                     remitter,
                     actionUrl,
-                    params
-            );
+                    params);
 
             return ResponseEntity.ok(general.response("ok", "Essential notifications dispatched successfully", null));
         } catch (Exception e) {

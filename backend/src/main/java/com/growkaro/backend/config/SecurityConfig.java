@@ -16,10 +16,11 @@ public class SecurityConfig {
                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers(
                                                                 "/api/health",
+                                                                "/api/user/test",
+                                                                "/api/remitter/test",
                                                                 "/api/user/signup",
                                                                 "/api/user/getEmailOtp/{email}",
                                                                 "/api/user/validateEmailOtp",
-                                                                "/api/user/test",
                                                                 "/api/user/login",
                                                                 "/api/user/dashboard",
                                                                 "/api/user/scheme/enroll",
@@ -36,10 +37,13 @@ public class SecurityConfig {
                                                                 "/api/user/{userId}/nominees",
                                                                 "/api/user/{userId}/nominees/{nomineeId}",
                                                                 "/api/user/addNominee",
+                                                                "/api/user/logout/{userID}/{userName}",
+                                                                "/api/user/{userId}/notifications",
+                                                                "/api/user/{userId}/notifications/read",
+                                                                "/api/user/{userId}/notifications/stream",
                                                                 "/uploads/bonds/**",
                                                                 "/uploads/settlements/**",
                                                                 "/api/scheme/get",
-                                                                "/api/user/logout/{userID}/{userName}",
                                                                 "/api/admin/scheme/create",
                                                                 "/api/admin/scheme/update/{schemeId}",
                                                                 "/api/admin/scheme/delete/{id}",
@@ -59,6 +63,10 @@ public class SecurityConfig {
                                                                 "/api/admin/remitter/update/{id}",
                                                                 "/api/admin/remitter/delete/{id}",
                                                                 "/api/admin/remitter/send-crendentials",
+                                                                "/api/admin/notifications",
+                                                                "/api/admin/notifications/read",
+                                                                "/api/admin/notifications/stream",
+                                                                "/api/admin/user/all",
                                                                 "/api/remitter/login",
                                                                 "/api/remitter/forgot-password/{email}",
                                                                 "/api/remitter/reset-password/{remitterId}",
@@ -68,7 +76,10 @@ public class SecurityConfig {
                                                                 "/api/remitter/settlements",
                                                                 "/api/remitter/transactions",
                                                                 "/api/remitter/{remitterId}/recipients",
-                                                                "/api/remitter/logout")
+                                                                "/api/remitter/logout",
+                                                                "/api/remitter/{remitterId}/notifications",
+                                                                "/api/remitter/{remitterId}/notifications/read",
+                                                                "/api/remitter/{remitterId}/notifications/stream")
                                                 .permitAll() // Public endpoints
                                                 .anyRequest().authenticated() // Everything else requires login
                                 )

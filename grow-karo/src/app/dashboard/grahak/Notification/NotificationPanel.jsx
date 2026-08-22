@@ -9,11 +9,9 @@ import { Bell, CheckCheck, Inbox } from "lucide-react";
 import NotificationItem from "./NotificationItem";
 import NotificationItemSkeleton from "./NotificationItemSkeleton";
 import Pagination from "./Pagination";
-import {
-  fetchUserNotifications,
-  markUserNotificationsAsRead,
-} from "@/api/userApi";
+import { markUserNotificationsAsRead } from "@/api/userApi";
 import { userContext } from "@/context/UserContext";
+import { fetchUserNotifications } from "../../../../../services/grahakService";
 
 const PAGE_SIZE = 6;
 const TABS = [
@@ -45,6 +43,7 @@ export default function NotificationPanel({ onItemClick }) {
     try {
       const res = await fetchUserNotifications(userId, page);
       const resData = res?.data || res || {};
+      // console.log(userId + "===>" + page, resData);
       const rawItems = resData.items || resData.notifications || [];
       const unreadCount = Number(resData.unreadCount ?? 0);
       const totalCount = Number(
@@ -59,6 +58,7 @@ export default function NotificationPanel({ onItemClick }) {
         date: n.createdAt || new Date().toISOString(),
         read: Boolean(n.read),
         actionUrl: n.actionUrl,
+        createdAt: n.createdAt,
       }));
 
       setData({

@@ -511,20 +511,25 @@ public class RemitterAPIService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> getRemitterNotifications(String remitterId, int page, int size) {
-        Pageable pageable = PageRequest.of(Math.max(0, page - 1), size > 0 ? size : DEFAULT_PAGE_SIZE,
-                Sort.by("createdAt").descending());
-        Page<Notification> result = notificationRepository.findByReceiverIdAndReceiverType(
-                remitterId, ReceiverType.Remitter, pageable);
-        long unreadCount = notificationRepository.countByReceiverIdAndReceiverTypeAndRead(
-                remitterId, ReceiverType.Remitter, false);
+        try {
+            Pageable pageable = PageRequest.of(Math.max(0, page - 1), size > 0 ? size : DEFAULT_PAGE_SIZE,
+                    Sort.by("createdAt").descending());
+            Page<Notification> result = notificationRepository.findByReceiverIdAndReceiverType(
+                    remitterId, ReceiverType.Remitter, pageable);
+            long unreadCount = notificationRepository.countByReceiverIdAndReceiverTypeAndRead(
+                    remitterId, ReceiverType.Remitter, false);
 
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("currentPage", page);
-        data.put("totalPages", result.getTotalPages());
-        data.put("totalItems", result.getTotalElements());
-        data.put("unreadCount", unreadCount);
-        data.put("items", result.getContent().stream().map(this::toRemitterNotificationView).toList());
-        return general.response("ok", "Remitter notifications fetched", data);
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("currentPage", page);
+            data.put("totalPages", result.getTotalPages());
+            data.put("totalItems", result.getTotalElements());
+            data.put("unreadCount", unreadCount);
+            data.put("items", result.getContent().stream().map(this::toRemitterNotificationView).toList());
+            return general.response("success", "Remitter notifications fetched", data);
+        } catch (Exception e) {
+            log.error("Error in fetching remitter notifications: {}", e.getMessage());
+            return general.response("error", "Something went wrong..", Map.of("error", e.getMessage()));
+        }
     }
 
     @Transactional

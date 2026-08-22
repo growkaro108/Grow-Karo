@@ -99,7 +99,7 @@ export async function fetchUserTransactions(userId) {
   return apiRequest(`/user/${userId}/transactions`);
 }
 
-export async function fetchUserNotifications(userId, page = 1) {
+export async function fetchUserNotificationsApi(userId, page = 1) {
   return apiRequest(`${base}/${userId}/notifications?page=${page}`);
 }
 

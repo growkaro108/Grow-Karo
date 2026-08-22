@@ -1,9 +1,11 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Toolbar from "./Toolbar";
 import UserTable from "./UserTable";
 import UserCardList from "./UserCardList";
 import UserDrawer from "./UserDrawer";
 import { USERS } from "./mockData";
+import { errorMessage } from "@/components/Message";
+import { fetchAllUsers } from "../../../../../../services/malikService";
 
 export default function UserManagement() {
   const [query, setQuery] = useState("");
@@ -11,6 +13,7 @@ export default function UserManagement() {
   const [schemeFilter, setSchemeFilter] = useState("all");
   const [sortDesc, setSortDesc] = useState(true);
   const [selected, setSelected] = useState(null);
+  const [users, setUsers] = useState([]);
 
   const filtered = useMemo(() => {
     let list = USERS.filter((u) => {
@@ -30,6 +33,20 @@ export default function UserManagement() {
     );
     return list;
   }, [query, statusFilter, schemeFilter, sortDesc]);
+
+  useEffect(() => {
+    async function fetchAllUser() {
+      try {
+        const res = await fetchAllUsers();
+        console.log(res);
+        if (res) return;
+        setUsers(res);
+      } catch (error) {
+        errorMessage("something went wrong ,try later..");
+      }
+    }
+    fetchAllUser();
+  }, []);
 
   return (
     <div className="min-h-screen bg-inherit font-sans">

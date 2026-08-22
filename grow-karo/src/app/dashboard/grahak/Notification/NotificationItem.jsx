@@ -17,15 +17,27 @@ const TYPE_CONFIG = {
 };
 
 function timeAgo(dateStr) {
-  const diffMs = Date.now() - new Date(dateStr).getTime();
+  if (!dateStr) return "";
+
+  // Parse ISO string directly (JavaScript treats non-Z strings as Local Time automatically)
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "Invalid date";
+
+  const diffMs = Date.now() - date.getTime();
+
+  // Return 'Just now' only for true sub-minute values or tiny future clock skews
+  if (diffMs < 60000) return "Just now";
+
   const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return "Just now";
   if (mins < 60) return `${mins}m ago`;
+
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
+
   const days = Math.floor(hrs / 24);
   if (days < 7) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString("en-IN", {
+
+  return date.toLocaleDateString("en-IN", {
     day: "numeric",
     month: "short",
   });
@@ -47,7 +59,7 @@ export default function NotificationItem({
     if (isUnread) onMarkRead(notification.id);
     onClick?.(notification);
   };
-
+  // console.log(notification);
   return (
     <button
       type="button"

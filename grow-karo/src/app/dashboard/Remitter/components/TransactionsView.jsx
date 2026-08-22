@@ -122,7 +122,9 @@ export default function TransactionsView() {
                       >
                         <img
                           src={
-                            tx.proofUrl ? resolveMediaUrl(tx.proofUrl) : null
+                            tx.proofUrl
+                              ? resolveMediaUrl(tx.proofUrl)
+                              : "/logo.png"
                           }
                           alt="Payment proof"
                           fill

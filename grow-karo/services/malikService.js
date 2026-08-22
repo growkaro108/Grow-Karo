@@ -19,6 +19,7 @@ import {
   updateRemitterApi,
   removeRemitterApi,
   sendCredentialsApi,
+  fetchAllUsersApi,
 } from "@/api/adminApi";
 import { allRounderMessage } from "@/components/Message";
 
@@ -309,6 +310,15 @@ export async function sendCredentials(payload) {
     return false;
   }
   return true;
+}
+
+export async function fetchAllUsers() {
+  const response = await fetchAllUsersApi();
+  if (response.status !== "success") {
+    allRounderMessage(response);
+    return null;
+  }
+  return response.data;
 }
 
 //pending

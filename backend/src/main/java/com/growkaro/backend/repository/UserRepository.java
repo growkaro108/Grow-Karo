@@ -34,6 +34,8 @@ public interface UserRepository extends JpaRepository<User, String> {
             "LOWER(u.id) LIKE LOWER(CONCAT('%', :query, '%'))")
     Page<User> searchUsers(@Param("query") String query, Pageable pageable);
 
+    @Query("SELECT DISTINCT u FROM User u JOIN FETCH u.enrolledSchemes us JOIN FETCH us.scheme s")
+    Page<User> findAllWithUserScheme(Pageable pageable);
     // ── Lookup ───────────────────────────────────────────────────────────────
 
     Optional<User> findByEmail(String email);

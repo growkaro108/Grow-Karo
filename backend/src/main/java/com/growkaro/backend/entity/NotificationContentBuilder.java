@@ -126,7 +126,7 @@ public class NotificationContentBuilder {
         if (role == null) {
             role = ReceiverType.User;
         }
-        String name = (recipientName == null || recipientName.isBlank()) ? "there" : recipientName;
+        String name = (recipientName == null || recipientName.isBlank()) ? "userName" : recipientName;
         String amount = valueOf(params, "amount");
         String txnId = valueOf(params, "txnId");
         String reason = valueOf(params, "reason");
@@ -177,6 +177,10 @@ public class NotificationContentBuilder {
                 case PASSWORD_CHANGED ->
                     "Hi %s, your account password was changed successfully. If you did not make this change, please contact support immediately."
                             .formatted(name);
+                case SCHEME_MATURITY_REMINDER ->
+                    "Hi %s, your investment scheme %s will mature on %s. Please login to your dashboard for more details."
+                            .formatted(name,
+                                    valueOf(params, "schemeName"), valueOf(params, "maturityDate"));
                 default ->
                     "Hi %s, update regarding %s (Txn: %s, Amount: ₹%s).".formatted(name,
                             action.name().toLowerCase().replace('_', ' '), txnId, amount);

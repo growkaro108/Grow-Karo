@@ -4,7 +4,7 @@ export async function healthCheck() {
   return apiRequest("/health");
 }
 export async function getAllPlans() {
-  return await apiRequest("/scheme/get");
+  return await apiRequest(`/scheme/get?admin=${true}`);
 }
 
 ///pending belows

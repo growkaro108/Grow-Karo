@@ -24,7 +24,7 @@ import { PlanStatusBadge } from "../StatusBadge";
 import { Suggestion } from "./Suggestion";
 // import { FormModal } from "./Form";
 const FormModal = dynamic(() => import("./Form"), {
-  loading: () => <TabLoader message={"Loading form..."}/>,
+  loading: () => <TabLoader message={"Loading form..."} />,
   ssr: false,
 });
 
@@ -81,6 +81,7 @@ export default function PlansPage() {
     setLoadError(null);
     try {
       const response = await getAllPlans(term ? { search: term } : undefined);
+      // console.log(response);
       const data = response.data ?? [];
       // console.log(data);
       setPlans(data);

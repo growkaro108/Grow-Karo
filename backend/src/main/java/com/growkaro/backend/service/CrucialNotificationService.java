@@ -141,7 +141,7 @@ public class CrucialNotificationService {
     }
 
     /** 1. Notify User individually */
-    @Transactional
+    @Async
     public void notifyUser(EssentialActionType action, User user, String actionUrl, Map<String, Object> params) {
         if (user == null) {
             return;
@@ -198,7 +198,10 @@ public class CrucialNotificationService {
             String actionUrl = frontendUrl + "/dashboard";
             Map<String, Object> params = new HashMap<>();
             params.put("userSchemeId", userScheme.getUserSchemeId());
+            params.put("userId", userScheme.getUser().getId());
+            params.put("userName", userScheme.getUser().getName());
             params.put("schemeName", userScheme.getScheme().getSchemeName());
+            params.put("maturityDate", userScheme.getMaturityDate());
             params.put("schemeCategory", userScheme.getScheme().getSchemeCategory());
             params.put("schemeDetails", userScheme.getScheme().getSchemeDetails());
             params.put("payoutFrequency", userScheme.getScheme().getPayoutFrequency());
@@ -211,7 +214,10 @@ public class CrucialNotificationService {
             params.put("paidAmount", userScheme.getPaidAmount());
             params.put("profit", userScheme.getProfit());
             params.put("profitReedemed", userScheme.getProfitReedemed());
+            params.put("txnId", userScheme.getUserSchemeId());
             params.put("totalAmount",
+                    userScheme.getProfit().add(userScheme.getPaidAmount()).subtract(userScheme.getProfitReedemed()));
+            params.put("amount",
                     userScheme.getProfit().add(userScheme.getPaidAmount()).subtract(userScheme.getProfitReedemed()));
             notifyUser(EssentialActionType.SCHEME_MATURITY_REMINDER, userScheme.getUser(), actionUrl, params);
             notifyAdmin(EssentialActionType.SCHEME_MATURITY_REMINDER, userScheme.getUser(), actionUrl, params);
@@ -221,6 +227,7 @@ public class CrucialNotificationService {
         }
     }
 
+    @Async
     private void dispatchNotification(
             EssentialActionType action,
             ReceiverType role,

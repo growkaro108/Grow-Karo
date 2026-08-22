@@ -26,6 +26,7 @@ import com.growkaro.backend.DRO.AddRemitter;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DTO.AddedRemitter;
 import com.growkaro.backend.DTO.AdminTransactionResponse;
+import com.growkaro.backend.DTO.AdminUser;
 import com.growkaro.backend.DTO.PagedResponse;
 import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.DTO.SchemeResponse;
@@ -121,15 +122,10 @@ public class AdminAPIService {
     }
 
     public List<SchemeResponse> getAllSchemes(boolean admin) {
-        if (admin) {
-            return schemeRepository.findAll().stream().map(general::toSchemeResponse).toList();
-        } else {
-            return schemeRepository.findAll().stream()
-                    // filter which is closed(status: false)
-                    .filter(scheme -> Boolean.TRUE.equals(scheme.getStatus()))
-                    .map(general::toSchemeResponse)
-                    .toList();
-        }
+        return schemeRepository.findAll().stream()
+                .filter(scheme -> admin || Boolean.TRUE.equals(scheme.getStatus()))
+                .map(general::toSchemeResponse)
+                .toList();
     }
 
     // Update the scheme
@@ -624,6 +620,12 @@ public class AdminAPIService {
             log.error("Error while deleting remitter: " + e.getMessage());
             return false;
         }
+    }
+
+    public PagedResponse<AdminUser> getAllUsers(Pageable pageable) {
+        var users = userRepository.findAllWithUserScheme(pageable);
+        var mapped = users.map(general::toAdminUser);
+        return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
     }
 
     // pending--------------------------------------------------------------------------------------------------------

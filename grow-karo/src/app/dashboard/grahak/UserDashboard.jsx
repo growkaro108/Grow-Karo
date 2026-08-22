@@ -1,16 +1,14 @@
 "use client";
 
-import { useState, useEffect, use, useCallback } from "react";
+import { useState, useEffect, use } from "react";
 import Sidebar from "./Sidebar";
 import dynamic from "next/dynamic";
 import {
   fetchGrahakDashboardData,
-  getAllUsersScheme,
 } from "../../../../services/grahakService";
 import { userContext } from "@/context/UserContext";
 import TabLoader from "../../../loader/TabLoader";
 import { useRouter } from "next/navigation";
-import { allRounderMessage, errorMessage } from "@/components/Message";
 import { RefreshCcw } from "lucide-react";
 import NotificationPanel from "./Notification/NotificationPanel";
 
@@ -22,7 +20,7 @@ const WithDrawFormComponent = dynamic(() => import("./WithDrawFormComponent"), {
   loading: () => <TabLoader message={"Loading withdrawal form..."} />,
   ssr: false,
 });
-const Portfolio = dynamic(() => import("./Portfolio"), {
+const Portfolio = dynamic(() => import("./Portfolio/index"), {
   loading: () => <TabLoader message={"Loading portfolio..."} />,
   ssr: false,
 });
@@ -36,8 +34,6 @@ const Settings = dynamic(() => import("./Settings"), {
 });
 
 export default function DashboardPage() {
-  const [balance, setBalance] = useState(0);
-  const [portfolioValue, setPortfolioValue] = useState(0);
   const [activeTab, setActiveTab] = useState("overview");
 
   const [withdrawType, setWithdrawType] = useState("general");
@@ -59,8 +55,6 @@ export default function DashboardPage() {
     fetchGrahakDashboardData("me")
       .then((data) => {
         if (!active) return;
-        setBalance(Number(data.balance ?? 0));
-        setPortfolioValue(Number(data.portfolioValue ?? 0));
         setDashboardData({
           holdings: Array.isArray(data.holdings) ? data.holdings : [],
           transactions: Array.isArray(data.transactions)
@@ -83,24 +77,17 @@ export default function DashboardPage() {
     };
   }, []);
 
-  function openAggressiveWithdrawal() {
-    // setWithdrawData(holding);
-    setWithdrawType("aggressive");
-    setActiveTab("withdraw");
-  }
-
   function openGeneralWithdrawModal() {
     // setWithdrawData(authUser);
     setWithdrawType("general");
     setActiveTab("withdraw");
   }
 
-  const { holdings, transactions, graphDataMap } = dashboardData;
+  const { transactions } = dashboardData;
   useEffect(() => {
     if (!authUser) {
       router.replace("/auth");
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPortfolio();
   }, [authUser, fetchPortfolio, router]);
 
@@ -139,6 +126,7 @@ export default function DashboardPage() {
                 Agresive Withdraw
               </button> */}
               <button
+              type="button"
                 onClick={() => openGeneralWithdrawModal()}
                 className="flex-1 sm:flex-none text-center bg-green-500 text-white hover:bg-green-600 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm cursor-pointer focus:cursor-wait"
               >
@@ -146,6 +134,7 @@ export default function DashboardPage() {
               </button>
               {/* refresh dashboard button */}
               <button
+                type="button"
                 onClick={handleRefresh}
                 disabled={loading}
                 className="flex-1 sm:flex-none text-center bg-blue-500 text-white hover:bg-blue-600 px-4 py-2.5 rounded-lg font-light text-sm transition-colors shadow-sm cursor-pointer focus:cursor-wait flex gap-2 items-center"

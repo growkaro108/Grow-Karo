@@ -49,17 +49,25 @@ export async function logoutRemitterApi(remitterId, remitterCode) {
   );
 }
 
-export async function fetchRemitterNotifications(remitterId, page = 1, size = 20) {
-  return apiRequest(`${BASE}/${remitterId}/notifications?page=${page}&size=${size}`);
+export async function fetchRemitterNotifications(
+  remitterId,
+  page = 1,
+  size = 10,
+) {
+  return apiRequest(
+    `${BASE}/${remitterId}/notifications?page=${page}&size=${size}`,
+  );
 }
 
-export async function markRemitterNotificationsAsRead(remitterId, notificationIds = []) {
+export async function markRemitterNotificationsAsRead(
+  remitterId,
+  notificationIds = [],
+) {
   return apiRequest(`${BASE}/${remitterId}/notifications/read`, {
     method: "POST",
     body: notificationIds,
   });
 }
-
 
 //pending
 

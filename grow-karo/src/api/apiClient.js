@@ -14,6 +14,19 @@ export const resolveMediaUrl = (path) => {
   const apiBase = BASE_URL.replace(/\/api\/?$/, "");
   return apiBase + (path.startsWith("/") ? path : "/" + path);
 };
+
+export function buildSseUrl(endpoint) {
+  const normalizedEndpoint = endpoint.replace(/^\/+/, "");
+  const baseUrl = trimTrailingSlashes(BASE_URL || "/api");
+  return `${baseUrl}/${normalizedEndpoint}`;
+}
+
+function trimTrailingSlashes(value) {
+  let result = value;
+  while (result.endsWith("/")) result = result.slice(0, -1);
+  return result;
+}
+
 // --- Rate Limiter Setup ---
 // Adjust these values based on your API requirements
 const MAX_REQUESTS = 5; // Max number of requests allowed in the window

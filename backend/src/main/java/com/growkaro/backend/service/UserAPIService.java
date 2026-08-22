@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -266,6 +267,10 @@ public class UserAPIService {
         }
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "userPortfolio", key = "#userId"),
+            @CacheEvict(value = "userSchemes", key = "#userId")
+    })
     @Transactional
     public Map<String, Object> enrollInScheme(String schemeId, String userId, BigDecimal amount, String nomineId) {
         try {
@@ -308,13 +313,6 @@ public class UserAPIService {
             newUserScheme.setNominee(selectedNominee);
             userSchemeRepository.save(newUserScheme);
 
-            crucialNotificationService.notifyUser(
-                    EssentialActionType.INVESTMENT_CONFIRMED,
-                    user,
-                    "/dashboard/portfolio",
-                    Map.of("amount", amount.toString(), "schemeName", scheme.getSchemeName(), "txnId",
-                            newUserScheme.getUserSchemeId() != null ? newUserScheme.getUserSchemeId() : ""));
-
             activityLogService.log(
                     user.getId(), user.getName(), "USER",
                     ActivityType.SCHEME_ENROLLED,
@@ -329,6 +327,7 @@ public class UserAPIService {
         }
     }
 
+    @Cacheable(value = "userSchemes", key = "#userId")
     public Map<String, Object> getMyScheme(String userId) {
         try {
             User user = getUserById(userId);
@@ -343,7 +342,7 @@ public class UserAPIService {
         }
     }
 
-    // @Cacheable(value = "getUserPortfolio", key = "#userId")
+    @Cacheable(value = "userPortfolio", key = "#userId")
     @Transactional(readOnly = true)
     public Map<String, Object> getUserPortfolio(String userId) {
         try {
@@ -369,6 +368,10 @@ public class UserAPIService {
         }
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "userPortfolio", key = "#userId"),
+            @CacheEvict(value = "userSchemes", key = "#userId")
+    })
     @Transactional
     public Map<String, Object> schemeWithdrawal(String userSchemeId, String userId) {
         User user = getUserById(userId);
@@ -441,7 +444,13 @@ public class UserAPIService {
         }
     }
 
-    @CachePut(value = "userProfile", key = "#up.id()")
+    @Caching(
+        put = { @CachePut(value = "userProfile", key = "#up.id()") },
+        evict = {
+            @CacheEvict(value = "userNominees", key = "#up.id()"),
+            @CacheEvict(value = "userTransactions", key = "#up.id()")
+        }
+    )
     @Transactional
     public Map<String, Object> updateUser(UserProfile up) {
         // create new token
@@ -487,6 +496,7 @@ public class UserAPIService {
         return general.response("success", "User updated successfully", general.toUserProfile(user, token));
     }
 
+    @CacheEvict(value = "userTransactions", key = "#wa.userId()")
     @Transactional
     public Map<String, Object> redeemAmount(WithdrawAmount wa) {
 
@@ -585,6 +595,7 @@ public class UserAPIService {
         return general.response("success", "Withdraw request placed successfully", null);
     }
 
+    @Cacheable(value = "userTransactions", key = "#userId")
     public Map<String, Object> getTransactionsofUser(String userId) {
         List<Transaction> transactions = getAllUsersTransactions(userId);
         if (transactions == null) {
@@ -610,6 +621,7 @@ public class UserAPIService {
                         .toList();
     }
 
+    @CacheEvict(value = "userNominees", key = "#nominee.userId()")
     public NomineeResponse addNominee(NewNominee nominee) {
         try {
             User user = getUserById(nominee.userId());
@@ -636,6 +648,7 @@ public class UserAPIService {
         }
     }
 
+    @CacheEvict(value = "userNominees", key = "#userId")
     @Transactional
     public Map<String, Object> deleteNominee(String userId, String nomineeId) {
         User user = getUserById(userId);
@@ -659,6 +672,7 @@ public class UserAPIService {
         return general.response("success", "Nominee deleted successfully", null);
     }
 
+    @CacheEvict(value = "userNominees", key = "#userId")
     @Transactional
     public Map<String, Object> updateNominee(String userId, String nomineeId, NewNominee details) {
         User user = getUserById(userId);
@@ -683,12 +697,52 @@ public class UserAPIService {
         return general.response("success", "Nominee updated successfully", NomineeResponse.fromEntity(nominee));
     }
 
+    @Cacheable(value = "userNotifications", key = "#userId + ':' + (#page != null ? #page : '1')")
+    @Transactional(readOnly = true)
+    public Map<String, Object> userNotifications(String userId, String page) {
+        User user = getUserById(userId);
+        if (user == null) {
+            return general.response("error", "Invalid requests...", Map.of("id", userId));
+        }
+
+        Page<Notification> notifications = notificationRepository.findByReceiverIdAndReceiverType(
+                user.getId(), Notification.ReceiverType.User, pageable(page));
+        Map<String, Object> data = paginatedMeta(notifications);
+        data.put("userId", user.getId());
+        data.put("unreadCount",
+                notificationRepository.countByReceiverIdAndReceiverTypeAndRead(user.getId(),
+                        Notification.ReceiverType.User, false));
+        data.put("items", notifications.getContent().stream().map(this::toNotificationView).toList());
+        return general.response("success", "User notifications fetched", data);
+    }
+
+    @CacheEvict(value = "userNotifications", allEntries = true)
+    @Transactional
+    public Map<String, Object> markNotificationsAsRead(String userId, List<String> notificationIds) {
+        User user = getUserById(userId);
+        if (user == null) {
+            return general.response("error", "Invalid requests...", Map.of("id", userId));
+        }
+
+        int updated = (notificationIds == null || notificationIds.isEmpty())
+                ? notificationRepository.markAllAsRead(user.getId(), Notification.ReceiverType.User)
+                : notificationRepository.markAsRead(user.getId(), Notification.ReceiverType.User, notificationIds);
+        return general.response("success", "Notifications marked as read", Map.of("updatedCount", updated));
+    }
+
+    public Map<String, Object> updateNotificationSettings(String userId, Map<String, Boolean> settings) {
+        return general.response("success", "Notification preferences updated",
+                Map.of("userId", userId, "settings", settings));
+    }
+
     //// pending
     @Caching(evict = {
             @CacheEvict(value = "userProfile", key = "#userId"),
-            @CacheEvict(value = "userTransactions", allEntries = true),
-            @CacheEvict(value = "userRecipients", allEntries = true),
-            @CacheEvict(value = "userNotifications", key = "#userId")
+            @CacheEvict(value = "userPortfolio", key = "#userId"),
+            @CacheEvict(value = "userSchemes", key = "#userId"),
+            @CacheEvict(value = "userNominees", key = "#userId"),
+            @CacheEvict(value = "userTransactions", key = "#userId"),
+            @CacheEvict(value = "userNotifications", allEntries = true)
     })
     @Transactional
     public Map<String, Object> deleteUser(String userId) {
@@ -717,37 +771,6 @@ public class UserAPIService {
     // paginatedTransactions(transactions, "clientId", user.getId()));
     // }
 
-    @Transactional(readOnly = true)
-    public Map<String, Object> userNotifications(String userId, String page) {
-        User user = getUserById(userId);
-        if (user == null) {
-            return general.response("error", "Invalid requests...", Map.of("id", userId));
-        }
-
-        Page<Notification> notifications = notificationRepository.findByReceiverIdAndReceiverType(
-                user.getId(), Notification.ReceiverType.User, pageable(page));
-        Map<String, Object> data = paginatedMeta(notifications);
-        data.put("userId", user.getId());
-        data.put("unreadCount",
-                notificationRepository.countByReceiverIdAndReceiverTypeAndRead(user.getId(),
-                        Notification.ReceiverType.User, false));
-        data.put("items", notifications.getContent().stream().map(this::toNotificationView).toList());
-        return general.response("ok", "User notifications fetched", data);
-    }
-
-    @Transactional
-    public Map<String, Object> markNotificationsAsRead(String userId, List<String> notificationIds) {
-        User user = getUserById(userId);
-        if (user == null) {
-            return general.response("error", "Invalid requests...", Map.of("id", userId));
-        }
-
-        int updated = (notificationIds == null || notificationIds.isEmpty())
-                ? notificationRepository.markAllAsRead(user.getId(), Notification.ReceiverType.User)
-                : notificationRepository.markAsRead(user.getId(), Notification.ReceiverType.User, notificationIds);
-        return general.response("ok", "Notifications marked as read", Map.of("updatedCount", updated));
-    }
-
     private Map<String, Object> toNotificationView(Notification notification) {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("id", notification.getId());
@@ -760,11 +783,6 @@ public class UserAPIService {
         data.put("createdAt", notification.getCreatedAt());
         data.put("updatedAt", notification.getUpdatedAt());
         return data;
-    }
-
-    public Map<String, Object> updateNotificationSettings(String userId, Map<String, Boolean> settings) {
-        return general.response("ok", "Notification preferences updated",
-                Map.of("userId", userId, "settings", settings));
     }
 
     // private Map<String, Object> paginatedTransactions(Page<Transaction> page,

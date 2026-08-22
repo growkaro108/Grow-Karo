@@ -1,19 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import {
-  Bell,
-  Check,
-  Inbox,
-  RefreshCw,
-  Zap,
-  Wallet,
-  AlertCircle,
-} from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Bell, Check, Inbox, Wallet } from "lucide-react";
 import {
   fetchRemitterNotifications,
   markRemitterNotificationsAsRead,
 } from "@/api/remitterApi";
+import { buildSseUrl } from "@/api/apiClient";
 
 export default function RemitterNotificationDropdown({ remitterId }) {
   const [open, setOpen] = useState(false);
@@ -21,13 +14,13 @@ export default function RemitterNotificationDropdown({ remitterId }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     if (!remitterId) return;
     setLoading(true);
     try {
-      const res = await fetchRemitterNotifications(remitterId, 1, 20);
+      const res = await fetchRemitterNotifications(remitterId, 1, 10);
       const data = res?.data || res || {};
+      // console.log(data);
       const rawList = data.items || data.notifications || [];
       const count = Number(
         data.unreadCount ?? rawList.filter((n) => !n.read).length,
@@ -55,10 +48,11 @@ export default function RemitterNotificationDropdown({ remitterId }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [remitterId]);
 
   useEffect(() => {
     if (remitterId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadNotifications();
     }
   }, [remitterId, open, loadNotifications]);
@@ -67,10 +61,7 @@ export default function RemitterNotificationDropdown({ remitterId }) {
   useEffect(() => {
     if (!remitterId) return;
 
-    const apiBaseUrl =
-      process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
-      "http://localhost:9090/api";
-    const sseUrl = `${apiBaseUrl}/remitter/${remitterId}/notifications/stream`;
+    const sseUrl = buildSseUrl(`remitter/${remitterId}/notifications/stream`);
 
     let eventSource;
     try {
@@ -148,6 +139,7 @@ export default function RemitterNotificationDropdown({ remitterId }) {
   return (
     <div className="relative" data-remitter-notif>
       <button
+        type="button"
         onClick={() => setOpen(!open)}
         className="relative p-2 rounded-xl text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
         aria-label="Remitter Notifications"
@@ -166,6 +158,7 @@ export default function RemitterNotificationDropdown({ remitterId }) {
             <h4 className="font-bold text-gray-900 text-sm">Notifications</h4>
             {unreadCount > 0 && (
               <button
+                type="button"
                 onClick={handleMarkAllRead}
                 className="text-xs text-emerald-600 hover:text-emerald-700 font-medium cursor-pointer"
               >
@@ -175,16 +168,19 @@ export default function RemitterNotificationDropdown({ remitterId }) {
           </div>
 
           <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
-            {loading ? (
+            {loading && (
               <div className="p-6 text-center text-xs text-gray-400">
                 Loading alerts...
               </div>
-            ) : notifications.length === 0 ? (
+            )}
+            {!loading && notifications.length === 0 && (
               <div className="py-8 px-4 text-center">
                 <Inbox className="w-6 h-6 text-gray-300 mx-auto mb-2" />
                 <p className="text-xs text-gray-400">No notifications found.</p>
               </div>
-            ) : (
+            )}
+            {!loading &&
+              notifications.length > 0 &&
               notifications.map((n) => (
                 <div
                   key={n.id}
@@ -210,6 +206,7 @@ export default function RemitterNotificationDropdown({ remitterId }) {
                   </div>
                   {n.isUnread && (
                     <button
+                      type="button"
                       onClick={() => handleMarkRead(n.id)}
                       className="p-1 text-gray-400 hover:text-emerald-600 shrink-0 cursor-pointer"
                       title="Mark read"
@@ -218,8 +215,7 @@ export default function RemitterNotificationDropdown({ remitterId }) {
                     </button>
                   )}
                 </div>
-              ))
-            )}
+              ))}
           </div>
         </div>
       )}

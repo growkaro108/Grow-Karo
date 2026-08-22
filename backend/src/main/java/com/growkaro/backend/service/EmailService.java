@@ -187,6 +187,7 @@ public class EmailService {
                     "<p>Your scheme " + userScheme.getScheme().getSchemeName() +
                     " is set to mature in the next 10-15 days.</p>" +
                     "<p><strong>Maturity Date:</strong> " + userScheme.getMaturityDate() + "</p>" +
+                    "<p><strong>Amount Invested:</strong> " + userScheme.getPaidAmount() + "</p>" +
                     "<p><strong>Total Profit:</strong> " + userScheme.getProfit() + "</p>" +
                     "<p><strong>Amount Reedeemed So Far:</strong> " + userScheme.getProfitReedemed() + "</p>" +
                     "<p><strong>Amount To Be Credited at Maturity:</strong> " + totalAmount + "</p>" +
@@ -211,7 +212,7 @@ public class EmailService {
     public void sendSchemeMaturityEmailtoAdmin(UserScheme userScheme, String adminEmail) {
         try {
             String subject = "Upcoming Scheme Maturity for User " + userScheme.getUser().getName();
-            BigDecimal totalAmount = userScheme.getProfit().add(userScheme.getPaidAmount())
+            BigDecimal totalAmount = (userScheme.getProfit().add(userScheme.getPaidAmount()))
                     .subtract(userScheme.getProfitReedemed());
             String body = "<div style='font-family: Arial, sans-serif; margin: 0; padding: 0;'>" +
                     "<div style='background-color: #f0f8ff; padding: 20px;'>" +
@@ -221,6 +222,7 @@ public class EmailService {
                     "<p>Dear Admin,</p>" +
                     "<p>Scheme " + userScheme.getScheme().getSchemeName() + " for user "
                     + userScheme.getUser().getName() + " is set to mature in the next 10-15 days.</p>" +
+                    "<p><strong>Amount Invested:</strong> " + userScheme.getPaidAmount() + "</p>" +
                     "<p><strong>Total Profit:</strong> " + userScheme.getProfit() + "</p>" +
                     "<p><strong>Amount Reedeemed So Far:</strong> " + userScheme.getProfitReedemed() + "</p>" +
                     "<p><strong>Amount To Be Paid at Maturity:</strong> " + totalAmount + "</p>" +

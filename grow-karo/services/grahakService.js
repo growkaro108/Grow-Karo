@@ -18,6 +18,7 @@ import {
   userRegister,
   userSchemeWithdraw,
   validateEmailOtp,
+  fetchUserNotificationsApi,
 } from "@/api/userApi";
 import { allRounderMessage } from "@/components/Message";
 
@@ -248,6 +249,15 @@ export async function deleteNominee(userId, nomineeId) {
 export async function updateNominee(userId, nomineeId, nominee) {
   const res = await updateNomineeApi(userId, nomineeId, nominee);
   if (res.status === "success") {
+    return res.data;
+  }
+  allRounderMessage(res);
+  return null;
+}
+
+export async function fetchUserNotifications(userId, page) {
+  const res = await fetchUserNotificationsApi(userId, page);
+  if (res.status == "success") {
     return res.data;
   }
   allRounderMessage(res);

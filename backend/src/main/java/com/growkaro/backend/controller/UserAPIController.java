@@ -324,6 +324,7 @@ public class UserAPIController {
         return notificationBroadcaster.subscribe(ReceiverType.User, userId);
     }
 
+    // pending
     @PutMapping("/{userId}/notifications/settings")
     public ResponseEntity<Map<String, Object>> updateNotificationSettings(
             @PathVariable String userId,

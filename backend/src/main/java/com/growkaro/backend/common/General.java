@@ -18,11 +18,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DRO.UserRegister;
+import com.growkaro.backend.DTO.AdminUser;
+import com.growkaro.backend.DTO.NomineeResponse;
 import com.growkaro.backend.DTO.Payee;
 import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.DTO.UserRequest;
+import com.growkaro.backend.DTO.UserSchemeResponse;
 import com.growkaro.backend.entity.BankDetails;
+import com.growkaro.backend.entity.Nominee;
 import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.Transaction;
@@ -156,6 +160,8 @@ public class General {
 
     public UserPortfolio toUserPortfolio(UserScheme us) {
         Scheme scheme = us.getScheme();
+        Nominee nominee = us.getNominee();
+        NomineeResponse nomineeResponse = toNomineeResponse(nominee);
         return new UserPortfolio(
                 scheme.getSchemeId(),
                 scheme.getSchemeName(),
@@ -173,7 +179,7 @@ public class General {
                 us.getProfitReedemed(),
                 us.getNextPayoutDate(),
                 us.getPaidDate(), us.getStatus(),
-                us.getMaturityDate());
+                us.getMaturityDate(), nomineeResponse);
     }
 
     public SchemeResponse toSchemeResponse(Scheme scheme) {
@@ -346,4 +352,35 @@ public class General {
                 user.getPhone(),
                 transfers);
     }
+
+    public NomineeResponse toNomineeResponse(Nominee nominee) {
+        return new NomineeResponse(
+                nominee.getNomineeId(),
+                nominee.getName(),
+                nominee.getAadharNo(),
+                nominee.getMobileNo(),
+                nominee.getRelation());
+    }
+
+    public AdminUser toAdminUser(User user) {
+        return new AdminUser(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getPhone(),
+                user.isActive(),
+                user.getEnrolledSchemes().stream().map(this::toUserSchemeResponse).toList());
+    }
+
+    private UserSchemeResponse toUserSchemeResponse(UserScheme us) {
+        return new UserSchemeResponse(
+                us.getUserSchemeId(),
+                us.getScheme().getSchemeName(),
+                us.getScheme().getProfitPercentage(),
+                us.getPaidAmount(),
+                us.getEnrollmentDate(),
+                us.getMaturityDate(),
+                us.getScheme().getPayoutFrequency());
+    }
+
 }

@@ -91,6 +91,7 @@ export default function RemitterDashboard() {
         <header className="bg-white border-b border-gray-200 sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
+            type="button"
               onClick={toggleSidebar}
               className="lg:hidden text-gray-600 focus:outline-none"
             >
@@ -101,7 +102,7 @@ export default function RemitterDashboard() {
             </h1>
           </div>
           <div className="flex items-center space-x-3">
-            <RemitterNotificationDropdown remitterId={authRemitter?.remitterId} />
+            <RemitterNotificationDropdown remitterId={authRemitter?.id} />
             <div className="hidden md:flex items-center space-x-2 bg-green-50 border border-green-200 px-3 py-1.5 rounded-lg text-sm text-green-700 font-medium">
               <span>{authRemitter?.organizationName}</span>
             </div>

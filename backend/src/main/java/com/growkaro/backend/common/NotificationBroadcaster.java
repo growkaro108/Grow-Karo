@@ -28,7 +28,8 @@ public class NotificationBroadcaster {
 
     private static final long EMITTER_TIMEOUT = 0L; // Keep connection open indefinitely until client disconnects
 
-    // Keyed by channel ID e.g. "USER:usr123", "REMITTER:rem123", "ADMIN:GLOBAL", "ADMIN:adm123"
+    // Keyed by channel ID e.g. "USER:usr123", "REMITTER:rem123", "ADMIN:GLOBAL",
+    // "ADMIN:adm123"
     private final Map<String, List<SseEmitter>> channels = new ConcurrentHashMap<>();
 
     /**
@@ -48,7 +49,8 @@ public class NotificationBroadcaster {
         try {
             emitter.send(SseEmitter.event()
                     .name("connected")
-                    .data(Map.of("status", "connected", "channel", channelKey, "timestamp", System.currentTimeMillis())));
+                    .data(Map.of("status", "connected", "channel", channelKey, "timestamp",
+                            System.currentTimeMillis())));
         } catch (IOException e) {
             removeEmitter(channelKey, emitter);
         }
@@ -106,10 +108,20 @@ public class NotificationBroadcaster {
     }
 
     private String buildChannelKey(ReceiverType receiverType, String receiverId) {
-        if (receiverType == ReceiverType.Admin && (receiverId == null || receiverId.isBlank() || "GLOBAL".equalsIgnoreCase(receiverId))) {
+        if (receiverType == ReceiverType.Admin
+                && (receiverId == null || receiverId.isBlank() || "GLOBAL".equalsIgnoreCase(receiverId))) {
             return "ADMIN:GLOBAL";
         }
-        return (receiverType != null ? receiverType.name().toUpperCase() : "UNKNOWN") + ":" + (receiverId != null ? receiverId : "GLOBAL");
+        if (receiverType == ReceiverType.Remitter
+                && (receiverId == null || receiverId.isBlank() || "GLOBAL".equalsIgnoreCase(receiverId))) {
+            return "REMITTER:" + receiverId;
+        }
+        if (receiverType == ReceiverType.User
+                && (receiverId == null || receiverId.isBlank() || "GLOBAL".equalsIgnoreCase(receiverId))) {
+            return "USER:" + receiverId;
+        }
+        return (receiverType != null ? receiverType.name().toUpperCase() : "UNKNOWN") + ":"
+                + (receiverId != null ? receiverId : "GLOBAL");
     }
 
     /**

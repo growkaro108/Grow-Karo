@@ -1,27 +1,27 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { 
-  Bell, 
-  Check, 
-  Trash2, 
-  Wallet, 
-  AlertCircle, 
-  UserPlus, 
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  Check,
+  Trash2,
+  Wallet,
+  AlertCircle,
   Zap,
-  ArrowDownLeft,
-  ArrowUpRight,
   ShieldCheck,
   TrendingUp,
-  RefreshCw
+  RefreshCw,
 } from "lucide-react";
-import { fetchAdminNotifications, markAdminNotificationsAsRead } from "@/api/adminApi";
+import {
+  fetchAdminNotifications,
+  markAdminNotificationsAsRead,
+} from "@/api/adminApi";
+import { buildSseUrl } from "@/api/apiClient";
 
 export default function NotificationDropdown({ setShowNotifications }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [filterUnread, setFilterUnread] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
 
   const getIconAndStyle = (type, actionType) => {
     const act = (actionType || type || "").toUpperCase();
@@ -77,15 +77,18 @@ export default function NotificationDropdown({ setShowNotifications }) {
     }
   };
 
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetchAdminNotifications(1, 30);
+      const res = await fetchAdminNotifications(1, 10);
       const data = res?.data || res || {};
+      // console.log(data);
       const rawList = data.items || data.notifications || [];
-      const count = Number(data.unreadCount ?? rawList.filter(n => !n.read).length);
+      const count = Number(
+        data.unreadCount ?? rawList.filter((n) => !n.read).length,
+      );
 
-      const mapped = rawList.map(n => {
+      const mapped = rawList.map((n) => {
         const style = getIconAndStyle(n.type, n.actionType);
         return {
           id: n.id,
@@ -108,16 +111,16 @@ export default function NotificationDropdown({ setShowNotifications }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadNotifications();
-  }, []);
+  }, [loadNotifications]);
 
   // Subscribe to Admin SSE Stream
   useEffect(() => {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "http://localhost:9090/api";
-    const sseUrl = `${apiBaseUrl}/admin/notifications/stream`;
+    const sseUrl = buildSseUrl("admin/notifications/stream");
 
     let eventSource;
     try {
@@ -140,11 +143,11 @@ export default function NotificationDropdown({ setShowNotifications }) {
             iconColor: style.iconColor,
           };
 
-          setNotifications(prev => {
-            if (prev.some(x => x.id === newNotif.id)) return prev;
+          setNotifications((prev) => {
+            if (prev.some((x) => x.id === newNotif.id)) return prev;
             return [newNotif, ...prev];
           });
-          setUnreadCount(prev => prev + 1);
+          setUnreadCount((prev) => prev + 1);
         } catch (err) {
           console.error("Failed to parse admin notification SSE:", err);
         }
@@ -161,10 +164,10 @@ export default function NotificationDropdown({ setShowNotifications }) {
   }, []);
 
   const markAsRead = async (id) => {
-    setNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, isUnread: false } : n))
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isUnread: false } : n)),
     );
-    setUnreadCount(prev => Math.max(0, prev - 1));
+    setUnreadCount((prev) => Math.max(0, prev - 1));
     try {
       await markAdminNotificationsAsRead([id]);
     } catch (e) {
@@ -173,7 +176,7 @@ export default function NotificationDropdown({ setShowNotifications }) {
   };
 
   const markAllRead = async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isUnread: false })));
+    setNotifications((prev) => prev.map((n) => ({ ...n, isUnread: false })));
     setUnreadCount(0);
     try {
       await markAdminNotificationsAsRead([]);
@@ -188,7 +191,7 @@ export default function NotificationDropdown({ setShowNotifications }) {
   };
 
   const displayedNotifications = filterUnread
-    ? notifications.filter(n => n.isUnread)
+    ? notifications.filter((n) => n.isUnread)
     : notifications;
 
   return (
@@ -196,7 +199,9 @@ export default function NotificationDropdown({ setShowNotifications }) {
       {/* Header Area */}
       <div className="p-4 border-b border-slate-800 flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <h3 className="font-bold text-white text-sm tracking-wide">Notifications</h3>
+          <h3 className="font-bold text-white text-sm tracking-wide">
+            Notifications
+          </h3>
           {unreadCount > 0 && (
             <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500 text-slate-950 animate-pulse">
               {unreadCount} new
@@ -204,7 +209,8 @@ export default function NotificationDropdown({ setShowNotifications }) {
           )}
         </div>
         {unreadCount > 0 && (
-          <button 
+          <button
+            type="button"
             onClick={markAllRead}
             className="text-xs text-teal-400 hover:text-teal-300 font-medium transition-colors cursor-pointer"
           >
@@ -216,20 +222,22 @@ export default function NotificationDropdown({ setShowNotifications }) {
       {/* Tabs / Filter Controls */}
       <div className="px-4 py-2 bg-slate-900/40 border-b border-slate-800/60 flex gap-2">
         <button
+          type="button"
           onClick={() => setFilterUnread(false)}
           className={`px-3 py-1 text-xs rounded-full font-medium transition-all cursor-pointer ${
-            !filterUnread 
-              ? "bg-slate-800 text-white border border-slate-700 shadow-sm" 
+            !filterUnread
+              ? "bg-slate-800 text-white border border-slate-700 shadow-sm"
               : "text-slate-400 hover:text-slate-200"
           }`}
         >
           All Activity
         </button>
         <button
+          type="button"
           onClick={() => setFilterUnread(true)}
           className={`px-3 py-1 text-xs rounded-full font-medium transition-all cursor-pointer ${
-            filterUnread 
-              ? "bg-slate-800 text-white border border-slate-700 shadow-sm" 
+            filterUnread
+              ? "bg-slate-800 text-white border border-slate-700 shadow-sm"
               : "text-slate-400 hover:text-slate-200"
           }`}
         >
@@ -239,12 +247,12 @@ export default function NotificationDropdown({ setShowNotifications }) {
 
       {/* Notification Body Container */}
       <div className="max-h-90 overflow-y-auto divide-y divide-slate-900">
-        {displayedNotifications.length > 0 ? (
-          displayedNotifications.map((n) => {
+        {displayedNotifications?.length > 0 ? (
+          displayedNotifications?.map((n) => {
             const IconComponent = n.icon;
             return (
-              <div 
-                key={n.id} 
+              <div
+                key={n.id}
                 className={`p-4 flex items-start gap-3 transition-colors duration-200 relative group ${
                   n.isUnread ? "bg-slate-900/30" : "hover:bg-slate-900/20"
                 }`}
@@ -255,7 +263,9 @@ export default function NotificationDropdown({ setShowNotifications }) {
                 )}
 
                 {/* Categorized Icon Wrapper */}
-                <div className={`p-2 rounded-xl border shrink-0 ${n.iconColor}`}>
+                <div
+                  className={`p-2 rounded-xl border shrink-0 ${n.iconColor}`}
+                >
                   <IconComponent className="h-4 w-4" />
                 </div>
 
@@ -265,7 +275,9 @@ export default function NotificationDropdown({ setShowNotifications }) {
                     <h4 className="text-xs font-semibold text-slate-100 truncate tracking-wide">
                       {n.title}
                     </h4>
-                    <span className="text-[10px] text-slate-500 shrink-0 whitespace-nowrap">{n.time}</span>
+                    <span className="text-[10px] text-slate-500 shrink-0 whitespace-nowrap">
+                      {n.time}
+                    </span>
                   </div>
                   <p className="text-xs text-slate-400 leading-relaxed font-normal line-clamp-2">
                     {n.description}
@@ -275,6 +287,7 @@ export default function NotificationDropdown({ setShowNotifications }) {
                 {/* Interactive Action Node */}
                 {n.isUnread && (
                   <button
+                    type="button"
                     onClick={() => markAsRead(n.id)}
                     className="p-1 rounded-md opacity-0 group-hover:opacity-100 transition-all text-slate-500 hover:text-emerald-400 hover:bg-slate-800 shrink-0 self-center cursor-pointer"
                     title="Mark as read"
@@ -289,7 +302,9 @@ export default function NotificationDropdown({ setShowNotifications }) {
           <div className="py-12 px-4 flex flex-col items-center justify-center text-center">
             <Zap className="h-6 w-6 text-slate-700 mb-2 stroke-[1.5]" />
             <p className="text-xs text-slate-400 font-medium">All caught up!</p>
-            <p className="text-[11px] text-slate-600 mt-0.5">No actionable alerts found.</p>
+            <p className="text-[11px] text-slate-600 mt-0.5">
+              No actionable alerts found.
+            </p>
           </div>
         )}
       </div>
@@ -297,7 +312,8 @@ export default function NotificationDropdown({ setShowNotifications }) {
       {/* Footer Utility Actions */}
       {notifications.length > 0 && (
         <div className="p-3 bg-slate-950 border-t border-slate-900 flex justify-center">
-          <button 
+          <button
+            type="button"
             onClick={clearAll}
             className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-rose-400 transition-colors py-1 px-3 rounded-lg hover:bg-rose-500/5 cursor-pointer"
           >

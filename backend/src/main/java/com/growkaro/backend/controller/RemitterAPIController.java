@@ -270,7 +270,7 @@ public class RemitterAPIController {
     public ResponseEntity<Map<String, Object>> getNotifications(
             @PathVariable String remitterId,
             @RequestParam(required = false, defaultValue = "1") int page,
-            @RequestParam(required = false, defaultValue = "20") int size) {
+            @RequestParam(required = false, defaultValue = "10") int size) {
         return ResponseEntity.ok(remitterAPIService.getRemitterNotifications(remitterId, page, size));
     }
 

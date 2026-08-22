@@ -26,6 +26,7 @@ export default function Topbar({ title, onMenuClick }) {
     <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-slate-800 bg-slate-950/80 px-4 py-4 backdrop-blur-md sm:px-6">
       <div className="flex items-center gap-3">
         <button
+        type="button"
           onClick={onMenuClick}
           className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200 md:hidden"
         >
@@ -47,6 +48,7 @@ export default function Topbar({ title, onMenuClick }) {
         {/* 1. Bell Icon Trigger Node */}
         <div className="relative" ref={notificationRef}>
           <button
+          type="button"
             onClick={() => {
               setShowNotifications(!showNotifications);
               setShowProfile(false); // Close other open menus
@@ -81,6 +83,7 @@ export default function Topbar({ title, onMenuClick }) {
         {/* 2. Avatar Profile Trigger Node */}
         <div className="relative" ref={profileRef}>
           <button
+            type="button"
             onClick={() => {
               setShowProfile(!showProfile);
               setShowNotifications(false); // Close other open menus

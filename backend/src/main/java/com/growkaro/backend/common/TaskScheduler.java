@@ -82,10 +82,9 @@ public class TaskScheduler {
     }
 
     // cron expression for 4:45 AM every day
-    @Scheduled(cron = "0 10 4 * * *", zone = timeZone)
-    @SchedulerLock(name = "notifyForSchemeMatured", lockAtMostFor = "5m", lockAtLeastFor = "2m") // lock the db to
-                                                                                                 // prevent from running
-                                                                                                 // multiple times
+    @Scheduled(cron = "0 10 3 * * *", zone = timeZone)
+    @SchedulerLock(name = "notifyForSchemeMatured", // lock the db to prevent from running multiple times
+            lockAtMostFor = "5m", lockAtLeastFor = "2m")
     @Transactional
     public void notifyForSchemeMatured() {
         // notify user and admin by email and notification 10-15 days before maturity
