@@ -1,91 +1,148 @@
 "use client";
 
-import React, { useState } from "react";
-import { 
-  HelpCircle, 
-  Search, 
-  ChevronDown, 
-  LifeBuoy, 
-  Send, 
-  FileText, 
-  CheckCircle, 
+import React, { use, useCallback, useState } from "react";
+import {
+  HelpCircle,
+  Search,
+  ChevronDown,
+  LifeBuoy,
+  Send,
+  FileText,
+  CheckCircle,
   ArrowRight,
   ShieldAlert,
-  HeadsetIcon
+  HeadsetIcon,
 } from "lucide-react";
+import { userContext } from "@/context/UserContext";
+import { submitIssue } from "../../../services/grahakService";
+import { useRouter } from "next/navigation";
 
 export default function SolutionsHelpCenter() {
   const [searchQuery, setSearchQuery] = useState("");
   const [openFaq, setOpenFaq] = useState(null);
-  
+  const { authUser } = use(userContext);
   const [issueSubmitted, setIssueSubmitted] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const router = useRouter();
   const [ticketData, setTicketData] = useState({
-    category: "payout",
-    email: "",
-    transactionId: "",
-    description: ""
+    submitterId: authUser?.id,
+    priority: "low",
+    title: "",
+    // transactionId: "",
+    description: "",
   });
+  const userId = authUser?.id;
 
   const faqData = [
     {
       id: 1,
-      question: "Why is my manual withdrawal request marked as 'Pending Review'?",
-      answer: "To secure the platform network, any daily withdrawal surpassing your configured instant auto-approval ceiling (typically ₹25,000) or hitting an anomalous risk profile requires secondary hardware-authenticated verification from the admin panel layer. Reviews are usually settled within 15–30 minutes."
+      question:
+        "Why is my manual withdrawal request marked as 'Pending Review'?",
+      answer:
+        "To secure the platform network, any daily withdrawal surpassing your configured instant auto-approval ceiling (typically ₹25,000) or hitting an anomalous risk profile requires secondary hardware-authenticated verification from the admin panel layer. Reviews are usually settled within 15–30 minutes.",
     },
     {
       id: 2,
       question: "How do I update our platform management transaction fee?",
-      answer: "Go directly to your 'System Control & Gateway Configurations' module under settings. Choose the 'Financial & Limits' panel, adjust the percentage matrix, and click 'Save System Changes' to commit the state global updates instantly."
+      answer:
+        "Go directly to your 'System Control & Gateway Configurations' module under settings. Choose the 'Financial & Limits' panel, adjust the percentage matrix, and click 'Save System Changes' to commit the state global updates instantly.",
     },
     {
       id: 3,
-      question: "What happens if a critical webhook dispatch endpoint responds with 500?",
-      answer: "Grow-Karo implements an exponential backoff retry layout strategy over 4 hours. If routing continues to fail, the audit log triggers a high-severity notification alert visible inside your admin console navbar tray."
-    }
+      question:
+        "What happens if a critical webhook dispatch endpoint responds with 500?",
+      answer:
+        "Grow-Karo implements an exponential backoff retry layout strategy over 4 hours. If routing continues to fail, the audit log triggers a high-severity notification alert visible inside your admin console navbar tray.",
+    },
   ];
 
-  const filteredFaqs = faqData.filter(faq => 
-    faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredFaqs = faqData.filter(
+    (faq) =>
+      faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      faq.answer.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setTicketData(prev => ({ ...prev, [name]: value }));
+    setTicketData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleTicketSubmit = (e) => {
-    e.preventDefault();
-    setIsSending(true);
-    setTimeout(() => {
-      setIsSending(false);
-      setIssueSubmitted(true);
-      setTicketData({ category: "payout", email: "", transactionId: "", description: "" });
-    }, 1500);
-  };
+  const handleTicketSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      if (!userId) {
+        const res = await confirmMessage(
+          "Please Login",
+          "You need to login to access this feature",
+        );
+        if (res) {
+          router.push("/auth");
+        }
+        return;
+      }
+
+      // console.log(ticketData);
+      try {
+        setIsSending(true);
+        const res = await submitIssue(userId, ticketData);
+        if (!res) {
+          return;
+        } else {
+          setIssueSubmitted(true);
+          setTicketData({
+            priority: "low",
+            title: "",
+            // transactionId: "",
+            description: "",
+          });
+        }
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setTimeout(() => {
+          setIsSending(false);
+        }, 2500);
+      }
+
+      // setTimeout(() => {
+      //   setIsSending(false);
+      //   setIssueSubmitted(true);
+      //   setTicketData({
+      //     submitterId: authUser?.id,
+      //     priority: "low",
+      //     title: "",
+      //     // transactionId: "",
+      //     description: "",
+      //   });
+      // }, 1500);
+    },
+    [userId, router, ticketData],
+  );
 
   return (
     // Clean, crisp light mode presentation layer
     <div className="w-full min-h-screen bg-slate-50 text-slate-800 p-6 md:p-12 selection:bg-teal-100 selection:text-teal-900">
       <div className="max-w-6xl mx-auto space-y-12">
-        
         {/* Modernized Header Group */}
         <div className="text-center space-y-3 max-w-2xl mx-auto">
           <div className="h-12 w-12 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center mx-auto shadow-md shadow-teal-500/5">
-            <HeadsetIcon className="h-6 w-6 text-teal-600 animate-pulse" style={{ animationDuration: '20s' }} />
+            <HeadsetIcon
+              className="h-6 w-6 text-teal-600 animate-pulse"
+              style={{ animationDuration: "20s" }}
+            />
           </div>
           <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight sm:text-4xl">
             Resolution Matrix & Support Gateway
           </h2>
           <p className="text-sm text-slate-600 leading-relaxed">
-            Search our terminal knowledge vault for instant self-healing rules, or dispatch an urgent encrypted ticket directly to the supervising authority.
+            Search our terminal knowledge vault for instant self-healing rules,
+            or dispatch an urgent encrypted ticket directly to the supervising
+            authority.
           </p>
         </div>
 
         {/* Master Content Split Layout Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
           {/* LEFT: FAQ Vault Segment (7 Columns) */}
           <div className="lg:col-span-7 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -101,9 +158,9 @@ export default function SolutionsHelpCenter() {
             {/* Interactive Search Field */}
             <div className="relative">
               <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Search troubleshooting keywords, error logs..." 
+              <input
+                type="text"
+                placeholder="Search troubleshooting keywords, error logs..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-3 text-xs text-slate-800 focus:outline-none focus:border-slate-400 focus:bg-white placeholder-slate-400 transition-all"
@@ -114,21 +171,29 @@ export default function SolutionsHelpCenter() {
             <div className="space-y-3 pt-2">
               {filteredFaqs.length > 0 ? (
                 filteredFaqs.map((faq) => (
-                  <div 
-                    key={faq.id} 
+                  <div
+                    key={faq.id}
                     className="border border-slate-200 bg-white rounded-xl overflow-hidden shadow-2xs transition-all duration-200"
                   >
                     <button
-                      onClick={() => setOpenFaq(openFaq === faq.id ? null : faq.id)}
+                      onClick={() =>
+                        setOpenFaq(openFaq === faq.id ? null : faq.id)
+                      }
                       className="w-full flex items-center justify-between p-4.5 text-left gap-4 hover:bg-slate-50 transition-colors"
                     >
-                      <span className="text-xs font-semibold text-slate-800 leading-tight">{faq.question}</span>
-                      <ChevronDown className={`h-4 w-4 text-slate-400 shrink-0 transition-transform duration-300 ${openFaq === faq.id ? "rotate-180 text-teal-600" : ""}`} />
+                      <span className="text-xs font-semibold text-slate-800 leading-tight">
+                        {faq.question}
+                      </span>
+                      <ChevronDown
+                        className={`h-4 w-4 text-slate-400 shrink-0 transition-transform duration-300 ${openFaq === faq.id ? "rotate-180 text-teal-600" : ""}`}
+                      />
                     </button>
-                    
-                    <div 
+
+                    <div
                       className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                        openFaq === faq.id ? "max-h-75 border-t border-slate-100 bg-slate-50/50" : "max-h-0"
+                        openFaq === faq.id
+                          ? "max-h-75 border-t border-slate-100 bg-slate-50/50"
+                          : "max-h-0"
                       }`}
                     >
                       <p className="p-4.5 text-[12px] text-slate-600 leading-relaxed font-normal">
@@ -139,7 +204,9 @@ export default function SolutionsHelpCenter() {
                 ))
               ) : (
                 <div className="text-center py-8 border border-dashed border-slate-200 rounded-xl">
-                  <p className="text-xs text-slate-400">No matching system parameters resolved in local cache.</p>
+                  <p className="text-xs text-slate-400">
+                    No matching system parameters resolved in local cache.
+                  </p>
                 </div>
               )}
             </div>
@@ -153,9 +220,12 @@ export default function SolutionsHelpCenter() {
                   <CheckCircle className="h-6 w-6 text-emerald-600" />
                 </div>
                 <div>
-                  <h4 className="text-base font-bold text-slate-900">Ticket Securely Dispatched</h4>
+                  <h4 className="text-base font-bold text-slate-900">
+                    Ticket Securely Dispatched
+                  </h4>
                   <p className="text-xs text-slate-600 mt-1.5 max-w-xs mx-auto leading-relaxed">
-                    Your report has been committed to the support queue. An administrator will review your logs shortly.
+                    Your report has been committed to the support queue. An
+                    administrator will review your logs shortly.
                   </p>
                 </div>
                 <button
@@ -173,56 +243,64 @@ export default function SolutionsHelpCenter() {
                     Escalate to Authority
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    Route a diagnostics inquiry directly into core supervisor support lines.
+                    Route a diagnostics inquiry directly into core supervisor
+                    support lines.
                   </p>
                 </div>
 
                 <div className="space-y-4">
                   <div>
                     <label className="block text-[11px] uppercase tracking-wider text-slate-500 font-bold mb-2">
-                      Operational Category
+                      Action will processed
                     </label>
                     <select
-                      name="category"
-                      value={ticketData.category}
+                      name="priority"
+                      value={ticketData.priority}
                       onChange={handleInputChange}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-slate-400 focus:bg-white transition-colors"
                     >
-                      <option value="payout">Payout & Financial Gateway Hold</option>
-                      <option value="security">MFA Verification Lockout</option>
-                      <option value="system">Webhook Synchronization Conflict</option>
-                      <option value="other">General Structural Anomaly</option>
+                      <option value="low">Low - General inquiry</option>
+                      <option value="medium">Medium - Minor issue</option>
+                      <option value="high">
+                        High - Important / Blocking progress
+                      </option>
+                      <option value="critical">
+                        Critical - Immediate assistance needed
+                      </option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-[11px] uppercase tracking-wider text-slate-500 font-bold mb-2">
-                      Registered Email Address
+                      Subject
                     </label>
                     <input
                       required
-                      type="email"
-                      name="email"
-                      placeholder="admin@grow-karo.com"
-                      value={ticketData.email}
+                      type="text"
+                      name="title"
+                      placeholder="Enter Subject"
+                      value={ticketData.title}
                       onChange={handleInputChange}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-slate-400 focus:bg-white transition-colors"
                     />
                   </div>
 
-                  <div>
+                  {/* <div>
                     <label className="block text-[11px] uppercase tracking-wider text-slate-500 font-bold mb-2">
-                      Reference Transaction ID <span className="text-slate-400 font-normal">(Optional)</span>
+                      Reference Transaction ID{" "}
+                      <span className="text-slate-400 font-normal">
+                        (Optional)
+                      </span>
                     </label>
                     <input
                       type="text"
                       name="transactionId"
-                      placeholder="TXN-90821-X"
+                      placeholder="Enter previous id.."
                       value={ticketData.transactionId}
                       onChange={handleInputChange}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-mono focus:outline-none focus:border-slate-400 focus:bg-white transition-colors placeholder-slate-300"
                     />
-                  </div>
+                  </div> */}
 
                   <div>
                     <label className="block text-[11px] uppercase tracking-wider text-slate-500 font-bold mb-2">
@@ -260,7 +338,6 @@ export default function SolutionsHelpCenter() {
               </form>
             )}
           </div>
-
         </div>
       </div>
     </div>

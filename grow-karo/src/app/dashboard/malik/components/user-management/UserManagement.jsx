@@ -14,9 +14,11 @@ export default function UserManagement() {
   const [sortDesc, setSortDesc] = useState(true);
   const [selected, setSelected] = useState(null);
   const [users, setUsers] = useState([]);
-
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const filtered = useMemo(() => {
-    let list = USERS.filter((u) => {
+    let list = users.filter((u) => {
       const matchesQuery =
         !query ||
         u.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -32,16 +34,17 @@ export default function UserManagement() {
         : new Date(a.joined) - new Date(b.joined),
     );
     return list;
-  }, [query, statusFilter, schemeFilter, sortDesc]);
+  }, [users, query, statusFilter, schemeFilter, sortDesc]);
 
   useEffect(() => {
     async function fetchAllUser() {
       try {
         const res = await fetchAllUsers();
-        console.log(res);
-        if (res) return;
-        setUsers(res);
-      } catch (error) {
+        // console.log(res);
+        if (!res || res?.content?.length === 0) return;
+        setUsers(res.content);
+      } catch (e) {
+        console.log(e);
         errorMessage("something went wrong ,try later..");
       }
     }
@@ -78,11 +81,20 @@ export default function UserManagement() {
           onToggleSort={() => setSortDesc((v) => !v)}
         />
 
-        <p className="mb-3 text-sm text-slate-400">
+        {/* <p className="mb-3 text-sm text-slate-400">
           {filtered.length} user{filtered.length !== 1 ? "s" : ""} found
-        </p>
+        </p> */}
 
-        <UserTable users={filtered} onSelect={setSelected} />
+        <UserTable
+          users={filtered}
+          onSelect={setSelected}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalItems={filtered.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
+        {/* on mobile size */}
         <UserCardList users={filtered} onSelect={setSelected} />
       </div>
 

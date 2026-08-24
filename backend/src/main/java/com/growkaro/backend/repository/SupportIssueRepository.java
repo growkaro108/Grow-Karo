@@ -13,36 +13,37 @@ import java.util.List;
 @Repository
 public interface SupportIssueRepository extends JpaRepository<SupportIssue, String> {
 
-    // ── Per-user queries ─────────────────────────────────────────────────────
+        // ── Per-user queries ─────────────────────────────────────────────────────
 
-    Page<SupportIssue> findByUserId(String userId, Pageable pageable);
+        Page<SupportIssue> findBySubmitterId(String submitterId, Pageable pageable);
 
-    Page<SupportIssue> findByUserIdAndStatus(String userId, SupportIssue.Status status, Pageable pageable);
+        Page<SupportIssue> findBySubmitterIdAndStatus(String submitterId, SupportIssue.Status status,
+                        Pageable pageable);
 
-    // ── Admin queries ─────────────────────────────────────────────────────────
+        // ── Admin queries ─────────────────────────────────────────────────────────
 
-    Page<SupportIssue> findByStatus(SupportIssue.Status status, Pageable pageable);
+        Page<SupportIssue> findByStatus(SupportIssue.Status status, Pageable pageable);
 
-    Page<SupportIssue> findByPriority(SupportIssue.Priority priority, Pageable pageable);
+        Page<SupportIssue> findByPriority(SupportIssue.Priority priority, Pageable pageable);
 
-    Page<SupportIssue> findByStatusAndPriority(SupportIssue.Status status, SupportIssue.Priority priority,
-            Pageable pageable);
+        Page<SupportIssue> findByStatusAndPriority(SupportIssue.Status status, SupportIssue.Priority priority,
+                        Pageable pageable);
 
-    List<SupportIssue> findByStatusOrderByPriorityDesc(SupportIssue.Status status);
+        List<SupportIssue> findByStatusOrderByPriorityDesc(SupportIssue.Status status);
 
-    // ── Search ───────────────────────────────────────────────────────────────
+        // ── Search ───────────────────────────────────────────────────────────────
 
-    @Query("SELECT s FROM SupportIssue s WHERE " +
-            "LOWER(s.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(s.description) LIKE LOWER(CONCAT('%', :query, '%'))")
-    Page<SupportIssue> searchIssues(@Param("query") String query, Pageable pageable);
+        @Query("SELECT s FROM SupportIssue s WHERE " +
+                        "LOWER(s.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                        "LOWER(s.description) LIKE LOWER(CONCAT('%', :query, '%'))")
+        Page<SupportIssue> searchIssues(@Param("query") String query, Pageable pageable);
 
-    // ── Dashboard stats ──────────────────────────────────────────────────────
+        // ── Dashboard stats ──────────────────────────────────────────────────────
 
-    long countByStatus(SupportIssue.Status status);
+        long countByStatus(SupportIssue.Status status);
 
-    long countByPriority(SupportIssue.Priority priority);
+        long countByPriority(SupportIssue.Priority priority);
 
-    @Query("SELECT COUNT(s) FROM SupportIssue s WHERE s.status != 'RESOLVED' AND s.status != 'CLOSED'")
-    long countOpenIssues();
+        @Query("SELECT COUNT(s) FROM SupportIssue s WHERE s.status != 'RESOLVED' AND s.status != 'CLOSED'")
+        long countOpenIssues();
 }

@@ -63,8 +63,8 @@ export default function Toolbar({
         </button>
 
         {/* Filters (desktop inline) */}
-        <div className="hidden items-center gap-2 sm:flex">
-          <SelectFilter
+        <div className="hidden items-center gap-7 sm:flex">
+          {/* <SelectFilter
             value={statusFilter}
             onChange={onStatusChange}
             options={STATUS_OPTIONS}
@@ -73,7 +73,7 @@ export default function Toolbar({
             value={schemeFilter}
             onChange={onSchemeChange}
             options={SCHEME_OPTIONS}
-          />
+          /> */}
           <button
             onClick={onToggleSort}
             className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-800 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/5"
@@ -96,7 +96,7 @@ export default function Toolbar({
       {/* Filters (mobile expanded) */}
       {filtersOpen && (
         <div className="mt-3 flex flex-col gap-2 sm:hidden">
-          <SelectFilter
+          {/* <SelectFilter
             value={statusFilter}
             onChange={onStatusChange}
             options={STATUS_OPTIONS}
@@ -107,7 +107,7 @@ export default function Toolbar({
             onChange={onSchemeChange}
             options={SCHEME_OPTIONS}
             full
-          />
+          /> */}
           <button
             onClick={onToggleSort}
             className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-800 px-3 py-2.5 text-sm font-medium text-slate-300"

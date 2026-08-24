@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, use, useCallback } from "react";
+import React, { useState, useMemo, useEffect, use } from "react";
 import {
   Search,
   SlidersHorizontal,
@@ -10,10 +10,6 @@ import {
   Clock,
   XCircle,
   X,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   ArrowRightLeft,
   RefreshCw,
   CircleAlert,
@@ -21,7 +17,7 @@ import {
 import { userContext } from "@/context/UserContext";
 import { formatDateTime } from "@/app/plan/utils/planUtils";
 import { TableRowLoader } from "@/loader/TableRowLoader";
-
+import TablePagination from "@/components/TablePagination";
 const STATUS_STYLES = {
   Completed: {
     badge: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -525,7 +521,7 @@ export default function Transaction() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 h-[100px] overflow-y-scroll">
+            <tbody className="divide-y divide-slate-200 h-25 overflow-y-scroll">
               {isLoading ? (
                 <TableRowLoader colSpan={5} loading={"Transactions"} />
               ) : paginatedTransactions.length > 0 ? (
@@ -575,87 +571,15 @@ export default function Transaction() {
           </table>
         </div>
 
-        {/* Footer / pagination */}
-        <div className="p-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-          <div className="flex items-center gap-4">
-            <span>
-              Showing <b className="text-slate-700">{rangeStart}</b>–
-              <b className="text-slate-700">{rangeEnd}</b> of{" "}
-              <b className="text-slate-700">{filteredTransactions.length}</b>{" "}
-              entries
-            </span>
-            <div className="flex items-center gap-1.5">
-              <span>Rows per page</span>
-              <select
-                value={pageSize}
-                onChange={(e) => setPageSize(Number(e.target.value))}
-                className="px-2 py-1 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                {PAGE_SIZE_OPTIONS.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+        {/* Footer / pagination*/}
 
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setCurrentPage(1)}
-                disabled={safePage === 1}
-                className="p-1.5 rounded-md border border-slate-300 bg-white text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100"
-              >
-                <ChevronsLeft className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={safePage === 1}
-                className="p-1.5 rounded-md border border-slate-300 bg-white text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-
-              {pageButtons.map((p, idx) =>
-                p === "…" ? (
-                  <span key={`ellipsis-${idx}`} className="px-2 text-slate-400">
-                    …
-                  </span>
-                ) : (
-                  <button
-                    key={p}
-                    onClick={() => setCurrentPage(p)}
-                    className={`min-w-7 h-7 px-2 rounded-md text-xs font-medium border ${
-                      p === safePage
-                        ? "bg-indigo-600 border-indigo-600 text-white"
-                        : "bg-white border-slate-300 text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ),
-              )}
-
-              <button
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
-                disabled={safePage === totalPages}
-                className="p-1.5 rounded-md border border-slate-300 bg-white text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={safePage === totalPages}
-                className="p-1.5 rounded-md border border-slate-300 bg-white text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100"
-              >
-                <ChevronsRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-        </div>
+        <TablePagination
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalItems={filteredTransactions.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
       </div>
     </div>
   );

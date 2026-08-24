@@ -147,6 +147,11 @@ export async function fetchAllUsersApi() {
   return await apiRequest(`${END_POINT}user/all`);
 }
 
+export async function getAllIssuesApi(status) {
+  return await apiRequest(`${END_POINT}issues/${status}`, {
+    method: "GET",
+  });
+}
 //pending----------------------------------------------------------------------
 
 export async function fetchAdminDashboard(params) {

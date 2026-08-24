@@ -6,12 +6,16 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.growkaro.backend.DRO.EnrollingUser;
 import com.growkaro.backend.DRO.NewNominee;
+import com.growkaro.backend.DRO.RaiseIssue;
 import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.DRO.WithdrawAmount;
 import com.growkaro.backend.DTO.NomineeResponse;
@@ -322,6 +326,31 @@ public class UserAPIController {
     @GetMapping(value = "/{userId}/notifications/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamUserNotifications(@PathVariable String userId) {
         return notificationBroadcaster.subscribe(ReceiverType.User, userId);
+    }
+
+    @PostMapping("/{userId}/raiseIssue")
+    public ResponseEntity<Map<String, Object>> raiseIssue(@PathVariable String userId, @RequestBody RaiseIssue issue) {
+        if (issue == null || issue.title() == null || issue.title().isBlank() || issue.description() == null
+                || issue.description().isBlank() || userId == null || userId.isBlank()
+
+        ) {
+            return ResponseEntity.badRequest().body(general.response("error", "Invalid request...", null));
+        }
+        return ResponseEntity.ok(userAPIService.submitIssue(userId, issue));
+    }
+
+    @GetMapping("/{userId}/issues")
+    public ResponseEntity<Map<String, Object>> getUserIssues(
+            @PathVariable String userId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        // Clamp values gracefully instead of resetting completely
+        int validPage = Math.max(1, page) - 1;
+        int validSize = Math.min(Math.max(1, size), 20);
+
+        Pageable pageable = PageRequest.of(validPage, validSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(userAPIService.getUserIssues(userId, pageable));
     }
 
     // pending

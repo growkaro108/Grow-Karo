@@ -6,14 +6,14 @@ import {
   useMemo,
   useState,
 } from "react";
-import { getAllRemitter } from "../../services/malikService";
+import { getAllIssues, getAllRemitter } from "../../services/malikService";
 
 export const adminContext = createContext({});
 export const AdminContextProvider = ({ children }) => {
   const [malikNotification, setMalikNotification] = useState([]);
   const [isLoading, setIsloading] = useState(true);
   const [codes, setCodes] = useState([]);
-
+  const [issuesData, setIssuesData] = useState([]);
   const LoadCodes = useCallback(async () => {
     try {
       const data = await getAllRemitter();
@@ -27,6 +27,20 @@ export const AdminContextProvider = ({ children }) => {
     }
   }, []);
 
+  const loadIssues = useCallback(async (status) => {
+    try {
+      const data = await getAllIssues(status);
+      console.log(data);
+      if (data) {
+        setIssuesData(data);
+        return data;
+      }
+      return false;
+    } catch (error) {
+      console.log("error while loading issues", error);
+      return false;
+    }
+  }, []);
   //malik notification provider
   const contextValue = useMemo(
     () => ({
@@ -36,8 +50,10 @@ export const AdminContextProvider = ({ children }) => {
       setCodes,
       isLoading,
       LoadCodes,
+      issuesData,
+      loadIssues,
     }),
-    [malikNotification, codes, isLoading, LoadCodes],
+    [malikNotification, codes, isLoading, LoadCodes, issuesData, loadIssues],
   );
 
   return (

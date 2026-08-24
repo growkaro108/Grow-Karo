@@ -39,6 +39,7 @@ import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
+import com.growkaro.backend.entity.SupportIssue.Status;
 import com.growkaro.backend.service.AdminAPIService;
 import com.growkaro.backend.service.EmailService;
 import com.growkaro.backend.service.CrucialNotificationService;
@@ -351,12 +352,37 @@ public class AdminAPIController {
         }
     }
 
-    // pendingss
-
-    @GetMapping("/issues")
-    public ResponseEntity<Map<String, Object>> issues(@RequestParam(required = false) String status) {
-        return ResponseEntity.ok(adminAPIService.issues(status));
+    @GetMapping("/issues/{status}")
+    public Map<String, Object> issues(@PathVariable String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int limit) {
+        if (page < 0 || limit <= 0 || limit > 20 || page > 100) {
+            page = 0;
+            limit = 10;
+        }
+        try {
+            Pageable pageable = PageRequest.of(page, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
+            if (status == null || status.isBlank()) {
+                return general.response("error", "Invalid status.", null);
+            }
+            switch (status.toLowerCase()) {
+                case "unresolved":
+                    return general.response("success", "Issues fetched successfully",
+                            adminAPIService.issues(Status.OPEN, pageable));
+                case "resolved":
+                    return general.response("success", "Issues fetched successfully",
+                            adminAPIService.issues(Status.CLOSED, pageable));
+                default:
+                    return general.response("error", "Invalid status.", null);
+            }
+        } catch (Exception e) {
+            log.error("Error while fetching issues: " + e.getMessage());
+            return general.response("error",
+                    "something went wrong..", null);
+        }
     }
+
+    // pendings
 
     @PutMapping("/issues/{issueId}/resolve")
     public ResponseEntity<Map<String, Object>> resolveIssue(@PathVariable String issueId) {

@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.growkaro.backend.DRO.NewNominee;
+import com.growkaro.backend.DRO.RaiseIssue;
 import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.DRO.WithdrawAmount;
 import com.growkaro.backend.DTO.NomineeResponse;
@@ -35,6 +36,7 @@ import com.growkaro.backend.entity.Guardian;
 import com.growkaro.backend.entity.Nominee;
 import com.growkaro.backend.entity.Notification;
 import com.growkaro.backend.entity.Scheme;
+import com.growkaro.backend.entity.SupportIssue;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserProfile;
@@ -44,6 +46,7 @@ import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.repository.BankDetailsRepository;
 import com.growkaro.backend.repository.NotificationRepository;
 import com.growkaro.backend.repository.SchemeRepository;
+import com.growkaro.backend.repository.SupportIssueRepository;
 import com.growkaro.backend.repository.TransactionRepository;
 import com.growkaro.backend.repository.UserRepository;
 import com.growkaro.backend.repository.UserSchemeRepository;
@@ -68,6 +71,7 @@ public class UserAPIService {
     private final General general;
     private final CrucialNotificationService crucialNotificationService;
     private final EmailService emailService;
+    private final SupportIssueRepository supportIssueRepository;
 
     // @Cacheable(value = "testApis", key = "#id")
     @Transactional
@@ -444,13 +448,10 @@ public class UserAPIService {
         }
     }
 
-    @Caching(
-        put = { @CachePut(value = "userProfile", key = "#up.id()") },
-        evict = {
+    @Caching(put = { @CachePut(value = "userProfile", key = "#up.id()") }, evict = {
             @CacheEvict(value = "userNominees", key = "#up.id()"),
             @CacheEvict(value = "userTransactions", key = "#up.id()")
-        }
-    )
+    })
     @Transactional
     public Map<String, Object> updateUser(UserProfile up) {
         // create new token
@@ -712,7 +713,7 @@ public class UserAPIService {
         data.put("unreadCount",
                 notificationRepository.countByReceiverIdAndReceiverTypeAndRead(user.getId(),
                         Notification.ReceiverType.User, false));
-        data.put("items", notifications.getContent().stream().map(this::toNotificationView).toList());
+        data.put("items", notifications.getContent().stream().map(general::toNotificationView).toList());
         return general.response("success", "User notifications fetched", data);
     }
 
@@ -733,6 +734,40 @@ public class UserAPIService {
     public Map<String, Object> updateNotificationSettings(String userId, Map<String, Boolean> settings) {
         return general.response("success", "Notification preferences updated",
                 Map.of("userId", userId, "settings", settings));
+    }
+
+    public Map<String, Object> submitIssue(String userId, RaiseIssue issue) {
+        try {
+            if (!general.isValidId(userId) || !existByUserId(userId)) {
+                return general.response("error", "Invalid requests...", Map.of("id", userId));
+            }
+            SupportIssue newIssue = new SupportIssue();
+            newIssue.setSubmitterId(userId);
+            newIssue.setTitle(issue.title());
+            newIssue.setDescription(issue.description());
+            if (issue.priority().equalsIgnoreCase("high")) {
+                newIssue.setPriority(SupportIssue.Priority.HIGH);
+            } else if (issue.priority().equalsIgnoreCase("medium")) {
+                newIssue.setPriority(SupportIssue.Priority.MEDIUM);
+            } else {
+                newIssue.setPriority(SupportIssue.Priority.LOW);
+            }
+            newIssue.setStatus(SupportIssue.Status.OPEN);
+            supportIssueRepository.save(newIssue);
+
+            return general.response("success", "Issue submitted successfully", true);
+        } catch (Exception e) {
+            log.error("Error submitting issue for user {}", userId, e);
+            return general.response("error", "Failed to submit issue", null);
+        }
+    }
+
+    public Map<String, Object> getUserIssues(String userId, Pageable pageable) {
+        if (!general.isValidId(userId) || !existByUserId(userId)) {
+            return general.response("error", "Invalid request...", Map.of("id", userId));
+        }
+        Page<SupportIssue> issues = supportIssueRepository.findBySubmitterId(userId, pageable);
+        return general.response("success", "User issues fetched", issues);
     }
 
     //// pending
@@ -770,20 +805,6 @@ public class UserAPIService {
     // return general.response("ok", "User transactions fetched",
     // paginatedTransactions(transactions, "clientId", user.getId()));
     // }
-
-    private Map<String, Object> toNotificationView(Notification notification) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("id", notification.getId());
-        data.put("title", notification.getTitle());
-        data.put("message", notification.getMessage());
-        data.put("type", notification.getNotificationType());
-        data.put("actionType", notification.getActionType());
-        data.put("read", notification.isRead());
-        data.put("actionUrl", notification.getActionUrl());
-        data.put("createdAt", notification.getCreatedAt());
-        data.put("updatedAt", notification.getUpdatedAt());
-        return data;
-    }
 
     // private Map<String, Object> paginatedTransactions(Page<Transaction> page,
     // String ownerKey, String ownerId) {

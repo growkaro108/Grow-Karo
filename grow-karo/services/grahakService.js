@@ -19,6 +19,7 @@ import {
   userSchemeWithdraw,
   validateEmailOtp,
   fetchUserNotificationsApi,
+  submitIssueApi,
 } from "@/api/userApi";
 import { allRounderMessage } from "@/components/Message";
 
@@ -261,6 +262,16 @@ export async function fetchUserNotifications(userId, page) {
     return res.data;
   }
   allRounderMessage(res);
+  return null;
+}
+
+export async function submitIssue(userId, data) {
+  const res = await submitIssueApi(userId, data);
+  allRounderMessage(res);
+  if (res.status === "success") {
+    return res.data;
+  }
+
   return null;
 }
 

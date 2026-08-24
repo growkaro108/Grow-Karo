@@ -5,5 +5,6 @@ public enum UserSchemeStatus {
     PENDING,
     APPROVED,
     REJECTED,
+    WITHDRAWN,
     MATURED,
 }

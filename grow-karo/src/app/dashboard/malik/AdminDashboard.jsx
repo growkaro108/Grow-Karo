@@ -101,14 +101,14 @@ const NAV_ITEMS = [
   { id: "plans", label: "Plans", icon: ScrollText },
   { id: "approvals", label: "Approvals", icon: ClipboardCheck },
   { id: "remitter", label: "Remitter", icon: Ticket },
-  { id: "user", label: "User Management ⏱️", icon: User2Icon },
-  { id: "issues", label: "User Issues", icon: AlertTriangle },
+  { id: "user", label: "User Management", icon: User2Icon },
+  { id: "issues", label: "User Issues ⏱️", icon: AlertTriangle },
   { id: "contacts", label: "Contacts⏱️", icon: Contact },
   { id: "settings", label: "Settings⏱️", icon: Settings2 },
 ];
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState("withdrawals");
+  const [activeTab, setActiveTab] = useState("issues");
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [toast, setToast] = useState(null);
@@ -214,7 +214,10 @@ export default function AdminPanel() {
               {activeTab === "plans" && <PlanTab />}
               {activeTab === "approvals" && <SchemeApproval />}
               {activeTab === "issues" && (
-                <IssuesTab issues={issues} onResolve={handleResolveIssue} />
+                <IssuesTab
+                  // issues={issues}
+                  onResolve={handleResolveIssue}
+                />
               )}
               {activeTab === "remitter" && <AdminRemitterTrackersTab />}
               {activeTab === "user" && <UserManagement />}

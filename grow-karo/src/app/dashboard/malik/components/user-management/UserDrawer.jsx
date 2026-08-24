@@ -1,10 +1,20 @@
 import React, { useState } from "react";
-import { X, Mail, Phone, Calendar, Landmark } from "lucide-react";
+import {
+  X,
+  Mail,
+  Phone,
+  Calendar,
+  Landmark,
+  RotateCcwKeyIcon,
+  HandCoins,
+} from "lucide-react";
 import StatusPill from "./StatusPill";
 import BondStub from "./BondStub";
 import { currency, dateFmt, initials } from "./format";
 import dynamic from "next/dynamic";
 import TabLoader from "@/loader/TabLoader";
+import { useMemo } from "react";
+
 const CertificateLightbox = dynamic(() => import("../Certificatelightbox"), {
   loading: () => <TabLoader message="Loading certificate..." />,
 
@@ -14,10 +24,28 @@ const CertificateLightbox = dynamic(() => import("../Certificatelightbox"), {
 
 export default function UserDrawer({ user, onClose }) {
   const [viewingBond, setViewingBond] = useState(null);
+  //sort by whose bond.bondUrl is null first and order by bond.id
+  const sortedBonds = useMemo(() => {
+    return (user?.enrolledSchemes ?? []).sort((a, b) => {
+      if (a.bondUrl === null && b.bondUrl !== null) {
+        return -1;
+      }
+      if (a.bondUrl !== null && b.bondUrl === null) {
+        return 1;
+      }
+      return b.id - a.id;
+    });
+  }, [user]);
 
+  const totalPrincipal = useMemo(
+    () =>
+      (user?.enrolledSchemes ?? []).reduce(
+        (sum, b) => sum + (b.paidAmount ?? 0),
+        0,
+      ),
+    [user],
+  );
   if (!user) return null;
-  const totalPrincipal = user.bonds.reduce((sum, b) => sum + b.principal, 0);
-
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div
@@ -37,7 +65,7 @@ export default function UserDrawer({ user, onClose }) {
               <h2 className="font-[Space_Grotesk] text-lg font-semibold text-slate-100">
                 {user.name}
               </h2>
-              <p className="text-xs text-slate-500">{user.id}</p>
+              <p className="text-[10px] text-slate-500">{user.id}</p>
             </div>
           </div>
           <button
@@ -45,25 +73,36 @@ export default function UserDrawer({ user, onClose }) {
             className="rounded-full p-2 text-slate-500 transition hover:bg-white/5 hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
             aria-label="Close panel"
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5 hover:cursor-pointer hover:text-white hover:rotate-90 transition-transform duration-300" />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
           {/* Contact + status */}
-          <div className="mb-6 flex flex-wrap items-center gap-3">
-            <StatusPill status={user.status} />
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
             <span className="inline-flex items-center gap-1.5 text-sm text-slate-400">
-              <Calendar className="h-3.5 w-3.5" /> Joined {dateFmt(user.joined)}
+              <Calendar className="h-3.5 w-3.5" /> Joined {user.joined}
             </span>
+            <StatusPill status={user.status} />
           </div>
 
           <div className="mb-6 space-y-2 rounded-xl border border-slate-800 bg-white/2 p-4">
             <div className="flex items-center gap-2 text-sm text-slate-300">
+              <HandCoins className="h-4 w-4 text-slate-500" />{" "}
+              <span className="text-sm font-medium">
+                Total Invested :{" "}
+                <span className="text-slate-100">
+                  {currency(totalPrincipal)}
+                </span>
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-slate-300">
               <Mail className="h-4 w-4 text-slate-500" /> {user.email}
             </div>
             <div className="flex items-center gap-2 text-sm text-slate-300">
-              <Phone className="h-4 w-4 text-slate-500" /> {user.phone}
+              <Phone className="h-4 w-4 text-slate-500" />
+              <span className="font-semibold text-slate-100">+91 </span>{" "}
+              {user.phone}
             </div>
           </div>
 
@@ -71,41 +110,58 @@ export default function UserDrawer({ user, onClose }) {
           <h3 className="mb-2 font-[Space_Grotesk] text-sm font-semibold uppercase tracking-wide text-slate-500">
             Joined Scheme
           </h3>
-          <div className="mb-6 flex items-center justify-between rounded-xl bg-linear-to-br from-teal-900 to-[#0c3b3d] px-4 py-3.5 text-white ring-1 ring-teal-800/50">
-            <div className="flex items-center gap-2.5">
-              <Landmark className="h-5 w-5 text-[#D8B77B]" />
-              <div>
-                <p className="text-sm font-medium">{user.scheme}</p>
-                <p className="text-xs text-white/50">
-                  {user.bonds.length} bond{user.bonds.length !== 1 ? "s" : ""}{" "}
-                  held
-                </p>
-              </div>
-            </div>
-            <p className="font-[Space_Grotesk] text-sm font-semibold tabular-nums text-[#D8B77B]">
-              {currency(totalPrincipal)}
-            </p>
-          </div>
 
-          {/* Bond ledger */}
-          <h3 className="mb-3 font-[Space_Grotesk] text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Bonds
-          </h3>
-
-          {user.bonds.length === 0 ? (
+          {sortedBonds.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-700 px-4 py-8 text-center text-sm text-slate-500">
               No bonds issued yet.
             </div>
           ) : (
             <div className="space-y-3">
-              {user.bonds.map((b) => (
-                <BondStub
-                  key={b.userSchemeId}
-                  bond={b}
-                  userName={user.name}
-                  scheme={user.scheme}
-                  onView={setViewingBond}
-                />
+              {sortedBonds.map((b) => (
+                <div key={b.userSchemeId}>
+                  <div
+                    className={`mb-6 flex items-center justify-between rounded-xl bg-linear-to-br ${
+                      b.enrollmentDate
+                        ? "from-teal-900 to-[#0c3b3d] ring-teal-800/50"
+                        : "from-amber-700 to-[#3d2c0c] ring-amber-700/50"
+                    } px-4 py-3.5 text-white`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      {b.bondUrl ? (
+                        <Landmark className="h-5 w-5 text-[#D8B77B]" />
+                      ) : (
+                        <RotateCcwKeyIcon className="h-5 w-5 text-[#D8B77B]" />
+                      )}
+                      <div>
+                        <p className="text-sm font-medium">{b.schemeName}</p>
+                        <p className="text-xs text-white/50">
+                          {b.length} bond
+                          {b.length !== 1 ? "s" : ""} held
+                        </p>
+                      </div>
+                    </div>
+                    <p className="font-[Space_Grotesk] text-sm font-semibold tabular-nums text-[#D8B77B]">
+                      {currency(b.paidAmount)}
+                    </p>
+                  </div>
+                  {/* Bond ledger */}
+                  <h3 className="mb-3 font-[Space_Grotesk] text-sm font-semibold uppercase tracking-wide text-slate-500">
+                    Bonds
+                  </h3>
+                  {!b.bondUrl ? (
+                    <div className="rounded-xl border border-dashed border-slate-700 px-4 py-8 text-center text-sm text-slate-500 mb-5">
+                      No bonds issued yet.
+                    </div>
+                  ) : (
+                    <BondStub
+                      key={b.userSchemeId}
+                      bond={b}
+                      userName={user.name}
+                      scheme={user.scheme}
+                      onView={setViewingBond}
+                    />
+                  )}
+                </div>
               ))}
             </div>
           )}

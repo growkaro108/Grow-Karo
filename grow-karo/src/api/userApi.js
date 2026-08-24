@@ -124,6 +124,14 @@ export async function addNomineeApi(nominee) {
   });
 }
 
+export async function submitIssueApi(userId, data) {
+  return await apiRequest(`${base}/${userId}/raiseIssue`, {
+    method: "POST",
+    body: data,
+  });
+}
+
+//implement but not used
 export async function deleteNomineeApi(userId, nomineeId) {
   return apiRequest(`/user/${userId}/nominees/${nomineeId}`, {
     method: "DELETE",

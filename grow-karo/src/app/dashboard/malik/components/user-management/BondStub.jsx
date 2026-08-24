@@ -2,7 +2,9 @@ import React from "react";
 import { ZoomIn } from "lucide-react";
 import StatusPill from "./StatusPill";
 import { currency, dateFmt } from "./format";
-import BondCertificate from "../Bondcertificate.jsx";
+import BondCertificate from "../BondCertificate.jsx";
+import { resolveMediaUrl } from "../../../../../api/apiClient";
+import Image from "next/image";
 
 export default function BondStub({ bond, userName, scheme, onView }) {
   return (
@@ -10,7 +12,7 @@ export default function BondStub({ bond, userName, scheme, onView }) {
       {/* counterfoil */}
       <div className="flex items-center justify-between bg-white/3 px-4 py-2">
         <span className="font-mono text-[11px] tracking-wide text-slate-500">
-          {bond.id}
+          {bond.userSchemeId}
         </span>
         <StatusPill
           status={bond.status === "matured" ? "active" : bond.status}
@@ -29,15 +31,26 @@ export default function BondStub({ bond, userName, scheme, onView }) {
         className="group relative block h-28 w-full overflow-hidden border-b border-slate-800 bg-[#F3ECD9] focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-in[...]"
         aria-label={`View certificate for bond ${bond.id}`}
       >
-        <BondCertificate
-          bond={bond}
-          userName={userName}
-          scheme={scheme}
-          className="h-full w-full"
-        />
+        {bond.bondUrl ? (
+          <Image
+            unoptimized
+            width={500}
+            height={500}
+            src={resolveMediaUrl(bond.bondUrl)}
+            alt={`Bond certificate for ${userName}`}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <BondCertificate
+            bond={bond}
+            userName={userName}
+            scheme={scheme}
+            className="h-full w-full"
+          />
+        )}
         <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-medium text-white">
-            <ZoomIn className="h-3.5 w-3.5" /> View certificate
+            <ZoomIn className="h-3.5 w-3.5" /> View bond
           </span>
         </div>
       </button>
@@ -49,7 +62,7 @@ export default function BondStub({ bond, userName, scheme, onView }) {
             Principal
           </p>
           <p className="font-[Space_Grotesk] text-sm font-semibold tabular-nums text-slate-100">
-            {currency(bond.principal)}
+            {currency(bond.paidAmount)}
           </p>
         </div>
         <div>
@@ -57,7 +70,7 @@ export default function BondStub({ bond, userName, scheme, onView }) {
             Rate
           </p>
           <p className="text-sm font-medium tabular-nums text-slate-200">
-            {bond.rate}% per {bond.payoutCycle}
+            {bond.profitPercentage}% per {bond.payoutCycle}
           </p>
         </div>
         <div className="col-span-2">
@@ -65,7 +78,7 @@ export default function BondStub({ bond, userName, scheme, onView }) {
             Maturity
           </p>
           <p className="text-sm font-medium text-slate-200">
-            {dateFmt(bond.maturity)}
+            {dateFmt(bond.maturityDate)}
           </p>
         </div>
       </div>

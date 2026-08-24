@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import BondCertificate from "./BondCertificate.jsx";
 import BondDownloadButton from "./BondDownloadButton.jsx";
+import { resolveMediaUrl } from "../../../../api/apiClient";
 
 export default function CertificateLightbox({
   bond,
@@ -40,13 +41,21 @@ export default function CertificateLightbox({
           className="overflow-hidden rounded-md shadow-2xl shadow-black/50 ring-1 ring-white/10"
           style={{ width: 400, margin: "0 auto" }}
         >
-          <BondCertificate
-            bond={bond ?? null}
-            userName={userName}
-            scheme={scheme}
-            className="h-auto w-full"
-            logoUrl={"/logo.jpg"}
-          />
+          {bond.bondUrl ? (
+            <img
+              src={resolveMediaUrl(bond.bondUrl)}
+              alt={`Bond certificate for ${userName}`}
+              className="h-auto max-h-[80vh] w-full object-contain"
+            />
+          ) : (
+            <BondCertificate
+              bond={bond}
+              userName={userName}
+              scheme={scheme}
+              className="h-auto w-full"
+              logoUrl={"/logo.jpg"}
+            />
+          )}
 
           <BondDownloadButton
             className="absolute right-2 bottom-2"

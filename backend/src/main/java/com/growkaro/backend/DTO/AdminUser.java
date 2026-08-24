@@ -8,6 +8,8 @@ public record AdminUser(
         String email,
         String phone,
         boolean isActive,
+        String joined,
+        Long totalRedeem,
         List<UserSchemeResponse> enrolledSchemes) {
 
 }

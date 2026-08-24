@@ -9,6 +9,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
@@ -27,6 +28,7 @@ import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.DTO.UserSchemeResponse;
 import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.Nominee;
+import com.growkaro.backend.entity.Notification;
 import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.Transaction;
@@ -362,25 +364,48 @@ public class General {
                 nominee.getRelation());
     }
 
+    public Map<String, Object> toNotificationView(Notification notification) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("id", notification.getId());
+        data.put("title", notification.getTitle());
+        data.put("message", notification.getMessage());
+        data.put("type", notification.getNotificationType());
+        data.put("actionType", notification.getActionType());
+        data.put("read", notification.isRead());
+        data.put("actionUrl", notification.getActionUrl());
+        data.put("createdAt", notification.getCreatedAt());
+        data.put("updatedAt", notification.getUpdatedAt());
+        return data;
+    }
+
     public AdminUser toAdminUser(User user) {
+        BigDecimal totalRedeemed = BigDecimal.ZERO;
+        for (UserScheme us : user.getEnrolledSchemes()) {
+            totalRedeemed = totalRedeemed.add(us.getProfitReedemed());
+        }
         return new AdminUser(
                 user.getId(),
                 user.getName(),
                 user.getEmail(),
                 user.getPhone(),
                 user.isActive(),
+                user.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                totalRedeemed.longValue(),
                 user.getEnrolledSchemes().stream().map(this::toUserSchemeResponse).toList());
     }
 
     private UserSchemeResponse toUserSchemeResponse(UserScheme us) {
+        boolean isJoined = us.getEnrollmentDate() != null;
         return new UserSchemeResponse(
                 us.getUserSchemeId(),
                 us.getScheme().getSchemeName(),
                 us.getScheme().getProfitPercentage(),
+                us.getStatus().toString().toLowerCase(),
                 us.getPaidAmount(),
-                us.getEnrollmentDate(),
-                us.getMaturityDate(),
-                us.getScheme().getPayoutFrequency());
+                isJoined ? us.getEnrollmentDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")) : null,
+                isJoined ? us.getMaturityDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")) : null,
+                isJoined ? us.getBondImageURL() : null,
+                isJoined ? us.getScheme().getPayoutFrequency() : null);
     }
 
 }

@@ -3,6 +3,7 @@ import {
   ShieldAlert,
   ShieldX,
   CheckCircleIcon,
+  Share,
 } from "lucide-react";
 
 export const SCHEMES = [
@@ -22,6 +23,16 @@ export const STATUS_META = {
     label: "Pending",
     icon: ShieldAlert,
     className: "text-amber-400 bg-amber-400/10 ring-amber-400/30",
+  },
+  rejected: {
+    label: "rejected",
+    icon: ShieldX,
+    className: "text-rose-400 bg-rose-400/10 ring-rose-400/30",
+  },
+  withdrawn: {
+    label: "withdrawn",
+    icon: Share,
+    className: "text-rose-400 bg-rose-400/10 ring-rose-400/30",
   },
   matured: {
     label: "matured",

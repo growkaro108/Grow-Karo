@@ -120,7 +120,7 @@ public class ApiService {
         }
 
         SupportIssue issue = new SupportIssue();
-        issue.setUser(userOpt.get());
+        issue.setSubmitterId(userOpt.get().getId());
         issue.setTitle(firstString(payload, "subject", "title", "name"));
         issue.setDescription(firstString(payload, "message", "description", "email"));
         if (issue.getTitle() == null) {

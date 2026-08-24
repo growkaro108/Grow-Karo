@@ -38,6 +38,7 @@ export function StatusBadge({ status }) {
     login: "bg-indigo-500/10 text-indigo-400 ring-indigo-500/30",
     logout: "bg-red-500/10 text-red-400 ring-red-500/30",
     signup: "bg-green-500/10 text-green-400 ring-green-500/30",
+    closed: "bg-green-500/10 text-green-400 ring-green-500/30",
     create: "bg-blue-500/10 text-blue-400 ring-blue-500/30",
     processed: "bg-indigo-500/10 text-indigo-400 ring-indigo-500/30",
     rejected: "bg-red-500/10 text-red-400 ring-red-500/30",

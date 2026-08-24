@@ -24,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.growkaro.backend.DRO.AddRemitter;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
+import com.growkaro.backend.DRO.SupportIssueView;
 import com.growkaro.backend.DTO.AddedRemitter;
 import com.growkaro.backend.DTO.AdminTransactionResponse;
 import com.growkaro.backend.DTO.AdminUser;
@@ -46,6 +47,7 @@ import com.growkaro.backend.entity.Notification.ActionType;
 import com.growkaro.backend.entity.Notification.NotificationType;
 import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
+import com.growkaro.backend.entity.SupportIssue.Status;
 import com.growkaro.backend.entity.Transaction.TransactionStatus;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.enums.UserSchemeStatus;
@@ -623,8 +625,22 @@ public class AdminAPIService {
     }
 
     public PagedResponse<AdminUser> getAllUsers(Pageable pageable) {
-        var users = userRepository.findAllWithUserScheme(pageable);
-        var mapped = users.map(general::toAdminUser);
+        try {
+            log.info("Fetching all users with pageable: {}", pageable);
+            var users = userRepository.findAllWithUserScheme(pageable);
+            log.info("Users fetched successfully: {}", users.getContent().size());
+            var mapped = users.map(general::toAdminUser);
+            return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
+        } catch (Exception e) {
+            log.error("Error while fetching all users: " + e.getMessage());
+            return null;
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public PagedResponse<SupportIssueView> issues(Status status, Pageable pageable) {
+        var issuesPage = supportIssueRepository.findByStatus(status, pageable);
+        var mapped = issuesPage.map(SupportIssueView::from);
         return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
     }
 
@@ -663,19 +679,6 @@ public class AdminAPIService {
     // return general.response("ok", "Admin dashboard data fetched", data);
     // }
 
-    @Cacheable(value = "issues", key = "#status ?: 'default'")
-    @Transactional(readOnly = true)
-    public Map<String, Object> issues(String status) {
-        Page<SupportIssue> page = parseIssueStatus(status)
-                .map(value -> supportIssueRepository.findByStatus(value, pageable("1")))
-                .orElseGet(() -> supportIssueRepository.findAll(pageable("1")));
-
-        Map<String, Object> data = paginatedMeta(page);
-        data.put("status", status);
-        data.put("items", page.getContent().stream().map(this::toIssueView).toList());
-        return general.response("ok", "Issues fetched", data);
-    }
-
     @CacheEvict(value = { "adminDashboard", "issues" }, allEntries = true)
     @Transactional
     public Map<String, Object> resolveIssue(String issueId) {
@@ -687,7 +690,7 @@ public class AdminAPIService {
         SupportIssue issue = issueOpt.get();
         issue.setStatus(SupportIssue.Status.RESOLVED);
         issue.setResolvedAt(LocalDateTime.now());
-        return general.response("ok", "Issue resolved", toIssueView(supportIssueRepository.save(issue)));
+        return general.response("success", "Issue resolved", toIssueView(supportIssueRepository.save(issue)));
     }
 
     // @Cacheable(value = "remitters", key = "#page ?: 'default'")
@@ -818,7 +821,6 @@ public class AdminAPIService {
     private Map<String, Object> toIssueView(SupportIssue issue) {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("id", issue.getId());
-        data.put("user", issue.getUser().getName());
         data.put("subject", issue.getTitle());
         data.put("title", issue.getTitle());
         data.put("message", issue.getDescription());
