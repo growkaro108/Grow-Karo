@@ -45,29 +45,29 @@ export default function RemitterDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    let active = true;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
+  // useEffect(() => {
+  //   let active = true;
+  //   // eslint-disable-next-line react-hooks/set-state-in-effect
+  //   setLoading(true);
 
-    fetchRemitterDashboardData("me")
-      .then((data) => {
-        if (!active) return;
-        setDashboardData(data);
-      })
-      .catch((fetchError) => {
-        if (!active) return;
-        console.error(fetchError);
-        setError(fetchError?.message ?? "Unable to load remitter data.");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+  //   fetchRemitterDashboardData("me")
+  //     .then((data) => {
+  //       if (!active) return;
+  //       setDashboardData(data);
+  //     })
+  //     .catch((fetchError) => {
+  //       if (!active) return;
+  //       console.error(fetchError);
+  //       setError(fetchError?.message ?? "Unable to load remitter data.");
+  //     })
+  //     .finally(() => {
+  //       if (active) setLoading(false);
+  //     });
 
-    return () => {
-      active = false;
-    };
-  }, []);
+  //   return () => {
+  //     active = false;
+  //   };
+  // }, []);
 
   const { dashboardMetrics, chartData, transactions, recipients, requests } =
     dashboardData;
@@ -91,7 +91,7 @@ export default function RemitterDashboard() {
         <header className="bg-white border-b border-gray-200 sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
-            type="button"
+              type="button"
               onClick={toggleSidebar}
               className="lg:hidden text-gray-600 focus:outline-none"
             >

@@ -52,7 +52,7 @@ public class ActivityLogBroadcaster {
         for (SseEmitter emitter : emitters) {
             try {
                 emitter.send(SseEmitter.event().name("activity").data(log));
-            } catch (IOException e) {
+            } catch (IOException | RuntimeException e) {
                 dead.add(emitter);
             }
         }
@@ -70,7 +70,7 @@ public class ActivityLogBroadcaster {
         for (SseEmitter emitter : emitters) {
             try {
                 emitter.send(SseEmitter.event().name("heartbeat").data("ping"));
-            } catch (IOException e) {
+            } catch (IOException | RuntimeException e) {
                 dead.add(emitter);
             }
         }

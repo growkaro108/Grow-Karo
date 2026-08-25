@@ -7,6 +7,8 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -37,6 +39,10 @@ public class SupportIssue {
     private String resolvedBy;
 
     private String resolutionNote;
+
+    @OneToMany(mappedBy = "supportIssue", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("createdAt ASC")
+    private List<Reply> replies = new ArrayList<>();
 
     private LocalDateTime resolvedAt;
 
@@ -69,4 +75,8 @@ public class SupportIssue {
         LOW, MEDIUM, HIGH, CRITICAL
     }
 
+    public void addReply(Reply reply) {
+        replies.add(reply);
+        reply.setSupportIssue(this);
+    }
 }

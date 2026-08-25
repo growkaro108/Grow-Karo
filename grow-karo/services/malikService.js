@@ -322,8 +322,8 @@ export async function fetchAllUsers() {
   return response.data;
 }
 
-export async function getAllIssues(status) {
-  const response = await getAllIssuesApi(status);
+export async function getAllIssues(status, page, size) {
+  const response = await getAllIssuesApi(status, page, size);
   if (response.status !== "success") {
     allRounderMessage(response);
     return null;

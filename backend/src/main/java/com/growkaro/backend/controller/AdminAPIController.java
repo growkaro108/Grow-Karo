@@ -352,16 +352,17 @@ public class AdminAPIController {
         }
     }
 
-    @GetMapping("/issues/{status}")
+    @GetMapping("/{status}/issues")
     public Map<String, Object> issues(@PathVariable String status,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int limit) {
-        if (page < 0 || limit <= 0 || limit > 20 || page > 100) {
-            page = 0;
+        if (page < 1 || limit <= 0 || limit > 20 || page > 100) {
+            page = 1;
             limit = 10;
         }
         try {
-            Pageable pageable = PageRequest.of(page, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
+            // The API accepts 1-based page numbers; Spring Data uses a 0-based index.
+            Pageable pageable = PageRequest.of(page - 1, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
             if (status == null || status.isBlank()) {
                 return general.response("error", "Invalid status.", null);
             }

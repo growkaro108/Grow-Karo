@@ -90,7 +90,7 @@ public class NotificationBroadcaster {
                 emitter.send(SseEmitter.event()
                         .name("notification")
                         .data(notification));
-            } catch (IOException e) {
+            } catch (IOException | RuntimeException e) {
                 dead.add(emitter);
             }
         }
@@ -134,7 +134,7 @@ public class NotificationBroadcaster {
             for (SseEmitter emitter : emitters) {
                 try {
                     emitter.send(SseEmitter.event().name("heartbeat").data("ping"));
-                } catch (IOException e) {
+                } catch (IOException | RuntimeException e) {
                     dead.add(emitter);
                 }
             }

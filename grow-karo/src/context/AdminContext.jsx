@@ -14,6 +14,7 @@ export const AdminContextProvider = ({ children }) => {
   const [isLoading, setIsloading] = useState(true);
   const [codes, setCodes] = useState([]);
   const [issuesData, setIssuesData] = useState([]);
+
   const LoadCodes = useCallback(async () => {
     try {
       const data = await getAllRemitter();
@@ -27,10 +28,11 @@ export const AdminContextProvider = ({ children }) => {
     }
   }, []);
 
-  const loadIssues = useCallback(async (status) => {
+  const loadIssues = useCallback(async (status, page, size) => {
     try {
-      const data = await getAllIssues(status);
-      console.log(data);
+      const data = await getAllIssues(status, page, size);
+      // console.log(status + " " + page + " " + size);
+      // console.log("issues data", data);
       if (data) {
         setIssuesData(data);
         return data;

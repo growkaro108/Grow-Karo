@@ -13,7 +13,7 @@ export default function PaginationFooter({
   totalItems,
   onPageChange,
   onPageSizeChange,
-  pageSizeOptions = [10, 25, 50, 100],
+  pageSizeOptions = [5, 10, 15, 20],
   maxVisiblePages = 5,
   darkMode = false,
 }) {
@@ -74,6 +74,10 @@ export default function PaginationFooter({
       : "bg-white border-slate-300 text-slate-600 hover:bg-slate-100",
     ellipsis: darkMode ? "text-slate-600" : "text-slate-400",
   };
+  // console.log(totalPages);
+  // console.log(totalItems);
+  // console.log(pageSize);
+  // console.log(currentPage);
 
   return (
     <div

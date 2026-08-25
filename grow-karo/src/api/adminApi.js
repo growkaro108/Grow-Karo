@@ -147,11 +147,15 @@ export async function fetchAllUsersApi() {
   return await apiRequest(`${END_POINT}user/all`);
 }
 
-export async function getAllIssuesApi(status) {
-  return await apiRequest(`${END_POINT}issues/${status}`, {
-    method: "GET",
-  });
+export async function getAllIssuesApi(status, page, size) {
+  return await apiRequest(
+    `${END_POINT}${status}/issues?page=${page}&limit=${size}`,
+    {
+      method: "GET",
+    },
+  );
 }
+
 //pending----------------------------------------------------------------------
 
 export async function fetchAdminDashboard(params) {

@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import java.util.HashMap;
@@ -52,6 +52,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(errorResponse);
     }
 
+    /**
+     * An SSE client can disconnect while the server is writing a heartbeat.
+     * The response is no longer writable, so do not attempt to send JSON.
+     */
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    public void handleAsyncRequestNotUsableException(AsyncRequestNotUsableException e) {
+        log.debug("SSE client disconnected: {}", e.getMessage());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneralException(Exception e) {
         log.error("Unhandled exception", e);
@@ -74,4 +83,5 @@ public class GlobalExceptionHandler {
             return errors;
         }
     }
+
 }

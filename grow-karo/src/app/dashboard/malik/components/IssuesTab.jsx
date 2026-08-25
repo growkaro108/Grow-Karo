@@ -5,6 +5,7 @@ import TablePagination from "@/components/TablePagination";
 import PriorityDot from "./PriorityDot";
 import { StatusBadge } from "./StatusBadge";
 import { adminContext } from "@/context/AdminContext";
+import { validateReply } from "./issue/ReplyValidation";
 
 const ISSUES = [
   {
@@ -59,28 +60,27 @@ export default function IssuesTab({ onResolve, onReply }) {
 
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(1);
-
+  const [pageSize, setPageSize] = useState(5);
   // Expanded Accordion State
   const [openId, setOpenId] = useState(null);
   const [replyText, setReplyText] = useState({});
+  // NEW: per-issue thread of replies that have already been sent
+  const [repliesById, setRepliesById] = useState({});
   const [issuesList, setIssuesList] = useState([]);
+  const [replyErrors, setReplyErrors] = useState({});
+  const [replyAdding, setReplyAdding] = useState(false);
   const { loadIssues } = use(adminContext);
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchData = async () => {
-      const data = await loadIssues(activeTab);
-
+      const data = await loadIssues(activeTab, currentPage, pageSize);
       if (!isMounted) return;
-
       if (data) {
         setIssuesList(data.content ?? []);
-        setPageSize(data.totalPages ?? 1);
       } else {
         setIssuesList([]);
-        setPageSize(1);
       }
     };
 
@@ -89,7 +89,7 @@ export default function IssuesTab({ onResolve, onReply }) {
     return () => {
       isMounted = false;
     };
-  }, [activeTab, loadIssues]);
+  }, [activeTab, currentPage, loadIssues, pageSize]);
 
   // 1. Filter Issues based on Tab, Search, and Priority
   const filteredIssues = useMemo(() => {
@@ -115,12 +115,6 @@ export default function IssuesTab({ onResolve, onReply }) {
     });
   }, [activeTab, issuesList, priorityFilter, searchQuery]);
 
-  // 2. Paginate Filtered Results
-  const paginatedIssues = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredIssues.slice(start, start + pageSize);
-  }, [filteredIssues, currentPage, pageSize]);
-
   // Reset page to 1 whenever filters change
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -143,9 +137,33 @@ export default function IssuesTab({ onResolve, onReply }) {
   };
 
   const handleSendReply = (id) => {
-    const text = replyText[id];
-    if (!text?.trim()) return;
-    if (onReply) onReply(id, text);
+    const raw = replyText[id];
+    const { valid, error, sanitized } = validateReply(raw || "");
+
+    if (!valid) {
+      setReplyErrors((prev) => ({ ...prev, [id]: error }));
+      return;
+    }
+
+    setReplyErrors((prev) => ({ ...prev, [id]: null }));
+
+    setRepliesById((prev) => ({
+      ...prev,
+      [id]: [
+        ...(prev[id] || []),
+        {
+          text: sanitized,
+          sentAt: new Date().toLocaleString("en-IN", {
+            hour: "2-digit",
+            minute: "2-digit",
+            day: "2-digit",
+            month: "short",
+          }),
+        },
+      ],
+    }));
+
+    if (onReply) onReply(id, sanitized); // send the sanitized version, not raw
     setReplyText((prev) => ({ ...prev, [id]: "" }));
   };
 
@@ -203,13 +221,16 @@ export default function IssuesTab({ onResolve, onReply }) {
               <option value="all" className="bg-slate-900 text-slate-200">
                 All Priorities
               </option>
-              <option value="high" className="bg-slate-900 text-slate-200">
+              <option value="critical" className="bg-red-900 text-slate-200">
+                Critical
+              </option>
+              <option value="high" className="bg-orange-900 text-slate-200">
                 High Priority
               </option>
-              <option value="medium" className="bg-slate-900 text-slate-200">
+              <option value="medium" className="bg-yellow-900 text-slate-200">
                 Medium Priority
               </option>
-              <option value="low" className="bg-slate-900 text-slate-200">
+              <option value="low" className="bg-emerald-700 text-slate-200">
                 Low Priority
               </option>
             </select>
@@ -222,13 +243,14 @@ export default function IssuesTab({ onResolve, onReply }) {
 
       {/* Issues Accordion List */}
       <div className="space-y-3">
-        {paginatedIssues.length === 0 ? (
+        {filteredIssues.length === 0 ? (
           <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-8 text-center text-xs text-slate-500">
             No {activeTab} issues found matching your filters.
           </div>
         ) : (
-          paginatedIssues.map((issue) => {
+          filteredIssues.map((issue) => {
             const expanded = openId === issue.id;
+            const threadForIssue = repliesById[issue.id] || [];
             return (
               <div
                 key={issue.id}
@@ -247,8 +269,13 @@ export default function IssuesTab({ onResolve, onReply }) {
                         {issue.title}
                       </p>
                       <p className="truncate text-xs text-slate-500 font-body">
-                        {/* {issue.user}{" "} */}
                         {issue.createdAt ? `· ${issue.createdAt}` : ""}
+                        {threadForIssue.length > 0 && (
+                          <span className="ml-2 text-indigo-400">
+                            · {threadForIssue.length} repl
+                            {threadForIssue.length === 1 ? "y" : "ies"} sent
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -268,6 +295,31 @@ export default function IssuesTab({ onResolve, onReply }) {
                     <p className="mb-4 text-sm leading-relaxed text-slate-300 font-body">
                       {issue.description}
                     </p>
+
+                    {/* NEW: Reply thread — shows every reply already sent for this issue */}
+                    {threadForIssue.length > 0 && (
+                      <div className="mb-4 space-y-2">
+                        {threadForIssue.map((reply, idx) => (
+                          <div
+                            key={idx}
+                            className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-3 py-2"
+                          >
+                            <div className="mb-1 flex items-center justify-between">
+                              <span className="text-[11px] font-medium text-indigo-400">
+                                Admin reply
+                              </span>
+                              <span className="text-[10px] text-slate-500">
+                                {reply.sentAt}
+                              </span>
+                            </div>
+                            <p className="text-xs leading-relaxed text-slate-300 font-body">
+                              {reply.text}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="mb-4 flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-800/40 px-3 py-2">
                       <MessageSquare className="h-4 w-4 shrink-0 text-slate-500" />
                       <input
@@ -282,6 +334,11 @@ export default function IssuesTab({ onResolve, onReply }) {
                         className="w-full bg-transparent text-sm text-slate-200 placeholder-slate-500 outline-none font-body"
                       />
                     </div>
+                    {replyErrors[issue.id] && (
+                      <div className="mt-1 text-xs text-rose-400">
+                        {replyErrors[issue.id]} this is demo
+                      </div>
+                    )}
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => handleSendReply(issue.id)}
@@ -316,7 +373,7 @@ export default function IssuesTab({ onResolve, onReply }) {
           setPageSize(size);
           setCurrentPage(1);
         }}
-        pageSizeOptions={[5, 10, 20]}
+        pageSizeOptions={[5, 10, 15, 20]}
         darkMode={true}
       />
     </div>

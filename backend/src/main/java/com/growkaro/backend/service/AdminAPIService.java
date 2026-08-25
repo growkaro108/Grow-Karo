@@ -396,12 +396,12 @@ public class AdminAPIService {
     }
 
     private Transaction getPendingOrThrow(String txnId) {
-        Transaction txn = transactionRepository.findById(txnId).get();
-        if (txn == null || txn.getStatus() != TransactionStatus.PENDING) {
+        Optional<Transaction> txn = transactionRepository.findById(txnId);
+        if (!txn.isPresent() || txn.get().getStatus() != TransactionStatus.PENDING) {
             throw new IllegalTransactionStateException(
-                    "Transaction " + txnId + " is not pending (current: " + txn.getStatus() + ")");
+                    "Transaction " + txnId + " is not pending (current: " + txn.get().getStatus() + ")");
         }
-        return txn;
+        return txn.get();
     }
 
     public List<SearchUser> searchUser(String query) {
@@ -626,9 +626,7 @@ public class AdminAPIService {
 
     public PagedResponse<AdminUser> getAllUsers(Pageable pageable) {
         try {
-            log.info("Fetching all users with pageable: {}", pageable);
             var users = userRepository.findAllWithUserScheme(pageable);
-            log.info("Users fetched successfully: {}", users.getContent().size());
             var mapped = users.map(general::toAdminUser);
             return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
         } catch (Exception e) {
@@ -639,9 +637,14 @@ public class AdminAPIService {
 
     @Transactional(readOnly = true)
     public PagedResponse<SupportIssueView> issues(Status status, Pageable pageable) {
-        var issuesPage = supportIssueRepository.findByStatus(status, pageable);
-        var mapped = issuesPage.map(SupportIssueView::from);
-        return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
+        try {
+            var issuesPage = supportIssueRepository.findByStatus(status, pageable);
+            var mapped = issuesPage.map(SupportIssueView::from);
+            return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
+        } catch (Exception e) {
+            log.error("Error while fetching issues: " + e.getMessage());
+            return null;
+        }
     }
 
     // pending--------------------------------------------------------------------------------------------------------

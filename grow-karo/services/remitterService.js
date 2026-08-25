@@ -1,5 +1,4 @@
 import {
-  fetchRemitterDashboard,
   fetchRemittersPendingRequests,
   fetchTransactions,
   fetchTransactionsCounts,
@@ -181,22 +180,22 @@ const mockDashboardData = {
   ],
 };
 
-export async function fetchRemitterDashboardData(remitterId = "me") {
-  if (USE_MOCK) {
-    return delay(mockDashboardData);
-  }
+// export async function fetchRemitterDashboardData(remitterId = "me") {
+//   if (USE_MOCK) {
+//     return delay(mockDashboardData);
+//   }
 
-  const apiResponse = await fetchRemitterDashboard(remitterId);
-  const response = apiResponse?.data ?? apiResponse;
-  return {
-    dashboardMetrics: response.dashboardMetrics ?? {},
-    chartData: Array.isArray(response.chartData) ? response.chartData : [],
-    transactions: Array.isArray(response.transactions)
-      ? response.transactions
-      : [],
-    recipients: Array.isArray(response.recipients) ? response.recipients : [],
-    requests: Array.isArray(response.requests) ? response.requests : [],
-  };
-}
+//   const apiResponse = await fetchRemitterDashboard(remitterId);
+//   const response = apiResponse?.data ?? apiResponse;
+//   return {
+//     dashboardMetrics: response.dashboardMetrics ?? {},
+//     chartData: Array.isArray(response.chartData) ? response.chartData : [],
+//     transactions: Array.isArray(response.transactions)
+//       ? response.transactions
+//       : [],
+//     recipients: Array.isArray(response.recipients) ? response.recipients : [],
+//     requests: Array.isArray(response.requests) ? response.requests : [],
+//   };
+// }
 
 export { USE_MOCK, NETWORK_DELAY_MS };
