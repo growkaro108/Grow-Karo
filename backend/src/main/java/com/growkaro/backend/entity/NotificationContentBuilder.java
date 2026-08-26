@@ -27,6 +27,10 @@ public class NotificationContentBuilder {
         SCHEME_MATURITY_REMINDER,
         SCHEME_MATURED,
 
+        // issue
+        ISSUE_REPLIED,
+        ISSUE_RESOLVED,
+
         // KYC & Profile
         KYC_SUBMITTED,
         KYC_APPROVED,
@@ -73,6 +77,8 @@ public class NotificationContentBuilder {
                 case LOGIN -> "New Login Activity Detected";
                 case PASSWORD_CHANGED -> "Security Alert: Password Changed";
                 case SCHEME_MATURITY_REMINDER -> "Scheme Matured in 10-15 Days";
+                case ISSUE_REPLIED -> "Admin replied to your issue";
+                case ISSUE_RESOLVED -> "Issue resolved";
                 default -> "Account Notification";
             };
             case Admin -> switch (action) {
@@ -97,6 +103,8 @@ public class NotificationContentBuilder {
                 case SETTLEMENT_SUBMITTED -> "Remitter Batch Settlement Uploaded";
                 case LOGIN -> "Admin Console Access Logged";
                 case PASSWORD_CHANGED -> "Admin Password Changed";
+                case ISSUE_REPLIED -> "Reply added to the issue";
+                case ISSUE_RESOLVED -> "Issue resolved";
             };
             case Remitter -> switch (action) {
                 case WITHDRAWAL_REQUESTED -> "Payout Queue Updated";
@@ -111,6 +119,8 @@ public class NotificationContentBuilder {
                 case SETTLEMENT_SUBMITTED -> "Settlement Proof Uploaded";
                 case LOGIN -> "Remitter Portal Login";
                 case PASSWORD_CHANGED -> "Remitter Password Changed";
+                case ISSUE_REPLIED -> "Admin replied to your issue";
+                case ISSUE_RESOLVED -> "Issue resolved";
                 default -> "Remitter Alert";
             };
         };
@@ -296,7 +306,7 @@ public class NotificationContentBuilder {
     public NotificationType toNotificationType(EssentialActionType action) {
         return switch (action) {
             case FUND_TRANSFER_INITIATED, WITHDRAWAL_REQUESTED, KYC_SUBMITTED, KYC_UPDATED, LOGIN,
-                    SCHEME_MATURITY_REMINDER ->
+                    SCHEME_MATURITY_REMINDER, ISSUE_REPLIED, ISSUE_RESOLVED ->
                 NotificationType.INFO;
             case FUND_TRANSFER_COMPLETED, WITHDRAWAL_APPROVED, WITHDRAWAL_DISBURSED, INVESTMENT_CONFIRMED,
                     PROFIT_CREDITED, SCHEME_MATURED, KYC_APPROVED, REMITTER_ONBOARDED, PASSWORD_CHANGED ->
@@ -329,6 +339,8 @@ public class NotificationContentBuilder {
             case SETTLEMENT_SUBMITTED -> ActionType.SETTLEMENT_SUBMITTED;
             case LOGIN -> ActionType.LOGIN;
             case PASSWORD_CHANGED -> ActionType.PASSWORD_CHANGED;
+            case ISSUE_REPLIED -> ActionType.ISSUE_REPLIED;
+            case ISSUE_RESOLVED -> ActionType.ISSUE_RESOLVED;
         };
     }
 }

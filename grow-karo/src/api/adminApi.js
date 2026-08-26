@@ -155,6 +155,17 @@ export async function getAllIssuesApi(status, page, size) {
     },
   );
 }
+export async function sendReplyApi(payload) {
+  return await apiRequest(`${END_POINT}issues/send-reply`, {
+    method: "PUT",
+    body: payload,
+  });
+}
+export async function markResolvedApi(id) {
+  return await apiRequest(`${END_POINT}issues/${id}/mark-resolved`, {
+    method: "PUT",
+  });
+}
 
 //pending----------------------------------------------------------------------
 

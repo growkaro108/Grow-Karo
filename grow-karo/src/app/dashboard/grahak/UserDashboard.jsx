@@ -3,14 +3,13 @@
 import { useState, useEffect, use } from "react";
 import Sidebar from "./Sidebar";
 import dynamic from "next/dynamic";
-import {
-  fetchGrahakDashboardData,
-} from "../../../../services/grahakService";
+import { fetchGrahakDashboardData } from "../../../../services/grahakService";
 import { userContext } from "@/context/UserContext";
 import TabLoader from "../../../loader/TabLoader";
 import { useRouter } from "next/navigation";
 import { RefreshCcw } from "lucide-react";
 import NotificationPanel from "./Notification/NotificationPanel";
+// import MyIssuesTab from "./MyIssueTab";
 
 const Overview = dynamic(() => import("./Overview"), {
   loading: () => <TabLoader message={"Loading overview..."} />,
@@ -26,6 +25,10 @@ const Portfolio = dynamic(() => import("./Portfolio/index"), {
 });
 const Transactions = dynamic(() => import("./Transaction"), {
   loading: () => <TabLoader message={"Loading transactions..."} />,
+  ssr: false,
+});
+const MyIssuesTab = dynamic(() => import("./MyIssueTab"), {
+  loading: () => <TabLoader message={"Loading issues..."} />,
   ssr: false,
 });
 const Settings = dynamic(() => import("./Settings"), {
@@ -126,7 +129,7 @@ export default function DashboardPage() {
                 Agresive Withdraw
               </button> */}
               <button
-              type="button"
+                type="button"
                 onClick={() => openGeneralWithdrawModal()}
                 className="flex-1 sm:flex-none text-center bg-green-500 text-white hover:bg-green-600 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm cursor-pointer focus:cursor-wait"
               >
@@ -175,6 +178,7 @@ export default function DashboardPage() {
             {activeTab === "transactions" && (
               <Transactions transactions={transactions} />
             )}
+            {activeTab === "issue" && <MyIssuesTab />}
             {/* {activeTab === "notification" && <NotificationPanel />} */}
             {activeTab === "settings" && <Settings />}
           </>

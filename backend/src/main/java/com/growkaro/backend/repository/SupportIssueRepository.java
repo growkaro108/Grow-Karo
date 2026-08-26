@@ -24,6 +24,9 @@ public interface SupportIssueRepository extends JpaRepository<SupportIssue, Stri
 
         Page<SupportIssue> findByStatus(SupportIssue.Status status, Pageable pageable);
 
+        @Query("SELECT s FROM SupportIssue s WHERE s.status != 'CLOSED' ORDER BY s.priority DESC")
+        Page<SupportIssue> findUnResolvedIssue(Pageable pageable);
+
         Page<SupportIssue> findByPriority(SupportIssue.Priority priority, Pageable pageable);
 
         Page<SupportIssue> findByStatusAndPriority(SupportIssue.Status status, SupportIssue.Priority priority,

@@ -93,7 +93,9 @@ public class Notification {
         SETTLEMENT_SUBMITTED,
         LOGIN,
         PASSWORD_CHANGED,
-        SYSTEM_ALERT
+        SYSTEM_ALERT,
+        ISSUE_REPLIED,
+        ISSUE_RESOLVED
     }
 
     @PrePersist

@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDateTime } from "@/app/plan/utils/planUtils";
+import { userContext } from "@/context/UserContext";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -11,6 +13,7 @@ import {
   Filler,
   Legend,
 } from "chart.js";
+import { use, useEffect } from "react";
 import { Line } from "react-chartjs-2";
 
 // Register the essential Chart.js modules (treeshaking keeps it as lean as possible)
@@ -22,12 +25,12 @@ ChartJS.register(
   Title,
   Tooltip,
   Filler,
-  Legend
+  Legend,
 );
 
 const labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-export const data = {
+const data = {
   labels,
   datasets: [
     {
@@ -100,12 +103,31 @@ export const options = {
 };
 
 export default function StockGraph() {
+  const { portfolio } = use(userContext);
+  //dataset from enrolmentdate and paidAmount
+  // x-axis will be enrolmentdate
+  // y-axis will be paidAmount
+  // dataset will be enrolmentdate - paidAmount
+  // const data = useMemo(() => {
+  //   if (!portfolio) return;
+  //   return portfolio.holdings?.map((item) => ({
+  //     date: formatDateTime(item?.enrollmentDate),
+  //     // NAV: item?.scheme?.NAV,
+  //     paidAmount: item?.paidAmount,
+  //   }));
+  // }, [portfolio]);
+  // console.log("dates", data);
+
   return (
     <div className="w-full h-72 mt-2 p-6 bg-white border border-slate-200/60 rounded-2xl shadow-sm">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-sm font-bold text-slate-900">Stock Performance</h3>
-          <p className="text-xs text-slate-400 font-medium">Weekly growth trajectory</p>
+          <h3 className="text-sm font-bold text-slate-900">
+            Stock Performance
+          </h3>
+          <p className="text-xs text-slate-400 font-medium">
+            Weekly growth trajectory
+          </p>
         </div>
         <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">
           +26.3% This Month

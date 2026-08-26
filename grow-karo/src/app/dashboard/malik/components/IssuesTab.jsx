@@ -1,56 +1,39 @@
-import { useState, useMemo, use, useEffect } from "react";
-import { MessageSquare, ChevronDown, Search, Filter } from "lucide-react";
+import { useState, useMemo, use, useEffect, useCallback } from "react";
+import {
+  MessageSquare,
+  ChevronDown,
+  Search,
+  Filter,
+  RefreshCcw,
+} from "lucide-react";
 
 import TablePagination from "@/components/TablePagination";
 import PriorityDot from "./PriorityDot";
 import { StatusBadge } from "./StatusBadge";
 import { adminContext } from "@/context/AdminContext";
 import { validateReply } from "./issue/ReplyValidation";
+import { markResolved, sendReply } from "../../../../../services/malikService";
+const TabButton = ({
+  value,
+  label,
+  activeTab,
+  onClick,
+  activeClass = "bg-slate-800 text-slate-100 shadow-sm",
+  inactiveClass = "text-slate-400 hover:text-slate-200",
+}) => {
+  return (
+    <button
+      onClick={() => onClick(value)}
+      className={`flex-1 rounded-lg px-4 py-1.5 text-xs font-medium transition-colors sm:flex-none ${
+        activeTab === value ? activeClass : inactiveClass
+      }`}
+    >
+      {label}
+    </button>
+  );
+};
 
-const ISSUES = [
-  {
-    id: "TCK-3021",
-    user: "Ravi Sharma",
-    subject: "Deposit not reflecting in portfolio",
-    message:
-      "I deposited ₹20,000 yesterday via UPI but it isn't showing in my active investments yet. Transaction ID: TXN12345; please help.",
-    priority: "high",
-    status: "open",
-    createdAt: "2 hours ago",
-  },
-  {
-    id: "TCK-3018",
-    user: "Neha Kapoor",
-    subject: "Unable to update KYC documents",
-    message:
-      "The upload keeps failing at 90% when I try to re-submit my PAN card image. I have a stable connection and tried different browsers.",
-    priority: "medium",
-    status: "open",
-    createdAt: "5 hours ago",
-  },
-  {
-    id: "TCK-3011",
-    user: "Arjun Das",
-    subject: "Referral bonus missing",
-    message:
-      "Two of my referrals completed KYC last week but the bonus was never credited to my wallet. Please check referral IDs REF123 and REF124.",
-    priority: "medium",
-    status: "resolved",
-    createdAt: "1 day ago",
-  },
-  {
-    id: "TCK-3002",
-    user: "Meera Pillai",
-    subject: "Login OTP delayed",
-    message:
-      "OTP emails are arriving 10+ minutes late, making it hard to log in during trading hours. This started two days ago.",
-    priority: "low",
-    status: "open",
-    createdAt: "2 days ago",
-  },
-];
-
-export default function IssuesTab({ onResolve, onReply }) {
+export default function IssuesTab({ onReply }) {
   // Tab State: 'unresolved' (open/pending) vs 'resolved'
   const [activeTab, setActiveTab] = useState("unresolved");
 
@@ -61,61 +44,66 @@ export default function IssuesTab({ onResolve, onReply }) {
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
+  const [totalItems, setTotalItems] = useState(0);
+
   // Expanded Accordion State
   const [openId, setOpenId] = useState(null);
   const [replyText, setReplyText] = useState({});
-  // NEW: per-issue thread of replies that have already been sent
-  const [repliesById, setRepliesById] = useState({});
+  // Per-issue thread of replies sent during this session (merged with server replies)
+  // const [repliesById, setRepliesById] = useState({});
   const [issuesList, setIssuesList] = useState([]);
   const [replyErrors, setReplyErrors] = useState({});
   const [replyAdding, setReplyAdding] = useState(false);
+  const [markingResolved, setMarkingResolved] = useState(false);
+  const [loadingIssues, setLoadingIssues] = useState(false);
   const { loadIssues } = use(adminContext);
+  const fetchData = useCallback(async () => {
+    setLoadingIssues(true);
+    const data = await loadIssues(activeTab, currentPage, pageSize);
+    // console.log("data fetching...");
+    if (data) {
+      setIssuesList(data.content ?? []);
+      setTotalItems(data.totalElements ?? data.content?.length ?? 0);
+    } else {
+      setIssuesList([]);
+      setTotalItems(0);
+    }
+    setTimeout(() => setLoadingIssues(false), 2500);
+  }, [activeTab, currentPage, loadIssues, pageSize]);
 
   useEffect(() => {
     let isMounted = true;
 
-    const fetchData = async () => {
-      const data = await loadIssues(activeTab, currentPage, pageSize);
-      if (!isMounted) return;
-      if (data) {
-        setIssuesList(data.content ?? []);
-      } else {
-        setIssuesList([]);
-      }
-    };
-
+    if (!isMounted) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
+    // console.log("useeffect called..", activeTab);
 
     return () => {
       isMounted = false;
     };
-  }, [activeTab, currentPage, loadIssues, pageSize]);
+  }, [activeTab, currentPage, fetchData, loadIssues, pageSize]);
 
-  // 1. Filter Issues based on Tab, Search, and Priority
+  // Filter Issues based on Tab, Search, and Priority
   const filteredIssues = useMemo(() => {
     return issuesList.filter((issue) => {
-      // Tab filter
       const matchesTab =
         activeTab === "resolved"
-          ? issue.status === "resolved"
+          ? issue.status === "closed"
           : issue.status !== "resolved";
 
-      // Priority filter
       const matchesPriority =
         priorityFilter === "all" || issue.priority === priorityFilter;
 
-      // Search filter (ID, User, Subject)
       const query = searchQuery.toLowerCase();
       const matchesSearch =
-        issue.id.toLowerCase().includes(query) ||
-        issue.user.toLowerCase().includes(query) ||
-        issue.subject.toLowerCase().includes(query);
+        (issue.id || "").toLowerCase().includes(query) ||
+        (issue.title || "").toLowerCase().includes(query);
 
       return matchesTab && matchesPriority && matchesSearch;
     });
   }, [activeTab, issuesList, priorityFilter, searchQuery]);
 
-  // Reset page to 1 whenever filters change
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setCurrentPage(1);
@@ -136,7 +124,7 @@ export default function IssuesTab({ onResolve, onReply }) {
     setReplyText((prev) => ({ ...prev, [id]: text }));
   };
 
-  const handleSendReply = (id) => {
+  const handleSendReply = async (id) => {
     const raw = replyText[id];
     const { valid, error, sanitized } = validateReply(raw || "");
 
@@ -146,53 +134,81 @@ export default function IssuesTab({ onResolve, onReply }) {
     }
 
     setReplyErrors((prev) => ({ ...prev, [id]: null }));
-
-    setRepliesById((prev) => ({
-      ...prev,
-      [id]: [
-        ...(prev[id] || []),
-        {
-          text: sanitized,
-          sentAt: new Date().toLocaleString("en-IN", {
-            hour: "2-digit",
-            minute: "2-digit",
-            day: "2-digit",
-            month: "short",
-          }),
-        },
-      ],
-    }));
+    try {
+      setReplyAdding(true);
+      const res = await sendReply({
+        issueId: id,
+        reply: sanitized,
+      });
+      if (!res) return;
+      fetchData();
+      // setRepliesById((prev) => ({
+      //   ...prev,
+      //   [id]: [
+      //     ...(prev[id] || []),
+      //     {
+      //       text: sanitized,
+      //       senderType: "admin",
+      //       createdAt: new Date().toLocaleString("en-IN", {
+      //         hour: "2-digit",
+      //         minute: "2-digit",
+      //         day: "2-digit",
+      //         month: "short",
+      //       }),
+      //     },
+      //   ],
+      // }));
+    } catch (error) {
+      console.log(error);
+      setReplyErrors((prev) => ({ ...prev, [id]: "Failed to send reply" }));
+    } finally {
+      setTimeout(() => {
+        setReplyAdding(false);
+      }, 1500);
+    }
 
     if (onReply) onReply(id, sanitized); // send the sanitized version, not raw
     setReplyText((prev) => ({ ...prev, [id]: "" }));
   };
 
+  const onResolve = async (id) => {
+    try {
+      setMarkingResolved(true);
+      const res = await markResolved(id);
+      if (!res) return;
+      fetchData();
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setTimeout(() => {
+        setMarkingResolved(false);
+      }, 1000);
+    }
+  };
   return (
     <div className="space-y-4">
       {/* Top Header Controls: Tabs, Search & Priority Filter */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Unresolved / Resolved Tabs */}
         <div className="flex rounded-xl bg-slate-900 p-1 border border-slate-800">
-          <button
-            onClick={() => handleTabChange("unresolved")}
-            className={`flex-1 rounded-lg px-4 py-1.5 text-xs font-medium transition-colors sm:flex-none ${
-              activeTab === "unresolved"
-                ? "bg-slate-800 text-slate-100 shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            Unresolved
-          </button>
-          <button
-            onClick={() => handleTabChange("resolved")}
-            className={`flex-1 rounded-lg px-4 py-1.5 text-xs font-medium transition-colors sm:flex-none ${
-              activeTab === "resolved"
-                ? "bg-slate-800 text-slate-100 shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            Resolved
-          </button>
+          <TabButton
+            value="unresolved"
+            label="Unresolved"
+            activeTab={activeTab}
+            onClick={handleTabChange}
+          />
+          <TabButton
+            value="in_progress"
+            label="In Progress"
+            activeTab={activeTab}
+            onClick={handleTabChange}
+          />
+          <TabButton
+            value="resolved"
+            label="Resolved"
+            activeTab={activeTab}
+            onClick={handleTabChange}
+          />
         </div>
 
         {/* Search Input & Priority Filter */}
@@ -209,13 +225,11 @@ export default function IssuesTab({ onResolve, onReply }) {
           </div>
 
           <div className="relative flex items-center rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-1.5 backdrop-blur-md transition-all hover:border-slate-700 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20">
-            {/* Left Icon */}
             <Filter className="h-3.5 w-3.5 shrink-0 text-slate-400" />
 
-            {/* Select Box */}
             <select
               value={priorityFilter}
-              onChange={(e) => handlePriorityChange(e.value || e.target.value)}
+              onChange={(e) => handlePriorityChange(e.target.value)}
               className="w-full appearance-none bg-transparent pl-2 pr-6 text-xs font-medium text-slate-200 outline-none cursor-pointer"
             >
               <option value="all" className="bg-slate-900 text-slate-200">
@@ -235,9 +249,20 @@ export default function IssuesTab({ onResolve, onReply }) {
               </option>
             </select>
 
-            {/* Custom Right Chevron */}
             <ChevronDown className="pointer-events-none absolute right-2.5 h-3.5 w-3.5 text-slate-400" />
           </div>
+          {/* Refresh button */}
+          {activeTab === "unresolved" && (
+            <button
+              onClick={fetchData}
+              className="rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-1.5 backdrop-blur-md transition-all hover:border-slate-700 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loadingIssues}
+            >
+              <RefreshCcw
+                className={`h-3.5 w-3.5 shrink-0 text-slate-400 ${loadingIssues ? "animate-spin" : ""}`}
+              />
+            </button>
+          )}
         </div>
       </div>
 
@@ -245,12 +270,24 @@ export default function IssuesTab({ onResolve, onReply }) {
       <div className="space-y-3">
         {filteredIssues.length === 0 ? (
           <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-8 text-center text-xs text-slate-500">
-            No {activeTab} issues found matching your filters.
+            {loadingIssues ? (
+              <p className="flex items-center justify-center gap-2">
+                <RefreshCcw className="h-3.5 w-3.5 shrink-0 text-slate-400 animate-spin" />
+                Loading issues...
+              </p>
+            ) : (
+              `No ${activeTab} issues found matching your filters.`
+            )}
           </div>
         ) : (
           filteredIssues.map((issue) => {
             const expanded = openId === issue.id;
-            const threadForIssue = repliesById[issue.id] || [];
+            // Merge replies already on the issue (from server) with any sent locally this session
+            const threadForIssue = [
+              ...(issue.replies || []),
+              // ...(repliesById[issue.id] || []),
+            ];
+
             return (
               <div
                 key={issue.id}
@@ -269,7 +306,14 @@ export default function IssuesTab({ onResolve, onReply }) {
                         {issue.title}
                       </p>
                       <p className="truncate text-xs text-slate-500 font-body">
-                        {issue.createdAt ? `· ${issue.createdAt}` : ""}
+                        {issue.createdAt && `· ${issue.createdAt}`}
+                        {issue.status === "resolved" &&
+                          issue.resolvedAt &&
+                          issue.resolvedAt !== "Not Resolved" && (
+                            <span className="ml-2">
+                              · resolved {issue.resolvedAt}
+                            </span>
+                          )}
                         {threadForIssue.length > 0 && (
                           <span className="ml-2 text-indigo-400">
                             · {threadForIssue.length} repl
@@ -280,8 +324,8 @@ export default function IssuesTab({ onResolve, onReply }) {
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
-                    <PriorityDot priority={issue.priority.toLowerCase()} />
-                    <StatusBadge status={issue.status.toLowerCase()} />
+                    <PriorityDot priority={issue.priority} />
+                    <StatusBadge status={issue.status} />
                     <ChevronDown
                       className={`h-4 w-4 text-slate-500 transition-transform duration-300 ${
                         expanded ? "rotate-180" : ""
@@ -296,20 +340,20 @@ export default function IssuesTab({ onResolve, onReply }) {
                       {issue.description}
                     </p>
 
-                    {/* NEW: Reply thread — shows every reply already sent for this issue */}
+                    {/* Reply thread — shows every reply already sent for this issue */}
                     {threadForIssue.length > 0 && (
                       <div className="mb-4 space-y-2">
                         {threadForIssue.map((reply, idx) => (
                           <div
-                            key={idx}
+                            key={reply.replyId ?? idx}
                             className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-3 py-2"
                           >
                             <div className="mb-1 flex items-center justify-between">
                               <span className="text-[11px] font-medium text-indigo-400">
-                                Admin reply
+                                Our reply
                               </span>
                               <span className="text-[10px] text-slate-500">
-                                {reply.sentAt}
+                                {reply.createdAt}
                               </span>
                             </div>
                             <p className="text-xs leading-relaxed text-slate-300 font-body">
@@ -335,23 +379,28 @@ export default function IssuesTab({ onResolve, onReply }) {
                       />
                     </div>
                     {replyErrors[issue.id] && (
-                      <div className="mt-1 text-xs text-rose-400">
-                        {replyErrors[issue.id]} this is demo
+                      <div className="mt-1 text-xs text-rose-400 pb-2 capitalize">
+                        {replyErrors[issue.id]}
                       </div>
                     )}
+
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => handleSendReply(issue.id)}
                         className="rounded-lg bg-indigo-500/10 px-3.5 py-2 text-xs font-medium text-indigo-400 ring-1 ring-indigo-500/30 hover:bg-indigo-500/20 transition-colors"
+                        disabled={replyAdding}
                       >
-                        Send Reply
+                        {replyAdding ? "Adding..." : "Send Reply"}
                       </button>
                       {issue.status !== "resolved" && (
                         <button
-                          onClick={() => onResolve && onResolve(issue.id)}
+                          onClick={() => {
+                            onResolve(issue.id);
+                          }}
                           className="rounded-lg bg-emerald-500/10 px-3.5 py-2 text-xs font-medium text-emerald-400 ring-1 ring-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
+                          disabled={replyAdding || !onResolve}
                         >
-                          Mark Resolved
+                          {markingResolved ? "Marking..." : "Mark Resolved"}
                         </button>
                       )}
                     </div>
@@ -367,7 +416,7 @@ export default function IssuesTab({ onResolve, onReply }) {
       <TablePagination
         currentPage={currentPage}
         pageSize={pageSize}
-        totalItems={filteredIssues.length}
+        totalItems={totalItems}
         onPageChange={setCurrentPage}
         onPageSizeChange={(size) => {
           setPageSize(size);

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   CheckCircle2,
   AlertTriangle,
@@ -6,6 +6,7 @@ import {
   Wallet,
   Settings,
   Circle,
+  Check,
 } from "lucide-react";
 
 const TYPE_CONFIG = {
@@ -19,13 +20,11 @@ const TYPE_CONFIG = {
 function timeAgo(dateStr) {
   if (!dateStr) return "";
 
-  // Parse ISO string directly (JavaScript treats non-Z strings as Local Time automatically)
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return "Invalid date";
 
   const diffMs = Date.now() - date.getTime();
 
-  // Return 'Just now' only for true sub-minute values or tiny future clock skews
   if (diffMs < 60000) return "Just now";
 
   const mins = Math.floor(diffMs / 60000);
@@ -48,6 +47,8 @@ export default function NotificationItem({
   onMarkRead,
   onClick,
 }) {
+  const [expanded, setExpanded] = useState(false);
+
   const {
     icon: Icon,
     color,
@@ -56,14 +57,21 @@ export default function NotificationItem({
   const isUnread = !notification.read;
 
   const handleClick = () => {
-    if (isUnread) onMarkRead(notification.id);
+    // console.log("clicked");
+    setExpanded((prev) => !prev);
+    // if (isUnread) onMarkRead(notification.id);
     onClick?.(notification);
   };
-  // console.log(notification);
+
+  const handleMarkReadClick = (e) => {
+    e.stopPropagation();
+    onMarkRead(notification.id);
+  };
+
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={() => handleClick()}
       className="w-full text-left flex gap-3 px-4 py-3 transition-colors hover:bg-slate-50 relative"
       style={{ backgroundColor: isUnread ? "#fafafe" : "transparent" }}
     >
@@ -89,14 +97,37 @@ export default function NotificationItem({
           >
             {notification.title}
           </p>
-          <span
-            className="shrink-0 text-[11px] mt-0.5"
-            style={{ color: "#94a3b8" }}
-          >
-            {timeAgo(notification.createdAt)}
-          </span>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[11px] mt-0.5" style={{ color: "#94a3b8" }}>
+              {timeAgo(notification.createdAt)}
+            </span>
+
+            {isUnread && (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={handleMarkReadClick}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleMarkReadClick(e);
+                  }
+                }}
+                title="Mark as read"
+                className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center border transition-colors hover:bg-indigo-50"
+                style={{ borderColor: "#c7d2fe", color: "#4f46e5" }}
+              >
+                <Check size={12} />
+              </span>
+            )}
+          </div>
         </div>
-        <p className="text-xs mt-0.5 line-clamp-2" style={{ color: "#64748b" }}>
+
+        <p
+          className={`text-xs mt-0.5 ${expanded ? "" : "line-clamp-1"}`}
+          style={{ color: "#64748b" }}
+        >
           {notification.message}
         </p>
       </div>

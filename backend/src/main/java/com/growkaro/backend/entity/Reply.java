@@ -44,4 +44,5 @@ public class Reply {
     public enum SenderType {
         ADMIN, USER
     }
+
 }

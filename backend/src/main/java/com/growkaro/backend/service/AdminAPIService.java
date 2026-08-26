@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -24,10 +23,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.growkaro.backend.DRO.AddRemitter;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
-import com.growkaro.backend.DRO.SupportIssueView;
 import com.growkaro.backend.DTO.AddedRemitter;
 import com.growkaro.backend.DTO.AdminTransactionResponse;
 import com.growkaro.backend.DTO.AdminUser;
+import com.growkaro.backend.DTO.IssueResponse;
 import com.growkaro.backend.DTO.PagedResponse;
 import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.DTO.SchemeResponse;
@@ -38,13 +37,12 @@ import com.growkaro.backend.common.GlobalExceptionHandler.DuplicateResourceExcep
 import com.growkaro.backend.entity.Notification;
 import com.growkaro.backend.entity.NotificationContentBuilder;
 import com.growkaro.backend.entity.Remitter;
+import com.growkaro.backend.entity.Reply;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.SupportIssue;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
-import com.growkaro.backend.entity.Notification.ActionType;
-import com.growkaro.backend.entity.Notification.NotificationType;
 import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.entity.SupportIssue.Status;
@@ -636,14 +634,51 @@ public class AdminAPIService {
     }
 
     @Transactional(readOnly = true)
-    public PagedResponse<SupportIssueView> issues(Status status, Pageable pageable) {
+    public PagedResponse<IssueResponse> issues(Status status, Pageable pageable) {
         try {
             var issuesPage = supportIssueRepository.findByStatus(status, pageable);
-            var mapped = issuesPage.map(SupportIssueView::from);
+            var mapped = issuesPage.map(IssueResponse::fromEntity);
             return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
         } catch (Exception e) {
             log.error("Error while fetching issues: " + e.getMessage());
             return null;
+        }
+    }
+
+    public Map<String, Object> sendReply(String issueId, String reply) {
+        try {
+            SupportIssue issue = supportIssueRepository.findById(issueId)
+                    .orElseThrow(() -> new IllegalArgumentException("Issue not found with id " + issueId));
+            User user = userRepository.findById(issue.getSubmitterId())
+                    .orElseThrow(
+                            () -> new IllegalArgumentException("User not found with id " + issue.getSubmitterId()));
+            Reply r = new Reply();
+            r.setSupportIssue(issue);
+            r.setSenderType(Reply.SenderType.ADMIN);
+            r.setText(reply);
+            issue.addReply(r);
+            issue.setStatus(Status.IN_PROGRESS);
+            supportIssueRepository.save(issue);
+            crucialNotificationService.notifyUser(EssentialActionType.ISSUE_REPLIED, user, "/dashboard", null);
+            return general.response("success", "Reply added successfully", true);
+        } catch (Exception e) {
+            log.error("Error while adding reply: " + e.getMessage());
+            return general.response("error", "Failed to add reply", false);
+        }
+    }
+
+    public Map<String, Object> markIssueResolved(String id) {
+        try {
+            SupportIssue issue = supportIssueRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Issue not found with id " + id));
+            issue.setStatus(Status.CLOSED);
+            supportIssueRepository.save(issue);
+            activityLogService.log("adminId", "AdminName", "admin", ActivityType.ISSUE_RESOLVED,
+                    "Issue is resolved by admin", "support_issue", id, null);
+            return general.response("success", "Issue marked as resolved...", true);
+        } catch (Exception e) {
+            log.error("Error while marking issue resolved: " + e.getMessage());
+            return general.response("error", "Failed to mark issue resolved", false);
         }
     }
 

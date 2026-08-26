@@ -2,11 +2,15 @@ package com.growkaro.backend.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +22,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +31,7 @@ import com.growkaro.backend.DRO.NewNominee;
 import com.growkaro.backend.DRO.RaiseIssue;
 import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.DRO.WithdrawAmount;
+import com.growkaro.backend.DTO.IssueResponse;
 import com.growkaro.backend.DTO.NomineeResponse;
 import com.growkaro.backend.DTO.TransactionResponse;
 import com.growkaro.backend.DTO.TransactionSummary;
@@ -78,14 +84,30 @@ public class UserAPIService {
     public boolean testApis() {
         try {
             // User u = userRepository.findById("GKUSID20260731180215").get();
-            // System.out.println(u.getNominees().get(0).getName());
-            List<UserScheme> users = userSchemeRepository.findAllByMaturityDate(general.getCurrentDate(),
-                    general.getCurrentDate().plusDays(15));
-            for (UserScheme userScheme : users) {
-                System.out.println(userScheme.getUser().getName());
-                System.out.println(userScheme.getMaturityDate());
-                emailService.sendSchemeMaturityEmailtoUser(userScheme);
+            // Page<List<IssueResponse>> issues =
+            // supportIssueRepository.findUnResolvedIssue(PageRequest.of(0,
+            // DEFAULT_PAGE_SIZE)).map(SupportIssue::fromEntity);
+            // for(IssueResponse issue : issues) {
+            // System.out.println(issue);
+            // }
+            LocalDateTime time = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
 
+            List<UserScheme> list = userSchemeRepository.findAll();
+            for (UserScheme userScheme : list) {
+                // userScheme.setUpdatedAt(time.minusDays(5));
+                if (userScheme.getProfitDates() == null) {
+                    userScheme.setProfitDates(new HashSet<>());
+                    // userSchemeRepository.save(userScheme);
+                }
+                if (userScheme.getProfit().compareTo(BigDecimal.ZERO) > 0) {
+                    Set<LocalDateTime> profitDates = new HashSet<>();
+
+                    profitDates.add(time.minusDays(30));
+                    profitDates.add(time.minusDays(20));
+                    profitDates.add(time.minusDays(5));
+                    userScheme.setProfitDates(profitDates);
+                }
+                userSchemeRepository.save(userScheme);
             }
             return true;
         } catch (Exception e) {
@@ -698,16 +720,16 @@ public class UserAPIService {
         return general.response("success", "Nominee updated successfully", NomineeResponse.fromEntity(nominee));
     }
 
-    @Cacheable(value = "userNotifications", key = "#userId + ':' + (#page != null ? #page : '1')")
+    @Cacheable(value = "userNotifications", key = "#userId + ':' + #page")
     @Transactional(readOnly = true)
-    public Map<String, Object> userNotifications(String userId, String page) {
+    public Map<String, Object> userNotifications(String userId, int page) {
         User user = getUserById(userId);
         if (user == null) {
             return general.response("error", "Invalid requests...", Map.of("id", userId));
         }
-
+        Pageable pageable = PageRequest.of(page, 5, Sort.by(Sort.Direction.ASC, "createdAt"));
         Page<Notification> notifications = notificationRepository.findByReceiverIdAndReceiverType(
-                user.getId(), Notification.ReceiverType.User, pageable(page));
+                user.getId(), Notification.ReceiverType.User, pageable);
         Map<String, Object> data = paginatedMeta(notifications);
         data.put("userId", user.getId());
         data.put("unreadCount",

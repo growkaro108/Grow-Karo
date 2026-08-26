@@ -25,7 +25,7 @@ export const userContext = createContext({});
 export const UserProvider = ({ children }) => {
   const [authUser, setAuthUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [portfolio, setPortfolio] = useState([]);
+  const [portfolio, setPortfolio] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [nominees, setNominees] = useState(null);
   const [nomineeId, setNomineeId] = useState("");
@@ -51,7 +51,7 @@ export const UserProvider = ({ children }) => {
     try {
       setIsLoading(true);
       const response = await getAllUsersScheme(authUser?.id);
-      // console.log(response.data);
+      console.log(response.data);
       if (response.status === "success" && response.data) {
         setPortfolio(response.data);
       } else {

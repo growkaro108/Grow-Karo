@@ -14,18 +14,24 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 import org.hibernate.annotations.ColumnDefault;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PostUpdate;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.DecimalMin;
@@ -38,10 +44,11 @@ import jakarta.validation.constraints.Positive;
 @NoArgsConstructor
 @ToString(exclude = { "user", "scheme" }) // Avoid infinite loops in toString()
 @Entity
-@Table(name = "user_schemes"
-// , uniqueConstraints = { @UniqueConstraint(columnNames = { "user_id",
-// "scheme_id" }) } /// for no duplicate entries
-)
+@Table(name = "user_schemes", indexes = {
+        @Index(name = "idx_user_scheme_id", columnList = "userSchemeId"),
+// @Index(name = "idx_user_scheme_user_id", columnList = "userId"),
+// @Index(name = "idx_activity_type", columnList = "type")
+})
 public class UserScheme {
 
     @Id
@@ -115,6 +122,13 @@ public class UserScheme {
     @ColumnDefault("false")
     private Boolean maturityNotificationSent = false;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_scheme_profit_dates", joinColumns = @JoinColumn(name = "user_scheme_id", referencedColumnName = "user_scheme_id"))
+    @Column(name = "profit_date")
+    private Set<LocalDateTime> profitDates = new HashSet<>();
+
+    private LocalDateTime updatedAt;
+
     @PrePersist
     protected void onCreate() {
         LocalDateTime indianTimezone = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
@@ -126,6 +140,11 @@ public class UserScheme {
                     + LocalDateTime.now(ZoneId.of("Asia/Kolkata"))
                             .format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         }
+    }
+
+    @PostUpdate
+    private void onUpdate() {
+        this.updatedAt = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
     }
 
     @Override

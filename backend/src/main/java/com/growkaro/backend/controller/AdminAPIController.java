@@ -370,6 +370,9 @@ public class AdminAPIController {
                 case "unresolved":
                     return general.response("success", "Issues fetched successfully",
                             adminAPIService.issues(Status.OPEN, pageable));
+                case "in_progress":
+                    return general.response("success", "Issues fetched successfully",
+                            adminAPIService.issues(Status.IN_PROGRESS, pageable));
                 case "resolved":
                     return general.response("success", "Issues fetched successfully",
                             adminAPIService.issues(Status.CLOSED, pageable));
@@ -380,6 +383,29 @@ public class AdminAPIController {
             log.error("Error while fetching issues: " + e.getMessage());
             return general.response("error",
                     "something went wrong..", null);
+        }
+    }
+
+    @PutMapping("/issues/send-reply")
+    public ResponseEntity<Map<String, Object>> sendReply(@RequestBody Map<String, String> payload) {
+        try {
+            return ResponseEntity.ok(adminAPIService.sendReply(
+                    general.stringValue(payload.get("issueId")),
+                    general.stringValue(payload.get("reply"))));
+        } catch (Exception e) {
+            log.error("Error while sending reply: " + e.getMessage());
+            return ResponseEntity.ok(general.response("error",
+                    e.getMessage(), null));
+        }
+    }
+
+    @PutMapping("/issues/{id}/mark-resolved")
+    public ResponseEntity<Map<String, Object>> markResolved(@PathVariable String id) {
+        try {
+            return ResponseEntity.ok(adminAPIService.markIssueResolved(id));
+        } catch (Exception e) {
+            log.error("Error while marking issue resolved: " + e.getMessage());
+            return ResponseEntity.ok(general.response("error", "something went wrong..", null));
         }
     }
 

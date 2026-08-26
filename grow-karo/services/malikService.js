@@ -21,6 +21,8 @@ import {
   sendCredentialsApi,
   fetchAllUsersApi,
   getAllIssuesApi,
+  sendReplyApi,
+  markResolvedApi,
 } from "@/api/adminApi";
 import { allRounderMessage } from "@/components/Message";
 
@@ -326,9 +328,27 @@ export async function getAllIssues(status, page, size) {
   const response = await getAllIssuesApi(status, page, size);
   if (response.status !== "success") {
     allRounderMessage(response);
-    return null;
+    return false;
   }
   return response.data;
+}
+
+export async function sendReply(payload) {
+  const response = await sendReplyApi(payload);
+  allRounderMessage(response);
+  if (response.status !== "success") {
+    return false;
+  }
+  return response.data;
+}
+
+export async function markResolved(id) {
+  const res = await markResolvedApi(id);
+  allRounderMessage(res);
+  if (res.status !== "success") {
+    return false;
+  }
+  return res.data;
 }
 
 //pending

@@ -160,12 +160,29 @@ public class UserAPIController {
 
     @PostMapping("/myscheme/{userId}")
     public ResponseEntity<Map<String, Object>> getMySchemesIds(@PathVariable String userId) {
-        return ResponseEntity.ok(userAPIService.getMyScheme(userId));
+        try {
+            if (userId.isBlank()) {
+                return ResponseEntity.badRequest().body(general.response("error", "Invalid data", null));
+            }
+            return ResponseEntity.ok(userAPIService.getMyScheme(userId));
+        } catch (Exception e) {
+            log.error("Error getting user schemes ids for user {}", userId, e);
+            return ResponseEntity.internalServerError().body(general.response("error", "Internal Server error", null));
+        }
     }
 
     @GetMapping("/scheme/user/{userId}")
     public ResponseEntity<Map<String, Object>> showUserPortfolio(@PathVariable String userId) {
-        return ResponseEntity.ok(userAPIService.getUserPortfolio(userId));
+        try {
+            if (userId.isBlank() || !general.isValidId(userId)) {
+                return ResponseEntity.badRequest().body(general.response("error", "Invalid data", null));
+            }
+            return ResponseEntity.ok(userAPIService.getUserPortfolio(userId));
+
+        } catch (Exception e) {
+            log.error("Error showing user portfolio for user {}", userId, e);
+            return ResponseEntity.internalServerError().body(general.response("error", "Internal Server error", null));
+        }
     }
 
     @PutMapping("/scheme/withdraw/{userSchemeId}/{userId}")
@@ -312,7 +329,10 @@ public class UserAPIController {
     @GetMapping("/{userId}/notifications")
     public ResponseEntity<Map<String, Object>> userNotifications(
             @PathVariable String userId,
-            @RequestParam(required = false, defaultValue = "1") String page) {
+            @RequestParam(required = false, defaultValue = "1") int page) {
+        if (!general.isValidId(userId) || page <= 0 || page > 100) {
+            return ResponseEntity.badRequest().body(general.response("error", "Invalid user ID or page number", null));
+        }
         return ResponseEntity.ok(userAPIService.userNotifications(userId, page));
     }
 

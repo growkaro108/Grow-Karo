@@ -64,10 +64,10 @@ export default function Sidebar({
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-slate-200 font-body">
-              Admin User
+              Admin
             </p>
             <p className="truncate text-xs text-slate-500 font-body">
-              superadmin@vantage.io
+              System Administrator
             </p>
           </div>
         </div>

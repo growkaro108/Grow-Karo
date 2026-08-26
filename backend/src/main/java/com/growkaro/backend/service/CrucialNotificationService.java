@@ -298,7 +298,7 @@ public class CrucialNotificationService {
             case FUND_TRANSFER_INITIATED,
                     SETTLEMENT_SUBMITTED,
                     SCHEME_MATURITY_REMINDER,
-                    LOGIN ->
+                    LOGIN, ISSUE_REPLIED, ISSUE_RESOLVED ->
                 false;
         };
     }
@@ -321,6 +321,8 @@ public class CrucialNotificationService {
             case LIMIT_UPDATED, LOW_ALLOCATION_BALANCE, SETTLEMENT_SUBMITTED -> ActivityType.REMITTER_UPDATED;
             case LOGIN -> ActivityType.LOGIN;
             case PASSWORD_CHANGED -> ActivityType.PASSWORD_CHANGED;
+            case ISSUE_REPLIED -> ActivityType.ISSUE_REPLIED;
+            case ISSUE_RESOLVED -> ActivityType.ISSUE_RESOLVED;
             case SCHEME_MATURITY_REMINDER -> null;
             case PAYMENT_FAILED -> null;
         };

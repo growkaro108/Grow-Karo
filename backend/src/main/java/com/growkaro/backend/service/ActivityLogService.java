@@ -9,6 +9,7 @@ import com.growkaro.backend.repository.ActivityLogRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -38,6 +39,7 @@ public class ActivityLogService {
      * (e.g. inside WithdrawalService.requestWithdrawal). It persists the
      * log row and immediately pushes it to every connected admin tab.
      */
+    @Async
     public void log(String actorId, String actorName, String actorRole,
             ActivityType type, String description,
             String targetType, String targetId, Object metadata) {

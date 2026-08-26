@@ -5,13 +5,13 @@ import {
   LayoutDashboard,
   Activity,
   Wallet,
-  AlertTriangle,
   Ticket,
   Settings2,
   Contact,
   ScrollText,
   ClipboardCheck,
   User2Icon,
+  MessageCircleQuestionMark,
 } from "lucide-react";
 import {
   Chart as ChartJS,
@@ -102,7 +102,7 @@ const NAV_ITEMS = [
   { id: "approvals", label: "Approvals", icon: ClipboardCheck },
   { id: "remitter", label: "Remitter", icon: Ticket },
   { id: "user", label: "User Management", icon: User2Icon },
-  { id: "issues", label: "User Issues ⏱️", icon: AlertTriangle },
+  { id: "issues", label: "User Issues", icon: MessageCircleQuestionMark },
   { id: "contacts", label: "Contacts⏱️", icon: Contact },
   { id: "settings", label: "Settings⏱️", icon: Settings2 },
 ];

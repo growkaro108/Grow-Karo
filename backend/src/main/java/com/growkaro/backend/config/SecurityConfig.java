@@ -69,6 +69,8 @@ public class SecurityConfig {
                                                                 "/api/admin/notifications/stream",
                                                                 "/api/admin/user/all",
                                                                 "/api/admin/{status}/issues",
+                                                                "/api/admin/issues/send-reply",
+                                                                "/api/admin/issues/{id}/mark-resolved",
                                                                 "/api/remitter/login",
                                                                 "/api/remitter/forgot-password/{email}",
                                                                 "/api/remitter/reset-password/{remitterId}",

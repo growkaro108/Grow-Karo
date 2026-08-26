@@ -15,8 +15,8 @@ import { fetchUserNotifications } from "../../../../../services/grahakService";
 
 const PAGE_SIZE = 6;
 const TABS = [
-  { key: "all", label: "All" },
   { key: "unread", label: "Unread" },
+  { key: "all", label: "All" },
 ];
 
 export default function NotificationPanel({ onItemClick }) {
@@ -24,7 +24,7 @@ export default function NotificationPanel({ onItemClick }) {
   const userId = authUser?.id;
 
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState("all");
+  const [tab, setTab] = useState("unread");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -284,7 +284,7 @@ export default function NotificationPanel({ onItemClick }) {
           {!loading && !error && data.items.length > 0 && (
             <Pagination
               page={page}
-              totalPages={totalPages}
+              totalPages={totalPages - 1}
               onChange={setPage}
             />
           )}

@@ -6,11 +6,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
@@ -164,6 +167,7 @@ public class General {
         Scheme scheme = us.getScheme();
         Nominee nominee = us.getNominee();
         NomineeResponse nomineeResponse = toNomineeResponse(nominee);
+        List<LocalDateTime> profitDates = new ArrayList<>(us.getProfitDates());
         return new UserPortfolio(
                 scheme.getSchemeId(),
                 scheme.getSchemeName(),
@@ -181,7 +185,9 @@ public class General {
                 us.getProfitReedemed(),
                 us.getNextPayoutDate(),
                 us.getPaidDate(), us.getStatus(),
-                us.getMaturityDate(), nomineeResponse);
+                us.getMaturityDate(), nomineeResponse,
+                us.getUpdatedAt(),
+                profitDates);
     }
 
     public SchemeResponse toSchemeResponse(Scheme scheme) {

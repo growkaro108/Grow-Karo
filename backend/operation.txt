@@ -1,3 +1,12 @@
 //  when ever add a new enum type in ActivityType \\
 ALTER TABLE public.activity_log 
 DROP CONSTRAINT activity_log_type_check;
+ ALTER TABLE public.activity_log
+ADD CONSTRAINT activity_log_type_check CHECK (type = ANY (ARRAY['ACCOUNT_CREATED', 'ACCOUNT_UPDATED', 'LOGIN', 'LOGIN_FAILED', 'LOGOUT', 'PASSWORD_CHANGED', 'SCHEME_ENROLLED', 'SCHEME_REJECTED', 'SCHEME_WITHDRAWAL', 'DEPOSIT_REQUESTED', 'DEPOSIT_COMPLETED', 'WITHDRAWAL_REQUESTED', 'WITHDRAWAL_APPROVED', 'WITHDRAWAL_REJECTED', 'WITHDRAWAL_PROCESSED', 'WITHDRAWAL_COMPLETED', 'KYC_SUBMITTED', 'KYC_APPROVED', 'KYC_REJECTED', 'REFERRAL_CREATED', 'REMITTER_ADDED', 'REMITTER_UPDATED', 'REMITTER_DELETED']));
+ 
+OR 
+if add one enum in notification_action_type \\
+ALTER TYPE notification_action_type ADD VALUE 'ISSUE_REPLIED';
+OR 
+if add one enum in activity_log_type \\
+ALTER TYPE activity_log_type ADD VALUE 'ISSUE_REPLIED';

@@ -77,8 +77,10 @@ export default function PaginationFooter({
   // console.log(totalPages);
   // console.log(totalItems);
   // console.log(pageSize);
-  // console.log(currentPage);
-
+  // console.log(totalItems?.length);
+  if (!totalItems || totalItems?.length === 0) {
+    return null;
+  }
   return (
     <div
       className={`p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-3 text-xs ${theme.container}`}
