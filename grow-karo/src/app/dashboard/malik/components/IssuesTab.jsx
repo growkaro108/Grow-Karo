@@ -13,19 +13,34 @@ import { StatusBadge } from "./StatusBadge";
 import { adminContext } from "@/context/AdminContext";
 import { validateReply } from "./issue/ReplyValidation";
 import { markResolved, sendReply } from "../../../../../services/malikService";
+import { loadUserIssues } from "../../../../../services/grahakService";
+import { userContext } from "@/context/UserContext";
+
 const TabButton = ({
   value,
   label,
   activeTab,
   onClick,
-  activeClass = "bg-slate-800 text-slate-100 shadow-sm",
-  inactiveClass = "text-slate-400 hover:text-slate-200",
+  darkMode,
+  activeClass,
+  inactiveClass,
 }) => {
+  const active =
+    activeClass ??
+    (darkMode
+      ? "bg-slate-800 text-slate-100 shadow-sm"
+      : "bg-white text-slate-900 shadow-sm");
+  const inactive =
+    inactiveClass ??
+    (darkMode
+      ? "text-slate-400 hover:text-slate-200"
+      : "text-slate-500 hover:text-slate-700");
+
   return (
     <button
       onClick={() => onClick(value)}
       className={`flex-1 rounded-lg px-4 py-1.5 text-xs font-medium transition-colors sm:flex-none ${
-        activeTab === value ? activeClass : inactiveClass
+        activeTab === value ? active : inactive
       }`}
     >
       {label}
@@ -33,7 +48,7 @@ const TabButton = ({
   );
 };
 
-export default function IssuesTab({ onReply }) {
+export default function IssuesTab({ Admin, darkMode = true }) {
   // Tab State: 'unresolved' (open/pending) vs 'resolved'
   const [activeTab, setActiveTab] = useState("unresolved");
 
@@ -49,18 +64,19 @@ export default function IssuesTab({ onReply }) {
   // Expanded Accordion State
   const [openId, setOpenId] = useState(null);
   const [replyText, setReplyText] = useState({});
-  // Per-issue thread of replies sent during this session (merged with server replies)
-  // const [repliesById, setRepliesById] = useState({});
   const [issuesList, setIssuesList] = useState([]);
   const [replyErrors, setReplyErrors] = useState({});
   const [replyAdding, setReplyAdding] = useState(false);
   const [markingResolved, setMarkingResolved] = useState(false);
   const [loadingIssues, setLoadingIssues] = useState(false);
+  const { authUser } = use(userContext);
   const { loadIssues } = use(adminContext);
+  const userId = authUser?.id;
   const fetchData = useCallback(async () => {
     setLoadingIssues(true);
-    const data = await loadIssues(activeTab, currentPage, pageSize);
-    // console.log("data fetching...");
+    const data = Admin
+      ? await loadIssues(activeTab, currentPage, pageSize)
+      : await loadUserIssues(userId, activeTab, currentPage, pageSize);
     if (data) {
       setIssuesList(data.content ?? []);
       setTotalItems(data.totalElements ?? data.content?.length ?? 0);
@@ -69,22 +85,18 @@ export default function IssuesTab({ onReply }) {
       setTotalItems(0);
     }
     setTimeout(() => setLoadingIssues(false), 2500);
-  }, [activeTab, currentPage, loadIssues, pageSize]);
+  }, [Admin, activeTab, currentPage, loadIssues, pageSize, userId]);
 
   useEffect(() => {
     let isMounted = true;
-
     if (!isMounted) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
-    // console.log("useeffect called..", activeTab);
-
     return () => {
       isMounted = false;
     };
   }, [activeTab, currentPage, fetchData, loadIssues, pageSize]);
 
-  // Filter Issues based on Tab, Search, and Priority
   const filteredIssues = useMemo(() => {
     return issuesList.filter((issue) => {
       const matchesTab =
@@ -142,22 +154,6 @@ export default function IssuesTab({ onReply }) {
       });
       if (!res) return;
       fetchData();
-      // setRepliesById((prev) => ({
-      //   ...prev,
-      //   [id]: [
-      //     ...(prev[id] || []),
-      //     {
-      //       text: sanitized,
-      //       senderType: "admin",
-      //       createdAt: new Date().toLocaleString("en-IN", {
-      //         hour: "2-digit",
-      //         minute: "2-digit",
-      //         day: "2-digit",
-      //         month: "short",
-      //       }),
-      //     },
-      //   ],
-      // }));
     } catch (error) {
       console.log(error);
       setReplyErrors((prev) => ({ ...prev, [id]: "Failed to send reply" }));
@@ -167,7 +163,7 @@ export default function IssuesTab({ onReply }) {
       }, 1500);
     }
 
-    if (onReply) onReply(id, sanitized); // send the sanitized version, not raw
+    if (onReply) onReply(id, sanitized);
     setReplyText((prev) => ({ ...prev, [id]: "" }));
   };
 
@@ -185,81 +181,176 @@ export default function IssuesTab({ onReply }) {
       }, 1000);
     }
   };
+
+  // ---- Theme classes ----
+  const t = darkMode
+    ? {
+        tabWrap: "bg-slate-900 border border-slate-800",
+        searchWrap: "border border-slate-800 bg-slate-900/60",
+        searchIcon: "text-slate-500",
+        searchInput: "text-slate-200 placeholder-slate-500",
+        filterWrap:
+          "border border-slate-800 bg-slate-900/60 hover:border-slate-700 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20",
+        filterIcon: "text-slate-400",
+        filterSelect: "text-slate-200",
+        filterOptionBase: "bg-slate-900 text-slate-200",
+        filterOptionCritical: "bg-red-900 text-slate-200",
+        filterOptionHigh: "bg-orange-900 text-slate-200",
+        filterOptionMedium: "bg-yellow-900 text-slate-200",
+        filterOptionLow: "bg-emerald-700 text-slate-200",
+        chevron: "text-slate-400",
+        refreshBtn:
+          "border border-slate-800 bg-slate-900/60 hover:border-slate-700 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20",
+        refreshIcon: "text-slate-400",
+        emptyState: "border border-slate-800 bg-slate-900/40 text-slate-500",
+        card: "border border-slate-800 bg-slate-900/60",
+        cardHeaderHover: "hover:bg-slate-800/30",
+        idBadge: "bg-slate-800 text-slate-500",
+        title: "text-slate-300",
+        subtitle: "text-slate-500",
+        repliesLabel: "text-indigo-400",
+        cardChevron: "text-slate-500",
+        cardBorder: "border-slate-800",
+        description: "text-slate-300",
+        replyBubble: "border border-indigo-500/20 bg-indigo-500/5",
+        replyLabel: "text-indigo-400",
+        replyTimestamp: "text-slate-500",
+        replyText: "text-slate-300",
+        replyInputWrap: "border border-slate-800 bg-slate-800/40",
+        replyInputIcon: "text-slate-500",
+        replyInput: "text-slate-200 placeholder-slate-500",
+        errorText: "text-rose-400",
+        sendBtn:
+          "bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/30 hover:bg-indigo-500/20",
+        resolveBtn:
+          "bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/30 hover:bg-emerald-500/20",
+      }
+    : {
+        tabWrap: "bg-slate-100 border border-slate-200",
+        searchWrap: "border border-slate-200 bg-white",
+        searchIcon: "text-slate-400",
+        searchInput: "text-slate-800 placeholder-slate-400",
+        filterWrap:
+          "border border-slate-200 bg-white hover:border-slate-300 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20",
+        filterIcon: "text-slate-500",
+        filterSelect: "text-slate-700",
+        filterOptionBase: "bg-white text-slate-700",
+        filterOptionCritical: "bg-red-100 text-red-800",
+        filterOptionHigh: "bg-orange-100 text-orange-800",
+        filterOptionMedium: "bg-yellow-100 text-yellow-800",
+        filterOptionLow: "bg-emerald-100 text-emerald-800",
+        chevron: "text-slate-500",
+        refreshBtn:
+          "border border-slate-200 bg-white hover:border-slate-300 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20",
+        refreshIcon: "text-slate-500",
+        emptyState: "border border-slate-200 bg-slate-50 text-slate-500",
+        card: "border border-slate-200 bg-white",
+        cardHeaderHover: "hover:bg-slate-50",
+        idBadge: "bg-slate-100 text-slate-500",
+        title: "text-slate-700",
+        subtitle: "text-slate-500",
+        repliesLabel: "text-indigo-600",
+        cardChevron: "text-slate-400",
+        cardBorder: "border-slate-200",
+        description: "text-slate-700",
+        replyBubble: "border border-indigo-200 bg-indigo-50",
+        replyLabel: "text-indigo-600",
+        replyTimestamp: "text-slate-400",
+        replyText: "text-slate-700",
+        replyInputWrap: "border border-slate-200 bg-slate-50",
+        replyInputIcon: "text-slate-400",
+        replyInput: "text-slate-800 placeholder-slate-400",
+        errorText: "text-rose-600",
+        sendBtn:
+          "bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200 hover:bg-indigo-100",
+        resolveBtn:
+          "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200 hover:bg-emerald-100",
+      };
+
   return (
     <div className="space-y-4">
       {/* Top Header Controls: Tabs, Search & Priority Filter */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {/* Unresolved / Resolved Tabs */}
-        <div className="flex rounded-xl bg-slate-900 p-1 border border-slate-800">
+        {/* Unresolved / In Progress / Resolved Tabs */}
+        <div className={`flex rounded-xl p-1 ${t.tabWrap}`}>
           <TabButton
             value="unresolved"
             label="Unresolved"
             activeTab={activeTab}
             onClick={handleTabChange}
+            darkMode={darkMode}
           />
           <TabButton
             value="in_progress"
             label="In Progress"
             activeTab={activeTab}
             onClick={handleTabChange}
+            darkMode={darkMode}
           />
           <TabButton
             value="resolved"
             label="Resolved"
             activeTab={activeTab}
             onClick={handleTabChange}
+            darkMode={darkMode}
           />
         </div>
 
         {/* Search Input & Priority Filter */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-1.5">
-            <Search className="h-3.5 w-3.5 text-slate-500" />
+          <div
+            className={`flex items-center gap-2 rounded-xl px-3 py-1.5 ${t.searchWrap}`}
+          >
+            <Search className={`h-3.5 w-3.5 ${t.searchIcon}`} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search issues..."
-              className="w-32 bg-transparent text-xs text-slate-200 placeholder-slate-500 outline-none sm:w-44"
+              className={`w-32 bg-transparent text-xs outline-none sm:w-44 ${t.searchInput}`}
             />
           </div>
 
-          <div className="relative flex items-center rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-1.5 backdrop-blur-md transition-all hover:border-slate-700 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20">
-            <Filter className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          <div
+            className={`relative flex items-center rounded-xl px-3 py-1.5 backdrop-blur-md transition-all ${t.filterWrap}`}
+          >
+            <Filter className={`h-3.5 w-3.5 shrink-0 ${t.filterIcon}`} />
 
             <select
               value={priorityFilter}
               onChange={(e) => handlePriorityChange(e.target.value)}
-              className="w-full appearance-none bg-transparent pl-2 pr-6 text-xs font-medium text-slate-200 outline-none cursor-pointer"
+              className={`w-full appearance-none bg-transparent pl-2 pr-6 text-xs font-medium outline-none cursor-pointer ${t.filterSelect}`}
             >
-              <option value="all" className="bg-slate-900 text-slate-200">
+              <option value="all" className={t.filterOptionBase}>
                 All Priorities
               </option>
-              <option value="critical" className="bg-red-900 text-slate-200">
+              <option value="critical" className={t.filterOptionCritical}>
                 Critical
               </option>
-              <option value="high" className="bg-orange-900 text-slate-200">
+              <option value="high" className={t.filterOptionHigh}>
                 High Priority
               </option>
-              <option value="medium" className="bg-yellow-900 text-slate-200">
+              <option value="medium" className={t.filterOptionMedium}>
                 Medium Priority
               </option>
-              <option value="low" className="bg-emerald-700 text-slate-200">
+              <option value="low" className={t.filterOptionLow}>
                 Low Priority
               </option>
             </select>
 
-            <ChevronDown className="pointer-events-none absolute right-2.5 h-3.5 w-3.5 text-slate-400" />
+            <ChevronDown
+              className={`pointer-events-none absolute right-2.5 h-3.5 w-3.5 ${t.chevron}`}
+            />
           </div>
           {/* Refresh button */}
           {activeTab === "unresolved" && (
             <button
               onClick={fetchData}
-              className="rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-1.5 backdrop-blur-md transition-all hover:border-slate-700 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`rounded-xl px-3 py-1.5 backdrop-blur-md transition-all disabled:opacity-50 disabled:cursor-not-allowed ${t.refreshBtn}`}
               disabled={loadingIssues}
             >
               <RefreshCcw
-                className={`h-3.5 w-3.5 shrink-0 text-slate-400 ${loadingIssues ? "animate-spin" : ""}`}
+                className={`h-3.5 w-3.5 shrink-0 ${t.refreshIcon} ${loadingIssues ? "animate-spin" : ""}`}
               />
             </button>
           )}
@@ -269,10 +360,14 @@ export default function IssuesTab({ onReply }) {
       {/* Issues Accordion List */}
       <div className="space-y-3">
         {filteredIssues.length === 0 ? (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-8 text-center text-xs text-slate-500">
+          <div
+            className={`rounded-2xl p-8 text-center text-xs ${t.emptyState}`}
+          >
             {loadingIssues ? (
               <p className="flex items-center justify-center gap-2">
-                <RefreshCcw className="h-3.5 w-3.5 shrink-0 text-slate-400 animate-spin" />
+                <RefreshCcw
+                  className={`h-3.5 w-3.5 shrink-0 animate-spin ${t.refreshIcon}`}
+                />
                 Loading issues...
               </p>
             ) : (
@@ -282,30 +377,30 @@ export default function IssuesTab({ onReply }) {
         ) : (
           filteredIssues.map((issue) => {
             const expanded = openId === issue.id;
-            // Merge replies already on the issue (from server) with any sent locally this session
-            const threadForIssue = [
-              ...(issue.replies || []),
-              // ...(repliesById[issue.id] || []),
-            ];
+            const threadForIssue = [...(issue.replies || [])];
 
             return (
               <div
                 key={issue.id}
-                className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60"
+                className={`overflow-hidden rounded-2xl ${t.card}`}
               >
                 <button
                   onClick={() => setOpenId(expanded ? null : issue.id)}
-                  className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left hover:bg-slate-800/30 transition-colors"
+                  className={`flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-colors ${t.cardHeaderHover}`}
                 >
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className="hidden shrink-0 rounded-lg bg-slate-800 px-2 py-1 font-mono text-[11px] text-slate-500 sm:inline">
+                    <span
+                      className={`hidden shrink-0 rounded-lg px-2 py-1 font-mono text-[11px] sm:inline ${t.idBadge}`}
+                    >
                       {issue.id}
                     </span>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-slate-300 font-body">
+                      <p
+                        className={`truncate text-sm font-medium font-body ${t.title}`}
+                      >
                         {issue.title}
                       </p>
-                      <p className="truncate text-xs text-slate-500 font-body">
+                      <p className={`truncate text-xs font-body ${t.subtitle}`}>
                         {issue.createdAt && `· ${issue.createdAt}`}
                         {issue.status === "resolved" &&
                           issue.resolvedAt &&
@@ -315,7 +410,7 @@ export default function IssuesTab({ onReply }) {
                             </span>
                           )}
                         {threadForIssue.length > 0 && (
-                          <span className="ml-2 text-indigo-400">
+                          <span className={`ml-2 ${t.repliesLabel}`}>
                             · {threadForIssue.length} repl
                             {threadForIssue.length === 1 ? "y" : "ies"} sent
                           </span>
@@ -327,7 +422,7 @@ export default function IssuesTab({ onReply }) {
                     <PriorityDot priority={issue.priority} />
                     <StatusBadge status={issue.status} />
                     <ChevronDown
-                      className={`h-4 w-4 text-slate-500 transition-transform duration-300 ${
+                      className={`h-4 w-4 transition-transform duration-300 ${t.cardChevron} ${
                         expanded ? "rotate-180" : ""
                       }`}
                     />
@@ -335,28 +430,37 @@ export default function IssuesTab({ onReply }) {
                 </button>
 
                 {expanded && (
-                  <div className="animate-fade-slide-in border-t border-slate-800 px-5 py-4">
-                    <p className="mb-4 text-sm leading-relaxed text-slate-300 font-body">
+                  <div
+                    className={`animate-fade-slide-in border-t px-5 py-4 ${t.cardBorder}`}
+                  >
+                    <p
+                      className={`mb-4 text-sm leading-relaxed font-body ${t.description}`}
+                    >
                       {issue.description}
                     </p>
 
-                    {/* Reply thread — shows every reply already sent for this issue */}
                     {threadForIssue.length > 0 && (
                       <div className="mb-4 space-y-2">
                         {threadForIssue.map((reply, idx) => (
                           <div
                             key={reply.replyId ?? idx}
-                            className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-3 py-2"
+                            className={`rounded-xl px-3 py-2 ${t.replyBubble}`}
                           >
                             <div className="mb-1 flex items-center justify-between">
-                              <span className="text-[11px] font-medium text-indigo-400">
+                              <span
+                                className={`text-[11px] font-medium ${t.replyLabel}`}
+                              >
                                 Our reply
                               </span>
-                              <span className="text-[10px] text-slate-500">
+                              <span
+                                className={`text-[10px] ${t.replyTimestamp}`}
+                              >
                                 {reply.createdAt}
                               </span>
                             </div>
-                            <p className="text-xs leading-relaxed text-slate-300 font-body">
+                            <p
+                              className={`text-xs leading-relaxed font-body ${t.replyText}`}
+                            >
                               {reply.text}
                             </p>
                           </div>
@@ -364,8 +468,12 @@ export default function IssuesTab({ onReply }) {
                       </div>
                     )}
 
-                    <div className="mb-4 flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-800/40 px-3 py-2">
-                      <MessageSquare className="h-4 w-4 shrink-0 text-slate-500" />
+                    <div
+                      className={`mb-4 flex items-center gap-2 rounded-xl px-3 py-2 ${t.replyInputWrap}`}
+                    >
+                      <MessageSquare
+                        className={`h-4 w-4 shrink-0 ${t.replyInputIcon}`}
+                      />
                       <input
                         value={replyText[issue.id] || ""}
                         onChange={(e) =>
@@ -375,11 +483,13 @@ export default function IssuesTab({ onReply }) {
                           if (e.key === "Enter") handleSendReply(issue.id);
                         }}
                         placeholder="Write a reply to the user…"
-                        className="w-full bg-transparent text-sm text-slate-200 placeholder-slate-500 outline-none font-body"
+                        className={`w-full bg-transparent text-sm outline-none font-body ${t.replyInput}`}
                       />
                     </div>
                     {replyErrors[issue.id] && (
-                      <div className="mt-1 text-xs text-rose-400 pb-2 capitalize">
+                      <div
+                        className={`mt-1 text-xs pb-2 capitalize ${t.errorText}`}
+                      >
                         {replyErrors[issue.id]}
                       </div>
                     )}
@@ -387,7 +497,7 @@ export default function IssuesTab({ onReply }) {
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => handleSendReply(issue.id)}
-                        className="rounded-lg bg-indigo-500/10 px-3.5 py-2 text-xs font-medium text-indigo-400 ring-1 ring-indigo-500/30 hover:bg-indigo-500/20 transition-colors"
+                        className={`rounded-lg px-3.5 py-2 text-xs font-medium transition-colors ${t.sendBtn}`}
                         disabled={replyAdding}
                       >
                         {replyAdding ? "Adding..." : "Send Reply"}
@@ -397,7 +507,7 @@ export default function IssuesTab({ onReply }) {
                           onClick={() => {
                             onResolve(issue.id);
                           }}
-                          className="rounded-lg bg-emerald-500/10 px-3.5 py-2 text-xs font-medium text-emerald-400 ring-1 ring-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
+                          className={`rounded-lg px-3.5 py-2 text-xs font-medium transition-colors ${t.resolveBtn}`}
                           disabled={replyAdding || !onResolve}
                         >
                           {markingResolved ? "Marking..." : "Mark Resolved"}
@@ -423,7 +533,7 @@ export default function IssuesTab({ onReply }) {
           setCurrentPage(1);
         }}
         pageSizeOptions={[5, 10, 15, 20]}
-        darkMode={true}
+        darkMode={darkMode}
       />
     </div>
   );

@@ -112,13 +112,12 @@ const Overview = () => {
     {
       id: "total-profit",
       title: "Available Balance",
-      value: `₹ ${(totalProfit - portfolio?.pendingSum ?? 0).toLocaleString(
-        "en-IN",
-        {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        },
-      )}`,
+      value: `₹ ${(
+        totalProfit - portfolio?.pendingSum - portfolio?.successSum ?? 0
+      ).toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`,
       badge: `Total redeemed : -₹ ${portfolio?.successSum || 0}`,
       // isPositiveBadge: true,
       imageSrc: "/profit.png", // Unique decorative asset
@@ -132,11 +131,14 @@ const Overview = () => {
       imageSrc: "/pending.png", // Unique decorative asset
     },
   ];
-
+  //remove last card if pendingSum is not there
+  if (!portfolio?.pendingSum) cardsData.pop();
   return (
     <>
       {/* Financial Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div
+        className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-${portfolio?.pendingSum ? "4" : "3"} gap-6`}
+      >
         {cardsData.map((card) => (
           <div
             key={card.id}

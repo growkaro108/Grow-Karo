@@ -20,6 +20,7 @@ import {
   validateEmailOtp,
   fetchUserNotificationsApi,
   submitIssueApi,
+  fetchUserIssuesApi,
 } from "@/api/userApi";
 import { allRounderMessage } from "@/components/Message";
 
@@ -256,8 +257,8 @@ export async function updateNominee(userId, nomineeId, nominee) {
   return null;
 }
 
-export async function fetchUserNotifications(userId, page) {
-  const res = await fetchUserNotificationsApi(userId, page);
+export async function fetchUserNotifications(userId, tab, page) {
+  const res = await fetchUserNotificationsApi(userId, tab, page);
   if (res.status == "success") {
     return res.data;
   }
@@ -272,6 +273,15 @@ export async function submitIssue(userId, data) {
     return res.data;
   }
 
+  return null;
+}
+
+export async function loadUserIssues(userId, status, page, size) {
+  const res = await fetchUserIssuesApi(userId, status, page, size);
+  if (res.status == "success") {
+    return res.data;
+  }
+  allRounderMessage(res);
   return null;
 }
 

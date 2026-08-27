@@ -366,19 +366,25 @@ public class AdminAPIController {
             if (status == null || status.isBlank()) {
                 return general.response("error", "Invalid status.", null);
             }
+            Status askedStatus = null;
             switch (status.toLowerCase()) {
                 case "unresolved":
-                    return general.response("success", "Issues fetched successfully",
-                            adminAPIService.issues(Status.OPEN, pageable));
+                    askedStatus = Status.OPEN;
+                    break;
                 case "in_progress":
-                    return general.response("success", "Issues fetched successfully",
-                            adminAPIService.issues(Status.IN_PROGRESS, pageable));
+                    askedStatus = Status.IN_PROGRESS;
+                    break;
                 case "resolved":
-                    return general.response("success", "Issues fetched successfully",
-                            adminAPIService.issues(Status.CLOSED, pageable));
+                    askedStatus = Status.CLOSED;
+                    break;
                 default:
                     return general.response("error", "Invalid status.", null);
             }
+            var result = adminAPIService.issues(askedStatus, pageable);
+            if (result == null) {
+                return general.response("error", "Failed to fetch issues", null);
+            }
+            return general.response("success", "Issues fetched successfully", result);
         } catch (Exception e) {
             log.error("Error while fetching issues: " + e.getMessage());
             return general.response("error",

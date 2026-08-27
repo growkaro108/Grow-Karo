@@ -5,7 +5,7 @@ import React, {
   useContext,
   useCallback,
 } from "react";
-import { Bell, CheckCheck, Inbox } from "lucide-react";
+import { Bell, CheckCheck, Inbox, NotebookPen } from "lucide-react";
 import NotificationItem from "./NotificationItem";
 import NotificationItemSkeleton from "./NotificationItemSkeleton";
 import Pagination from "./Pagination";
@@ -16,7 +16,7 @@ import { fetchUserNotifications } from "../../../../../services/grahakService";
 const PAGE_SIZE = 6;
 const TABS = [
   { key: "unread", label: "Unread" },
-  { key: "all", label: "All" },
+  { key: "read", label: "Read" },
 ];
 
 export default function NotificationPanel({ onItemClick }) {
@@ -41,7 +41,7 @@ export default function NotificationPanel({ onItemClick }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchUserNotifications(userId, page);
+      const res = await fetchUserNotifications(userId, tab, page);
       const resData = res?.data || res || {};
       // console.log(userId + "===>" + page, resData);
       const rawItems = resData.items || resData.notifications || [];
@@ -157,6 +157,13 @@ export default function NotificationPanel({ onItemClick }) {
     try {
       if (userId) {
         await markUserNotificationsAsRead(userId, [id]);
+        //if unread tab remove from them
+        if (tab === "unread") {
+          setData((d) => ({
+            ...d,
+            items: d.items.filter((n) => n.id !== id),
+          }));
+        }
       }
     } catch {
       load(); // reconcile with server on failure
@@ -172,6 +179,15 @@ export default function NotificationPanel({ onItemClick }) {
     try {
       if (userId) {
         await markUserNotificationsAsRead(userId, []);
+        // if unread tab remove from them
+        if (tab === "unread") {
+          setData((d) => ({
+            ...d,
+            items: [],
+            totalCount: 0,
+            unreadCount: 0,
+          }));
+        }
       }
     } catch {
       load();
@@ -227,13 +243,21 @@ export default function NotificationPanel({ onItemClick }) {
                 key={t.key}
                 type="button"
                 onClick={() => setTab(t.key)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer flex items-center gap-1 ${
                   tab === t.key
                     ? "bg-emerald-50 text-emerald-700 font-semibold"
                     : "text-slate-500 hover:bg-slate-50"
                 }`}
               >
-                {t.label}
+                {t.label !== "Read" ? (
+                  <>
+                    <NotebookPen size={15} /> {t.label}
+                  </>
+                ) : (
+                  <>
+                    <CheckCheck size={15} /> {t.label}
+                  </>
+                )}
                 {t.key === "unread" && data.unreadCount > 0 && (
                   <span className="ml-1 text-emerald-600">
                     ({data.unreadCount})
@@ -284,7 +308,7 @@ export default function NotificationPanel({ onItemClick }) {
           {!loading && !error && data.items.length > 0 && (
             <Pagination
               page={page}
-              totalPages={totalPages - 1}
+              totalPages={totalPages}
               onChange={setPage}
             />
           )}

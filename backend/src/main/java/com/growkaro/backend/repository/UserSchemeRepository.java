@@ -20,6 +20,9 @@ import jakarta.persistence.LockModeType;
 @Repository
 public interface UserSchemeRepository extends JpaRepository<UserScheme, String> {
 
+    @Query("SELECT us FROM UserScheme us JOIN FETCH us.scheme AND JOIN FETCH us.user WHERE us.userSchemeId = :userSchemeId")
+    Optional<UserScheme> findByUserSchemeId(@Param("userSchemeId") String userSchemeId);
+
     @Query("SELECT us FROM UserScheme us JOIN FETCH us.scheme WHERE us.user.id = :userId")
     List<UserScheme> findAllByUserId(@Param("userId") String userId);
 

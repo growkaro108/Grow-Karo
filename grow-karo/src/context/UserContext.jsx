@@ -51,7 +51,7 @@ export const UserProvider = ({ children }) => {
     try {
       setIsLoading(true);
       const response = await getAllUsersScheme(authUser?.id);
-      console.log(response.data);
+      // console.log(response.data);
       if (response.status === "success" && response.data) {
         setPortfolio(response.data);
       } else {

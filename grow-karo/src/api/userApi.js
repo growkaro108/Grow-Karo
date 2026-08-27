@@ -99,8 +99,8 @@ export async function fetchUserTransactions(userId) {
   return apiRequest(`/user/${userId}/transactions`);
 }
 
-export async function fetchUserNotificationsApi(userId, page = 1) {
-  return apiRequest(`${base}/${userId}/notifications?page=${page}`);
+export async function fetchUserNotificationsApi(userId, tab, page = 1) {
+  return apiRequest(`${base}/${userId}/notifications?tab=${tab}&page=${page}`);
 }
 
 export async function markUserNotificationsAsRead(
@@ -129,6 +129,12 @@ export async function submitIssueApi(userId, data) {
     method: "POST",
     body: data,
   });
+}
+
+export async function fetchUserIssuesApi(userId, status, page, size) {
+  return apiRequest(
+    `${base}/${userId}/issues?status=${status}&page=${page}&limit=${size}`,
+  );
 }
 
 //implement but not used

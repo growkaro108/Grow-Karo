@@ -101,7 +101,7 @@ export default function AggresiveTop({ value, onChange, isAggressive }) {
         userSchemeId: h.userSchemeId,
         name: h.schemeName,
         tenure: h.tenure,
-        amount: h.profit - h - profitReedemed,
+        amount: h.profit - h.profitReedemed,
         invested: h.paidAmount,
       }));
   }, [holding, isAggressive]);

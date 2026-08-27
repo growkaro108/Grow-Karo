@@ -26,6 +26,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
 import com.growkaro.backend.DRO.NewNominee;
 import com.growkaro.backend.DRO.RaiseIssue;
@@ -33,6 +34,8 @@ import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.DRO.WithdrawAmount;
 import com.growkaro.backend.DTO.IssueResponse;
 import com.growkaro.backend.DTO.NomineeResponse;
+import com.growkaro.backend.DTO.NotificationView;
+import com.growkaro.backend.DTO.PagedResponse;
 import com.growkaro.backend.DTO.TransactionResponse;
 import com.growkaro.backend.DTO.TransactionSummary;
 import com.growkaro.backend.DTO.UserPortfolio;
@@ -48,6 +51,7 @@ import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserProfile;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
+import com.growkaro.backend.entity.SupportIssue.Status;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.repository.BankDetailsRepository;
 import com.growkaro.backend.repository.NotificationRepository;
@@ -81,7 +85,7 @@ public class UserAPIService {
 
     // @Cacheable(value = "testApis", key = "#id")
     @Transactional
-    public boolean testApis() {
+    public Object testApis() {
         try {
             // User u = userRepository.findById("GKUSID20260731180215").get();
             // Page<List<IssueResponse>> issues =
@@ -90,26 +94,31 @@ public class UserAPIService {
             // for(IssueResponse issue : issues) {
             // System.out.println(issue);
             // }
-            LocalDateTime time = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+            // LocalDateTime time = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
 
-            List<UserScheme> list = userSchemeRepository.findAll();
-            for (UserScheme userScheme : list) {
-                // userScheme.setUpdatedAt(time.minusDays(5));
-                if (userScheme.getProfitDates() == null) {
-                    userScheme.setProfitDates(new HashSet<>());
-                    // userSchemeRepository.save(userScheme);
-                }
-                if (userScheme.getProfit().compareTo(BigDecimal.ZERO) > 0) {
-                    Set<LocalDateTime> profitDates = new HashSet<>();
+            // List<UserScheme> list = userSchemeRepository.findAll();
+            // for (UserScheme userScheme : list) {
+            // // userScheme.setUpdatedAt(time.minusDays(5));
+            // if (userScheme.getProfitDates() == null) {
+            // userScheme.setProfitDates(new HashSet<>());
+            // // userSchemeRepository.save(userScheme);
+            // }
+            // if (userScheme.getProfit().compareTo(BigDecimal.ZERO) > 0) {
+            // Set<LocalDateTime> profitDates = new HashSet<>();
 
-                    profitDates.add(time.minusDays(30));
-                    profitDates.add(time.minusDays(20));
-                    profitDates.add(time.minusDays(5));
-                    userScheme.setProfitDates(profitDates);
-                }
-                userSchemeRepository.save(userScheme);
-            }
-            return true;
+            // profitDates.add(time.minusDays(30));
+            // profitDates.add(time.minusDays(20));
+            // profitDates.add(time.minusDays(5));
+            // userScheme.setProfitDates(profitDates);
+            // }
+            // userSchemeRepository.save(userScheme);
+            // }
+
+            // UserScheme userSchemes = getUserSchemeById("GKUSID20260728184654");
+            // System.out.println(userSchemes);
+            Map<String, Object> userNotifications = userNotifications("GKUSID20260731180215", "unread", 1);
+
+            return userNotifications;
         } catch (Exception e) {
             log.error("Failed to set user status active", e);
             return false;
@@ -128,12 +137,12 @@ public class UserAPIService {
         return userSchemeRepository.existsById(userSchemeId);
     }
 
-    // @Cacheable(value = "getUserSchemeById", key = "'userSchemeId'")
+    @Cacheable(value = "getUserSchemeById", key = "#userSchemeId")
     public UserScheme getUserSchemeById(String userSchemeId) {
         if (userSchemeId == null || userSchemeId.isBlank()) {
             return null;
         }
-        Optional<UserScheme> userScheme = userSchemeRepository.findById(userSchemeId);
+        Optional<UserScheme> userScheme = userSchemeRepository.findByUserSchemeId(userSchemeId);
         return userScheme.isPresent() ? userScheme.get() : null;
     }
 
@@ -354,6 +363,7 @@ public class UserAPIService {
     }
 
     @Cacheable(value = "userSchemes", key = "#userId")
+    @Transactional(readOnly = true)
     public Map<String, Object> getMyScheme(String userId) {
         try {
             User user = getUserById(userId);
@@ -378,6 +388,7 @@ public class UserAPIService {
             }
             List<UserPortfolio> portfolios = user.getEnrolledSchemes()
                     .stream()
+                    .sorted((a, b) -> b.getRequestDate().compareTo(a.getRequestDate()))
                     // .filter(us -> us.getIsApproved())
                     .map(general::toUserPortfolio)
                     .toList();
@@ -720,22 +731,29 @@ public class UserAPIService {
         return general.response("success", "Nominee updated successfully", NomineeResponse.fromEntity(nominee));
     }
 
-    @Cacheable(value = "userNotifications", key = "#userId + ':' + #page")
+    @Cacheable(value = "userNotifications", key = "#userId + ':' + #tab + ':' + #page", unless = "#result.get('status') == 'error'")
     @Transactional(readOnly = true)
-    public Map<String, Object> userNotifications(String userId, int page) {
+    public Map<String, Object> userNotifications(String userId, String tab, int page) {
         User user = getUserById(userId);
         if (user == null) {
             return general.response("error", "Invalid requests...", Map.of("id", userId));
         }
-        Pageable pageable = PageRequest.of(page, 5, Sort.by(Sort.Direction.ASC, "createdAt"));
-        Page<Notification> notifications = notificationRepository.findByReceiverIdAndReceiverType(
-                user.getId(), Notification.ReceiverType.User, pageable);
+        boolean isRead = false;
+        if (tab.equalsIgnoreCase("read")) {
+            isRead = true;
+        }
+        // The API exposes one-based page numbers, whereas Spring Data uses zero-based
+        // indexes.
+        Pageable pageable = PageRequest.of(page - 1, 10, Sort.by(Sort.Direction.ASC, "createdAt"));
+        Page<Notification> notifications;
+        notifications = notificationRepository.findByReceiverIdAndReceiverTypeAndRead(
+                user.getId(), Notification.ReceiverType.User, isRead, pageable);
         Map<String, Object> data = paginatedMeta(notifications);
         data.put("userId", user.getId());
         data.put("unreadCount",
                 notificationRepository.countByReceiverIdAndReceiverTypeAndRead(user.getId(),
                         Notification.ReceiverType.User, false));
-        data.put("items", notifications.getContent().stream().map(general::toNotificationView).toList());
+        data.put("items", notifications.getContent().stream().map(NotificationView::fromEntity).toList());
         return general.response("success", "User notifications fetched", data);
     }
 
@@ -758,6 +776,8 @@ public class UserAPIService {
                 Map.of("userId", userId, "settings", settings));
     }
 
+    @CacheEvict(value = "userIssues", key = "#userId", condition = "'success'.equals(#result?.get('status'))")
+    @Transactional
     public Map<String, Object> submitIssue(String userId, RaiseIssue issue) {
         try {
             if (!general.isValidId(userId) || !existByUserId(userId)) {
@@ -779,17 +799,24 @@ public class UserAPIService {
 
             return general.response("success", "Issue submitted successfully", true);
         } catch (Exception e) {
+            // Ensure the transaction is rolled back even though we're catching here.
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             log.error("Error submitting issue for user {}", userId, e);
             return general.response("error", "Failed to submit issue", null);
         }
     }
 
-    public Map<String, Object> getUserIssues(String userId, Pageable pageable) {
-        if (!general.isValidId(userId) || !existByUserId(userId)) {
-            return general.response("error", "Invalid request...", Map.of("id", userId));
+    @Cacheable(value = "userIssues", key = "#userId + ':' + #status + ':' + #page")
+    @Transactional(readOnly = true)
+    public PagedResponse<IssueResponse> issues(String userId, Status status, Pageable pageable) {
+        try {
+            var issuesPage = supportIssueRepository.findBySubmitterIdAndStatus(userId, status, pageable);
+            var mapped = issuesPage.map(IssueResponse::fromEntity);
+            return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
+        } catch (Exception e) {
+            log.error("Error fetching issues for user {}", userId, e);
+            return null;
         }
-        Page<SupportIssue> issues = supportIssueRepository.findBySubmitterId(userId, pageable);
-        return general.response("success", "User issues fetched", issues);
     }
 
     //// pending

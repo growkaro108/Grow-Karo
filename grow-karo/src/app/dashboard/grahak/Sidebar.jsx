@@ -44,7 +44,7 @@ export default function Sidebar({ activeTab, setActiveTab, userEmail, name }) {
       <aside
         id="sidebar-navigation"
         className={`
-          fixed lg:static top-0 bottom-0 left-0 z-40 w-64 bg-slate-50 border-r border-slate-200/80 p-6 flex flex-col justify-between transition-transform duration-300 ease-in-out lg:translate-x-0 lg:max-h-[87vh]
+          fixed top-0 bottom-0 left-0 z-40 w-64 bg-slate-50 border-r border-slate-200/80 p-6 flex flex-col justify-between transition-transform duration-300 ease-in-out lg:translate-x-0 lg:max-h-screen
           ${isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}
         `}
       >

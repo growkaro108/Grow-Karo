@@ -63,7 +63,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneralException(Exception e) {
-        log.error("Unhandled exception", e);
+        log.error("Unhandled exception: ", e.getMessage());
         Map<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("timestamp", Instant.now().toString());
         errorResponse.put("message", "An unexpected error occurred");

@@ -166,7 +166,7 @@ public class General {
     public UserPortfolio toUserPortfolio(UserScheme us) {
         Scheme scheme = us.getScheme();
         Nominee nominee = us.getNominee();
-        NomineeResponse nomineeResponse = toNomineeResponse(nominee);
+        NomineeResponse nomineeResponse = NomineeResponse.fromEntity(nominee);
         List<LocalDateTime> profitDates = new ArrayList<>(us.getProfitDates());
         return new UserPortfolio(
                 scheme.getSchemeId(),
@@ -359,29 +359,6 @@ public class General {
                 user.getEmail(),
                 user.getPhone(),
                 transfers);
-    }
-
-    public NomineeResponse toNomineeResponse(Nominee nominee) {
-        return new NomineeResponse(
-                nominee.getNomineeId(),
-                nominee.getName(),
-                nominee.getAadharNo(),
-                nominee.getMobileNo(),
-                nominee.getRelation());
-    }
-
-    public Map<String, Object> toNotificationView(Notification notification) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("id", notification.getId());
-        data.put("title", notification.getTitle());
-        data.put("message", notification.getMessage());
-        data.put("type", notification.getNotificationType());
-        data.put("actionType", notification.getActionType());
-        data.put("read", notification.isRead());
-        data.put("actionUrl", notification.getActionUrl());
-        data.put("createdAt", notification.getCreatedAt());
-        data.put("updatedAt", notification.getUpdatedAt());
-        return data;
     }
 
     public AdminUser toAdminUser(User user) {

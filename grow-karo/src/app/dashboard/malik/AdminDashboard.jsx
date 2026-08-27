@@ -214,10 +214,7 @@ export default function AdminPanel() {
               {activeTab === "plans" && <PlanTab />}
               {activeTab === "approvals" && <SchemeApproval />}
               {activeTab === "issues" && (
-                <IssuesTab
-                  // issues={issues}
-                  onResolve={handleResolveIssue}
-                />
+                <IssuesTab Admin={true} onResolve={handleResolveIssue} />
               )}
               {activeTab === "remitter" && <AdminRemitterTrackersTab />}
               {activeTab === "user" && <UserManagement />}

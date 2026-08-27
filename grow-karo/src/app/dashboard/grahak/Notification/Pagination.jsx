@@ -17,13 +17,13 @@ export default function Pagination({ page, totalPages, onChange }) {
       </button>
 
       <span className="text-xs font-medium" style={{ color: "#64748b" }}>
-        Page {page} of {totalPages}
+        Page {page} of {totalPages - 1}
       </span>
 
       <button
         type="button"
         onClick={() => onChange(page + 1)}
-        disabled={page >= totalPages}
+        disabled={page >= totalPages - 1}
         className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
         aria-label="Next page"
       >

@@ -9,7 +9,6 @@ import TabLoader from "../../../loader/TabLoader";
 import { useRouter } from "next/navigation";
 import { RefreshCcw } from "lucide-react";
 import NotificationPanel from "./Notification/NotificationPanel";
-// import MyIssuesTab from "./MyIssueTab";
 
 const Overview = dynamic(() => import("./Overview"), {
   loading: () => <TabLoader message={"Loading overview..."} />,
@@ -27,7 +26,7 @@ const Transactions = dynamic(() => import("./Transaction"), {
   loading: () => <TabLoader message={"Loading transactions..."} />,
   ssr: false,
 });
-const MyIssuesTab = dynamic(() => import("./MyIssueTab"), {
+const MyIssuesTab = dynamic(() => import("../malik/components/IssuesTab"), {
   loading: () => <TabLoader message={"Loading issues..."} />,
   ssr: false,
 });
@@ -43,42 +42,8 @@ export default function DashboardPage() {
   const { authUser, fetchPortfolio, isLoading } = use(userContext);
   const router = useRouter();
 
-  const [dashboardData, setDashboardData] = useState({
-    holdings: [],
-    transactions: [],
-    graphDataMap: {},
-  });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  useEffect(() => {
-    let active = true;
-    // setLoading(true);
-
-    fetchGrahakDashboardData("me")
-      .then((data) => {
-        if (!active) return;
-        setDashboardData({
-          holdings: Array.isArray(data.holdings) ? data.holdings : [],
-          transactions: Array.isArray(data.transactions)
-            ? data.transactions
-            : [],
-          graphDataMap: data.graphDataMap ?? {},
-        });
-      })
-      .catch((fetchError) => {
-        if (!active) return;
-        console.error(fetchError);
-        setError(fetchError?.message ?? "Unable to load Grahak data.");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
 
   function openGeneralWithdrawModal() {
     // setWithdrawData(authUser);
@@ -86,12 +51,17 @@ export default function DashboardPage() {
     setActiveTab("withdraw");
   }
 
-  const { transactions } = dashboardData;
   useEffect(() => {
-    if (!authUser) {
-      router.replace("/auth");
+    try {
+      if (!authUser) {
+        router.replace("/auth");
+      }
+      fetchPortfolio();
+    } catch (error) {
+      console.error(error);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setError(error?.message ?? "Unable to load User data.");
     }
-    fetchPortfolio();
   }, [authUser, fetchPortfolio, router]);
 
   const handleRefresh = () => {
@@ -109,9 +79,9 @@ export default function DashboardPage() {
         userEmail={authUser?.email}
         name={authUser?.name}
       />
-      <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-6 sm:pt-8 flex flex-col gap-7 grow">
+      <div className="lg:ml-64 max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-6 sm:pt-8 flex flex-col gap-5 grow">
         {(activeTab === "overview" || activeTab === "portfolio") && (
-          <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-2 border-b border-slate-200">
+          <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-2 border-b border-slate-200 ">
             <div>
               <h1 className="text-xl sm:text-[29px] font-bold tracking-tight text-slate-900 flex gap-3">
                 Welcome Back, Investor
@@ -175,10 +145,10 @@ export default function DashboardPage() {
             {activeTab === "portfolio" && (
               <Portfolio refresh={() => fetchPortfolio()} loading={loading} />
             )}
-            {activeTab === "transactions" && (
-              <Transactions transactions={transactions} />
+            {activeTab === "transactions" && <Transactions />}
+            {activeTab === "issue" && (
+              <MyIssuesTab darkMode={false} Admin={false} />
             )}
-            {activeTab === "issue" && <MyIssuesTab />}
             {/* {activeTab === "notification" && <NotificationPanel />} */}
             {activeTab === "settings" && <Settings />}
           </>

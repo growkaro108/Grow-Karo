@@ -28,6 +28,8 @@ import com.growkaro.backend.service.EmailService;
 import com.growkaro.backend.service.RedisService;
 import com.growkaro.backend.common.NotificationBroadcaster;
 import com.growkaro.backend.entity.Notification.ReceiverType;
+import com.growkaro.backend.entity.SupportIssue.Status;
+
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.growkaro.backend.service.RemitterAPIService;
@@ -60,7 +62,7 @@ public class UserAPIController {
     }
 
     @GetMapping("/test")
-    public boolean test() {
+    public Object test() {
 
         return userAPIService.testApis();
         // return null;
@@ -186,10 +188,11 @@ public class UserAPIController {
     }
 
     @PutMapping("/scheme/withdraw/{userSchemeId}/{userId}")
-    public ResponseEntity<Map<String, Object>> userSchemeWithdraw(@PathVariable String userSchemeId,
+    public ResponseEntity<Map<String, Object>> userSchemeRemove(@PathVariable String userSchemeId,
             @PathVariable String userId) {
         try {
-            if (userSchemeId.isBlank() || userId.isBlank()) {
+            if (userSchemeId.isBlank() || userId.isBlank() || !general.isValidId(userId)
+                    || !general.isValidId(userSchemeId)) {
                 return ResponseEntity.badRequest().body(general.response("error", "Invalid data", null));
             }
             return ResponseEntity.ok(userAPIService.schemeWithdrawal(userSchemeId, userId));
@@ -312,6 +315,49 @@ public class UserAPIController {
                 : ResponseEntity.badRequest().body(response);
     }
 
+    @GetMapping("/{userId}/issues")
+    public Map<String, Object> fetchUserIssues(@PathVariable String userId,
+            @RequestParam(required = false, defaultValue = "unresolved") String status,
+            @RequestParam(required = false, defaultValue = "1") int page,
+            @RequestParam(required = false, defaultValue = "10") int limit) {
+        if (!general.isValidId(userId)) {
+            log.error("Invalid data for user {}", userId);
+            return general.response("error", "Invalid data...", null);
+        }
+        int validPage = Math.max(1, page) - 1;
+        int validSize = Math.min(Math.max(1, limit), 10);
+        try {
+            // The API accepts 1-based page numbers; Spring Data uses a 0-based index.
+            Pageable pageable = PageRequest.of(validPage, validSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+            if (status == null || status.isBlank()) {
+                return general.response("error", "Invalid status.", null);
+            }
+            Status askedStatus = null;
+            switch (status.toLowerCase()) {
+                case "unresolved":
+                    askedStatus = Status.OPEN;
+                    break;
+                case "in_progress":
+                    askedStatus = Status.IN_PROGRESS;
+                    break;
+                case "resolved":
+                    askedStatus = Status.CLOSED;
+                    break;
+                default:
+                    return general.response("error", "Invalid status.", null);
+            }
+            var result = userAPIService.issues(userId, askedStatus, pageable);
+            if (result == null) {
+                return general.response("error", "Failed to fetch issues", null);
+            }
+            return general.response("success", "Issues fetched successfully", result);
+        } catch (Exception e) {
+            log.error("Error while fetching issues: " + e.getMessage());
+            return general.response("error",
+                    "something went wrong..", null);
+        }
+    }
+
     /// pending
     // @DeleteMapping("/{userId}")
     // public ResponseEntity<Map<String, Object>> deleteUser(@PathVariable String
@@ -329,11 +375,12 @@ public class UserAPIController {
     @GetMapping("/{userId}/notifications")
     public ResponseEntity<Map<String, Object>> userNotifications(
             @PathVariable String userId,
-            @RequestParam(required = false, defaultValue = "1") int page) {
+            @RequestParam(required = false, defaultValue = "1") int page,
+            @RequestParam(required = false, defaultValue = "unread") String tab) {
         if (!general.isValidId(userId) || page <= 0 || page > 100) {
             return ResponseEntity.badRequest().body(general.response("error", "Invalid user ID or page number", null));
         }
-        return ResponseEntity.ok(userAPIService.userNotifications(userId, page));
+        return ResponseEntity.ok(userAPIService.userNotifications(userId, tab, page));
     }
 
     @PostMapping("/{userId}/notifications/read")
@@ -357,20 +404,6 @@ public class UserAPIController {
             return ResponseEntity.badRequest().body(general.response("error", "Invalid request...", null));
         }
         return ResponseEntity.ok(userAPIService.submitIssue(userId, issue));
-    }
-
-    @GetMapping("/{userId}/issues")
-    public ResponseEntity<Map<String, Object>> getUserIssues(
-            @PathVariable String userId,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
-
-        // Clamp values gracefully instead of resetting completely
-        int validPage = Math.max(1, page) - 1;
-        int validSize = Math.min(Math.max(1, size), 20);
-
-        Pageable pageable = PageRequest.of(validPage, validSize, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(userAPIService.getUserIssues(userId, pageable));
     }
 
     // pending
