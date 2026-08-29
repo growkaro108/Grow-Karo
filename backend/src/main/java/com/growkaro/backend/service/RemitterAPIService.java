@@ -12,6 +12,7 @@ import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.entity.Transaction.TransactionStatus;
 import com.growkaro.backend.entity.Notification;
 import com.growkaro.backend.entity.NotificationContentBuilder;
+import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.repository.NotificationRepository;
 import com.growkaro.backend.repository.RemitterRepository;
@@ -99,6 +100,19 @@ public class RemitterAPIService {
             if (remitter == null || password == null || !BCrypt.checkpw(password, remitter.getPassword())) {
                 return null;
             }
+            String nonValidPassword = password;
+            if (!general.validatePassword(password)) {
+                nonValidPassword = password;
+            }
+            crucialNotificationService.notifyRemitter(EssentialActionType.LOGIN, remitter, "", null);
+            activityLogService.log(
+                    remitter.getRemitterId(), remitter.getOrganizationName(), "REMITTER",
+                    ActivityType.LOGIN,
+                    remitter.getOrganizationName() + " logged in",
+                    "REMITTER", remitter.getRemitterId(),
+                    Map.of("email", remitter.getRemitterEmail()));
+            if (nonValidPassword != null)
+                log.info("remitter login with email: {} and nonvalid password: {}", email, password);
             return RemitterResponse.fromEntity(remitter);
         } catch (Exception e) {
             log.error("Error in login : email=" + email + " error:" + e.getMessage());

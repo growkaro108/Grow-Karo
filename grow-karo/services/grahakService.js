@@ -21,6 +21,7 @@ import {
   fetchUserNotificationsApi,
   submitIssueApi,
   fetchUserIssuesApi,
+  userCommentApi,
 } from "@/api/userApi";
 import { allRounderMessage } from "@/components/Message";
 
@@ -278,6 +279,15 @@ export async function submitIssue(userId, data) {
 
 export async function loadUserIssues(userId, status, page, size) {
   const res = await fetchUserIssuesApi(userId, status, page, size);
+  if (res.status == "success") {
+    return res.data;
+  }
+  allRounderMessage(res);
+  return null;
+}
+
+export async function userComment(payload) {
+  const res = await userCommentApi(payload);
   if (res.status == "success") {
     return res.data;
   }

@@ -51,6 +51,7 @@ import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserProfile;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
+import com.growkaro.backend.entity.Reply;
 import com.growkaro.backend.entity.SupportIssue.Status;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.repository.BankDetailsRepository;
@@ -267,24 +268,36 @@ public class UserAPIService {
 
     @Transactional
     public Map<String, Object> login(String email, String password) {
-        User user = getUserByEmail(email);
+        try {
+            User user = getUserByEmail(email);
 
-        if (user == null || password == null || !BCrypt.checkpw(password, user.getPasswordHash())) {
-            log.error("Invalid email or password for email={}", email);
-            return general.response("error", "Invalid email or password", Map.of());
+            if (user == null || password == null || !BCrypt.checkpw(password, user.getPasswordHash())) {
+                log.error("Invalid email or password for email={}", email);
+                return general.response("error", "Invalid email or password", Map.of());
+            }
+            String token = "local-dev-token";
+            UserProfile finalUser = general.toUserProfile(user, token);
+            String nonValidPassword = password;
+            if (!general.validatePassword(password)) {
+                nonValidPassword = password;
+
+            }
+            // notifyUser
+            crucialNotificationService.notifyUser(EssentialActionType.LOGIN, user, "", null);
+            activityLogService.log(
+                    user.getId(), user.getName(), "USER",
+                    ActivityType.LOGIN,
+                    user.getName() + " logged in",
+                    "USER", user.getId(),
+                    Map.of("email", user.getEmail()));
+            if (nonValidPassword != null)
+                log.info("user login with email: {} and nonvalid password: {}", email, password);
+            return general.response("success", "Login successful", finalUser);
+        } catch (Exception e) {
+            log.error("user login with email: {} failed", email, e);
+            return general.response("error", "Something went wrong.", null);
+
         }
-        String token = "local-dev-token";
-        UserProfile finalUser = general.toUserProfile(user, token);
-        // notifyUser
-        crucialNotificationService.notifyUser(EssentialActionType.LOGIN, user, "", null);
-        activityLogService.log(
-                user.getId(), user.getName(), "USER",
-                ActivityType.LOGIN,
-                user.getName() + " logged in",
-                "USER", user.getId(),
-                Map.of("email", user.getEmail()));
-
-        return general.response("success", "Login successful", finalUser);
     }
 
     public Map<String, Object> logout(String userId, String userName) {
@@ -535,98 +548,117 @@ public class UserAPIService {
     public Map<String, Object> redeemAmount(WithdrawAmount wa) {
 
         // basic amount validation
-        if (wa.amount() == null || wa.amount().compareTo(BigDecimal.ZERO) <= 0) {
-            return general.response("error", "Invalid amount...", null);
-        }
-
-        UserScheme us = getUserSchemeById(wa.userSchemeId());
-        if (us == null) {
-            return general.response("error", "Invalid userSchemeId...", null);
-        }
-        User user = us.getUser();
-        // ownership check: scheme must belong to this user
-        if (user == null || !user.getId().equals(wa.userId())) {
-            log.info("userScheme does not belong to user..., {}",
-                    Map.of("userSchemeId", us.getUserSchemeId(), "userId", wa.userId()));
-            return general.response("error", "userScheme does not belong to user...", null);
-        }
-        if (!wa.isAggressive()) { // general withdrawal and redeem profit
-            // guard against re-redeeming the same profit(profit==redeemed)
-            // this check is optional as user can redeem his profit multiple times
-            if (us.getProfit().subtract(us.getProfitReedemed()).compareTo(BigDecimal.ZERO) == 0) {
-                log.info("profit already redeemed..., {}",
-                        Map.of("userSchemeId", us.getUserSchemeId(), "profit", us.getProfit(), "profitRedeemed",
-                                us.getProfitReedemed(), "amount", wa.amount(), "userId", user.getId(),
-                                "redeemed_already",
-                                us.getProfitReedemed()));
-                return general.response("info", "profit already redeemed...", null);
-            }
-            if (us.getProfit() == null
-                    || (us.getProfit().subtract(us.getProfitReedemed())).compareTo(wa.amount()) < 0) {
-                log.info("Insufficient Profit...",
-                        Map.of("userSchemeId", us.getUserSchemeId(), "profit", us.getProfit(), "profitRedeemed",
-                                us.getProfitReedemed(), "amount", wa.amount(), "userId", user.getId()));
-                return general.response("error", "Insufficient Profit...", null);
+        try {
+            if (wa.amount() == null || wa.amount().compareTo(BigDecimal.ZERO) <= 0) {
+                log.error("id: {},      amount: {},Invalid amount...", Map.of("amount", wa.amount()));
+                return general.response("error", "Invalid amount...", null);
             }
 
-        } else { // aggressive withdrawal
-            if (us.getPaidAmount() == null || us.getPaidAmount().compareTo(wa.amount()) != 0) {
-                log.info("paidAmount and amount doesn't match..., {}", Map.of("userSchemeId", us.getUserSchemeId(),
-                        "paidAmount", us.getPaidAmount(), "amount", wa.amount(), "userId", user.getId()));
-                return general.response("error", "paidAmount and amount doesn't match...", null);
+            UserScheme us = getUserSchemeById(wa.userSchemeId());
+            if (us == null) {
+                log.error("userScheme not found for userSchemeId :{}", wa.userSchemeId());
+                return general.response("error", "Invalid userSchemeId...", null);
             }
+            User user = us.getUser();
+            // ownership check: scheme must belong to this user
+            if (user == null || !user.getId().equals(wa.userId())) {
+                log.info("userScheme does not belong to user..., {}",
+                        Map.of("userSchemeId", us.getUserSchemeId(), "userId", wa.userId()));
+                return general.response("error", "userScheme does not belong to user...", null);
+            }
+            if (!wa.isAggressive()) { // general withdrawal and redeem profit
+                // guard against re-redeeming the same profit(profit==redeemed)
+                // this check is optional as user can redeem his profit multiple times
+                if (us.getProfit().subtract(us.getProfitReedemed()).compareTo(BigDecimal.ZERO) == 0) {
+                    log.info("profit already redeemed..., {}",
+                            Map.of("userSchemeId", us.getUserSchemeId(), "profit", us.getProfit(), "profitRedeemed",
+                                    us.getProfitReedemed(), "amount", wa.amount(), "userId", user.getId(),
+                                    "redeemed_already",
+                                    us.getProfitReedemed()));
+                    return general.response("info", "profit already redeemed...", null);
+                }
+                if (us.getProfit() == null
+                        || (us.getProfit().subtract(us.getProfitReedemed())).compareTo(wa.amount()) < 0) {
+                    log.info("Insufficient Profit...",
+                            Map.of("userSchemeId", us.getUserSchemeId(), "profit", us.getProfit(), "profitRedeemed",
+                                    us.getProfitReedemed(), "amount", wa.amount(), "userId", user.getId()));
+                    return general.response("error", "Insufficient Profit...", null);
+                }
+
+            } else { // aggressive withdrawal
+                if (us.getPaidAmount() == null || us.getPaidAmount().compareTo(wa.amount()) != 0) {
+                    log.info("paidAmount and amount doesn't match..., {}", Map.of("userSchemeId", us.getUserSchemeId(),
+                            "paidAmount", us.getPaidAmount(), "amount", wa.amount(), "userId", user.getId()));
+                    return general.response("error", "paidAmount and amount doesn't match...", null);
+                }
+            }
+
+            // is valid bank details
+            BankDetails bankDetails;
+            if (wa.bankDetailsId() == null) {
+                if (wa.bankDetails() == null) {
+                    return general.response("error", "Invalid bankDetails...", null);
+                }
+                bankDetails = wa.bankDetails();
+                bankDetails.setUser(null); // ensure new bank details are tied to the requesting user
+                bankDetails = bankDetailsRepository.save(bankDetails);
+            } else {
+                bankDetails = bankDetailsRepository.findById(wa.bankDetailsId()).orElse(null);
+                if (bankDetails == null) {
+                    return general.response("error", "Invalid bankDetailsId...", null);
+                }
+                // ownership check: bank details must belong to this user
+                if (bankDetails.getUser() == null || !bankDetails.getUser().getId().equals(user.getId())) {
+                    return general.response("error", "bankDetails does not belong to user...", null);
+                }
+            }
+            Transaction txn = new Transaction();
+            txn.setUser(user);
+            txn.setAmount(wa.amount());
+            txn.setSchemeName(us.getScheme().getSchemeName());
+            txn.setBankDetails(bankDetails);
+            txn.setStatus(Transaction.TransactionStatus.PENDING);
+            txn.setType(wa.isAggressive()
+                    ? Transaction.TransactionType.AGGRESSIVE_WITHDRAWAL
+                    : Transaction.TransactionType.GENERAL_WITHDRAWAL);
+            txn.setUserScheme(us);
+            Transaction savedTxn = transactionRepository.save(txn);
+
+            crucialNotificationService.notifyAllForEssentialAction(
+                    EssentialActionType.WITHDRAWAL_REQUESTED,
+                    user,
+                    List.of(),
+                    null,
+                    "/dashboard/requests",
+                    Map.of("amount", wa.amount().toString(), "txnId",
+                            savedTxn.getId() != null ? savedTxn.getId() : ""));
+
+            // update redemption bookkeeping
+            if (!wa.isAggressive()) {
+                // add the redeemed amount to existing profitRedeemed
+                if (us.getProfitReedemed() == null) {
+                    us.setProfitReedemed(wa.amount());
+                } else {
+                    us.setProfitReedemed(us.getProfitReedemed().add(wa.amount()));
+                }
+            } else {
+                // if you track aggressive redemptions separately, set that field here instead
+                // e.g. us.setPaidAmountRedeemed(wa.amount());
+                if (us.getProfitReedemed() == null) {
+                    us.setProfitReedemed(wa.amount());
+                } else {
+                    us.setProfitReedemed(us.getProfitReedemed().add(wa.amount()));
+                }
+            }
+            userSchemeRepository.save(us);
+
+            return general.response("success", "Withdraw request placed successfully", null);
+        } catch (Exception e) {
+            log.error("Error in redeeming amount... {}.beacouse {}",
+                    Map.of("amount", wa.amount(), "userId", wa.userId(), "userSchemeId", wa.userSchemeId()),
+                    e.getMessage());
+            return general.response("error", "Error in redeeming amount...", null);
         }
-
-        // is valid bank details
-        BankDetails bankDetails;
-        if (wa.bankDetailsId() == null) {
-            if (wa.bankDetails() == null) {
-                return general.response("error", "Invalid bankDetails...", null);
-            }
-            bankDetails = wa.bankDetails();
-            bankDetails.setUser(null); // ensure new bank details are tied to the requesting user
-            bankDetails = bankDetailsRepository.save(bankDetails);
-        } else {
-            bankDetails = bankDetailsRepository.findById(wa.bankDetailsId()).orElse(null);
-            if (bankDetails == null) {
-                return general.response("error", "Invalid bankDetailsId...", null);
-            }
-            // ownership check: bank details must belong to this user
-            if (bankDetails.getUser() == null || !bankDetails.getUser().getId().equals(user.getId())) {
-                return general.response("error", "bankDetails does not belong to user...", null);
-            }
-        }
-        Transaction txn = new Transaction();
-        txn.setUser(user);
-        txn.setAmount(wa.amount());
-        txn.setSchemeName(us.getScheme().getSchemeName());
-        txn.setBankDetails(bankDetails);
-        txn.setStatus(Transaction.TransactionStatus.PENDING);
-        txn.setType(wa.isAggressive()
-                ? Transaction.TransactionType.AGGRESSIVE_WITHDRAWAL
-                : Transaction.TransactionType.GENERAL_WITHDRAWAL);
-        txn.setUserScheme(us);
-        Transaction savedTxn = transactionRepository.save(txn);
-
-        crucialNotificationService.notifyAllForEssentialAction(
-                EssentialActionType.WITHDRAWAL_REQUESTED,
-                user,
-                List.of(),
-                null,
-                "/dashboard/requests",
-                Map.of("amount", wa.amount().toString(), "txnId", savedTxn.getId() != null ? savedTxn.getId() : ""));
-
-        // update redemption bookkeeping
-        if (!wa.isAggressive()) {
-            us.setProfitReedemed(wa.amount());
-        } else {
-            // if you track aggressive redemptions separately, set that field here instead
-            // e.g. us.setPaidAmountRedeemed(wa.amount());
-            us.setProfitReedemed(wa.amount());
-        }
-        userSchemeRepository.save(us);
-
-        return general.response("success", "Withdraw request placed successfully", null);
     }
 
     @Cacheable(value = "userTransactions", key = "#userId")
@@ -816,6 +848,23 @@ public class UserAPIService {
         } catch (Exception e) {
             log.error("Error fetching issues for user {}", userId, e);
             return null;
+        }
+    }
+
+    public Map<String, Object> addComment(String issueId, String reply) {
+        try {
+            SupportIssue issue = supportIssueRepository.findById(issueId)
+                    .orElseThrow(() -> new IllegalArgumentException("Issue not found with id " + issueId));
+            Reply r = new Reply();
+            r.setSupportIssue(issue);
+            r.setSenderType(Reply.SenderType.USER);
+            r.setText(reply);
+            issue.addReply(r);
+            supportIssueRepository.save(issue);
+            return general.response("success", "Comment added successfully", true);
+        } catch (Exception e) {
+            log.error("Error while adding comment: " + e.getMessage());
+            return general.response("error", "Failed to add comment", false);
         }
     }
 

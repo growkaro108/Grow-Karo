@@ -137,6 +137,13 @@ export async function fetchUserIssuesApi(userId, status, page, size) {
   );
 }
 
+export async function userCommentApi(payload) {
+  return apiRequest(`${base}/issue/comment`, {
+    method: "POST",
+    body: payload,
+  });
+}
+
 //implement but not used
 export async function deleteNomineeApi(userId, nomineeId) {
   return apiRequest(`/user/${userId}/nominees/${nomineeId}`, {

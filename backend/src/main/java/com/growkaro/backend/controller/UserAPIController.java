@@ -28,6 +28,7 @@ import com.growkaro.backend.service.EmailService;
 import com.growkaro.backend.service.RedisService;
 import com.growkaro.backend.common.NotificationBroadcaster;
 import com.growkaro.backend.entity.Notification.ReceiverType;
+import com.growkaro.backend.entity.Reply;
 import com.growkaro.backend.entity.SupportIssue.Status;
 
 import org.springframework.http.MediaType;
@@ -132,6 +133,7 @@ public class UserAPIController {
         String password = general.stringValue(credentials.get("password"));
 
         if (email == null || !general.validateEmail(email) || password == null || password.isBlank()) {
+            log.warn("Invalid credentials for email: {}", email);
             return ResponseEntity.badRequest()
                     .body(general.response("error", "Invalid credentials", null));
         }
@@ -355,6 +357,18 @@ public class UserAPIController {
             log.error("Error while fetching issues: " + e.getMessage());
             return general.response("error",
                     "something went wrong..", null);
+        }
+    }
+
+    @PostMapping("/issue/comment")
+    public ResponseEntity<Map<String, Object>> userComment(@RequestBody Map<String, String> payload) {
+        try {
+            return ResponseEntity.ok(userAPIService.addComment(
+                    general.stringValue(payload.get("issueId")),
+                    general.stringValue(payload.get("reply"))));
+        } catch (Exception e) {
+            log.error("Error adding comment for issue {}", payload.get("issueId"), e);
+            return ResponseEntity.internalServerError().body(general.response("error", "Internal Server error", null));
         }
     }
 

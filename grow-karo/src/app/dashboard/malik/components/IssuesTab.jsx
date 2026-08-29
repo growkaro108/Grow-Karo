@@ -13,7 +13,7 @@ import { StatusBadge } from "./StatusBadge";
 import { adminContext } from "@/context/AdminContext";
 import { validateReply } from "./issue/ReplyValidation";
 import { markResolved, sendReply } from "../../../../../services/malikService";
-import { loadUserIssues } from "../../../../../services/grahakService";
+import { loadUserIssues, userComment } from "../../../../../services/grahakService";
 import { userContext } from "@/context/UserContext";
 
 const TabButton = ({
@@ -39,9 +39,8 @@ const TabButton = ({
   return (
     <button
       onClick={() => onClick(value)}
-      className={`flex-1 rounded-lg px-4 py-1.5 text-xs font-medium transition-colors sm:flex-none ${
-        activeTab === value ? active : inactive
-      }`}
+      className={`flex-1 rounded-lg px-4 py-1.5 text-xs font-medium transition-colors sm:flex-none ${activeTab === value ? active : inactive
+        }`}
     >
       {label}
     </button>
@@ -122,6 +121,11 @@ export default function IssuesTab({ Admin, darkMode = true }) {
     setOpenId(null);
   };
 
+  const showReplyInput = useMemo(() => {
+    if (!Admin && activeTab !== "in_progress") return false;
+    return activeTab === "resolved" ? false : true;
+  }, [Admin, activeTab]);
+
   const handleSearchChange = (val) => {
     setSearchQuery(val);
     setCurrentPage(1);
@@ -148,10 +152,11 @@ export default function IssuesTab({ Admin, darkMode = true }) {
     setReplyErrors((prev) => ({ ...prev, [id]: null }));
     try {
       setReplyAdding(true);
-      const res = await sendReply({
+      const payload = {
         issueId: id,
         reply: sanitized,
-      });
+      }
+      const res = Admin ? await sendReply(payload) : await userComment(payload);
       if (!res) return;
       fetchData();
     } catch (error) {
@@ -163,7 +168,7 @@ export default function IssuesTab({ Admin, darkMode = true }) {
       }, 1500);
     }
 
-    if (onReply) onReply(id, sanitized);
+    // if (onReply) onReply(id, sanitized);
     setReplyText((prev) => ({ ...prev, [id]: "" }));
   };
 
@@ -185,87 +190,87 @@ export default function IssuesTab({ Admin, darkMode = true }) {
   // ---- Theme classes ----
   const t = darkMode
     ? {
-        tabWrap: "bg-slate-900 border border-slate-800",
-        searchWrap: "border border-slate-800 bg-slate-900/60",
-        searchIcon: "text-slate-500",
-        searchInput: "text-slate-200 placeholder-slate-500",
-        filterWrap:
-          "border border-slate-800 bg-slate-900/60 hover:border-slate-700 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20",
-        filterIcon: "text-slate-400",
-        filterSelect: "text-slate-200",
-        filterOptionBase: "bg-slate-900 text-slate-200",
-        filterOptionCritical: "bg-red-900 text-slate-200",
-        filterOptionHigh: "bg-orange-900 text-slate-200",
-        filterOptionMedium: "bg-yellow-900 text-slate-200",
-        filterOptionLow: "bg-emerald-700 text-slate-200",
-        chevron: "text-slate-400",
-        refreshBtn:
-          "border border-slate-800 bg-slate-900/60 hover:border-slate-700 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20",
-        refreshIcon: "text-slate-400",
-        emptyState: "border border-slate-800 bg-slate-900/40 text-slate-500",
-        card: "border border-slate-800 bg-slate-900/60",
-        cardHeaderHover: "hover:bg-slate-800/30",
-        idBadge: "bg-slate-800 text-slate-500",
-        title: "text-slate-300",
-        subtitle: "text-slate-500",
-        repliesLabel: "text-indigo-400",
-        cardChevron: "text-slate-500",
-        cardBorder: "border-slate-800",
-        description: "text-slate-300",
-        replyBubble: "border border-indigo-500/20 bg-indigo-500/5",
-        replyLabel: "text-indigo-400",
-        replyTimestamp: "text-slate-500",
-        replyText: "text-slate-300",
-        replyInputWrap: "border border-slate-800 bg-slate-800/40",
-        replyInputIcon: "text-slate-500",
-        replyInput: "text-slate-200 placeholder-slate-500",
-        errorText: "text-rose-400",
-        sendBtn:
-          "bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/30 hover:bg-indigo-500/20",
-        resolveBtn:
-          "bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/30 hover:bg-emerald-500/20",
-      }
+      tabWrap: "bg-slate-900 border border-slate-800",
+      searchWrap: "border border-slate-800 bg-slate-900/60",
+      searchIcon: "text-slate-500",
+      searchInput: "text-slate-200 placeholder-slate-500",
+      filterWrap:
+        "border border-slate-800 bg-slate-900/60 hover:border-slate-700 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20",
+      filterIcon: "text-slate-400",
+      filterSelect: "text-slate-200",
+      filterOptionBase: "bg-slate-900 text-slate-200",
+      filterOptionCritical: "bg-red-900 text-slate-200",
+      filterOptionHigh: "bg-orange-900 text-slate-200",
+      filterOptionMedium: "bg-yellow-900 text-slate-200",
+      filterOptionLow: "bg-emerald-700 text-slate-200",
+      chevron: "text-slate-400",
+      refreshBtn:
+        "border border-slate-800 bg-slate-900/60 hover:border-slate-700 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20",
+      refreshIcon: "text-slate-400",
+      emptyState: "border border-slate-800 bg-slate-900/40 text-slate-500",
+      card: "border border-slate-800 bg-slate-900/60",
+      cardHeaderHover: "hover:bg-slate-800/30",
+      idBadge: "bg-slate-800 text-slate-500",
+      title: "text-slate-300",
+      subtitle: "text-slate-500",
+      repliesLabel: "text-indigo-400",
+      cardChevron: "text-slate-500",
+      cardBorder: "border-slate-800",
+      description: "text-slate-300",
+      replyBubble: "border border-indigo-500/20 bg-indigo-500/5",
+      replyLabel: "text-indigo-400",
+      replyTimestamp: "text-slate-500",
+      replyText: "text-slate-300",
+      replyInputWrap: "border border-slate-800 bg-slate-800/40",
+      replyInputIcon: "text-slate-500",
+      replyInput: "text-slate-200 placeholder-slate-500",
+      errorText: "text-rose-400",
+      sendBtn:
+        "bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/30 hover:bg-indigo-500/20",
+      resolveBtn:
+        "bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/30 hover:bg-emerald-500/20",
+    }
     : {
-        tabWrap: "bg-slate-100 border border-slate-200",
-        searchWrap: "border border-slate-200 bg-white",
-        searchIcon: "text-slate-400",
-        searchInput: "text-slate-800 placeholder-slate-400",
-        filterWrap:
-          "border border-slate-200 bg-white hover:border-slate-300 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20",
-        filterIcon: "text-slate-500",
-        filterSelect: "text-slate-700",
-        filterOptionBase: "bg-white text-slate-700",
-        filterOptionCritical: "bg-red-100 text-red-800",
-        filterOptionHigh: "bg-orange-100 text-orange-800",
-        filterOptionMedium: "bg-yellow-100 text-yellow-800",
-        filterOptionLow: "bg-emerald-100 text-emerald-800",
-        chevron: "text-slate-500",
-        refreshBtn:
-          "border border-slate-200 bg-white hover:border-slate-300 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20",
-        refreshIcon: "text-slate-500",
-        emptyState: "border border-slate-200 bg-slate-50 text-slate-500",
-        card: "border border-slate-200 bg-white",
-        cardHeaderHover: "hover:bg-slate-50",
-        idBadge: "bg-slate-100 text-slate-500",
-        title: "text-slate-700",
-        subtitle: "text-slate-500",
-        repliesLabel: "text-indigo-600",
-        cardChevron: "text-slate-400",
-        cardBorder: "border-slate-200",
-        description: "text-slate-700",
-        replyBubble: "border border-indigo-200 bg-indigo-50",
-        replyLabel: "text-indigo-600",
-        replyTimestamp: "text-slate-400",
-        replyText: "text-slate-700",
-        replyInputWrap: "border border-slate-200 bg-slate-50",
-        replyInputIcon: "text-slate-400",
-        replyInput: "text-slate-800 placeholder-slate-400",
-        errorText: "text-rose-600",
-        sendBtn:
-          "bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200 hover:bg-indigo-100",
-        resolveBtn:
-          "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200 hover:bg-emerald-100",
-      };
+      tabWrap: "bg-slate-100 border border-slate-200",
+      searchWrap: "border border-slate-200 bg-white",
+      searchIcon: "text-slate-400",
+      searchInput: "text-slate-800 placeholder-slate-400",
+      filterWrap:
+        "border border-slate-200 bg-white hover:border-slate-300 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20",
+      filterIcon: "text-slate-500",
+      filterSelect: "text-slate-700",
+      filterOptionBase: "bg-white text-slate-700",
+      filterOptionCritical: "bg-red-100 text-red-800",
+      filterOptionHigh: "bg-orange-100 text-orange-800",
+      filterOptionMedium: "bg-yellow-100 text-yellow-800",
+      filterOptionLow: "bg-emerald-100 text-emerald-800",
+      chevron: "text-slate-500",
+      refreshBtn:
+        "border border-slate-200 bg-white hover:border-slate-300 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20",
+      refreshIcon: "text-slate-500",
+      emptyState: "border border-slate-200 bg-slate-50 text-slate-500",
+      card: "border border-slate-200 bg-white",
+      cardHeaderHover: "hover:bg-slate-50",
+      idBadge: "bg-slate-100 text-slate-500",
+      title: "text-slate-700",
+      subtitle: "text-slate-500",
+      repliesLabel: "text-indigo-600",
+      cardChevron: "text-slate-400",
+      cardBorder: "border-slate-200",
+      description: "text-slate-700",
+      replyBubble: "border border-indigo-200 bg-indigo-50",
+      replyLabel: "text-indigo-600",
+      replyTimestamp: "text-slate-400",
+      replyText: "text-slate-700",
+      replyInputWrap: "border border-slate-200 bg-slate-50",
+      replyInputIcon: "text-slate-400",
+      replyInput: "text-slate-800 placeholder-slate-400",
+      errorText: "text-rose-600",
+      sendBtn:
+        "bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200 hover:bg-indigo-100",
+      resolveBtn:
+        "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200 hover:bg-emerald-100",
+    };
 
   return (
     <div className="space-y-4">
@@ -422,9 +427,8 @@ export default function IssuesTab({ Admin, darkMode = true }) {
                     <PriorityDot priority={issue.priority} />
                     <StatusBadge status={issue.status} />
                     <ChevronDown
-                      className={`h-4 w-4 transition-transform duration-300 ${t.cardChevron} ${
-                        expanded ? "rotate-180" : ""
-                      }`}
+                      className={`h-4 w-4 transition-transform duration-300 ${t.cardChevron} ${expanded ? "rotate-180" : ""
+                        }`}
                     />
                   </div>
                 </button>
@@ -444,13 +448,13 @@ export default function IssuesTab({ Admin, darkMode = true }) {
                         {threadForIssue.map((reply, idx) => (
                           <div
                             key={reply.replyId ?? idx}
-                            className={`rounded-xl px-3 py-2 ${t.replyBubble}`}
+                            className={`rounded-xl px-3 py-2 ${t.replyBubble} ${reply.senderType === 'admin' ? "bg-primary/10" : ""}`}
                           >
-                            <div className="mb-1 flex items-center justify-between">
+                            <div className={`mb-1 flex items-center justify-between ${reply.senderType === 'admin' ? "" : "flex-row-reverse"}`}>
                               <span
                                 className={`text-[11px] font-medium ${t.replyLabel}`}
                               >
-                                Our reply
+                                {reply.senderType === 'admin' ? "Admin" : "User"} reply
                               </span>
                               <span
                                 className={`text-[10px] ${t.replyTimestamp}`}
@@ -468,52 +472,60 @@ export default function IssuesTab({ Admin, darkMode = true }) {
                       </div>
                     )}
 
-                    <div
-                      className={`mb-4 flex items-center gap-2 rounded-xl px-3 py-2 ${t.replyInputWrap}`}
-                    >
-                      <MessageSquare
-                        className={`h-4 w-4 shrink-0 ${t.replyInputIcon}`}
-                      />
-                      <input
-                        value={replyText[issue.id] || ""}
-                        onChange={(e) =>
-                          handleReplyChange(issue.id, e.target.value)
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleSendReply(issue.id);
-                        }}
-                        placeholder="Write a reply to the user…"
-                        className={`w-full bg-transparent text-sm outline-none font-body ${t.replyInput}`}
-                      />
-                    </div>
-                    {replyErrors[issue.id] && (
-                      <div
-                        className={`mt-1 text-xs pb-2 capitalize ${t.errorText}`}
-                      >
-                        {replyErrors[issue.id]}
-                      </div>
-                    )}
-
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => handleSendReply(issue.id)}
-                        className={`rounded-lg px-3.5 py-2 text-xs font-medium transition-colors ${t.sendBtn}`}
-                        disabled={replyAdding}
-                      >
-                        {replyAdding ? "Adding..." : "Send Reply"}
-                      </button>
-                      {issue.status !== "resolved" && (
-                        <button
-                          onClick={() => {
-                            onResolve(issue.id);
-                          }}
-                          className={`rounded-lg px-3.5 py-2 text-xs font-medium transition-colors ${t.resolveBtn}`}
-                          disabled={replyAdding || !onResolve}
+                    {showReplyInput && (
+                      <>
+                        <div
+                          className={`mb-4 flex items-center gap-2 rounded-xl px-3 py-2 ${t.replyInputWrap}`}
                         >
-                          {markingResolved ? "Marking..." : "Mark Resolved"}
-                        </button>
-                      )}
-                    </div>
+                          <MessageSquare
+                            className={`h-4 w-4 shrink-0 ${t.replyInputIcon}`}
+                          />
+                          <input
+                            value={replyText[issue.id] || ""}
+                            onChange={(e) => handleReplyChange(issue.id, e.target.value)}
+                            onKeyDown={(e) => {
+                              if (
+                                e.key === "Enter" &&
+                                !replyAdding &&
+                                !markingResolved &&
+                                replyText[issue.id]?.trim()
+                              ) {
+                                handleSendReply(issue.id);
+                              }
+                            }}
+                            placeholder="Write a reply to the user…"
+                            className={`w-full bg-transparent text-sm outline-none font-body ${t.replyInput}`}
+                            disabled={replyAdding || markingResolved}
+                          />
+                        </div>
+
+                        {replyErrors[issue.id] && (
+                          <div className={`mt-1 text-xs pb-2 capitalize ${t.errorText}`}>
+                            {replyErrors[issue.id]}
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => handleSendReply(issue.id)}
+                            className={`rounded-lg px-3.5 py-2 text-xs font-medium transition-colors ${t.sendBtn}`}
+                            disabled={replyAdding || markingResolved || !replyText[issue.id]?.trim()}
+                          >
+                            {replyAdding ? "Adding..." : "Send Reply"}
+                          </button>
+
+                          {issue.status !== "resolved" && (
+                            <button
+                              onClick={() => onResolve(issue.id)}
+                              className={`rounded-lg px-3.5 py-2 text-xs font-medium transition-colors ${t.resolveBtn}`}
+                              disabled={replyAdding || markingResolved || !onResolve}
+                            >
+                              {markingResolved ? "Marking..." : "Mark Resolved"}
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

@@ -364,6 +364,7 @@ public class AdminAPIController {
             // The API accepts 1-based page numbers; Spring Data uses a 0-based index.
             Pageable pageable = PageRequest.of(page - 1, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
             if (status == null || status.isBlank()) {
+                log.warn("Invalid status for issues: {}", status);
                 return general.response("error", "Invalid status.", null);
             }
             Status askedStatus = null;

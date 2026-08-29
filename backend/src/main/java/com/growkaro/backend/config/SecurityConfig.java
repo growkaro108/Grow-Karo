@@ -43,6 +43,7 @@ public class SecurityConfig {
                                                                 "/api/user/{userId}/notifications/stream",
                                                                 "/api/user/{userId}/raiseIssue",
                                                                 "/api/user/{userId}/issues",
+                                                                "/api/user/issue/comment",
                                                                 "/uploads/bonds/**",
                                                                 "/uploads/settlements/**",
                                                                 "/api/scheme/get",

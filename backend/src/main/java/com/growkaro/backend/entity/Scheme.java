@@ -100,7 +100,7 @@ public class Scheme {
 
     @OneToMany(mappedBy = "scheme", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
-    @JsonManagedReference
+    @JsonManagedReference("scheme-joined-users")
     private List<UserScheme> joinedUsers = new ArrayList<>();
 
     // --- Lifecycle Callbacks ---

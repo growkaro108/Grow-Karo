@@ -70,7 +70,7 @@ public class UserScheme {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "scheme_id", nullable = false)
-    @JsonBackReference
+    @JsonBackReference("scheme-joined-users")
     private Scheme scheme;
 
     @NotNull(message = "Amount is required")

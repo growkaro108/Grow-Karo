@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "standalone",
   /* config options here */
   reactCompiler: true,
   // allowedDevOrigins: ["192.168.29.94"],
