@@ -221,8 +221,6 @@ public class AdminAPIController {
 
     @PostMapping("/remitter/add")
     public ResponseEntity<Map<String, Object>> addRemitter(@RequestBody AddRemitter addRemitter) {
-        System.out.println(addRemitter);
-
         if (addRemitter == null
                 || addRemitter.getOrganizationName().isBlank()
                 || addRemitter.getAadharNumber().isBlank() || addRemitter.getPanNumber().isBlank()

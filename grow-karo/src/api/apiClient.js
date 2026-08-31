@@ -1,179 +1,90 @@
 import axios from "axios";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
-  process.env.NEXT_PUBLIC_BASE_URL?.trim();
+// Helper function to validate if base URL is a valid http(s) URL or relative path
+function getSanitizedBaseUrl() {
+  const envUrl = (
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    ""
+  ).trim();
 
-//|| "http://localhost:9090/api"; //for development
-// "/api"; // for production
+  // If it's empty, a Windows file path (e.g., "C:\..."), or invalid scheme, fallback to /api
+  if (!envUrl || /^[a-zA-Z]:[\\/]/i.test(envUrl) || envUrl.startsWith("C:")) {
+    return "/api";
+  }
 
-export const resolveMediaUrl = (path) => {
-  if (!path) return "";
-  if (/^https?:\/\//i.test(path)) return path; // already absolute
-  // Strip the trailing /api suffix so we get just the origin+port
-  const apiBase = BASE_URL.replace(/\/api\/?$/, "");
-  return apiBase + (path.startsWith("/") ? path : "/" + path);
-};
-
-export function buildSseUrl(endpoint) {
-  const normalizedEndpoint = endpoint.replace(/^\/+/, "");
-  const baseUrl = trimTrailingSlashes(BASE_URL || "/api");
-  return `${baseUrl}/${normalizedEndpoint}`;
+  return envUrl;
 }
 
-function trimTrailingSlashes(value) {
-  let result = value;
-  while (result.endsWith("/")) result = result.slice(0, -1);
-  return result;
-}
-
-// --- Rate Limiter Setup ---
-// Adjust these values based on your API requirements
-const MAX_REQUESTS = 5; // Max number of requests allowed in the window
-const WINDOW_MS = 1000; // Time window in milliseconds (e.g., 1 second)
-
-const requestQueue = [];
-let activeRequestsCount = 0;
-const requestTimestamps = [];
+const BASE_URL = getSanitizedBaseUrl();
 
 /**
- * Enforces rate limiting by delaying execution if limits are breached.
+ * Creates an isolated Axios instance for production
  */
-async function rateLimitGate() {
-  return new Promise((resolve) => {
-    const checkGate = () => {
-      const now = Date.now();
-
-      // Filter out timestamps older than the rolling window
-      while (
-        requestTimestamps.length > 0 &&
-        requestTimestamps[0] <= now - WINDOW_MS
-      ) {
-        requestTimestamps.shift();
-      }
-
-      if (requestTimestamps.length < MAX_REQUESTS) {
-        requestTimestamps.push(now);
-        resolve();
-      } else {
-        // Wait until the oldest request falls out of the window, then check again
-        const delay = requestTimestamps[0] + WINDOW_MS - now;
-        setTimeout(checkGate, Math.max(delay, 10));
-      }
-    };
-
-    requestQueue.push(checkGate);
-
-    // Process queue item if nothing else is waiting immediately
-    if (requestQueue.length === 1) {
-      requestQueue[0]();
-    }
-  });
-}
+export const apiClient = axios.create({
+  baseURL: BASE_URL,
+  headers: {
+    Accept: "application/json",
+  },
+  paramsSerializer: {
+    indexes: null,
+  },
+});
 
 /**
- * Moves to the next item in the rate limiting queue.
+ * Response Interceptor: Standardizes API errors across the entire app
  */
-function advanceQueue() {
-  requestQueue.shift();
-  if (requestQueue.length > 0) {
-    requestQueue[0]();
-  }
-}
-
-// --- URL Builder ---
-function appendQueryParams(url, params) {
-  if (!params) return url;
-
-  const searchParams = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
-      searchParams.append(key, String(value));
-    }
-  });
-
-  const queryString = searchParams.toString();
-  if (!queryString) return url;
-
-  return `${url}${url.includes("?") ? "&" : "?"}${queryString}`;
-}
-
-function buildUrl(endpoint, params) {
-  const normalizedBaseUrl = (BASE_URL || "").trim().replace(/\/+$/, "");
-  const normalizedEndpoint = endpoint.startsWith("/")
-    ? endpoint.slice(1)
-    : endpoint;
-  const isAbsoluteUrl = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(normalizedBaseUrl);
-  if (!normalizedBaseUrl || normalizedBaseUrl === "/") {
-    return appendQueryParams(`/${normalizedEndpoint}`, params);
-  }
-
-  if (!isAbsoluteUrl) {
-    const basePath = normalizedBaseUrl.startsWith("/")
-      ? normalizedBaseUrl
-      : `/${normalizedBaseUrl}`;
-    const url = `${basePath}/${normalizedEndpoint}`.replace(/\/+/g, "/");
-    return appendQueryParams(url, params);
-  }
-
-  const url = new URL(normalizedEndpoint, `${normalizedBaseUrl}/`);
-
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== "") {
-        url.searchParams.append(key, String(value));
-      }
-    });
-  }
-  return url.toString();
-}
-
-// --- API Request Function ---
-async function apiRequest(endpoint, options = {}) {
-  const { method = "GET", body, params, headers = {} } = options;
-  const url = buildUrl(endpoint, params);
-
-  // Wait until rate limit allows the request to proceed
-  await rateLimitGate();
-
-  try {
-    // 1. Prepare dynamic headers copies
-    const requestHeaders = { ...headers };
-
-    // 2. Core configuration
-    const config = {
-      url, // Ensure buildUrl returns a clean string
-      method,
-      headers: requestHeaders,
-    };
-
-    if (body !== undefined && body !== null) {
-      config.data = body;
-
-      // 3. FORCE Axios to handle FormData cleanly without falling back to url-encoded defaults
-      if (body instanceof FormData) {
-        // If Content-Type was mistakenly passed, delete it so the browser sets the boundary automatically
-        delete requestHeaders["Content-Type"];
-      } else if (!requestHeaders["Content-Type"]) {
-        requestHeaders["Content-Type"] = "application/json";
-      }
-    }
-
-    const response = await axios(config);
-    return response.data;
-  } catch (error) {
-    // Standardize error handling
+apiClient.interceptors.response.use(
+  (response) => response.data,
+  (error) => {
     const standardizedError = new Error(
-      error.response?.data?.message || error.message || `API request failed`,
+      error.response?.data?.message || error.message || "API Request Failed",
     );
-    standardizedError.status = error.response?.status || null;
+    standardizedError.status = error.response?.status || 500;
     standardizedError.payload = error.response?.data || null;
 
-    return standardizedError;
-  } finally {
-    // Ensure the queue advances regardless of success or failure
-    advanceQueue();
-  }
+    return Promise.reject(standardizedError);
+  },
+);
+
+/**
+ * Main API wrapper function
+ */
+export async function apiRequest(endpoint, options = {}) {
+  const { method = "GET", body, params, headers = {} } = options;
+
+  // Clean leading slashes from endpoint to avoid breaking Axios baseURL joining
+  const cleanEndpoint =
+    typeof endpoint === "string" ? endpoint.replace(/^\/+/, "") : endpoint;
+
+  return apiClient({
+    url: cleanEndpoint,
+    method,
+    data: body,
+    params,
+    headers,
+  });
 }
 
-export { BASE_URL, apiRequest };
+/**
+ * Resolves full media URLs dynamically
+ */
+export const resolveMediaUrl = (path) => {
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) return path;
+
+  const apiBase = BASE_URL.replace(/\/api\/?$/, "");
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return `${apiBase}${cleanPath}`;
+};
+
+/**
+ * Builds Server-Sent Events (SSE) URLs
+ */
+export function buildSseUrl(endpoint) {
+  const normalizedEndpoint = endpoint.replace(/^\/+/, "");
+  const cleanBase = BASE_URL.replace(/\/+$/, "");
+  return `${cleanBase}/${normalizedEndpoint}`;
+}
+
+export { BASE_URL };

@@ -1,3 +1,5 @@
+name: growwkaro
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -7,8 +9,8 @@ services:
       POSTGRES_DB: growkaro_db
       POSTGRES_USER: growkaro
       POSTGRES_PASSWORD: growkaro123
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -18,29 +20,27 @@ services:
       retries: 5
     networks:
       - growkaro-network
-
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: pgadmin
-    restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@example.com
-      PGADMIN_DEFAULT_PASSWORD: secret
-    ports:
-      - "8081:80"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - growkaro-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
 
   redis:
     image: redis:7-alpine
     container_name: growkaro-redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
-    command: ["redis-server", "--appendonly", "yes"]
+    expose:
+      - "6379"
+    command: 
+      - "redis-server"
+      - "--appendonly"
+      - "yes"
+      - "--maxmemory"
+      - "256mb"
+      - "--maxmemory-policy"
+      - "allkeys-lru"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -50,9 +50,15 @@ services:
       retries: 5
     networks:
       - growkaro-network
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+        reservations:
+          memory: 128M
 
   backend:
-    image: growwkaro/backend:v2
+    image: growwkaro/backend:v3
     container_name: growkaro-backend
     restart: unless-stopped
     depends_on:
@@ -68,25 +74,46 @@ services:
       SPRING_DATASOURCE_PASSWORD: growkaro123
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
-    ports:
-      - "4000:4000"
+      SPRING_REDIS_PASSWORD: ""
+      FRONTEND_URL: http://localhost
+    expose:
+      - "4000"
+    # Uncomment for direct access (not recommended with nginx):
+    # ports:
+    #   - "4000:4000"
     volumes:
       - uploads_data:/app/uploads
     networks:
       - growkaro-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
 
   frontend:
-    image: growwkaro/frontend:v2
+    image: growwkaro/frontend:v3
     container_name: growkaro-frontend
     restart: unless-stopped
     depends_on:
       - backend
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://localhost/api
-    ports:
-      - "3000:3000"
+      NEXT_PUBLIC_API_BASE_URL: /api 
+      NEXT_PUBLIC_ADMIN_EMAILS: mahakaldarshnain1@gmail.com,wv9304@gmail.com
+    expose:
+      - "3000"
+    # Uncomment for direct access (not recommended with nginx):
+    # ports:
+    #   - "3000:3000"
     networks:
       - growkaro-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
 
   nginx:
     image: nginx:1.27-alpine
@@ -99,15 +126,41 @@ services:
         condition: service_started
     ports:
       - "80:80"
+      # For HTTPS with SSL certificates (production):
+      # - "443:443"
     volumes:
       - ./nginx/local/default.conf:/etc/nginx/conf.d/default.conf:ro
+      # For production, uncomment and use:
+      # - ./nginx/prod/default.conf:/etc/nginx/conf.d/default.conf:ro
+      # - certbot_certs:/etc/letsencrypt:ro
+      # - certbot_www:/var/www/certbot:ro
     networks:
       - growkaro-network
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+
+  # Certbot for SSL certificate renewal (production only - uncomment when needed)
+  # certbot:
+  #   image: certbot/certbot
+  #   container_name: growkaro-certbot
+  #   restart: unless-stopped
+  #   volumes:
+  #     - certbot_certs:/etc/letsencrypt
+  #     - certbot_www:/var/www/certbot
+  #   entrypoint: >
+  #     sh -c "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;"
 
 volumes:
   postgres-data:
   redis-data:
   uploads_data:
+  # Uncomment for production SSL:
+  # certbot_certs:
+  # certbot_www:
 
 networks:
   growkaro-network:

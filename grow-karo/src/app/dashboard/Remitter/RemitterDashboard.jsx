@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 import Loader from "@/loader/Loader";
 import SidebarNavigation from "./components/SidebarNavigation";
 import DashboardView from "./components/DashboardView";
-import { fetchRemitterDashboardData } from "../../../../services/remitterService";
 import { Menu } from "lucide-react";
 import TabLoader from "@/loader/TabLoader";
 import { remitterContext } from "@/context/RemitterContext";
@@ -30,11 +29,12 @@ const SettingsView = dynamic(() => import("./components/SettingsView"), {
 });
 
 import RemitterNotificationDropdown from "./components/RemitterNotificationDropdown";
+import { fetchRemitterDashboardData } from "../../../../services/remitterService";
 
 export default function RemitterDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { authRemitter } = use(remitterContext);
+  const { authRemitter, fetchPaymentTimeline } = use(remitterContext);
   const [dashboardData, setDashboardData] = useState({
     dashboardMetrics: { totalVolume: "₹0.00", activeCounterparties: 0 },
     chartData: [],
@@ -45,29 +45,30 @@ export default function RemitterDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // useEffect(() => {
-  //   let active = true;
-  //   // eslint-disable-next-line react-hooks/set-state-in-effect
-  //   setLoading(true);
+  useEffect(() => {
+    let active = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    fetchPaymentTimeline();
 
-  //   fetchRemitterDashboardData("me")
-  //     .then((data) => {
-  //       if (!active) return;
-  //       setDashboardData(data);
-  //     })
-  //     .catch((fetchError) => {
-  //       if (!active) return;
-  //       console.error(fetchError);
-  //       setError(fetchError?.message ?? "Unable to load remitter data.");
-  //     })
-  //     .finally(() => {
-  //       if (active) setLoading(false);
-  //     });
+    fetchRemitterDashboardData("me")
+      .then((data) => {
+        if (!active) return;
+        setDashboardData(data);
+      })
+      .catch((fetchError) => {
+        if (!active) return;
+        console.error(fetchError);
+        setError(fetchError?.message ?? "Unable to load remitter data.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
 
-  //   return () => {
-  //     active = false;
-  //   };
-  // }, []);
+    return () => {
+      active = false;
+    };
+  }, [fetchPaymentTimeline]);
 
   const { dashboardMetrics, chartData, transactions, recipients, requests } =
     dashboardData;

@@ -253,7 +253,9 @@ public class NotificationContentBuilder {
                 case PAYMENT_FAILED ->
                     "Settlement payment failed for transaction %s (Amount: ₹%s).".formatted(txnId, amount);
                 case PASSWORD_CHANGED ->
-                    "Your remitter password was changed successfully.".formatted();
+                    "Your password was changed successfully.";
+                case LOGIN ->
+                    "Login event for %s (IP: %s).".formatted(name, valueOf(params, "ip"));
                 default ->
                     "Remitter alert: %s (Amount: ₹%s, Txn: %s)."
                             .formatted(action.name().toLowerCase().replace('_', ' '), amount, txnId);

@@ -85,7 +85,8 @@ public class SecurityConfig {
                                                                 "/api/remitter/logout",
                                                                 "/api/remitter/{remitterId}/notifications",
                                                                 "/api/remitter/{remitterId}/notifications/read",
-                                                                "/api/remitter/{remitterId}/notifications/stream")
+                                                                "/api/remitter/{remitterId}/notifications/stream",
+                                                                "/api/remitter/{remitterId}/timeline")
                                                 .permitAll() // Public endpoints
                                                 .anyRequest().authenticated() // Everything else requires login
                                 )

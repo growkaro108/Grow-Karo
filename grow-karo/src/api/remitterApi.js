@@ -69,6 +69,10 @@ export async function markRemitterNotificationsAsRead(
   });
 }
 
+export async function getPaymentTimeLineApi(remitterId) {
+  return apiRequest(`${BASE}/${remitterId}/timeline`);
+}
+
 //pending
 
 // export async function fetchRemitterDashboard(remitterId, params) {

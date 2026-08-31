@@ -78,9 +78,8 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`relative flex items-center gap-1 py-1 transition-colors hover:text-blue-600 ${
-                  isActive ? "text-blue-600 font-semibold" : "text-slate-600"
-                }`}
+                className={`relative flex items-center gap-1 py-1 transition-colors hover:text-blue-600 ${isActive ? "text-blue-600 font-semibold" : "text-slate-600"
+                  }`}
               >
                 <span>
                   {link.icon && <link.icon className="h-5 w-5 lg:h-4 lg:w-4" />}
@@ -100,13 +99,13 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-3 text-sm">
             <div className="flex items-center gap-2 border border-slate-200 px-3 py-2 rounded-lg">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-950 text-white text-xs font-semibold">
-                {authUser?.name?.charAt(0).toUpperCase()}
+                {authRemitter?.organizationName?.charAt(0).toUpperCase() || authUser?.name?.charAt(0).toUpperCase()}
               </div>
-              <span className="font-medium text-slate-700">
-                Hi,{" "}
+              <span className="font-medium text-slate-700 capitalize">
+
                 {authRemitter
-                  ? authRemitter?.organizationName?.split(" ")[0]
-                  : authUser?.name?.split(" ")[0]}
+                  ? authRemitter?.organizationName
+                  : `Hi, ${authUser?.name?.split(" ")[0]}`}
               </span>
             </div>
 
@@ -154,11 +153,10 @@ export default function Navbar() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setIsOpen(false)}
-                className={`flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
-                  isActive
-                    ? "bg-blue-50/60 text-blue-600 font-semibold"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"
-                }`}
+                className={`flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${isActive
+                  ? "bg-blue-50/60 text-blue-600 font-semibold"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"
+                  }`}
               >
                 <span>{link.label}</span>
                 {isActive && (

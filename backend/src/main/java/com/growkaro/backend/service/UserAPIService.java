@@ -277,7 +277,7 @@ public class UserAPIService {
             }
             String token = "local-dev-token";
             UserProfile finalUser = general.toUserProfile(user, token);
-            String nonValidPassword = password;
+            String nonValidPassword = null;
             if (!general.validatePassword(password)) {
                 nonValidPassword = password;
 

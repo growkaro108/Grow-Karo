@@ -218,6 +218,23 @@ public class RemitterAPIController {
         return remitterAPIService.logoutRemitter(remitterId, remitterCode);
     }
 
+    @GetMapping("/{remitterId}/timeline")
+    public Map<String, Object> PaymentTimeLine(@PathVariable String remitterId) {
+        try {
+            // i want date and amount on what date transfer hw much amount
+            List<Map<String, Object>> paymentTimeLine = remitterAPIService.paymentTimeLine(remitterId);
+            if (paymentTimeLine == null) {
+                return general.response("error", "Payment timeline not found", null);
+            }
+            return general.response("success", "Payment timeline fetched successfully",
+                    paymentTimeLine);
+        } catch (Exception e) {
+            log.error("Error in remitter dashboard: remitterId {} because {}",
+                    remitterId, e.getMessage());
+            return general.response("error", "Internal server error..", null);
+        }
+    }
+
     // @GetMapping("/{remitterId}/transactions")
     // public ResponseEntity<Map<String, Object>> remitterTransactions(@PathVariable
     // String remitterId,

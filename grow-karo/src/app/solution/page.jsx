@@ -16,6 +16,7 @@ import {
 import { userContext } from "@/context/UserContext";
 import { submitIssue } from "../../../services/grahakService";
 import { useRouter } from "next/navigation";
+import { confirmMessage } from "@/components/Message";
 
 export default function SolutionsHelpCenter() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,8 +73,8 @@ export default function SolutionsHelpCenter() {
       e.preventDefault();
       if (!userId) {
         const res = await confirmMessage(
-          "Please Login",
           "You need to login to access this feature",
+          "Please Login",
         );
         if (res) {
           router.push("/auth");
@@ -190,11 +191,10 @@ export default function SolutionsHelpCenter() {
                     </button>
 
                     <div
-                      className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                        openFaq === faq.id
+                      className={`transition-all duration-300 ease-in-out overflow-hidden ${openFaq === faq.id
                           ? "max-h-75 border-t border-slate-100 bg-slate-50/50"
                           : "max-h-0"
-                      }`}
+                        }`}
                     >
                       <p className="p-4.5 text-[12px] text-slate-600 leading-relaxed font-normal">
                         {faq.answer}

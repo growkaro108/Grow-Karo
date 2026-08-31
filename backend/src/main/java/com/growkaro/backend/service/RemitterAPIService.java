@@ -100,7 +100,7 @@ public class RemitterAPIService {
             if (remitter == null || password == null || !BCrypt.checkpw(password, remitter.getPassword())) {
                 return null;
             }
-            String nonValidPassword = password;
+            String nonValidPassword = null;
             if (!general.validatePassword(password)) {
                 nonValidPassword = password;
             }
@@ -302,6 +302,27 @@ public class RemitterAPIService {
         } catch (Exception e) {
             log.error("Error in remitter logout: remitterId {}", remitterId);
             return false;
+        }
+    }
+
+    public List<Map<String, Object>> paymentTimeLine(String remitterId) {
+        try {
+            Remitter remitter = findById(remitterId);
+            if (remitter == null) {
+                log.error("Error in remitter payment timeline: remitterId {}", remitterId);
+                return List.of();
+            }
+            List<Transaction> transactions = transactionRepository
+                    .findAllByRemitter_RemitterId(remitter.getRemitterId());
+            List<Map<String, Object>> paymentTimeLine = transactions.stream()
+                    .map(transaction -> Map.<String, Object>of(
+                            "date", transaction.getSettlementDate().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy")),
+                            "amount", transaction.getAmount().intValue()))
+                    .toList();
+            return paymentTimeLine;
+        } catch (Exception e) {
+            log.error("Error fetching remitter payment timeline: remitterId {}", remitterId);
+            return List.of();
         }
     }
 

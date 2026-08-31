@@ -95,7 +95,7 @@ ChartJS.register(
 );
 
 const NAV_ITEMS = [
-  { id: "overview", label: "Overview⏱️", icon: LayoutDashboard },
+  // { id: "overview", label: "Overview⏱️", icon: LayoutDashboard },
   { id: "activity", label: "Activity Log", icon: Activity },
   { id: "withdrawals", label: "Withdrawals", icon: Wallet },
   { id: "plans", label: "Plans", icon: ScrollText },
@@ -103,8 +103,8 @@ const NAV_ITEMS = [
   { id: "remitter", label: "Remitter", icon: Ticket },
   { id: "user", label: "User Management", icon: User2Icon },
   { id: "issues", label: "User Issues", icon: MessageCircleQuestionMark },
-  { id: "contacts", label: "Contacts⏱️", icon: Contact },
-  { id: "settings", label: "Settings⏱️", icon: Settings2 },
+  // { id: "contacts", label: "Contacts⏱️", icon: Contact },
+  // { id: "settings", label: "Settings⏱️", icon: Settings2 },
 ];
 
 export default function AdminPanel() {

@@ -8,9 +8,9 @@ import {
   useState,
 } from "react";
 import { deleteSecureCookie, getSecureCookie } from "./cookiesManagement";
-import { RemRequestsCounts } from "../../services/remitterService";
+import { getPaymentTimeLine, getRemittersAllTransactions, RemRequestsCounts } from "../../services/remitterService";
 import { useLoader } from "./LoaderContext";
-import { errorMessage, successMessage } from "@/components/Message";
+import { confirmMessage, errorMessage, successMessage } from "@/components/Message";
 import { logoutRemitterApi } from "@/api/remitterApi";
 
 export const remitterContext = createContext({});
@@ -20,16 +20,27 @@ export const RemitterProvider = ({ children }) => {
   const [requestsCounts, setRequestsCounts] = useState([]);
   const [remLoading, setRemLoading] = useState(true);
   const { showLoader, hideLoader } = useLoader();
+  //from txn
+  const [currentPage, setCurrentPage] = useState(1); // 1-based for UI
+  const [transactions, setTransactions] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
+  const [paymentTimeline, setPaymentTimeline] = useState([]);
+  const [error, setError] = useState("");
+  const PAGE_SIZE = 5;
   const fetchRequestsCounts = useCallback(async () => {
     if (!authRemitter?.id) return;
     try {
       // console.log("called");
+      setRemLoading(true)
       const res = await RemRequestsCounts(authRemitter.id);
       // console.log(res);
       setRequestsCounts(res ?? []);
     } catch (error) {
       console.log(error);
       return;
+    } finally {
+      setRemLoading(false);
     }
   }, [authRemitter]);
 
@@ -52,9 +63,47 @@ export const RemitterProvider = ({ children }) => {
     };
   }, []);
 
+  const fetchTransactions = useCallback(async () => {
+    if (!authRemitter?.id) return;
+    setRemLoading(true);
+    setError("");
+    try {
+      const offset = (currentPage - 1) * PAGE_SIZE;
+      const response = await getRemittersAllTransactions(
+        authRemitter.id,
+        offset,
+        PAGE_SIZE,
+      );
+      if (response) {
+        setTransactions(response.content ?? []);
+        setTotalPages(response.totalPages ?? 1);
+        setTotalElements(response.totalElements ?? 0);
+      }
+    } catch (err) {
+      errorMessage(err.message);
+      console.error("Failed to fetch transactions:", err);
+      setError("Could not load transactions.");
+    } finally {
+      setRemLoading(false);
+    }
+  }, [authRemitter, currentPage]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchTransactions();
+  }, [currentPage, fetchTransactions])
+
+  const goToPage = useCallback((page) => {
+    setCurrentPage(Math.min(Math.max(page, 1), totalPages));
+  }, [totalPages]);
+
   const logoutRemitter = useCallback(async () => {
     if (!authRemitter) return;
     try {
+      const confirm = await confirmMessage("Are you sure you want to logout?");
+      if (!confirm) {
+        return;
+      }
       showLoader("Logout in progress...");
       const res = await logoutRemitterApi(
         authRemitter.id,
@@ -79,6 +128,24 @@ export const RemitterProvider = ({ children }) => {
     }
   }, [authRemitter, hideLoader, showLoader]);
 
+  const fetchPaymentTimeline = useCallback(async () => {
+    if (!authRemitter?.id) return;
+    setRemLoading(true);
+    setError("");
+    try {
+      const response = await getPaymentTimeLine(authRemitter.id);
+      if (response) {
+        setPaymentTimeline(response);
+      }
+    } catch (err) {
+      errorMessage(err.message);
+      console.error("Failed to fetch payment timeline:", err);
+      setError("Could not load payment timeline.");
+    } finally {
+      setRemLoading(false);
+    }
+  }, [authRemitter]);
+
   const contextValue = useMemo(
     () => ({
       authRemitter,
@@ -86,15 +153,9 @@ export const RemitterProvider = ({ children }) => {
       remLoading,
       logoutRemitter,
       fetchRequestsCounts,
-      requestsCounts,
+      requestsCounts, currentPage, goToPage, transactions, totalPages, totalElements, error, fetchTransactions, PAGE_SIZE, paymentTimeline, fetchPaymentTimeline
     }),
-    [
-      authRemitter,
-      remLoading,
-      logoutRemitter,
-      fetchRequestsCounts,
-      requestsCounts,
-    ],
+    [authRemitter, remLoading, logoutRemitter, fetchRequestsCounts, requestsCounts, currentPage, goToPage, transactions, totalPages, totalElements, error, fetchTransactions, paymentTimeline, fetchPaymentTimeline],
   );
 
   return (

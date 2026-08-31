@@ -24,11 +24,12 @@ const UserDashboard = dynamic(() => import("./grahak/UserDashboard"), {
 const Dashboard = () => {
   const { authUser } = use(userContext);
   const { authRemitter } = use(remitterContext);
-
+  const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',').map(e => e.trim()) ?? [];
+  const isAdmin = adminEmails.includes(authUser?.email);
   if (!AdminDashboard || !RemitterDashboard || !UserDashboard) {
     return <Loader />;
   }
-  if (process.env.NEXT_PUBLIC_ADMIN_EMAILS?.includes(authUser?.email)) {
+  if (isAdmin) {
     return <AdminDashboard />;
   } else if (authRemitter) {
     return <RemitterDashboard />;

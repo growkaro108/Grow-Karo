@@ -7,60 +7,23 @@ import { getRemittersAllTransactions } from "../../../../../services/remitterSer
 import { resolveMediaUrl } from "@/api/apiClient";
 import { TableRowLoader } from "@/loader/TableRowLoader";
 
-const PAGE_SIZE = 5;
 
 export default function TransactionsView() {
-  const { authRemitter } = use(remitterContext);
-  const [transactions, setTransactions] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1); // 1-based for UI
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalElements, setTotalElements] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const { currentPage, goToPage, transactions, totalPages, totalElements, error, remLoading, PAGE_SIZE } = use(remitterContext);
+  // const [currentPage, setCurrentPage] = useState(1); // 1-based for UI
+  // const [transactions, setTransactions] = useState([]);
+  // const [totalPages, setTotalPages] = useState(1);
+  // const [totalElements, setTotalElements] = useState(0);
+  // const [isLoading, setIsLoading] = useState(false);
+  // const [error, setError] = useState("");
   const [previewImage, setPreviewImage] = useState(null);
 
-  useEffect(() => {
-    let mounted = true;
 
-    const fetchTransactions = async () => {
-      if (!authRemitter?.id) return;
-      setIsLoading(true);
-      setError("");
-      try {
-        const offset = (currentPage - 1) * PAGE_SIZE;
-        const response = await getRemittersAllTransactions(
-          authRemitter.id,
-          offset,
-          PAGE_SIZE,
-        );
-        if (mounted && response) {
-          setTransactions(response.content ?? []);
-          setTotalPages(response.totalPages ?? 1);
-          setTotalElements(response.totalElements ?? 0);
-        }
-      } catch (err) {
-        if (mounted) {
-          console.error("Failed to fetch transactions:", err);
-          setError("Could not load transactions.");
-        }
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    };
-
-    fetchTransactions();
-
-    return () => {
-      mounted = false;
-    };
-  }, [authRemitter, currentPage]);
 
   const safeTransactions = Array.isArray(transactions) ? transactions : [];
   const startIndex = (currentPage - 1) * PAGE_SIZE;
 
-  const goToPage = (page) => {
-    setCurrentPage(Math.min(Math.max(page, 1), totalPages));
-  };
+
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-6">
@@ -87,7 +50,7 @@ export default function TransactionsView() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 text-sm">
-            {isLoading ? (
+            {remLoading ? (
               <TableRowLoader colSpan={5} loading={"transactions"} />
             ) : safeTransactions.length === 0 ? (
               <tr>
@@ -159,7 +122,7 @@ export default function TransactionsView() {
             <button
               type="button"
               onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1 || isLoading}
+              disabled={currentPage === 1 || remLoading}
               className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               Previous
@@ -170,12 +133,11 @@ export default function TransactionsView() {
                 key={page}
                 type="button"
                 onClick={() => goToPage(page)}
-                disabled={isLoading}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                  page === currentPage
-                    ? "bg-blue-600 text-white"
-                    : "border border-gray-200 text-gray-600 hover:bg-gray-50"
-                }`}
+                disabled={remLoading}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${page === currentPage
+                  ? "bg-blue-600 text-white"
+                  : "border border-gray-200 text-gray-600 hover:bg-gray-50"
+                  }`}
               >
                 {page}
               </button>
@@ -184,7 +146,7 @@ export default function TransactionsView() {
             <button
               type="button"
               onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages || isLoading}
+              disabled={currentPage === totalPages || remLoading}
               className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               Next

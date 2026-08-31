@@ -2,6 +2,7 @@ import {
   fetchRemittersPendingRequests,
   fetchTransactions,
   fetchTransactionsCounts,
+  getPaymentTimeLineApi,
   getRecipientApi,
   remitterLoginApi,
   submitSettlementApi,
@@ -58,6 +59,14 @@ export async function getRemittersAllTransactions(remId, offset, limit) {
 
 export async function getRecipient(remId) {
   const res = await getRecipientApi(remId);
+  if (res.status !== "success") {
+    allRounderMessage(res);
+    return null;
+  } else return res.data;
+}
+
+export async function getPaymentTimeLine(remId) {
+  const res = await getPaymentTimeLineApi(remId);
   if (res.status !== "success") {
     allRounderMessage(res);
     return null;
@@ -180,22 +189,22 @@ const mockDashboardData = {
   ],
 };
 
-// export async function fetchRemitterDashboardData(remitterId = "me") {
-//   if (USE_MOCK) {
-//     return delay(mockDashboardData);
-//   }
+export async function fetchRemitterDashboardData(remitterId = "me") {
+  if (USE_MOCK) {
+    return delay(mockDashboardData);
+  }
 
-//   const apiResponse = await fetchRemitterDashboard(remitterId);
-//   const response = apiResponse?.data ?? apiResponse;
-//   return {
-//     dashboardMetrics: response.dashboardMetrics ?? {},
-//     chartData: Array.isArray(response.chartData) ? response.chartData : [],
-//     transactions: Array.isArray(response.transactions)
-//       ? response.transactions
-//       : [],
-//     recipients: Array.isArray(response.recipients) ? response.recipients : [],
-//     requests: Array.isArray(response.requests) ? response.requests : [],
-//   };
-// }
+  const apiResponse = await fetchRemitterDashboard(remitterId);
+  const response = apiResponse?.data ?? apiResponse;
+  return {
+    dashboardMetrics: response.dashboardMetrics ?? {},
+    chartData: Array.isArray(response.chartData) ? response.chartData : [],
+    transactions: Array.isArray(response.transactions)
+      ? response.transactions
+      : [],
+    recipients: Array.isArray(response.recipients) ? response.recipients : [],
+    requests: Array.isArray(response.requests) ? response.requests : [],
+  };
+}
 
 export { USE_MOCK, NETWORK_DELAY_MS };

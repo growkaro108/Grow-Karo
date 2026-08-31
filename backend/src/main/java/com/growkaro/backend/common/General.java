@@ -335,7 +335,8 @@ public class General {
                 bd.getAccountHolderName(),
                 bd.getBankName(),
                 bd.getAccountNumber(),
-                bd.getIfscCode());
+                bd.getIfscCode(),
+                request.getCreatedAt().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")));
     }
 
     public Recipient toRecipient(List<Transaction> userTransactions) {

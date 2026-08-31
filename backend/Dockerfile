@@ -22,7 +22,7 @@ RUN ./mvnw clean package -DskipTests -B && \
 # ==========================================
 # Stage 2: Minimal Runtime Image
 # ==========================================
-FROM eclipse-temurin:25-jre-noble AS runtime
+FROM eclipse-temurin:21-jre-noble AS runtime
 WORKDIR /app
 
 # Create non-root system user and group
@@ -38,8 +38,8 @@ COPY --from=build --chown=appuser:appgroup /workspace/target/app-exec.jar /app/a
 USER appuser
 EXPOSE 4000
 
-# Strict JVM Memory Tuning for 2GB RAM Host (App capped at ~512MB Heap)
+# JVM Memory Tuning for Docker (512MB max heap)
 ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxMetaspaceSize=128m -XX:+ExitOnOutOfMemoryError"
 
-# Exec form allows JVM to run as PID 1 to handle SIGTERM/SIGKILL signals gracefully
-ENTRYPOINT ["exec", "java", "-Xms256m", "-Xmx512m", "-XX:+UseG1GC", "-XX:MaxMetaspaceSize=128m", "-XX:+ExitOnOutOfMemoryError", "-jar", "app.jar"]
+# Run Java directly
+CMD ["java", "-Xms256m", "-Xmx512m", "-XX:+UseG1GC", "-XX:MaxMetaspaceSize=128m", "-XX:+ExitOnOutOfMemoryError", "-jar", "app.jar"]

@@ -57,13 +57,13 @@ export default function FormModal({
       e.preventDefault();
       setIsSaving(true);
       setFormError(null);
-      console.log("Request: ", form);
+      // console.log("Request: ", form);
       try {
         const isEditing = editingId ?? false;
         const response = isEditing
           ? await updatePlan(editingId, form)
           : await createPlan(form);
-        console.log("response", response);
+        // console.log("response", response);
         if (response.status !== "success") {
           const message = response.message || "Something went wrong..";
           errorMessage(message, "error");
@@ -73,9 +73,9 @@ export default function FormModal({
 
         successMessage(
           response.message ||
-            (isEditing
-              ? "Plan updated successfully.."
-              : "Scheme Added successfully.."),
+          (isEditing
+            ? "Plan updated successfully.."
+            : "Scheme Added successfully.."),
           "success",
         );
 
