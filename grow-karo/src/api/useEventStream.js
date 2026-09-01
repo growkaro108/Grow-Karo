@@ -47,7 +47,8 @@ export function useEventStream({
   getId = (item) => item.id,
   initialItems = [],
   maxItems = 300,
-  getToken = () => (typeof window !== "undefined" ? localStorage.getItem("token") : null),
+  getToken = () =>
+    typeof window !== "undefined" ? localStorage.getItem("token") : null,
   enabled = true,
 }) {
   const [items, setItems] = useState(initialItems);
@@ -64,7 +65,7 @@ export function useEventStream({
     const url = token
       ? `${endpoint}${endpoint.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
       : endpoint;
-
+    console.log(url);
     const es = new EventSource(url);
 
     es.onopen = () => setConnectionStatus("live");

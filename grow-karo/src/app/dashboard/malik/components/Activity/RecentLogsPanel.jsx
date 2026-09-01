@@ -14,6 +14,7 @@ import {
 import { StatusBadge } from "../StatusBadge";
 import { usePaginatedFetch } from "./usePaginatedFetch";
 import { Filter } from "./Filter";
+import { buildSseUrl } from "@/api/apiClient";
 
 const PAGE_SIZE = 10;
 
@@ -70,7 +71,7 @@ export default function RecentLogsPanel({
 
   const { items, totalPages, totalElements, status, error, refetch } =
     usePaginatedFetch({
-      endpoint: `${apiBaseUrl}/api/admin/activity-logs`,
+      endpoint: buildSseUrl("admin/activity-logs"),
       params,
       mapItem: mapBackendLog,
       getToken,

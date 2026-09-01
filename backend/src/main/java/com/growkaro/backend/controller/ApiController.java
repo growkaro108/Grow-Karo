@@ -45,6 +45,25 @@ public class ApiController {
 
     }
 
+    @GetMapping("/home1-graph")
+    public ResponseEntity<Map<String, Object>> homeGraph() {
+        return ResponseEntity.ok(apiService.homeGraph());
+    }
+
+    @GetMapping("/top5-schemes")
+    public ResponseEntity<Map<String, Object>> top5Schemes() {
+        try {
+            Map<String, Object> top5Schemes = apiService.top5Schemes();
+            if (top5Schemes == null)
+                return ResponseEntity.internalServerError().build();
+            else
+                return ResponseEntity.ok(top5Schemes);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+
+    }
+
     @GetMapping("/config")
     public ResponseEntity<Map<String, Object>> config() {
         return ResponseEntity.ok(apiService.config());

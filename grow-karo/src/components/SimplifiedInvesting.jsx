@@ -4,9 +4,9 @@ import React from "react";
 const STEPS = [
   {
     id: "connect-accounts",
-    title: "Connect Accounts",
+    title: "Join Us",
     description:
-      "Link your bank or brokerage in a few taps — everything stays read-only and encrypted.",
+      "Join Us with basic details, your KYC and bank details",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -24,9 +24,9 @@ const STEPS = [
   },
   {
     id: "set-goals",
-    title: "Set Goals",
+    title: "Enroll Schemes",
     description:
-      "Tell us what you're investing for and by when, and we'll shape a plan around it.",
+      "Select and invest in schemes from top fund houses based on your goals.",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -45,9 +45,9 @@ const STEPS = [
   },
   {
     id: "optimize-grow",
-    title: "Optimize & Grow",
+    title: "Hold & Grow",
     description:
-      "We rebalance automatically as markets move, so your portfolio stays on track.",
+      "Your portfolio is monitored and rebalanced regularly to help you stay on track with your goals.",
     icon: (
       <svg
         viewBox="0 0 24 24"

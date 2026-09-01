@@ -16,6 +16,8 @@ public class SecurityConfig {
                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers(
                                                                 "/api/health",
+                                                                "/api/home1-graph",
+                                                                "/api/top5-schemes",
                                                                 "/api/user/test",
                                                                 "/api/remitter/test",
                                                                 "/api/user/signup",

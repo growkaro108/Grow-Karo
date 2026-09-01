@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { getTop5Schemes } from "@/api/generalApi";
+import { storage } from "../../services/storageService";
 
 // Chart.js lazy load with skeleton placeholder
 const ChartComponent = dynamic(() => import("./ChartComponent"), {
@@ -13,30 +15,16 @@ const ChartComponent = dynamic(() => import("./ChartComponent"), {
 
 const RANGES = ["1W", "1M", "1Y", "ALL"];
 
-const ALLOCATION = [
-  { label: "Liquid Funds", value: 29, color: "#2563eb", swatch: "bg-blue-600" },
-  {
-    label: "Margin Trading",
-    value: 18,
-    color: "#f43f5e",
-    swatch: "bg-rose-500",
-  },
-  { label: "Gold", value: 14, color: "#f59e0b", swatch: "bg-amber-500" },
-  { label: "Shares", value: 39, color: "#10b981", swatch: "bg-emerald-500" },
+// Palette sized for up to 5 items (top5Schemes can return up to 5 entries).
+// If you ever show more than 5, colors will cycle via index % length.
+const COLORS = ["#2563eb", "#f43f5e", "#f59e0b", "#10b981", "#8b5cf6"];
+const SWATCHES = [
+  "bg-blue-600",
+  "bg-rose-500",
+  "bg-amber-500",
+  "bg-emerald-500",
+  "bg-violet-500",
 ];
-
-const donutData = {
-  labels: ALLOCATION.map((a) => a.label),
-  datasets: [
-    {
-      data: ALLOCATION.map((a) => a.value),
-      backgroundColor: ALLOCATION.map((a) => a.color),
-      borderColor: "#ffffff",
-      borderWidth: 2.5,
-      hoverOffset: 6,
-    },
-  ],
-};
 
 const donutOptions = {
   responsive: true,
@@ -126,6 +114,89 @@ const performanceOptions = {
 export default function AssetAllocation() {
   const [activeRange, setActiveRange] = useState("ALL");
 
+  const [schemeData, setSchemeData] = useState([]);
+  const [schemeLoading, setSchemeLoading] = useState(true);
+  const [schemeError, setSchemeError] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function getTop5SchemesData() {
+      try {
+        const response = await getTop5Schemes();
+        if (!isMounted) return;
+
+        const schemesObj = response?.top5Schemes;
+
+        if (schemesObj && typeof schemesObj === "object") {
+          const allData = Object.keys(schemesObj).map((key) => ({
+            label: key,
+            value: schemesObj[key],
+          }));
+
+          if (allData.length > 0) {
+            setSchemeData(allData);
+            //set in session storage
+            storage.set("schemeData", allData, "session");
+            setSchemeError(null);
+          } else {
+            setSchemeError("No scheme data available.");
+          }
+        } else {
+          setSchemeError("Something went wrong...");
+        }
+      } catch (err) {
+        if (isMounted) setSchemeError("Unable to load scheme data.");
+      } finally {
+        if (isMounted) setSchemeLoading(false);
+      }
+    }
+
+    //check local storage
+    const cachedChartData = storage.get("schemeData", null, "session");
+    if (cachedChartData) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSchemeData(cachedChartData);
+      setSchemeLoading(false);
+      setSchemeError(null);
+    } else {
+      getTop5SchemesData();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Derived allocation list with color/swatch attached to each scheme.
+  const ALLOCATION = useMemo(() => {
+    // i want percentage instead of value in the pie chart
+    const total = schemeData.reduce((sum, item) => sum + item.value, 0);
+    return schemeData.map((item, index) => ({
+      label: item.label,
+      value: ((item.value / total) * 100).toFixed(0),
+      color: COLORS[index % COLORS.length],
+      swatch: SWATCHES[index % SWATCHES.length],
+    }));
+  }, [schemeData]);
+
+  // Donut chart data now correctly reacts to fetched ALLOCATION.
+  const donutData = useMemo(
+    () => ({
+      labels: ALLOCATION.map((a) => a.label),
+      datasets: [
+        {
+          data: ALLOCATION.map((a) => a.value),
+          backgroundColor: ALLOCATION.map((a) => a.color),
+          borderColor: "#ffffff",
+          borderWidth: 2.5,
+          hoverOffset: 6,
+        },
+      ],
+    }),
+    [ALLOCATION],
+  );
+
   const performanceData = useMemo(() => {
     const range = PERFORMANCE_BY_RANGE[activeRange];
     return {
@@ -193,7 +264,7 @@ export default function AssetAllocation() {
             id="insights-heading"
             className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl"
           >
-            Dynamic Portfolio Insights
+            Top Schemes Insights
           </h2>
           <p className="mt-1 text-sm text-slate-500">
             Interactive data visualization in secure investment platform.
@@ -201,7 +272,7 @@ export default function AssetAllocation() {
         </div>
 
         {/* Time range selector filter */}
-        <div
+        {/* <div
           role="group"
           aria-label="Select time range"
           className="flex self-start overflow-x-auto rounded-full border border-slate-200/80 bg-slate-50 p-1 shadow-xs sm:self-auto"
@@ -212,20 +283,19 @@ export default function AssetAllocation() {
               type="button"
               onClick={() => setActiveRange(range)}
               aria-pressed={activeRange === range}
-              className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-wide transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
-                activeRange === range
-                  ? "bg-slate-900 text-white shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-wide transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${activeRange === range
+                ? "bg-slate-900 text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+                }`}
             >
               {range}
             </button>
           ))}
-        </div>
+        </div> */}
       </div>
 
       {/* Grid: 1 col on mobile, 2 cols on tablet/desktop */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-1">
         {/* Left: Asset Allocation Doughnut */}
         <div className="flex flex-col justify-between rounded-2xl border border-slate-100 bg-slate-50/50 p-5 sm:p-6">
           <div className="flex items-center justify-between border-b border-slate-200/60 pb-4">
@@ -238,34 +308,44 @@ export default function AssetAllocation() {
           </div>
 
           <div className="relative my-6 flex h-48 sm:h-56 w-full items-center justify-center">
-            <ChartComponent
-              type="doughnut"
-              data={donutData}
-              options={donutOptions}
-              className="h-full w-full"
-            />
+            {schemeLoading ? (
+              <div className="h-full w-full animate-pulse rounded-xl bg-slate-100" />
+            ) : schemeError || ALLOCATION.length === 0 ? (
+              <div className="flex h-full w-full items-center justify-center text-center text-xs font-medium text-slate-400">
+                {schemeError ?? "No allocation data available."}
+              </div>
+            ) : (
+              <ChartComponent
+                type="doughnut"
+                data={donutData}
+                options={donutOptions}
+                className="h-full w-full"
+              />
+            )}
           </div>
 
           {/* Allocation Legend */}
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 text-xs">
-            {ALLOCATION.map((item) => (
-              <div
-                key={item.label}
-                className="flex items-center justify-between rounded-xl border border-slate-200/60 bg-white px-3.5 py-2.5 shadow-xs"
-              >
-                <div className="flex items-center gap-2">
-                  <span className={`h-2.5 w-2.5 rounded-full ${item.swatch}`} />
-                  <span className="font-medium text-slate-700">
-                    {item.label}
-                  </span>
+          {!schemeLoading && !schemeError && ALLOCATION.length > 0 && (
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 text-xs">
+              {ALLOCATION.map((item) => (
+                <div
+                  key={item.label}
+                  className="flex items-center justify-between rounded-xl border border-slate-200/60 bg-white px-3.5 py-2.5 shadow-xs"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2.5 w-2.5 rounded-full ${item.swatch}`} />
+                    <span className="font-medium text-slate-700">
+                      {item.label}
+                    </span>
+                  </div>
+                  <span className="font-bold text-slate-900">{item.value}%</span>
                 </div>
-                <span className="font-bold text-slate-900">{item.value}%</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Right: Growth Over Time Line Chart */}
+        {/* Right: Growth Over Time Line Chart 
         <div className="flex flex-col justify-between rounded-2xl border border-slate-100 bg-slate-50/50 p-5 sm:p-6">
           <div className="flex items-center justify-between border-b border-slate-200/60 pb-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -283,9 +363,9 @@ export default function AssetAllocation() {
               options={performanceOptions}
               className="h-full w-full"
             />
-          </div>
+          </div>*/}
 
-          {/* Series Legend */}
+        {/* Series Legend 
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs font-semibold tracking-wide text-slate-600">
             {SERIES.map((s) => (
               <span key={s.key} className="inline-flex items-center gap-2">
@@ -300,7 +380,9 @@ export default function AssetAllocation() {
               </span>
             ))}
           </div>
-        </div>
+        </div>*/}
+
+
       </div>
     </section>
   );

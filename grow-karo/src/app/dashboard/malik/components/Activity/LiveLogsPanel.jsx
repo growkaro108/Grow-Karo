@@ -4,6 +4,7 @@ import { STATUS_FILTERS, TYPE_DOT, mapBackendLog } from "./activityLogShared";
 import { StatusBadge } from "../StatusBadge";
 import { useEventStream } from "@/api/useEventStream";
 import { Filter } from "./Filter";
+import { buildSseUrl } from "@/api/apiClient";
 
 const MAX_LIVE_EVENTS = 100; // cap in-memory feed so the tab doesn't grow unbounded over a long session
 
@@ -25,7 +26,7 @@ export default function LiveLogsPanel({
   PROCESS_FILTERS,
 }) {
   const { items: feed, connectionStatus } = useEventStream({
-    endpoint: `${apiBaseUrl}/api/admin/activity-logs/stream`,
+    endpoint: buildSseUrl("admin/activity-logs/stream"),
     eventName: "activity",
     mapEvent: mapBackendLog,
     initialItems: initialFeed,

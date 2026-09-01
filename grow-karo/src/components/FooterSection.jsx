@@ -29,7 +29,7 @@ export default function FooterSection() {
 
         if (isMounted) {
           const statusText =
-            typeof data === "string" ? data : data?.status || "Healthy";
+            typeof data === "string" ? data : "Online" || "Healthy";
           setBackendHealth(statusText);
           setIsHealthy(true);
         }
@@ -58,7 +58,7 @@ export default function FooterSection() {
           className="flex flex-wrap items-center gap-6 text-sm font-semibold text-slate-500"
         >
           <Link
-            href="#about"
+            href="/about"
             className="transition-colors hover:text-slate-900"
           >
             About
@@ -70,10 +70,10 @@ export default function FooterSection() {
             Terms
           </Link>
           <Link
-            href="#privacy"
+            href="/solution"
             className="transition-colors hover:text-slate-900"
           >
-            Privacy
+            Solution
           </Link>
         </nav>
 
@@ -157,7 +157,7 @@ export default function FooterSection() {
         </p>
 
         <p className="font-medium text-slate-500">
-          © {new Date().getFullYear()} Grow-Karo. All rights reserved.
+          © {new Date().getFullYear()} Groww-Karo. All rights reserved.
         </p>
 
         {/* Dynamic Backend Status Indicator Badge */}

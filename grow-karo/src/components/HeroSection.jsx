@@ -2,26 +2,70 @@
 
 import Link from "next/link";
 import ChartComponent from "./ChartComponent";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { fetchHomeChartData } from "@/api/generalApi";
+import { storage } from "../../services/storageService";
+import { currency } from "@/app/dashboard/malik/utils";
+
+// TODO: move to env/config or fetch live rate from backend instead of hardcoding
+const CONVERSION_RATE = 1;
 
 export default function HeroSection() {
+  const [homeChartData, setHomeChartData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useLayoutEffect(() => {
+    let isMounted = true;
+
+    async function getChartData() {
+      try {
+        const response = await fetchHomeChartData();
+
+        if (!isMounted) return;
+
+        if (response && typeof response === "object") {
+          const labels = Object.keys(response);
+          const data = Object.values(response);
+
+          if (labels.length > 0 && data.every((v) => typeof v === "number")) {
+            //set in session storage
+            storage.set("homeChartData", { labels, data }, "session");
+            setHomeChartData({ labels, data });
+          } else {
+            setError("No chart data received.");
+          }
+        } else {
+          setError("Chart data is in an unexpected format.");
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError("Unable to load chart data.");
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+    //check local storage
+    const cachedChartData = storage.get("homeChartData", null, "session");
+    if (cachedChartData) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setHomeChartData(cachedChartData);
+      setLoading(false);
+    } else {
+      getChartData();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const chartData = {
-    labels: [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ],
+    labels: homeChartData?.labels,
     datasets: [
       {
-        data: [100, 115, 108, 125, 140, 135, 150, 170, 162, 185, 195, 210],
+        data: homeChartData?.data,
         borderColor: "#2563eb",
         borderWidth: 3,
         pointRadius: 0,
@@ -65,7 +109,8 @@ export default function HeroSection() {
         cornerRadius: 10,
         displayColors: false,
         callbacks: {
-          label: (context) => `$${(context.raw * 1242).toLocaleString()}`,
+          label: (context) =>
+            `₹${(context.raw * CONVERSION_RATE).toLocaleString()}`,
         },
       },
     },
@@ -79,6 +124,18 @@ export default function HeroSection() {
       intersect: false,
     },
   };
+
+  const portfolioValueOfcurrentMonth = useMemo(() => {
+    if (!homeChartData?.data) return 0;
+    const lastIndex = homeChartData.data.length - 1;
+    const lastValue = homeChartData.data[lastIndex];
+    const previousValue = lastIndex > 0 ? homeChartData.data[lastIndex - 1] : 0;
+    const currentMonth = new Date().toLocaleString("en-US", { month: "long" });
+    const totalValue = homeChartData.data.reduce((acc, val) => acc + val, 0);
+    const percentChange = (lastValue / totalValue) * 100;
+    return { lastValue, previousValue, currentMonth, percentChange, totalValue }
+  }, [homeChartData])
+
 
   return (
     <section className="relative mx-auto w-full max-w-7xl overflow-hidden rounded-3xl border border-slate-100 bg-slate-50/50 p-4 sm:p-8 lg:p-12 xl:p-16 shadow-xs backdrop-blur-sm">
@@ -118,10 +175,10 @@ export default function HeroSection() {
               Create Your Account
             </Link>
             <Link
-              href="#features"
+              href="/plan"
               className="inline-flex h-11 w-full items-center justify-center rounded-full border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 transition-all duration-300 hover:bg-slate-50 hover:text-slate-900 active:scale-[0.98] sm:h-12 sm:w-auto"
             >
-              Explore Features
+              Explore scheme
             </Link>
           </div>
         </div>
@@ -136,14 +193,14 @@ export default function HeroSection() {
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
                 <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 sm:text-xs">
-                  Portfolio Value
+                  {portfolioValueOfcurrentMonth.currentMonth ?? 'Month'} Value Added
                 </span>
                 <div className="mt-1 flex flex-wrap items-baseline gap-1.5 sm:gap-2">
                   <span className="text-xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-                    $260,820
+                    {currency(portfolioValueOfcurrentMonth.lastValue ?? 0)}
                   </span>
                   <span className="inline-flex items-center gap-0.5 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600 sm:px-2 sm:text-xs">
-                    ▲ +110.0% YTD
+                    ▲ +{portfolioValueOfcurrentMonth.percentChange?.toFixed(1)}% YTD
                   </span>
                 </div>
               </div>
@@ -156,12 +213,22 @@ export default function HeroSection() {
 
             {/* Sparkline Canvas */}
             <div className="relative mt-4 h-36 w-full sm:mt-6 sm:h-52 lg:h-56">
-              <ChartComponent
-                type="line"
-                data={chartData}
-                options={chartOptions}
-                className="h-full w-full"
-              />
+              {loading ? (
+                <div className="flex h-full w-full items-center justify-center">
+                  <div className="h-full w-full animate-pulse rounded-xl bg-slate-100" />
+                </div>
+              ) : error ? (
+                <div className="flex h-full w-full items-center justify-center text-center text-xs font-medium text-slate-400">
+                  {error}
+                </div>
+              ) : (
+                <ChartComponent
+                  type="line"
+                  data={chartData}
+                  options={chartOptions}
+                  className="h-full w-full"
+                />
+              )}
             </div>
           </div>
         </div>

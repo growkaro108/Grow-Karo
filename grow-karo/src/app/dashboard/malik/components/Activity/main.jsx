@@ -24,7 +24,7 @@ const VIEWS = [
 
 export default function ActivityTab({
   feed: initialFeed = [],
-  apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9090",
+  apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:9090",
   getToken = () =>
     typeof window !== "undefined" ? localStorage.getItem("token") : null,
 }) {
@@ -129,11 +129,10 @@ export default function ActivityTab({
             key={id}
             type="button"
             onClick={() => setActiveView(id)}
-            className={`flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-medium font-body transition-colors ${
-              activeView === id
-                ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
+            className={`flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-medium font-body transition-colors ${activeView === id
+              ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30"
+              : "text-slate-400 hover:text-slate-200"
+              }`}
           >
             <Icon className="h-3.5 w-3.5" />
             {label}

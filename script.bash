@@ -42,14 +42,14 @@ docker push "growwkaro/frontend:$IMAGE_TAG"
 # ==========================================
 # Build & push backend
 # ==========================================
-# echo "=========================================="
-# echo "🚀 Building Backend (tag: $IMAGE_TAG)"
-# echo "=========================================="
+echo "=========================================="
+echo "🚀 Building Backend (tag: $IMAGE_TAG)"
+echo "=========================================="
 
-# docker build -t "growwkaro/backend:$IMAGE_TAG" ./backend
+docker build -t "growwkaro/backend:$IMAGE_TAG" ./backend
 
-# echo "✅ Backend image built successfully!"
-# docker push "growwkaro/backend:$IMAGE_TAG"
+echo "✅ Backend image built successfully!"
+docker push "growwkaro/backend:$IMAGE_TAG"
 
 # ==========================================
 # Deploy
