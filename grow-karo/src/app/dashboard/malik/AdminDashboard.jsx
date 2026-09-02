@@ -21,6 +21,9 @@ import {
   LineElement,
   Filler,
   Tooltip as ChartJSTooltip,
+  ArcElement,
+  BarElement,
+  Legend,
 } from "chart.js";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
@@ -92,10 +95,13 @@ ChartJS.register(
   LineElement,
   Filler,
   ChartJSTooltip,
+  ArcElement,
+  BarElement,
+  Legend,
 );
 
 const NAV_ITEMS = [
-  // { id: "overview", label: "Overview⏱️", icon: LayoutDashboard },
+  { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "activity", label: "Activity Log", icon: Activity },
   { id: "withdrawals", label: "Withdrawals", icon: Wallet },
   { id: "plans", label: "Plans", icon: ScrollText },
@@ -104,11 +110,11 @@ const NAV_ITEMS = [
   { id: "user", label: "User Management", icon: User2Icon },
   { id: "issues", label: "User Issues", icon: MessageCircleQuestionMark },
   // { id: "contacts", label: "Contacts⏱️", icon: Contact },
-  // { id: "settings", label: "Settings⏱️", icon: Settings2 },
+  { id: "settings", label: "Settings", icon: Settings2 },
 ];
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState("activity");
+  const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [toast, setToast] = useState(null);
@@ -201,9 +207,7 @@ export default function AdminPanel() {
             <TabLoader message="Fetching details..." />
           ) : (
             <div className="animate-fade-slide-in">
-              {activeTab === "overview" && (
-                <OverviewTab withdrawals={withdrawals} issues={issues} />
-              )}
+              {activeTab === "overview" && <OverviewTab />}
               {activeTab === "activity" && <ActivityTab />}
               {activeTab === "withdrawals" && (
                 <WithdrawalsTab

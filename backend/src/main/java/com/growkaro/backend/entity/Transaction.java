@@ -114,5 +114,7 @@ public class Transaction {
     private void setId() {
         this.id = "TXN-" + LocalDateTime.now(ZoneId.of("Asia/Kolkata"))
                 .format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+        this.createdAt = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+        this.updatedAt = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
     }
 }

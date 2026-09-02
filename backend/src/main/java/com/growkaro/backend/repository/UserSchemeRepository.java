@@ -1,7 +1,9 @@
 package com.growkaro.backend.repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -52,5 +54,25 @@ public interface UserSchemeRepository extends JpaRepository<UserScheme, String> 
     // find all user scheme whose maturity date is in range of 10 to 15 days
     @Query("SELECT us FROM UserScheme us JOIN FETCH us.user WHERE us.maturityDate BETWEEN :today AND :endDate")
     List<UserScheme> findAllByMaturityDate(@Param("today") LocalDate today, @Param("endDate") LocalDate endDate);
+
+    // ── Overview dashboard queries ────────────────────────────────────────────
+
+    /** Total AUM: sum of paidAmount across all approved UserSchemes. */
+    @Query("SELECT COALESCE(SUM(us.paidAmount), 0) FROM UserScheme us WHERE us.isApproved = true")
+    BigDecimal findTotalAUM();
+
+    /** Number of distinct investors with at least one approved scheme. */
+    @Query("SELECT COUNT(DISTINCT us.user.id) FROM UserScheme us WHERE us.isApproved = true")
+    long countActiveInvestors();
+
+    /** Per-scheme AUM breakdown: [{schemeName, aum}] */
+    @Query("""
+            SELECT us.scheme.schemeName AS schemeName,
+                   COALESCE(SUM(us.paidAmount), 0) AS aum
+            FROM UserScheme us
+            WHERE us.isApproved = true
+            GROUP BY us.scheme.schemeName
+            """)
+    List<Map<String, Object>> findSchemeAumBreakdown();
 
 }

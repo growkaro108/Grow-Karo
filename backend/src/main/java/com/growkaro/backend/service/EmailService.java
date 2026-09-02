@@ -1,6 +1,7 @@
 package com.growkaro.backend.service;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import com.growkaro.backend.DRO.RemitterCredentials;
 import com.growkaro.backend.common.General;
+import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.UserScheme;
 
 import jakarta.mail.internet.MimeMessage;
@@ -240,4 +242,38 @@ public class EmailService {
             log.error("Failed to send scheme maturity email to admin {}", adminEmail, e);
         }
     }
+
+    @Async
+    public void notifyAllUsers(List<String> userEmails, Scheme scheme) {
+        try {
+            for (String email : userEmails) {
+
+                String subject = "New Scheme Launched - " + scheme.getSchemeName();
+                String body = "<div style='font-family: Arial, sans-serif; margin: 0; padding: 0;'>" +
+                        "<div style='background-color: #f0f8ff; padding: 20px;'>" +
+                        "<h1 style='color: #004d40;'>GrowKaro</h1>" +
+                        "</div>" +
+                        "<div style='padding: 20px;'>" +
+                        "<p>Dear Investor,</p>" +
+                        "<p>A new scheme has been launched on GrowKaro platform.</p>" +
+                        "<p><strong>Scheme Name:</strong> " + scheme.getSchemeName() + "</p>" +
+                        "<p><strong>Minimum Investment:</strong> " + scheme.getMinimumAmount() + "</p>" +
+                        "<p><strong>Profit Percentage:</strong> " + scheme.getProfitPercentage() + "</p>" +
+                        "<p><strong>Tenure:</strong> " + scheme.getTenure() + "</p>" +
+                        "<p>You can view the scheme details and invest in it by logging into your account.</p>" +
+                        "<a href='" + general.loginUrl() +
+                        "' style='display: inline-block; background-color: #006633; color: white; padding: 10px 20px; margin: 15px 0; text-decoration: none; border-radius: 5px;'>"
+                        +
+                        "Login to Platform" +
+                        "</a>" +
+                        "<p>Best regards,<br/>GrowwKaro Team</p>" +
+                        "</div>" +
+                        "</div>";
+                sendHtml(email, subject, body);
+            }
+        } catch (Exception e) {
+            log.error("Failed to send scheme launch email to users", e);
+        }
+    }
+
 }

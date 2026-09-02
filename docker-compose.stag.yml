@@ -130,6 +130,7 @@ services:
       # - "443:443"
     volumes:
       - ./nginx/local/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - uploads_data:/var/www/uploads:ro
       # For production, uncomment and use:
       # - ./nginx/prod/default.conf:/etc/nginx/conf.d/default.conf:ro
       # - certbot_certs:/etc/letsencrypt:ro

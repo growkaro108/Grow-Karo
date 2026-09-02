@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import TabLoader from "../../../loader/TabLoader";
 import { userContext } from "@/context/UserContext";
+import { currency } from "../malik/utils";
 
 //dynamic import for Overview component to avoid SSR issues with Chart.js
 const StockGraph = dynamic(() => import("./StockGraph"), {
@@ -89,21 +90,15 @@ const Overview = () => {
     {
       id: "net-worth",
       title: "Total Net Worth",
-      value: `₹ ${(totalNetWorth ?? 0).toLocaleString("en-IN", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`,
-      badge: `+₹ ${profitFromMonthStartToToday} this month`,
+      value: currency(totalNetWorth ?? 0),
+      badge: `+ ${currency(profitFromMonthStartToToday)} this month`,
       isPositiveBadge: true,
       imageSrc: "/muscle.png", // Unique decorative asset
     },
     {
       id: "invested-stocks",
       title: "Invested in Stocks",
-      value: `₹ ${(totalInvestment ?? 0).toLocaleString("en-IN", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`,
+      value: currency(totalInvestment ?? 0),
       badge: `Allocated across ${investmentSchemeCount ?? 0} schemes`,
       isPositiveBadge: true,
       imageSrc: "/money.png", // Unique decorative asset
@@ -112,20 +107,15 @@ const Overview = () => {
     {
       id: "total-profit",
       title: "Available Balance",
-      value: `₹ ${(
-        totalProfit - portfolio?.pendingSum - portfolio?.successSum ?? 0
-      ).toLocaleString("en-IN", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`,
-      badge: `Total redeemed : -₹ ${portfolio?.successSum || 0}`,
+      value: currency((totalProfit - portfolio?.pendingSum - portfolio?.successSum) > 0 ? (totalProfit - portfolio?.pendingSum - portfolio?.successSum) : 0),
+      badge: `Total redeemed : ${currency(portfolio?.successSum || 0)}`,
       // isPositiveBadge: true,
       imageSrc: "/profit.png", // Unique decorative asset
     },
     {
       id: "cash-balance",
       title: "Pending Withdrawals",
-      value: `₹ ${portfolio?.pendingSum || "-"}`,
+      value: currency(portfolio?.pendingSum || 0),
       badge: `submit for approval`,
       isPositiveBadge: true,
       imageSrc: "/pending.png", // Unique decorative asset
@@ -156,11 +146,10 @@ const Overview = () => {
               </div>
 
               <span
-                className={`text-[11px] font-bold px-2 py-0.5 rounded-md inline-block mt-3 wrap-break-word max-w-full ${
-                  card.isPositiveBadge
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-md inline-block mt-3 wrap-break-word max-w-full ${card.isPositiveBadge
                     ? "text-emerald-600 bg-emerald-50"
                     : "text-slate-500 bg-slate-50"
-                }`}
+                  }`}
               >
                 {card.badge}
               </span>

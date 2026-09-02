@@ -20,6 +20,10 @@ public interface UserRepository extends JpaRepository<User, String> {
     @Query("SELECT u.email FROM User u")
     List<String> findAllEmail();
 
+    // get all user email whose schemeAlerts is true
+    @Query("SELECT u.email FROM User u WHERE u.schemeAlerts = true")
+    List<String> findEmailOfUsersWantSchemeAlerts();
+
     // get all user phone no.
     @Query("SELECT u.phone FROM User u")
     List<String> findAllPhoneNo();

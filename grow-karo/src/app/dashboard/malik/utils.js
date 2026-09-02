@@ -1,8 +1,24 @@
 export function currency(n) {
-  if (typeof n !== "number") {
+  if (typeof n !== "number" || Number.isNaN(n)) {
     return "₹0";
   }
-  return "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+
+  const sign = n < 0 ? "-" : "";
+  const abs = Math.abs(n);
+
+  const trim = (value) =>
+    value % 1 === 0 ? value.toString() : value.toFixed(1);
+
+  if (abs >= 1_00_00_000) {
+    return `${sign}₹${trim(abs / 1_00_00_000)} Cr`;
+  }
+  if (abs >= 1_00_000) {
+    return `${sign}₹${trim(abs / 1_00_000)} L`;
+  }
+  if (abs >= 1_000) {
+    return `${sign}₹${trim(abs / 1_000)} k`;
+  }
+  return `${sign}₹${abs.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 }
 export const COMPOUNDS_PER_YEAR = {
   "21 Days": 365 / 21,

@@ -75,6 +75,8 @@ public class SecurityConfig {
                                                                 "/api/admin/{status}/issues",
                                                                 "/api/admin/issues/send-reply",
                                                                 "/api/admin/issues/{id}/mark-resolved",
+                                                                "/api/admin/overview",
+                                                                "/api/admin/settings",
                                                                 "/api/remitter/login",
                                                                 "/api/remitter/forgot-password/{email}",
                                                                 "/api/remitter/reset-password/{remitterId}",

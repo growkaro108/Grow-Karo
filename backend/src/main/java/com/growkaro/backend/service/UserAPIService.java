@@ -117,9 +117,11 @@ public class UserAPIService {
 
             // UserScheme userSchemes = getUserSchemeById("GKUSID20260728184654");
             // System.out.println(userSchemes);
-            Map<String, Object> userNotifications = userNotifications("GKUSID20260731180215", "unread", 1);
+            // Map<String, Object> userNotifications =
+            // userNotifications("GKUSID20260731180215",
+            // "unread", 1);
 
-            return userNotifications;
+            return userRepository.findEmailOfUsersWantSchemeAlerts();
         } catch (Exception e) {
             log.error("Failed to set user status active", e);
             return false;

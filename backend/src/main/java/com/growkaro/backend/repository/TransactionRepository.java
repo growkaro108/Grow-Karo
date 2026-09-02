@@ -12,7 +12,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, String> {
@@ -80,5 +83,36 @@ public interface TransactionRepository extends JpaRepository<Transaction, String
     // long countByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
 
     // ── Reference ID lookup ───────────────────────────────────────────────────
+
+    // ── Overview dashboard queries ────────────────────────────────────────────
+
+    /** Daily inflow (DEPOSIT, SUCCESS) for the last N days, newest first. */
+    @Query("""
+            SELECT CAST(t.createdAt AS LocalDate) AS day,
+                   COALESCE(SUM(t.amount), 0)     AS amount
+            FROM Transaction t
+            WHERE t.type = 'DEPOSIT'
+              AND t.status = 'SUCCESS'
+              AND t.createdAt >= :since
+            GROUP BY CAST(t.createdAt AS LocalDate)
+            ORDER BY CAST(t.createdAt AS LocalDate) ASC
+            """)
+    List<Map<String, Object>> findDailyInflow(@Param("since") LocalDateTime since);
+
+    /** Count of transactions per status (PENDING, SUCCESS, …). */
+    @Query("""
+            SELECT t.status AS status, COUNT(t) AS count
+            FROM Transaction t
+            GROUP BY t.status
+            """)
+    List<Map<String, Object>> findStatusBreakdown();
+
+    /** Total pending withdrawal amount. */
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.status = 'PENDING' AND t.type <> 'DEPOSIT'")
+    BigDecimal sumPendingWithdrawalAmount();
+
+    /** Count of pending withdrawals. */
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.status = 'PENDING' AND t.type <> 'DEPOSIT'")
+    long countPendingWithdrawals();
 
 }

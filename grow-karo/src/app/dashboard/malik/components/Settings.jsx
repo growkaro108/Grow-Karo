@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Sliders,
   ShieldAlert,
@@ -11,6 +11,8 @@ import {
   CheckCircle,
   HelpCircle,
 } from "lucide-react";
+import { apiRequest } from "@/api/apiClient";
+import { successMessage } from "@/components/Message";
 
 export default function Settings() {
   const [activeSection, setActiveSection] = useState("investment");
@@ -29,6 +31,20 @@ export default function Settings() {
     webhookUrl: "https://api.grow-karo.com/v1/webhooks/admin",
   });
 
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await apiRequest("/admin/settings", { method: "GET" });
+        if (response.status === "success" && response.data) {
+          setSettings(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch settings:", error);
+      }
+    };
+    fetchSettings();
+  }, []);
+
   const handleInputChange = (key, value) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
@@ -37,17 +53,26 @@ export default function Settings() {
     setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleSaveSettings = (e) => {
+  const handleSaveSettings = async (e) => {
     e.preventDefault();
     setIsSaving(true);
     setSaveSuccess(false);
 
-    // Simulate API delay for configuration write
-    setTimeout(() => {
+    try {
+      const response = await apiRequest("/admin/settings", {
+        method: "PUT",
+        body: settings,
+      });
+      if (response.status === "success") {
+        successMessage("Settings Saved Successfully...");
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      }
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+    } finally {
       setIsSaving(false);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    }, 1200);
+    }
   };
 
   return (
@@ -69,11 +94,10 @@ export default function Settings() {
         <button
           onClick={handleSaveSettings}
           disabled={isSaving}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-md ${
-            saveSuccess
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-md ${saveSuccess
               ? "bg-emerald-500 text-slate-950 shadow-emerald-500/10"
               : "bg-teal-500 text-slate-900 hover:bg-teal-400 disabled:opacity-50 shadow-teal-500/10"
-          }`}
+            }`}
         >
           {isSaving ? (
             <>
@@ -107,11 +131,10 @@ export default function Settings() {
               <button
                 key={tab.id}
                 onClick={() => setActiveSection(tab.id)}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
-                  activeSection === tab.id
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${activeSection === tab.id
                     ? "bg-slate-900 text-teal-400 border border-slate-800 shadow-inner font-semibold"
                     : "text-slate-400 hover:bg-slate-900/40 hover:text-slate-200"
-                }`}
+                  }`}
               >
                 <Icon
                   className={`h-4 w-4 ${activeSection === tab.id ? "text-teal-400" : "text-slate-500"}`}
@@ -208,16 +231,14 @@ export default function Settings() {
                 <button
                   type="button"
                   onClick={() => handleToggle("maintenanceMode")}
-                  className={`w-11 h-6 rounded-full p-1 transition-colors shrink-0 ${
-                    settings.maintenanceMode ? "bg-rose-500" : "bg-slate-800"
-                  }`}
+                  className={`w-11 h-6 rounded-full p-1 transition-colors shrink-0 ${settings.maintenanceMode ? "bg-rose-500" : "bg-slate-800"
+                    }`}
                 >
                   <div
-                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                      settings.maintenanceMode
+                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${settings.maintenanceMode
                         ? "translate-x-5"
                         : "translate-x-0"
-                    }`}
+                      }`}
                   />
                 </button>
               </div>
@@ -236,14 +257,12 @@ export default function Settings() {
                 <button
                   type="button"
                   onClick={() => handleToggle("mfaRequired")}
-                  className={`w-11 h-6 rounded-full p-1 transition-colors shrink-0 ${
-                    settings.mfaRequired ? "bg-teal-500" : "bg-slate-800"
-                  }`}
+                  className={`w-11 h-6 rounded-full p-1 transition-colors shrink-0 ${settings.mfaRequired ? "bg-teal-500" : "bg-slate-800"
+                    }`}
                 >
                   <div
-                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                      settings.mfaRequired ? "translate-x-5" : "translate-x-0"
-                    }`}
+                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${settings.mfaRequired ? "translate-x-5" : "translate-x-0"
+                      }`}
                   />
                 </button>
               </div>
@@ -266,14 +285,12 @@ export default function Settings() {
                 <button
                   type="button"
                   onClick={() => handleToggle("emailAlerts")}
-                  className={`w-11 h-6 rounded-full p-1 transition-colors shrink-0 ${
-                    settings.emailAlerts ? "bg-teal-500" : "bg-slate-800"
-                  }`}
+                  className={`w-11 h-6 rounded-full p-1 transition-colors shrink-0 ${settings.emailAlerts ? "bg-teal-500" : "bg-slate-800"
+                    }`}
                 >
                   <div
-                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                      settings.emailAlerts ? "translate-x-5" : "translate-x-0"
-                    }`}
+                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${settings.emailAlerts ? "translate-x-5" : "translate-x-0"
+                      }`}
                   />
                 </button>
               </div>

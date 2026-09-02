@@ -40,9 +40,11 @@ import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.entity.SupportIssue.Status;
+import com.growkaro.backend.entity.SystemSettings;
 import com.growkaro.backend.service.AdminAPIService;
 import com.growkaro.backend.service.EmailService;
 import com.growkaro.backend.service.CrucialNotificationService;
+import com.growkaro.backend.service.SystemSettingsService;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import lombok.extern.slf4j.Slf4j;
@@ -57,17 +59,31 @@ public class AdminAPIController {
     private final General general;
     private final NotificationBroadcaster notificationBroadcaster;
     private final CrucialNotificationService crucialNotificationService;
+    private final SystemSettingsService systemSettingsService;
 
     private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of("image/jpeg", "image/png", "image/webp", "image/jpg");
     private static final long MAX_FILE_SIZE_BYTES = 5L * 1024 * 1024;
 
     public AdminAPIController(AdminAPIService adminAPIService, EmailService emailService, General general,
-            NotificationBroadcaster notificationBroadcaster, CrucialNotificationService crucialNotificationService) {
+            NotificationBroadcaster notificationBroadcaster, CrucialNotificationService crucialNotificationService,
+            SystemSettingsService systemSettingsService) {
         this.adminAPIService = adminAPIService;
         this.emailService = emailService;
         this.general = general;
         this.notificationBroadcaster = notificationBroadcaster;
         this.crucialNotificationService = crucialNotificationService;
+        this.systemSettingsService = systemSettingsService;
+    }
+
+    @GetMapping("/overview")
+    public ResponseEntity<Map<String, Object>> getOverview() {
+        try {
+            Map<String, Object> stats = adminAPIService.getOverviewStats();
+            return ResponseEntity.ok(general.response("success", "Overview stats fetched", stats));
+        } catch (Exception e) {
+            log.error("Failed to fetch overview stats: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(general.response("error", e.getMessage(), null));
+        }
     }
 
     @PostMapping("/scheme/create")
@@ -411,6 +427,28 @@ public class AdminAPIController {
         } catch (Exception e) {
             log.error("Error while marking issue resolved: " + e.getMessage());
             return ResponseEntity.ok(general.response("error", "something went wrong..", null));
+        }
+    }
+
+    @GetMapping("/settings")
+    public ResponseEntity<Map<String, Object>> getSettings() {
+        try {
+            SystemSettings settings = systemSettingsService.getSettings();
+            return ResponseEntity.ok(general.response("success", "Settings fetched successfully", settings));
+        } catch (Exception e) {
+            log.error("Failed to fetch settings: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(general.response("error", e.getMessage(), null));
+        }
+    }
+
+    @PutMapping("/settings")
+    public ResponseEntity<Map<String, Object>> updateSettings(@RequestBody SystemSettings settings) {
+        try {
+            SystemSettings updatedSettings = systemSettingsService.updateSettings(settings);
+            return ResponseEntity.ok(general.response("success", "Settings updated successfully", updatedSettings));
+        } catch (Exception e) {
+            log.error("Failed to update settings: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(general.response("error", e.getMessage(), null));
         }
     }
 

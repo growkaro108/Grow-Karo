@@ -65,7 +65,6 @@ export function useEventStream({
     const url = token
       ? `${endpoint}${endpoint.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
       : endpoint;
-    console.log(url);
     const es = new EventSource(url);
 
     es.onopen = () => setConnectionStatus("live");

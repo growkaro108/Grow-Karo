@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -11,11 +12,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +50,7 @@ import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.entity.SupportIssue.Status;
 import com.growkaro.backend.entity.Transaction.TransactionStatus;
+import com.growkaro.backend.entity.Transaction.TransactionType;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.enums.UserSchemeStatus;
 import com.growkaro.backend.enums.WithdrawalStatus;
@@ -81,6 +85,7 @@ public class AdminAPIService {
     private final NotificationContentBuilder contentBuilder;
     private final General general;
     private final CrucialNotificationService crucialNotificationService;
+    private final EmailService emailService;
 
     public AdminAPIService(UserRepository userRepository,
             RemitterRepository remitterRepository,
@@ -91,7 +96,8 @@ public class AdminAPIService {
             ActivityLogRepository activityLogRepository, NotificationRepository notificationRepository,
             NotificationContentBuilder contentBuilder,
             General general,
-            CrucialNotificationService crucialNotificationService) {
+            CrucialNotificationService crucialNotificationService,
+            EmailService emailService) {
         this.userRepository = userRepository;
         this.remitterRepository = remitterRepository;
         this.transactionRepository = transactionRepository;
@@ -106,6 +112,7 @@ public class AdminAPIService {
         this.contentBuilder = contentBuilder;
         this.general = general;
         this.crucialNotificationService = crucialNotificationService;
+        this.emailService = emailService;
     }
 
     // create a new scheme
@@ -114,6 +121,9 @@ public class AdminAPIService {
         Scheme scheme = general.toScheme(schemeData);
         try {
             schemeRepository.save(scheme);
+            // notify all user and admin by notification
+            List<String> userEmails = userRepository.findEmailOfUsersWantSchemeAlerts();
+            emailService.notifyAllUsers(userEmails, scheme);
             return true;
         } catch (Exception e) {
             log.error("error in creating scheme", e.getMessage());
@@ -189,6 +199,7 @@ public class AdminAPIService {
         }
     }
 
+    @CacheEvict(value = "overviewStats", key = "'adminOverview'")
     @Transactional
     public Map<String, Object> activateUsersScheme(String userSchemeId, BigDecimal paidAmount, LocalDate paidDate) {
         if (userSchemeId == null || userSchemeId.isBlank() || paidAmount == null
@@ -226,6 +237,12 @@ public class AdminAPIService {
                     general.calculateMaturityDate(userScheme.getEnrollmentDate(), userScheme.getScheme().getTenure()));
             // save user scheme
             userSchemeRepository.save(userScheme);
+            // convert localdate to localdatetime paidDate=dateTime
+            LocalDateTime settlementDate = LocalDateTime.of(paidDate,
+                    LocalDateTime.now(ZoneId.of("Asia/Kolkata")).toLocalTime());
+
+            createTransaction(userSchemeId, user, paidAmount, settlementDate, TransactionType.DEPOSIT,
+                    "Initial Deposit");
             return general.response("success",
                     user.getName() + " is approved for " + scheme.getSchemeName() + " successfully..", userScheme);
 
@@ -239,6 +256,24 @@ public class AdminAPIService {
                         user.getName() + " has approved for " + scheme.getSchemeName(), "user",
                         user.getId(), null);
             }
+        }
+    }
+
+    @Async
+    private void createTransaction(String userSchemeId, User user, BigDecimal amount, LocalDateTime settlementDate,
+            TransactionType type, String note) {
+        try {
+            Transaction transaction = new Transaction();
+            transaction.setUserScheme(userSchemeRepository.findById(userSchemeId).orElse(null));
+            transaction.setUser(user);
+            transaction.setAmount(amount);
+            transaction.setSettlementDate(settlementDate);
+            transaction.setType(type);
+            transaction.setBankDetails(user.getBankDetails());
+            transaction.setStatus(TransactionStatus.SUCCESS);
+            transactionRepository.save(transaction);
+        } catch (Exception e) {
+            log.error("Error creating transaction for user scheme {} because of :{}", userSchemeId, e.getMessage());
         }
     }
 
@@ -325,6 +360,7 @@ public class AdminAPIService {
         }
     }
 
+    @Cacheable(value = "activityTypes", key = "'all'")
     public List<String> getAllStoredActivityTypes() {
         List<ActivityType> types = activityLogRepository.findDistinctTypes();
         List<String> typeNames = new ArrayList<>();
@@ -682,7 +718,61 @@ public class AdminAPIService {
         }
     }
 
+    @Cacheable(value = "overviewStats", key = "'adminOverview'", unless = "#result == null")
+    public Map<String, Object> getOverviewStats() {
+        try {
+            LocalDateTime since = LocalDateTime.now().minusDays(14);
+
+            BigDecimal totalAUM = userSchemeRepository.findTotalAUM();
+            long activeInvestors = userSchemeRepository.countActiveInvestors();
+            BigDecimal pendingWithdrawalAmount = transactionRepository.sumPendingWithdrawalAmount();
+            long pendingWithdrawalCount = transactionRepository.countPendingWithdrawals();
+            long openIssues = supportIssueRepository.countOpenIssues();
+
+            // Daily inflow for the last 14 days
+            List<Map<String, Object>> rawInflow = transactionRepository.findDailyInflow(since);
+            List<Map<String, Object>> inflowData = rawInflow.stream().map(row -> {
+                Map<String, Object> point = new LinkedHashMap<>();
+                Object day = row.get("day");
+                point.put("day", day != null ? day.toString() : "");
+                point.put("amount", row.get("amount"));
+                return point;
+            }).toList();
+
+            // Withdrawal status breakdown
+            List<Map<String, Object>> rawBreakdown = transactionRepository.findStatusBreakdown();
+            Map<String, Object> statusBreakdown = new LinkedHashMap<>();
+            for (Map<String, Object> row : rawBreakdown) {
+                statusBreakdown.put(String.valueOf(row.get("status")), row.get("count"));
+            }
+
+            // Per-scheme AUM
+            List<Map<String, Object>> schemeAUM = userSchemeRepository.findSchemeAumBreakdown().stream().map(row -> {
+                Map<String, Object> point = new java.util.LinkedHashMap<>();
+                point.put("schemeName", row.get("schemeName"));
+                point.put("aum", row.get("aum"));
+                return point;
+            }).toList();
+
+            Map<String, Object> result = new java.util.LinkedHashMap<>();
+            result.put("totalAUM", totalAUM);
+            result.put("activeInvestors", activeInvestors);
+            result.put("pendingWithdrawalAmount", pendingWithdrawalAmount);
+            result.put("pendingWithdrawalCount", pendingWithdrawalCount);
+            result.put("openIssues", openIssues);
+            result.put("inflowData", inflowData);
+            result.put("statusBreakdown", statusBreakdown);
+            result.put("schemeAUM", schemeAUM);
+            return result;
+        } catch (Exception e) {
+            log.error("Error while fetching overview stats: " + e.getMessage());
+            return null;
+        }
+
+    }
+
     // pending--------------------------------------------------------------------------------------------------------
+
     // @Cacheable(value = "adminDashboard", key = "#range ?: 'default'")
     // @Transactional(readOnly = true)
     // public Map<String, Object> adminDashboard(String range) {
@@ -1019,4 +1109,5 @@ public class AdminAPIService {
             return null;
         return remitterRepository.findById(id).orElse(null);
     }
+
 }
