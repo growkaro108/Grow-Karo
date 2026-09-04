@@ -4,11 +4,10 @@ import { CircleDot } from "lucide-react";
 export function PlanStatusBadge({ active }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold tracking-wide uppercase border ${
-        active
-          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_12px_rgba(16,185,129,0.1)]"
-          : "bg-rose-500/10 text-rose-400 border-rose-500/20"
-      }`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold tracking-wide uppercase border ${active
+        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_12px_rgba(16,185,129,0.1)]"
+        : "bg-rose-500/10 text-rose-400 border-rose-500/20"
+        }`}
     >
       <span
         className={`w-1.5 h-1.5 rounded-full animate-pulse ${active ? "bg-emerald-400 shadow-[0_0_8px_#34d399]" : "bg-rose-400"}
@@ -42,6 +41,7 @@ export function StatusBadge({ status }) {
     create: "bg-blue-500/10 text-blue-400 ring-blue-500/30",
     processed: "bg-indigo-500/10 text-indigo-400 ring-indigo-500/30",
     rejected: "bg-red-500/10 text-red-400 ring-red-500/30",
+    withdrawal: "bg-amber-500/10 text-amber-400 ring-amber-500/30",
   };
 
   const label = status.replace("_", " ");

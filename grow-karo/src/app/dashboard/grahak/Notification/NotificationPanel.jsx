@@ -12,6 +12,7 @@ import Pagination from "./Pagination";
 import { markUserNotificationsAsRead } from "@/api/userApi";
 import { userContext } from "@/context/UserContext";
 import { fetchUserNotifications } from "../../../../../services/grahakService";
+import { buildSseUrl } from "@/api/apiClient";
 
 const PAGE_SIZE = 6;
 const TABS = [
@@ -91,14 +92,11 @@ export default function NotificationPanel({ onItemClick }) {
   useEffect(() => {
     if (!userId) return;
 
-    const apiBaseUrl =
-      process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
-      "http://localhost:9090/api";
-    const sseUrl = `${apiBaseUrl}/user/${userId}/notifications/stream`;
+    const sseUrl = buildSseUrl(`/user/${userId}/notifications/stream`);
 
     let eventSource;
     try {
-      eventSource = new EventSource(sseUrl);
+      eventSource = new EventSource(sseUrl, { withCredentials: true });
 
       eventSource.addEventListener("notification", (event) => {
         try {
@@ -243,11 +241,10 @@ export default function NotificationPanel({ onItemClick }) {
                 key={t.key}
                 type="button"
                 onClick={() => setTab(t.key)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer flex items-center gap-1 ${
-                  tab === t.key
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer flex items-center gap-1 ${tab === t.key
                     ? "bg-emerald-50 text-emerald-700 font-semibold"
                     : "text-slate-500 hover:bg-slate-50"
-                }`}
+                  }`}
               >
                 {t.label !== "Read" ? (
                   <>

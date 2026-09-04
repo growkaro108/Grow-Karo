@@ -2,6 +2,8 @@ package com.growkaro.backend.DTO;
 
 import java.time.LocalDateTime;
 
+import com.growkaro.backend.entity.Notification;
+
 public record NotificationView(
         String id,
         String title,
@@ -13,7 +15,7 @@ public record NotificationView(
         LocalDateTime createdAt, LocalDateTime updatedAt) {
 
     // Forconvenience when mapping from entity
-    public static NotificationView fromEntity(com.growkaro.backend.entity.Notification n) {
+    public static NotificationView fromEntity(Notification n) {
         if (n == null) {
             return null;
         }

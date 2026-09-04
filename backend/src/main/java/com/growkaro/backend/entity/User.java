@@ -18,10 +18,11 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Data
 @AllArgsConstructor
-@JsonIgnoreProperties({"enrolledSchemes","nominees","bankDetails","guardian"})
+@JsonIgnoreProperties({ "enrolledSchemes", "nominees", "bankDetails", "guardian" })
 @NoArgsConstructor
 @Entity
-@Table(name = "users")
+@Table(name = "users", indexes = { @Index(name = "idx_user_email", columnList = "email"),
+        @Index(name = "idx_user_id", columnList = "id") })
 public class User {
 
     @Id

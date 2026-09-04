@@ -39,6 +39,7 @@ import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserProfile;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.repository.UserRepository;
+import com.growkaro.backend.security.JwtService;
 
 @Component
 public class General {
@@ -49,6 +50,8 @@ public class General {
 
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private JwtService jwtService;
 
     public boolean isValidId(String id) {
         Pattern idPattern = Pattern.compile("^GKUSID\\d{14}$");
@@ -166,7 +169,10 @@ public class General {
     public UserPortfolio toUserPortfolio(UserScheme us) {
         Scheme scheme = us.getScheme();
         Nominee nominee = us.getNominee();
-        NomineeResponse nomineeResponse = NomineeResponse.fromEntity(nominee);
+        NomineeResponse nomineeResponse = null;
+        if (nominee != null) {
+            nomineeResponse = NomineeResponse.fromEntity(nominee);
+        }
         List<LocalDateTime> profitDates = new ArrayList<>(us.getProfitDates());
         return new UserPortfolio(
                 scheme.getSchemeId(),
@@ -284,31 +290,32 @@ public class General {
         return baseUrl + "/reset/" + remitterId + "_rem";
     }
 
-    public UserProfile toUserProfile(User user, String token) {
-        BankDetails bankDetails = user.getBankDetails();
+    // public UserProfile toUserProfile(User user, String token) {
+    // BankDetails bankDetails = user.getBankDetails();
 
-        String bankName = null;
-        String accountNumber = null;
-        String ifscCode = null;
-        String accountHolderName = null;
-        String bankDetailsId = null;
+    // String bankName = null;
+    // String accountNumber = null;
+    // String ifscCode = null;
+    // String accountHolderName = null;
+    // String bankDetailsId = null;
 
-        if (bankDetails != null) {
-            bankName = bankDetails.getBankName();
-            accountNumber = bankDetails.getAccountNumber();
-            ifscCode = bankDetails.getIfscCode();
-            accountHolderName = bankDetails.getAccountHolderName();
-            bankDetailsId = bankDetails.getBank_details_id();
-        }
+    // if (bankDetails != null) {
+    // bankName = bankDetails.getBankName();
+    // accountNumber = bankDetails.getAccountNumber();
+    // ifscCode = bankDetails.getIfscCode();
+    // accountHolderName = bankDetails.getAccountHolderName();
+    // bankDetailsId = bankDetails.getBank_details_id();
+    // }
 
-        return new UserProfile(user.getId(), user.getName(), user.getEmail(), user.getPhone(),
-                bankName,
-                accountNumber,
-                ifscCode,
-                accountHolderName,
-                user.isSecurityAlerts(), user.isSchemeAlerts(), token,
-                bankDetailsId);
-    }
+    // return new UserProfile(user.getId(), user.getName(), user.getEmail(),
+    // user.getPhone(),
+    // bankName,
+    // accountNumber,
+    // ifscCode,
+    // accountHolderName,
+    // user.isSecurityAlerts(), user.isSchemeAlerts(), token,
+    // bankDetailsId);
+    // }
 
     public User getUserById(String userId) {
         if (userId == null || userId.isBlank()) {
@@ -390,6 +397,10 @@ public class General {
                 isJoined ? us.getMaturityDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")) : null,
                 isJoined ? us.getBondImageURL() : null,
                 isJoined ? us.getScheme().getPayoutFrequency() : null);
+    }
+
+    public String generateToken(String userId, String email, String role) {
+        return jwtService.generateToken(userId, email, role);
     }
 
 }

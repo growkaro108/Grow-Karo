@@ -2,16 +2,11 @@ package com.growkaro.backend.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
@@ -23,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,6 +57,8 @@ import com.growkaro.backend.repository.SupportIssueRepository;
 import com.growkaro.backend.repository.TransactionRepository;
 import com.growkaro.backend.repository.UserRepository;
 import com.growkaro.backend.repository.UserSchemeRepository;
+import com.growkaro.backend.security.AdminPolicy;
+import com.growkaro.backend.security.JwtService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -83,6 +81,8 @@ public class UserAPIService {
     private final CrucialNotificationService crucialNotificationService;
     private final EmailService emailService;
     private final SupportIssueRepository supportIssueRepository;
+    private final JwtService jwtService;
+    private final AdminPolicy adminPolicy;
 
     // @Cacheable(value = "testApis", key = "#id")
     @Transactional
@@ -129,7 +129,12 @@ public class UserAPIService {
     }
 
     public boolean isUserExists(String email) {
-        return userRepository.existsByEmail(email);
+        return findAllUsersEmail().contains(email);
+    }
+
+    @Cacheable(value = "AllUsersEmail")
+    public List<String> findAllUsersEmail() {
+        return userRepository.findAllEmail();
     }
 
     public boolean existByUserId(String id) {
@@ -188,6 +193,7 @@ public class UserAPIService {
         return txn.isEmpty() ? null : txn.get();
     }
 
+    @CacheEvict(value = "AllUsersEmail")
     @Transactional
     public boolean userSignup(UserRegister user) {
         String email = stringValue(user.email());
@@ -271,14 +277,19 @@ public class UserAPIService {
     @Transactional
     public Map<String, Object> login(String email, String password) {
         try {
+            if (!isUserExists(email)) {
+                return general.response("error", "User not found", Map.of());
+            }
             User user = getUserByEmail(email);
 
             if (user == null || password == null || !BCrypt.checkpw(password, user.getPasswordHash())) {
                 log.error("Invalid email or password for email={}", email);
                 return general.response("error", "Invalid email or password", Map.of());
             }
-            String token = "local-dev-token";
-            UserProfile finalUser = general.toUserProfile(user, token);
+            String role = adminPolicy.isAdminEmail(email) ? "ROLE_ADMIN" : "ROLE_GRAHAK";
+            String token = jwtService.generateToken(user.getId(), user.getEmail(), role);
+            UserProfile finalUser = UserProfile.fromEntity(user, token);
+
             String nonValidPassword = null;
             if (!general.validatePassword(password)) {
                 nonValidPassword = password;
@@ -319,7 +330,8 @@ public class UserAPIService {
 
     @Caching(evict = {
             @CacheEvict(value = "userPortfolio", key = "#userId"),
-            @CacheEvict(value = "userSchemes", key = "#userId")
+            @CacheEvict(value = "userSchemes", key = "#userId"),
+            @CacheEvict(value = "userTransactions", key = "#userId")
     })
     @Transactional
     public Map<String, Object> enrollInScheme(String schemeId, String userId, BigDecimal amount, String nomineId) {
@@ -503,7 +515,6 @@ public class UserAPIService {
     @Transactional
     public Map<String, Object> updateUser(UserProfile up) {
         // create new token
-        String token = "local-dev-token";
 
         User user = getUserById(up.id());
         if (user == null) {
@@ -537,12 +548,12 @@ public class UserAPIService {
         user.setEmail(up.email());
         user.setSchemeAlerts(up.schemeAlerts());
         user.setSecurityAlerts(up.securityAlerts());
-        userRepository.save(user);
+        user = userRepository.save(user);
 
         crucialNotificationService.notifyUser(EssentialActionType.BANK_DETAILS_UPDATED, user, "/dashboard/settings",
                 null);
 
-        return general.response("success", "User updated successfully", general.toUserProfile(user, token));
+        return general.response("success", "User updated successfully", UserProfile.fromEntity(user,general.generateToken(user.getId(), user.getEmail(), "ROLE_GRAHAK")));
     }
 
     @CacheEvict(value = "userTransactions", key = "#wa.userId()")
@@ -552,7 +563,7 @@ public class UserAPIService {
         // basic amount validation
         try {
             if (wa.amount() == null || wa.amount().compareTo(BigDecimal.ZERO) <= 0) {
-                log.error("id: {},      amount: {},Invalid amount...", Map.of("amount", wa.amount()));
+                log.error("id: {}, amount: {},Invalid amount...", wa.userId(), wa.amount());
                 return general.response("error", "Invalid amount...", null);
             }
 
@@ -865,7 +876,7 @@ public class UserAPIService {
             supportIssueRepository.save(issue);
             return general.response("success", "Comment added successfully", true);
         } catch (Exception e) {
-            log.error("Error while adding comment: " + e.getMessage());
+            log.error("Error while adding comment: {}", e.getMessage());
             return general.response("error", "Failed to add comment", false);
         }
     }

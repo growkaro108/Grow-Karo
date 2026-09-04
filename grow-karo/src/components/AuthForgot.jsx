@@ -32,16 +32,16 @@ export default function AuthForgot({ onSwitch }) {
         setError(response.message);
       } else {
         setMessage("Please check your email inbox for a reset link.");
-        setTimeout(() => {
-          onSwitch && onSwitch("login");
-          setIsLoading(false);
-        }, 2000);
       }
     } catch (error) {
       console.log(error);
       setError("Failed to send reset link.");
     } finally {
       response && allRounderMessage(response);
+      setTimeout(() => {
+        onSwitch && onSwitch("login");
+        setIsLoading(false);
+      }, 1500);
     }
   };
 

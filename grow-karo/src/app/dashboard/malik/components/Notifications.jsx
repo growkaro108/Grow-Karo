@@ -124,7 +124,7 @@ export default function NotificationDropdown({ setShowNotifications }) {
 
     let eventSource;
     try {
-      eventSource = new EventSource(sseUrl);
+      eventSource = new EventSource(sseUrl,{ withCredentials: true });
 
       eventSource.addEventListener("notification", (event) => {
         try {

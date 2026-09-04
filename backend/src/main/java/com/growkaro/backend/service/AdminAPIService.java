@@ -559,9 +559,7 @@ public class AdminAPIService {
     public PagedResponse<RemitterResponse> getAllRemitters(Pageable pageable) {
 
         var remitters = remitterRepository.findAll(pageable);
-
         var mapped = remitters.map(RemitterResponse::fromEntity);
-
         return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
     }
 

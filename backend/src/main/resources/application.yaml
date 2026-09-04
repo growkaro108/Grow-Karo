@@ -47,6 +47,29 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+  # 5. Logging Configuration
+  main:
+    # Disable the Spring Boot banner
+    banner-mode: "off"
+    # Start beans only when needed
+  #    lazy-initialization: true
+
+  # Suppress most logs, show WARN and ERROR
+  # logging:
+  #   level:
+  #     root: WARN
+  #     org:
+  #       springframework: WARN
+  #       hibernate: OFF
+  #       hibernate.SQL: OFF
+  #       apache: OFF
+  #     com:
+  #       zaxxer:
+  #         hikari: OFF
+  #     io:
+  #       netty: OFF
+  #     reactor: OFF
+
   # 5. Mail Configuration
   mail:
     host: smtp.gmail.com
@@ -71,6 +94,10 @@ spring:
       max-file-size: 5MB
       max-request-size: 5MB
 app:
+  jwt:
+    secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+    expiration-ms: ${JWT_EXPIRATION_MS:604800000} # 7 days
+    cookie-name: authToken
   storage:
     type: local
     local:

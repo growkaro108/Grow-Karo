@@ -30,12 +30,36 @@ spring:
     redis:
       time-to-live: 10m # Set explicit duration (10 minutes)
       cache-null-values: false
+  # Logging Configuration
+  main:
+    # Disable the Spring Boot banner
+    banner-mode: "off"
+    # Start beans only when needed
+  #  lazy-initialization: true
+
+# Suppress most logs, show WARN and ERROR
+logging:
+  level:
+    root: WARN
+    org:
+      springframework: WARN
+      hibernate: OFF
+      hibernate.SQL: OFF
+      apache: OFF
+    com:
+      zaxxer:
+        hikari: OFF
+    io:
+      netty: OFF
+    reactor: OFF
 
 app:
   storage:
     type: local
     local:
-      base-path: ${STORAGE_BASE_PATH:/app/uploads}   # mount a Docker volume here
-      base-url: /uploads                              # relative — frontend prepends API host
+      base-path: ${STORAGE_BASE_PATH:/app/uploads} # mount a Docker volume here
+      base-url: /uploads # relative — frontend prepends API host
 frontend:
-  url: ${FRONTEND_URL:http://localhost:3000}  # Define the frontend URL for CORS configuration
+  url: ${FRONTEND_URL:http://localhost:3000} # Define the frontend URL for CORS configuration
+admin:
+  email: ${ADMIN_EMAIL:"wv9304@gmail.com"}

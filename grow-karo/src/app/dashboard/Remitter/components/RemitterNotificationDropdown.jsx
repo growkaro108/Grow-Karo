@@ -65,7 +65,7 @@ export default function RemitterNotificationDropdown({ remitterId }) {
 
     let eventSource;
     try {
-      eventSource = new EventSource(sseUrl);
+      eventSource = new EventSource(sseUrl,{ withCredentials: true });
 
       eventSource.addEventListener("notification", (event) => {
         try {

@@ -28,9 +28,13 @@ import com.growkaro.backend.service.EmailService;
 import com.growkaro.backend.service.RedisService;
 import com.growkaro.backend.common.NotificationBroadcaster;
 import com.growkaro.backend.entity.Notification.ReceiverType;
+import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.entity.Reply;
 import com.growkaro.backend.entity.SupportIssue.Status;
 
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import com.growkaro.backend.security.JwtService;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.growkaro.backend.service.RemitterAPIService;
@@ -49,10 +53,11 @@ public class UserAPIController {
     private final General general;
     private final ApiService apiService;
     private final NotificationBroadcaster notificationBroadcaster;
+    private final JwtService jwtService;
 
     public UserAPIController(UserAPIService userAPIService, EmailService emailService, RedisService redisService,
             RemitterAPIService remitterAPIService, General general, ApiService apiService,
-            NotificationBroadcaster notificationBroadcaster) {
+            NotificationBroadcaster notificationBroadcaster, JwtService jwtService) {
         this.userAPIService = userAPIService;
         this.emailService = emailService;
         this.redisService = redisService;
@@ -60,6 +65,7 @@ public class UserAPIController {
         this.general = general;
         this.apiService = apiService;
         this.notificationBroadcaster = notificationBroadcaster;
+        this.jwtService = jwtService;
     }
 
     @GetMapping("/test")
@@ -79,8 +85,7 @@ public class UserAPIController {
         }
         // check if user or remitter with same email exists
         if (userAPIService.isUserExists(email) || remitterAPIService.isRemitterExists(email)) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(general.response("info", "Email already registered..", null));
+            return ResponseEntity.ok(general.response("info", "Email already registered..", null));
         }
 
         emailService.sendOtp(email, Remark.SIGNUP.getValue());
@@ -127,22 +132,48 @@ public class UserAPIController {
         }
     }
 
-    @PostMapping("/login")
+  @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, Object> credentials) {
         String email = general.stringValue(credentials.get("email"));
         String password = general.stringValue(credentials.get("password"));
-
+ 
         if (email == null || !general.validateEmail(email) || password == null || password.isBlank()) {
-            log.warn("Invalid credentials for email: {}", email);
+            log.warn("Login request rejected: malformed credentials"); // no email/password value logged
             return ResponseEntity.badRequest()
-                    .body(general.response("error", "Invalid credentials", null));
+                    .body(general.response("error", "Invalid credentials", Map.of()));
         }
-        return ResponseEntity.ok(userAPIService.login(email, password));
+ 
+        Map<String, Object> loginResponse = userAPIService.login(email, password);
+ 
+        boolean success = "success".equals(loginResponse.get("status"));
+        if (!success) {
+            // 401, not 200-with-error-field, so the client can branch on HTTP status.
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(loginResponse);
+        }
+ 
+        if (!(loginResponse.get("data") instanceof UserProfile userProfile) || userProfile.token() == null) {
+            // Success status but no usable profile/token is an internal
+            // inconsistency, not a client error — treat as 500, not 200.
+            log.error("Login succeeded but no token/profile returned for email={}", email);
+            return ResponseEntity.internalServerError()
+                    .body(general.response("error", "Something went wrong.", Map.of()));
+        }
+ 
+        ResponseCookie cookie = jwtService.generateJwtCookie(userProfile.token());
+        UserProfile safeProfile = UserProfile.removeToken(userProfile);
+        loginResponse.put("data", safeProfile);
+ 
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(loginResponse);
     }
 
     @PostMapping("/logout/{userId}/{userName}")
     public ResponseEntity<Map<String, Object>> logout(@PathVariable String userId, @PathVariable String userName) {
-        return ResponseEntity.ok(userAPIService.logout(userId, userName));
+        ResponseCookie cookie = jwtService.getCleanJwtCookie();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(userAPIService.logout(userId, userName));
     }
 
     @PutMapping("/scheme/enroll")
@@ -207,15 +238,15 @@ public class UserAPIController {
     @PostMapping("/forgot-password/{email}")
     public ResponseEntity<Map<String, Object>> forgotPassword(@PathVariable String email) {
         if (email == null || email.isBlank() || !general.validateEmail(email)) {
-            return ResponseEntity.badRequest().body(general.response("error", "Invalid data", null));
+            return ResponseEntity.ok(general.response("error", "Invalid data", null));
         }
         User user = userAPIService.getUserByEmail(email);
         if (user == null) {
-            return ResponseEntity.badRequest().body(general.response("error", "User not found", null));
+            return ResponseEntity.ok(general.response("error", "Email is unRegistered...", null));
         }
         try {
             emailService.sendResetLink(email, user.getId());
-            return ResponseEntity.ok().body(general.response("success", "Reset password link sent successfully", null));
+            return ResponseEntity.ok(general.response("success", "Reset password link sent successfully", null));
         } catch (Exception e) {
             log.error("Error sending reset password link to user {}", email, e);
             return ResponseEntity.internalServerError()
@@ -243,7 +274,16 @@ public class UserAPIController {
     @PutMapping("/change_password")
     public ResponseEntity<Map<String, Object>> updateUser(
             @RequestBody UserProfile userProfile) {
-        return ResponseEntity.ok(userAPIService.updateUser(userProfile));
+        Map<String, Object> updateResponse = userAPIService.updateUser(userProfile);
+        if ("success".equals(updateResponse.get("status")) && updateResponse.get("data") instanceof UserProfile up) {
+            if (up.token() != null) {
+                ResponseCookie cookie = jwtService.generateJwtCookie(up.token());
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                        .body(updateResponse);
+            }
+        }
+        return ResponseEntity.ok(updateResponse);
     }
 
     @PostMapping("/redeemProfit")
@@ -354,7 +394,7 @@ public class UserAPIController {
             }
             return general.response("success", "Issues fetched successfully", result);
         } catch (Exception e) {
-            log.error("Error while fetching issues: " + e.getMessage());
+            log.error("Error while fetching issues: {}", e.getMessage());
             return general.response("error",
                     "something went wrong..", null);
         }

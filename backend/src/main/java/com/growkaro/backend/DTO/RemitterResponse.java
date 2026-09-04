@@ -8,55 +8,62 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Getter
-@Setter
-public class RemitterResponse {
+public record RemitterResponse(
 
-    private String id;
+        String id,
+        String token,
 
-    private String RemitterEmail;
-    private String RemitterPhone;
-    private String remitterCode;
+        String RemitterEmail,
+        String RemitterPhone,
+        String remitterCode,
 
-    private String organizationName;
-    private BigDecimal allocationLimit;
-    private BigDecimal totalPaid;
-    private String aadharNumber;
-    private String panNumber;
-    private boolean status;
-    private int totalUsers;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+        String organizationName,
+        BigDecimal allocationLimit,
+        BigDecimal totalPaid,
+        String aadharNumber,
+        String panNumber,
+        boolean status,
+        int totalUsers,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt) {
 
     // private String gstNumber;
     /** Masked, e.g. "ABCDE****F" — full value is never sent to the client. */
 
     /** Masked, e.g. "XXXX XXXX 9012" — full value is never sent to the client. */
 
-    /**
-     * Maps a Remitter entity to its response representation, masking
-     * sensitive KYC identifiers along the way.
-     */
-    public static RemitterResponse fromEntity(Remitter remitter) {
-        RemitterResponse dto = new RemitterResponse();
+    public static RemitterResponse fromEntity(Remitter r, String token) {
+        return new RemitterResponse(r.getRemitterId(), token, r.getRemitterEmail(),
+                r.getRemitterPhone(), r.getRemitterCode(),
+                r.getOrganizationName(), r.getAllocationLimit(), r.getTotalPaid(), maskAadhar(r.getAadharNumber()),
+                maskPan(r.getPanNumber()), r.getStatus(), r.getUsers().size(), r.getCreatedAt(), r.getUpdatedAt());
 
-        dto.setId(remitter.getRemitterId());
+        // dto.setId(remitter.getRemitterId());
+        // dto.setToken(token);
 
-        dto.setOrganizationName(remitter.getOrganizationName());
-        // dto.setGstNumber(remitter.getGstNumber());
-        dto.setPanNumber(remitter.getPanNumber());
-        dto.setAadharNumber(remitter.getAadharNumber());
-        dto.setRemitterEmail(remitter.getRemitterEmail());
-        dto.setRemitterPhone(remitter.getRemitterPhone());
-        dto.setRemitterCode(remitter.getRemitterCode());
-        dto.setAllocationLimit(remitter.getAllocationLimit());
-        dto.setTotalPaid(remitter.getTotalPaid());
-        dto.setTotalUsers(remitter.getUsers().size());
-        dto.setStatus(remitter.getStatus());
-        dto.setCreatedAt(remitter.getCreatedAt());
-        dto.setUpdatedAt(remitter.getUpdatedAt());
+        // dto.setOrganizationName(remitter.getOrganizationName());
+        // dto.setPanNumber(remitter.getPanNumber());
+        // dto.setAadharNumber(remitter.getAadharNumber());
+        // dto.setRemitterEmail(remitter.getRemitterEmail());
+        // dto.setRemitterPhone(remitter.getRemitterPhone());
+        // dto.setRemitterCode(remitter.getRemitterCode());
+        // dto.setAllocationLimit(remitter.getAllocationLimit());
+        // dto.setTotalPaid(remitter.getTotalPaid());
+        // dto.setTotalUsers(remitter.getUsers().size());
+        // dto.setStatus(remitter.getStatus());
+        // dto.setCreatedAt(remitter.getCreatedAt());
+        // dto.setUpdatedAt(remitter.getUpdatedAt());
 
-        return dto;
+        
+    }
+
+    // for general response to admin
+    public static RemitterResponse fromEntity(Remitter r) {
+        return new RemitterResponse(r.getRemitterId(), null, r.getRemitterEmail(),
+                r.getRemitterPhone(), r.getRemitterCode(),
+                r.getOrganizationName(), r.getAllocationLimit(), r.getTotalPaid(), maskAadhar(r.getAadharNumber()),
+                maskPan(r.getPanNumber()), r.getStatus(), r.getUsers().size(), r.getCreatedAt(), r.getUpdatedAt());
+        
     }
 
     private static String maskPan(String pan) {

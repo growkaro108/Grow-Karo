@@ -1,5 +1,5 @@
 "use client";
-import react, { createContext, useCallback, useMemo, useState } from "react";
+import react, { createContext, useCallback, useEffect, useMemo, useState } from "react";
 import {
   allRounderMessage,
   confirmMessage,
@@ -33,6 +33,27 @@ export const UserProvider = ({ children }) => {
   const { showLoader, hideLoader } = useLoader();
 
   const router = useRouter();
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setIsLoading(true);
+        const user = await getSecureCookie("authUser");
+        if (!cancelled && user?.data) {
+          setAuthUser(user.data);
+        }
+      } catch (err) {
+        console.error("Failed to load auth user cookie", err);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const updateAuthUser = useCallback(async (user) => {
     if (!user) return;
@@ -105,7 +126,11 @@ export const UserProvider = ({ children }) => {
             errorMessage("Logout failed", "Logout");
             return;
           }
+          await deleteSecureCookie("authToken");
           const status = await deleteSecureCookie("authUser");
+          if (typeof window !== "undefined") {
+            localStorage.clear();
+          }
           if (status.success) {
             setAuthUser(null);
             router.replace("/auth");
@@ -133,7 +158,10 @@ export const UserProvider = ({ children }) => {
     if (authUser !== null) return authUser;
     try {
       const user = await getSecureCookie("authUser");
-      setAuthUser(user?.data);
+      if (user?.data) {
+        setAuthUser(user.data);
+      }
+      return user?.data ?? null;
     } catch (error) {
       console.error("Failed to get data", error);
       return null;

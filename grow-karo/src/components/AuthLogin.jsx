@@ -3,14 +3,16 @@
 import { loginUser } from "@/api/userApi";
 import { EyeClosedIcon, EyeIcon } from "lucide-react";
 import { use, useState } from "react";
+import { useRouter } from "next/navigation";
 import { confirmMessage, errorMessage, successMessage } from "./Message";
 import { userContext } from "@/context/UserContext";
-import { setSecureCookie } from "@/context/cookiesManagement";
 import { useLoader } from "@/context/LoaderContext";
 import { RemitterLogin } from "../../services/remitterService";
 import { remitterContext } from "@/context/RemitterContext";
+import { setSecureCookie } from "@/context/cookiesManagement";
 
 export default function AuthLogin({ onSwitch }) {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isRemitter, setIsRemitter] = useState(false);
@@ -63,7 +65,7 @@ export default function AuthLogin({ onSwitch }) {
               if (status.success) {
                 setAuthRemitter(response);
                 setMessage("Signed in — redirecting...");
-                // router.push("/dashboard");
+                router.push("/dashboard");
               } else {
                 setError(status.message);
               }
@@ -92,7 +94,7 @@ export default function AuthLogin({ onSwitch }) {
           if (status.success) {
             setAuthUser(response.data);
             setMessage("Signed in — redirecting...");
-            //router.push("/dashboard");
+            router.push("/dashboard");
           } else {
             setError(status.message);
           }

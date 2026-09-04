@@ -37,6 +37,17 @@ public class UserPrincipal implements UserDetails {
                 authorities);
     }
 
+    public static UserPrincipal createFromClaims(String id, String email, String role) {
+        String roleWithPrefix = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(roleWithPrefix));
+
+        return new UserPrincipal(
+                id,
+                email,
+                "",
+                authorities);
+    }
+
     @Override
     public String getUsername() {
         return email;

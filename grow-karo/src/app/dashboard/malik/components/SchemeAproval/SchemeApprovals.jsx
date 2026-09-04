@@ -276,7 +276,14 @@ export default function SchemeApproval() {
   const filteredRequests = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (requests.length === 0) return [];
-    return requests.filter((r) => {
+    // first sort with whose bondImageURL is null first 
+    const sortedRequests = [...requests].sort((a, b) => {
+      if (a.bondImageURL === null && b.bondImageURL !== null) return -1;
+      if (a.bondImageURL !== null && b.bondImageURL === null) return 1;
+      return 0;
+    });
+    // sort 
+    return sortedRequests.filter((r) => {
       const matchesStatus =
         statusFilter === "all" || r.isApproved === statusFilter;
       const matchesQuery =
@@ -309,7 +316,7 @@ export default function SchemeApproval() {
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           {pendingCount > 0 && (
             <span className="sea-pill-count">
-              {pendingCount} awaiting review
+              {pendingCount} awaiting
             </span>
           )}
           <button

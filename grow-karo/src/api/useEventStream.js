@@ -46,9 +46,7 @@ export function useEventStream({
   mapEvent = (raw) => raw,
   getId = (item) => item.id,
   initialItems = [],
-  maxItems = 300,
-  getToken = () =>
-    typeof window !== "undefined" ? localStorage.getItem("token") : null,
+  maxItems = 100,
   enabled = true,
 }) {
   const [items, setItems] = useState(initialItems);
@@ -61,11 +59,8 @@ export function useEventStream({
   useEffect(() => {
     if (!enabled || !endpoint) return;
 
-    const token = getToken();
-    const url = token
-      ? `${endpoint}${endpoint.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
-      : endpoint;
-    const es = new EventSource(url);
+   
+    const es = new EventSource(endpoint, { withCredentials: true });
 
     es.onopen = () => setConnectionStatus("live");
     es.onerror = () => setConnectionStatus("reconnecting"); // EventSource auto-retries on its own

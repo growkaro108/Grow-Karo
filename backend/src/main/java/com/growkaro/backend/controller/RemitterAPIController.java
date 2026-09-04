@@ -26,6 +26,9 @@ import com.growkaro.backend.common.NotificationBroadcaster;
 import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.service.RemitterAPIService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import com.growkaro.backend.security.JwtService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -40,16 +43,18 @@ public class RemitterAPIController {
     private final RemitterAPIService remitterAPIService;
     private final General general;
     private final NotificationBroadcaster notificationBroadcaster;
+    private final JwtService jwtService;
 
     public RemitterAPIController(RemitterAPIService remitterAPIService, General general,
-            NotificationBroadcaster notificationBroadcaster) {
+            NotificationBroadcaster notificationBroadcaster, JwtService jwtService) {
         this.remitterAPIService = remitterAPIService;
         this.general = general;
         this.notificationBroadcaster = notificationBroadcaster;
+        this.jwtService = jwtService;
     }
 
     @PostMapping("/login")
-    private Map<String, Object> login(@RequestBody Map<String, Object> credentials) {
+    public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, Object> credentials) {
         String email = general.stringValue(credentials.get("email"));
         String password = general.stringValue(credentials.get("password"));
         String role = general.stringValue(credentials.get("role"));
@@ -58,21 +63,29 @@ public class RemitterAPIController {
                     || role.isEmpty() || !role.equals("remiter") || !general.validateEmail(email)
                     || !general.validatePassword(password)) {
                 log.info("Invalid request: email {} role {}", email, role);
-                return general.response("info", "Invalid request", null);
+                return ResponseEntity.ok(general.response("info", "Invalid request", null));
             }
             RemitterResponse rr = remitterAPIService.login(email, password);
+            
+;
             if (rr != null) {
-                if (!rr.isStatus()) {
-                    return general.response("info", "Account is not active", null);
+                if (!rr.status()) {
+                    return ResponseEntity.ok(general.response("info", "Account is not active", null));
                 }
-                return general.response("success", "Login successful", rr);
+                if (rr.token() != null) {
+                    ResponseCookie cookie = jwtService.generateJwtCookie(rr.token());    
+                    return ResponseEntity.ok()
+                            .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                            .body(general.response("success", "Login successful", rr));
+                }
+                return ResponseEntity.ok(general.response("success", "Login successful", rr));
             } else {
                 log.info("Invalid credentials: email {} role {}", email, role);
-                return general.response("error", "Invalid credentials...", null);
+                return ResponseEntity.ok(general.response("error", "Invalid credentials...", null));
             }
         } catch (Exception e) {
             log.error("Error in remitter login: email {} role {} because {} ", email, role, e.getMessage());
-            return general.response("error", "Something went wrong..", null);
+            return ResponseEntity.internalServerError().body(general.response("error", "Something went wrong..", null));
         }
     }
 
@@ -214,8 +227,11 @@ public class RemitterAPIController {
     }
 
     @GetMapping("/logout")
-    public boolean logout(@RequestParam String remitterId, @RequestParam String remitterCode) {
-        return remitterAPIService.logoutRemitter(remitterId, remitterCode);
+    public ResponseEntity<Boolean> logout(@RequestParam String remitterId, @RequestParam String remitterCode) {
+        ResponseCookie cookie = jwtService.getCleanJwtCookie();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(remitterAPIService.logoutRemitter(remitterId, remitterCode));
     }
 
     @GetMapping("/{remitterId}/timeline")

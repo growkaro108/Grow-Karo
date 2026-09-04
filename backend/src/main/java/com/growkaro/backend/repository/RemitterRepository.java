@@ -16,6 +16,9 @@ public interface RemitterRepository extends JpaRepository<Remitter, String> {
 
         Page<Remitter> findAll(Pageable pageable);
 
+        @Query("SELECT r.remitterEmail FROM Remitter r")
+        List<String> findAllEmail();
+
         // login
         Optional<Remitter> findByRemitterEmail(String remitterEmail);
 

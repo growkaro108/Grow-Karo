@@ -138,7 +138,7 @@ export default function BondDetails({
               />
               <DetailField
                 label="Nominee Mobile No"
-                value={"+91 " + bond.nominee?.mobileNo}
+                value={"+91 " + (bond.nominee?.mobileNo || "-")}
               />
             </div>
           </div>

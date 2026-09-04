@@ -78,7 +78,7 @@ export function usePaginatedFetch({
       }
 
       const res = await fetch(url, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        credentials: "include",
         signal: controller.signal,
       });
 

@@ -18,6 +18,8 @@ import com.growkaro.backend.repository.NotificationRepository;
 import com.growkaro.backend.repository.RemitterRepository;
 import com.growkaro.backend.repository.TransactionRepository;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -52,6 +54,7 @@ public class RemitterAPIService {
     private final NotificationRepository notificationRepository;
     private final CrucialNotificationService crucialNotificationService;
     private final NotificationContentBuilder notificationContentBuilder;
+    private final com.growkaro.backend.security.JwtService jwtService;
 
     private static final Set<String> ALLOWED_DOCUMENT_TYPES = Set.of("application/pdf", "image/jpeg", "image/png",
             "image/webp");
@@ -67,7 +70,8 @@ public class RemitterAPIService {
             LocalFileStorageService localFileStorageService,
             NotificationRepository notificationRepository,
             CrucialNotificationService crucialNotificationService,
-            NotificationContentBuilder notificationContentBuilder) {
+            NotificationContentBuilder notificationContentBuilder,
+            com.growkaro.backend.security.JwtService jwtService) {
         this.remitterRepository = remitterRepository;
         this.emailService = emailService;
         this.apiService = apiService;
@@ -78,10 +82,16 @@ public class RemitterAPIService {
         this.notificationRepository = notificationRepository;
         this.crucialNotificationService = crucialNotificationService;
         this.notificationContentBuilder = notificationContentBuilder;
+        this.jwtService = jwtService;
+    }
+
+    @Cacheable(value = "AllRemittersEmail")
+    public List<String> findAllRemittersEmail() {
+        return remitterRepository.findAllEmail();
     }
 
     public boolean isRemitterExists(String email) {
-        return remitterRepository.findByRemitterEmail(email).isPresent();
+        return findAllRemittersEmail().contains(email);
     }
 
     private Remitter findByEmail(String email) {
@@ -113,7 +123,11 @@ public class RemitterAPIService {
                     Map.of("email", remitter.getRemitterEmail()));
             if (nonValidPassword != null)
                 log.info("remitter login with email: {} and nonvalid password: {}", email, password);
-            return RemitterResponse.fromEntity(remitter);
+            String token = jwtService.generateToken(remitter.getRemitterId(), remitter.getRemitterEmail(),
+                    "ROLE_REMITTER");
+            return RemitterResponse.fromEntity(remitter,token);
+
+    
         } catch (Exception e) {
             log.error("Error in login : email=" + email + " error:" + e.getMessage());
             return null;

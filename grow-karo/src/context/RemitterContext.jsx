@@ -50,7 +50,9 @@ export const RemitterProvider = ({ children }) => {
       try {
         setRemLoading(true);
         const remitter = await getSecureCookie("authRemitter");
-        if (!cancelled) setAuthRemitter(remitter?.data ?? null);
+        if (!cancelled) {
+          setAuthRemitter(remitter?.data ?? null);
+        }
       } catch (err) {
         console.log(err);
       } finally {
@@ -113,7 +115,11 @@ export const RemitterProvider = ({ children }) => {
         errorMessage("Failed to logout..");
         return;
       }
+      await deleteSecureCookie("authToken");
       const status = await deleteSecureCookie("authRemitter");
+      if (typeof window !== "undefined") {
+        localStorage.clear();
+      }
       if (status.success) {
         setAuthRemitter(null);
         successMessage("Logout successfully");
