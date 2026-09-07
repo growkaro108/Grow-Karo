@@ -463,7 +463,7 @@ public class AdminAPIService {
                 addRemitter.getPanNumber(),
                 addRemitter.getRemitterCode());
 
-        if (conflicts.size() > 0) {
+        if (!conflicts.isEmpty()) {
             int emailConflict = 0;
             int phoneConflict = 0;
             int aadharConflict = 0;
@@ -517,7 +517,7 @@ public class AdminAPIService {
         log.info("Remitter created successfully with id {}", saved.getRemitterId());
         // write log
         activityLogService.log("adminId", "AdminName", "admin", ActivityType.REMITTER_ADDED,
-                "Remitter is added by admin", "remitter", saved.getRemitterId(), null);
+                saved.getOrganizationName()+" is added by admin", "remitter", saved.getRemitterId(), null);
 
         return new AddedRemitter(
                 saved.getRemitterId(), // loginId — remitter logs in with their email

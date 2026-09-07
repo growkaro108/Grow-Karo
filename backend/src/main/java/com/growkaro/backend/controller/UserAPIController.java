@@ -28,8 +28,6 @@ import com.growkaro.backend.service.EmailService;
 import com.growkaro.backend.service.RedisService;
 import com.growkaro.backend.common.NotificationBroadcaster;
 import com.growkaro.backend.entity.Notification.ReceiverType;
-import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
-import com.growkaro.backend.entity.Reply;
 import com.growkaro.backend.entity.SupportIssue.Status;
 
 import org.springframework.http.HttpHeaders;

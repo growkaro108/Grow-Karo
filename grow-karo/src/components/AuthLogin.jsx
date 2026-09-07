@@ -65,7 +65,7 @@ export default function AuthLogin({ onSwitch }) {
               if (status.success) {
                 setAuthRemitter(response);
                 setMessage("Signed in — redirecting...");
-                router.push("/dashboard");
+                // router.push("/dashboard");
               } else {
                 setError(status.message);
               }
@@ -94,7 +94,7 @@ export default function AuthLogin({ onSwitch }) {
           if (status.success) {
             setAuthUser(response.data);
             setMessage("Signed in — redirecting...");
-            router.push("/dashboard");
+            // router.push("/dashboard");
           } else {
             setError(status.message);
           }

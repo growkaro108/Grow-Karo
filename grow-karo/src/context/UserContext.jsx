@@ -113,7 +113,7 @@ export const UserProvider = ({ children }) => {
 
   const logout = useCallback(async () => {
     try {
-      if (authUser && authUser?.id && authUser?.name) {
+      if (authUser?.id && authUser?.name) {
         let response = await confirmMessage(
           "you want to logout",
           "Are you sure?",

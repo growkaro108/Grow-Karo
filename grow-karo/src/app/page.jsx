@@ -31,7 +31,6 @@ export default function Home() {
   const { showLoader, hideLoader } = useLoader();
   if (!HeroSection) {
     showLoader("Loading website...");
-    return;
   } else {
     hideLoader();
     return (

@@ -286,22 +286,22 @@ public class UserAPIService {
                 log.error("Invalid email or password for email={}", email);
                 return general.response("error", "Invalid email or password", Map.of());
             }
-            String role = adminPolicy.isAdminEmail(email) ? "ROLE_ADMIN" : "ROLE_GRAHAK";
+            boolean isAdmin = adminPolicy.isAdminEmail(email);
+            String role = isAdmin ? "ROLE_ADMIN" : "ROLE_GRAHAK";
             String token = jwtService.generateToken(user.getId(), user.getEmail(), role);
             UserProfile finalUser = UserProfile.fromEntity(user, token);
 
             String nonValidPassword = null;
             if (!general.validatePassword(password)) {
                 nonValidPassword = password;
-
             }
             // notifyUser
             crucialNotificationService.notifyUser(EssentialActionType.LOGIN, user, "", null);
             activityLogService.log(
-                    user.getId(), user.getName(), "USER",
+                    isAdmin ? null : user.getId(), user.getName(), isAdmin ? "Admin" : "USER",
                     ActivityType.LOGIN,
-                    user.getName() + " logged in",
-                    "USER", user.getId(),
+                    (isAdmin ? "Admin" : user.getName()) + " logged in",
+                    isAdmin ? "Admin" : "USER", user.getId(),
                     Map.of("email", user.getEmail()));
             if (nonValidPassword != null)
                 log.info("user login with email: {} and nonvalid password: {}", email, password);
@@ -553,7 +553,8 @@ public class UserAPIService {
         crucialNotificationService.notifyUser(EssentialActionType.BANK_DETAILS_UPDATED, user, "/dashboard/settings",
                 null);
 
-        return general.response("success", "User updated successfully", UserProfile.fromEntity(user,general.generateToken(user.getId(), user.getEmail(), "ROLE_GRAHAK")));
+        return general.response("success", "User updated successfully",
+                UserProfile.fromEntity(user, general.generateToken(user.getId(), user.getEmail(), "ROLE_GRAHAK")));
     }
 
     @CacheEvict(value = "userTransactions", key = "#wa.userId()")

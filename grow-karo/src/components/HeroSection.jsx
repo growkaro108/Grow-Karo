@@ -41,6 +41,7 @@ export default function HeroSection() {
       } catch (err) {
         if (isMounted) {
           setError("Unable to load chart data.");
+          console.log(err);
         }
       } finally {
         if (isMounted) setLoading(false);
@@ -133,9 +134,14 @@ export default function HeroSection() {
     const currentMonth = new Date().toLocaleString("en-US", { month: "long" });
     const totalValue = homeChartData.data.reduce((acc, val) => acc + val, 0);
     const percentChange = (lastValue / totalValue) * 100;
-    return { lastValue, previousValue, currentMonth, percentChange, totalValue }
-  }, [homeChartData])
-
+    return {
+      lastValue,
+      previousValue,
+      currentMonth,
+      percentChange,
+      totalValue,
+    };
+  }, [homeChartData]);
 
   return (
     <section className="relative mx-auto w-full max-w-7xl overflow-hidden rounded-3xl border border-slate-100 bg-slate-50/50 p-4 sm:p-8 lg:p-12 xl:p-16 shadow-xs backdrop-blur-sm">
@@ -193,14 +199,16 @@ export default function HeroSection() {
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
                 <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 sm:text-xs">
-                  {portfolioValueOfcurrentMonth.currentMonth ?? 'Month'} Value Added
+                  {portfolioValueOfcurrentMonth.currentMonth ?? "Month"} Value
+                  Added
                 </span>
                 <div className="mt-1 flex flex-wrap items-baseline gap-1.5 sm:gap-2">
                   <span className="text-xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
                     {currency(portfolioValueOfcurrentMonth.lastValue ?? 0)}
                   </span>
                   <span className="inline-flex items-center gap-0.5 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600 sm:px-2 sm:text-xs">
-                    ▲ +{portfolioValueOfcurrentMonth.percentChange?.toFixed(1)}% YTD
+                    ▲ +{portfolioValueOfcurrentMonth.percentChange?.toFixed(1)}%
+                    YTD
                   </span>
                 </div>
               </div>
@@ -213,11 +221,12 @@ export default function HeroSection() {
 
             {/* Sparkline Canvas */}
             <div className="relative mt-4 h-36 w-full sm:mt-6 sm:h-52 lg:h-56">
-              {loading ? (
+              {loading && (
                 <div className="flex h-full w-full items-center justify-center">
                   <div className="h-full w-full animate-pulse rounded-xl bg-slate-100" />
                 </div>
-              ) : error ? (
+              )}
+              {!loading && error ? (
                 <div className="flex h-full w-full items-center justify-center text-center text-xs font-medium text-slate-400">
                   {error}
                 </div>
