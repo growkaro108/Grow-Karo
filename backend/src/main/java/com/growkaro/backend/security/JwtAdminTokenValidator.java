@@ -10,11 +10,10 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @Primary
 @RequiredArgsConstructor
-public class JwtAdminTokenValidator implements AdminTokenValidator {
+public class JwtAdminTokenValidator {
 
     private final JwtService jwtService;
 
-    @Override
     public boolean isValidAdminToken(String token) {
         if (token == null || token.isBlank()) {
             return false;
