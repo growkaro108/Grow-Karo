@@ -9,6 +9,7 @@ export function RemitterFormModal({
   onChange,
   onSubmit,
   onClose,
+  isLoadingState
 }) {
   return (
     <div
@@ -250,9 +251,13 @@ export function RemitterFormModal({
             </button>
             <button
               type="submit"
-              className="w-1/2 py-2.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-500 shadow-md active:scale-[0.99] transition-all"
+              disabled={isLoadingState}
+              className={`flex items-center align-middle text-center justify-center gap-2 w-1/2 py-2.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-500 shadow-md active:scale-[0.99] transition-all${isLoadingState ? " opacity-70 cursor-not-allowed" : ""}`}
             >
-              {isEditing ? "Save Changes" : "Onboard & Generate"}
+              {isLoadingState && (
+                <span className="ml-2 inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              )}
+              {!isEditing ? "Save Changes" : "Onboard & Generate"}
             </button>
           </div>
         </form>

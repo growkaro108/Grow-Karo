@@ -1,5 +1,7 @@
 package com.growkaro.backend.entity;
 
+import org.hibernate.envers.Audited;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.Entity;
@@ -20,6 +22,7 @@ import lombok.Setter;
 @Setter
 @Entity
 @Table(name = "bank_details")
+@Audited
 public class BankDetails {
 
     @Id

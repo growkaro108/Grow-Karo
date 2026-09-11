@@ -49,19 +49,17 @@ public class UserAPIController {
     private final RedisService redisService;
     private final RemitterAPIService remitterAPIService;
     private final General general;
-    private final ApiService apiService;
     private final NotificationBroadcaster notificationBroadcaster;
     private final JwtService jwtService;
 
     public UserAPIController(UserAPIService userAPIService, EmailService emailService, RedisService redisService,
-            RemitterAPIService remitterAPIService, General general, ApiService apiService,
+            RemitterAPIService remitterAPIService, General general,
             NotificationBroadcaster notificationBroadcaster, JwtService jwtService) {
         this.userAPIService = userAPIService;
         this.emailService = emailService;
         this.redisService = redisService;
         this.remitterAPIService = remitterAPIService;
         this.general = general;
-        this.apiService = apiService;
         this.notificationBroadcaster = notificationBroadcaster;
         this.jwtService = jwtService;
     }

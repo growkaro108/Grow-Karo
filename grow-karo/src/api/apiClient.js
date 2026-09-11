@@ -1,4 +1,8 @@
+import { infoMessage } from "@/components/Message";
+import { remitterContext } from "@/context/RemitterContext";
+import { userContext } from "@/context/UserContext";
 import axios from "axios";
+import { use } from "react";
 
 // Helper function to validate if base URL is a valid http(s) URL or relative path
 function getSanitizedBaseUrl() {
@@ -79,6 +83,10 @@ apiClient.interceptors.response.use(
       // Centralized session-expiry signal. Listen for this once in your
       // app shell (e.g. a top-level layout or auth provider) instead of
       // handling 401 in every individual call site.
+      console.log("unauthorised Access");
+      infoMessage("your Session is expired..   Login Again...");
+      //delete session
+
       window.dispatchEvent(new CustomEvent("auth:unauthorized"));
     }
 

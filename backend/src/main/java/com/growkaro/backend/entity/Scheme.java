@@ -14,6 +14,7 @@ import lombok.Setter;
 import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.envers.Audited;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -34,6 +35,7 @@ import java.util.Objects;
         @Index(name = "idx_scheme_id", columnList = "schemeId"),
         @Index(name = "idx_scheme_category", columnList = "scheme_category")
 })
+@Audited
 public class Scheme {
 
     @Id

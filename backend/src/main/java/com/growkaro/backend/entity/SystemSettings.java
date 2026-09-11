@@ -9,12 +9,15 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 
+import org.hibernate.envers.Audited;
+
 @Entity
 @Table(name = "system_settings")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Audited
 public class SystemSettings {
 
     @Id

@@ -27,6 +27,7 @@ import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.service.RemitterAPIService;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import com.growkaro.backend.security.JwtService;
 import org.springframework.http.MediaType;
@@ -58,34 +59,53 @@ public class RemitterAPIController {
         String email = general.stringValue(credentials.get("email"));
         String password = general.stringValue(credentials.get("password"));
         String role = general.stringValue(credentials.get("role"));
+
         try {
-            if (password == null || password.isEmpty() || email == null || email.isEmpty() || role == null
-                    || role.isEmpty() || !role.equals("remiter") || !general.validateEmail(email)
+            // Validation check
+            if (email == null || email.isBlank()
+                    || password == null || password.isBlank()
+                    || role == null || role.isBlank()
+                    || !role.equalsIgnoreCase("remiter")
+                    || !general.validateEmail(email)
                     || !general.validatePassword(password)) {
-                log.info("Invalid request: email {} role {}", email, role);
-                return ResponseEntity.ok(general.response("info", "Invalid request", null));
+
+                log.info("Invalid request parameters: email={}, role={}", email, role);
+                return ResponseEntity.badRequest()
+                        .body(general.response("info", "Invalid request parameters", null));
             }
+
             RemitterResponse rr = remitterAPIService.login(email, password);
-            
-;
-            if (rr != null) {
-                if (!rr.status()) {
-                    return ResponseEntity.ok(general.response("info", "Account is not active", null));
-                }
-                if (rr.token() != null) {
-                    ResponseCookie cookie = jwtService.generateJwtCookie(rr.token());    
-                    return ResponseEntity.ok()
-                            .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                            .body(general.response("success", "Login successful", rr));
-                }
-                return ResponseEntity.ok(general.response("success", "Login successful", rr));
-            } else {
-                log.info("Invalid credentials: email {} role {}", email, role);
-                return ResponseEntity.ok(general.response("error", "Invalid credentials...", null));
+
+            // Invalid credentials check
+            if (rr == null) {
+                log.info("Invalid credentials for email: {}, role: {}", email, role);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(general.response("error", "Invalid credentials...", null));
             }
+
+            // Account inactive check
+            if (!rr.status()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(general.response("info", "Account is not active", null));
+            }
+
+            // Missing token check
+            if (rr.token() == null) {
+                log.error("Login succeeded but token was null for email: {}", email);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(general.response("error", "Authentication failed due to internal error", null));
+            }
+
+            // Success path
+            ResponseCookie cookie = jwtService.generateJwtCookie(rr.token());
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                    .body(general.response("success", "Login successful", rr));
+
         } catch (Exception e) {
-            log.error("Error in remitter login: email {} role {} because {} ", email, role, e.getMessage());
-            return ResponseEntity.internalServerError().body(general.response("error", "Something went wrong..", null));
+            log.error("Error in remitter login: email={}, role={}, cause={}", email, role, e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                    .body(general.response("error", "Something went wrong..", null));
         }
     }
 

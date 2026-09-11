@@ -151,6 +151,11 @@
 			<version>0.12.6</version>
 			<scope>runtime</scope>
 		</dependency>
+		<!-- Source: https://mvnrepository.com/artifact/org.springframework.data/spring-data-envers -->
+<dependency>
+    <groupId>org.springframework.data</groupId>
+    <artifactId>spring-data-envers</artifactId>
+</dependency>
 	</dependencies>
 
 	<build>

@@ -105,7 +105,7 @@ export default function AuthLogin({ onSwitch }) {
         }
       }
     } catch (error) {
-      errorMessage("Somthing went wrong...");
+      errorMessage(error?.payload?.message ?? "Somthing went wrong...");
       console.error(error);
     } finally {
       // setIsLoading(false);

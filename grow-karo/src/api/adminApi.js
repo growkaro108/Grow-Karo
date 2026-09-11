@@ -8,11 +8,11 @@ export async function createScheme(payload) {
     body: payload,
   });
 }
-export async function updateScheme(id, payload) {
+export async function updateScheme(payload) {
   // Appends ?id=YOUR_ID to the URL
-  return await apiRequest(`${END_POINT}scheme/update/${id}`, {
+  return await apiRequest(`${END_POINT}scheme/update`, {
     method: "PUT",
-    body: JSON.stringify(payload), // Ensure payload is a JSON string if needed by apiRequest
+    body: payload,
   });
 }
 export async function deleteScheme(id) {

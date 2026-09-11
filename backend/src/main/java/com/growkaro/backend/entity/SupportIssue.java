@@ -10,10 +10,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.hibernate.envers.Audited;
+
 @Entity
 @Getter
 @Setter
 @Table(name = "support_issues")
+@Audited
 public class SupportIssue {
 
     @Id

@@ -292,7 +292,7 @@ public class NotificationContentBuilder {
                             <tr><td style="color:#64748b;"><strong>Action Type</strong></td><td>%s</td></tr>
                         </table>
                         <p style="margin-top:20px;color:#94a3b8;font-size:12px;border-top:1px solid #e2e8f0;padding-top:12px;">
-                            This is an automated notification from GrowKaro. Please do not reply to this email.
+                            This is an automated notification from GrowwKaro. Please do not reply to this email.
                         </p>
                     </div>
                 </div>

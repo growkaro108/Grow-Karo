@@ -3,6 +3,7 @@ package com.growkaro.backend;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.data.envers.repository.config.EnableEnversRepositories;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
@@ -13,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 @SpringBootApplication
 @EnableAsync
 @EnableScheduling
+@EnableEnversRepositories
 public class BackendApplication {
 
 	public static void main(String[] args) {

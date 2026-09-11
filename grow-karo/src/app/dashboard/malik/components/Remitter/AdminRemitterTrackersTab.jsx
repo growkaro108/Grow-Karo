@@ -22,6 +22,7 @@ export default function AdminRemitterTrackersTab() {
     updateTracker,
     removeTracker,
     sendCredentialEmail,
+    isLoadingState
   } = useRemitterTrackers();
 
   // Form modal state
@@ -163,6 +164,8 @@ export default function AdminRemitterTrackersTab() {
         onChange={handleInputChange}
         onSubmit={handleSubmitForm}
         onClose={closeForm}
+        isLoading={isLoading}
+        isLoadingState={isLoadingState}
       />
 
       <DeleteConfirmModal
@@ -177,15 +180,21 @@ export default function AdminRemitterTrackersTab() {
         <TabLoader message="Loading remitter ..." />
       ) : (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {codes?.map((c) => (
-            <RemitterTrackerCard
-              key={c.id}
-              tracker={c}
-              onEdit={openEditForm}
-              onRemove={setDeleteTarget}
-              isDeleting={isDeleting}
-            />
-          ))}
+          {codes.length === 0 ? (
+            <div className="col-span-full text-center py-10">
+              <p className="text-slate-400">No remitters added...</p>
+            </div>
+          ) : (
+            codes?.map((c) => (
+              <RemitterTrackerCard
+                key={c.id}
+                tracker={c}
+                onEdit={openEditForm}
+                onRemove={setDeleteTarget}
+                isDeleting={isDeleting}
+              />
+            ))
+          )}
         </div>
       )}
     </div>

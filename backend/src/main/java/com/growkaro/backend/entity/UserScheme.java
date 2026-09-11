@@ -19,6 +19,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.envers.Audited;
 
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -49,6 +50,7 @@ import jakarta.validation.constraints.Positive;
 // @Index(name = "idx_user_scheme_user_id", columnList = "userId"),
 // @Index(name = "idx_activity_type", columnList = "type")
 })
+@Audited
 public class UserScheme {
 
     @Id

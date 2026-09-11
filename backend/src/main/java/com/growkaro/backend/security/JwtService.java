@@ -26,7 +26,7 @@ public class JwtService {
     @Value("${app.jwt.secret:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}")
     private String jwtSecret;
 
-    @Value("${app.jwt.expiration-ms:604800000}") // 7 days default
+    @Value("${app.jwt.expiration-ms:86400000}") // 1 days default
     private long jwtExpirationMs;
 
     @Value("${app.jwt.cookie-name:authToken}")
@@ -136,7 +136,8 @@ public class JwtService {
     public boolean isTokenValid(String token) {
         try {
             Claims claims = extractAllClaims(token);
-            if (claims == null) return false;
+            if (claims == null)
+                return false;
             return !isTokenExpired(claims);
         } catch (Exception e) {
             log.warn("JWT validation error: {}", e.getMessage());

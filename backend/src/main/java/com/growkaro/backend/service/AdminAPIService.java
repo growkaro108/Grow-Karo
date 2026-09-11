@@ -7,17 +7,20 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.IllegalTransactionStateException;
@@ -62,6 +65,7 @@ import com.growkaro.backend.repository.SupportIssueRepository;
 import com.growkaro.backend.repository.TransactionRepository;
 import com.growkaro.backend.repository.UserRepository;
 import com.growkaro.backend.repository.UserSchemeRepository;
+import com.growkaro.backend.security.AdminPolicy;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -86,6 +90,7 @@ public class AdminAPIService {
     private final General general;
     private final CrucialNotificationService crucialNotificationService;
     private final EmailService emailService;
+    private final AdminPolicy adminPolicy;
 
     public AdminAPIService(UserRepository userRepository,
             RemitterRepository remitterRepository,
@@ -97,7 +102,8 @@ public class AdminAPIService {
             NotificationContentBuilder contentBuilder,
             General general,
             CrucialNotificationService crucialNotificationService,
-            EmailService emailService) {
+            EmailService emailService,
+            AdminPolicy adminPolicy) {
         this.userRepository = userRepository;
         this.remitterRepository = remitterRepository;
         this.transactionRepository = transactionRepository;
@@ -113,6 +119,7 @@ public class AdminAPIService {
         this.general = general;
         this.crucialNotificationService = crucialNotificationService;
         this.emailService = emailService;
+        this.adminPolicy = adminPolicy;
     }
 
     // create a new scheme
@@ -150,26 +157,79 @@ public class AdminAPIService {
             if (existingSchemeData == null) {
                 return null;
             }
-            general.applyIfChanged(receiveData.schemeName(), existingSchemeData.getSchemeName(),
-                    existingSchemeData::setSchemeName);
-            general.applyIfChanged(receiveData.schemeCategory(), existingSchemeData.getSchemeCategory(),
-                    existingSchemeData::setSchemeCategory);
-            general.applyIfChanged(receiveData.schemeDetails(), existingSchemeData.getSchemeDetails(),
-                    existingSchemeData::setSchemeDetails);
-            general.applyIfChanged(receiveData.payoutFrequency(), existingSchemeData.getPayoutFrequency(),
-                    existingSchemeData::setPayoutFrequency);
-            general.applyIfChanged(receiveData.tenure(), existingSchemeData.getTenure(), existingSchemeData::setTenure);
-            general.applyIfChanged(receiveData.profitPercentage(), existingSchemeData.getProfitPercentage(),
-                    existingSchemeData::setProfitPercentage);
-            general.applyIfChanged(receiveData.status(), existingSchemeData.getStatus(), existingSchemeData::setStatus);
-            general.applyIfChanged(receiveData.startDate(), existingSchemeData.getStartDate(),
-                    existingSchemeData::setStartDate);
-            general.applyIfChanged(receiveData.endDate(), existingSchemeData.getEndDate(),
-                    existingSchemeData::setEndDate);
-            general.applyIfChanged(receiveData.maxInvestorsAllowed(), existingSchemeData.getMaxInvestorsAllowed(),
-                    existingSchemeData::setMaxInvestorsAllowed);
+            // general.applyIfChanged(receiveData.schemeName(),
+            // existingSchemeData.getSchemeName(),
+            // existingSchemeData::setSchemeName);
+            // general.applyIfChanged(receiveData.schemeCategory(),
+            // existingSchemeData.getSchemeCategory(),
+            // existingSchemeData::setSchemeCategory);
+            // general.applyIfChanged(receiveData.schemeDetails(),
+            // existingSchemeData.getSchemeDetails(),
+            // existingSchemeData::setSchemeDetails);
+            // general.applyIfChanged(receiveData.payoutFrequency(),
+            // existingSchemeData.getPayoutFrequency(),
+            // existingSchemeData::setPayoutFrequency);
+            // general.applyIfChanged(receiveData.tenure(), existingSchemeData.getTenure(),
+            // existingSchemeData::setTenure);
+            // general.applyIfChanged(receiveData.profitPercentage(),
+            // existingSchemeData.getProfitPercentage(),
+            // existingSchemeData::setProfitPercentage);
+            // general.applyIfChanged(receiveData.status(), existingSchemeData.getStatus(),
+            // existingSchemeData::setStatus);
+            // general.applyIfChanged(receiveData.startDate(),
+            // existingSchemeData.getStartDate(),
+            // existingSchemeData::setStartDate);
+            // general.applyIfChanged(receiveData.endDate(),
+            // existingSchemeData.getEndDate(),
+            // existingSchemeData::setEndDate);
+            // general.applyIfChanged(receiveData.maxInvestorsAllowed(),
+            // existingSchemeData.getMaxInvestorsAllowed(),
+            // existingSchemeData::setMaxInvestorsAllowed);
+
+            Map<String, String> changes = new HashMap<>();
+            // check which feid is changed
+            if (!(receiveData.schemeName().equalsIgnoreCase(existingSchemeData.getSchemeName()))) {
+                changes.put("Name", existingSchemeData.getSchemeName() + " -> " + receiveData.schemeName());
+                existingSchemeData.setSchemeName(receiveData.schemeName());
+            }
+            if (!(receiveData.schemeCategory().equalsIgnoreCase(existingSchemeData.getSchemeCategory()))) {
+                changes.put("Category", existingSchemeData.getSchemeCategory() + " -> " + receiveData.schemeCategory());
+                existingSchemeData.setSchemeCategory(receiveData.schemeCategory());
+            }
+            if (!(receiveData.payoutFrequency().equalsIgnoreCase(existingSchemeData.getPayoutFrequency()))) {
+                changes.put("Frequency",
+                        existingSchemeData.getPayoutFrequency() + " -> " + receiveData.payoutFrequency());
+                existingSchemeData.setPayoutFrequency(receiveData.payoutFrequency());
+            }
+            if (receiveData.tenure() != existingSchemeData.getTenure()) {
+                changes.put("Tenure", existingSchemeData.getTenure() + " -> " + receiveData.tenure());
+                existingSchemeData.setTenure(receiveData.tenure());
+            }
+            if (!(receiveData.profitPercentage().equals(existingSchemeData.getProfitPercentage()))) {
+                changes.put("Percentage",
+                        existingSchemeData.getProfitPercentage() + " -> " + receiveData.profitPercentage());
+                existingSchemeData.setProfitPercentage(receiveData.profitPercentage());
+            }
+            if (receiveData.status() != existingSchemeData.getStatus()) {
+                changes.put("Status", existingSchemeData.getSchemeName() + " -> " + receiveData.status());
+                existingSchemeData.setStatus(receiveData.status());
+            }
+            if (!(receiveData.startDate().equals(existingSchemeData.getStartDate()))) {
+                changes.put("Start Date", existingSchemeData.getStartDate() + " -> " + receiveData.startDate());
+                existingSchemeData.setStartDate(receiveData.startDate());
+            }
+            if (!(receiveData.endDate().equals(existingSchemeData.getEndDate()))) {
+                changes.put("Start Date", existingSchemeData.getEndDate() + " -> " + receiveData.endDate());
+                existingSchemeData.setEndDate(receiveData.endDate());
+            }
+            if (!(receiveData.maxInvestorsAllowed().equals(existingSchemeData.getMaxInvestorsAllowed()))) {
+                changes.put("Name",
+                        existingSchemeData.getMaxInvestorsAllowed() + " -> " + receiveData.maxInvestorsAllowed());
+                existingSchemeData.setMaxInvestorsAllowed(receiveData.maxInvestorsAllowed());
+            }
 
             schemeRepository.save(existingSchemeData);
+            log.info("scheme updated successfully :" + changes);
             return getAllSchemes(true);
         } catch (Exception e) {
             log.error("error in updating scheme", e.getMessage());
@@ -199,7 +259,10 @@ public class AdminAPIService {
         }
     }
 
-    @CacheEvict(value = "overviewStats", key = "'adminOverview'")
+    @Caching(evict = {
+            @CacheEvict(value = "overviewStats", key = "'adminOverview'"),
+            @CacheEvict(value = "userPortfolio", key = "#userId")
+    })
     @Transactional
     public Map<String, Object> activateUsersScheme(String userSchemeId, BigDecimal paidAmount, LocalDate paidDate) {
         if (userSchemeId == null || userSchemeId.isBlank() || paidAmount == null
@@ -330,6 +393,7 @@ public class AdminAPIService {
         }
     }
 
+    @CacheEvict(value = "userPortfolio", key = "#userId")
     @Transactional
     public Map<String, Object> addBondDetails(String userSchemeId, String bondNumber, MultipartFile images) {
         try {
@@ -394,8 +458,13 @@ public class AdminAPIService {
         Transaction txn = getPendingOrThrow(txnId);
         Remitter rr = remitterRepository.findByRemitterId(remId)
                 .orElseThrow(() -> new RuntimeException("Remitter not found"));
+        List<Transaction> remitterTransactions = rr.getTransactions() != null ? rr.getTransactions()
+                : new ArrayList<>();
+        remitterTransactions.add(txn);
+        rr.setTransactions(remitterTransactions);
         txn.setRemitter(rr);
         txn.setStatus(TransactionStatus.PROCESSED);
+        remitterRepository.save(rr);
         Transaction saved = transactionRepository.save(txn);
 
         crucialNotificationService.notifyAllForEssentialAction(
@@ -517,7 +586,7 @@ public class AdminAPIService {
         log.info("Remitter created successfully with id {}", saved.getRemitterId());
         // write log
         activityLogService.log("adminId", "AdminName", "admin", ActivityType.REMITTER_ADDED,
-                saved.getOrganizationName()+" is added by admin", "remitter", saved.getRemitterId(), null);
+                saved.getOrganizationName() + " is added by admin", "remitter", saved.getRemitterId(), null);
 
         return new AddedRemitter(
                 saved.getRemitterId(), // loginId — remitter logs in with their email
@@ -659,6 +728,7 @@ public class AdminAPIService {
     public PagedResponse<AdminUser> getAllUsers(Pageable pageable) {
         try {
             var users = userRepository.findAllWithUserScheme(pageable);
+            // remove admin users from the list admin users are not needed in the list
             var mapped = users.map(general::toAdminUser);
             return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
         } catch (Exception e) {

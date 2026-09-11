@@ -12,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -107,14 +108,14 @@ public class AdminAPIController {
         }
     }
 
-    @PutMapping("/scheme/update/{schemeId}")
-    public ResponseEntity<Map<String, Object>> updateScheme(@PathVariable String schemeId,
-            @RequestBody ReceiveSchemeData updateScheme) {
-        if (schemeId == "" || schemeId == null || updateScheme == null) {
-            return ResponseEntity.badRequest().build();
+    @PutMapping("/scheme/update")
+    public ResponseEntity<Map<String, Object>> updateScheme(@RequestBody ReceiveSchemeData updateScheme) {
+        if (updateScheme.schemeId() == "" || updateScheme.schemeId() == null || updateScheme == null) {
+            log.error("Invalid scheme data", updateScheme);
+            return ResponseEntity.badRequest().body(general.response("error", "Invalid scheme data", null));
         }
         try {
-            List<SchemeResponse> updatedSchemes = adminAPIService.updateScheme(schemeId, updateScheme);
+            List<SchemeResponse> updatedSchemes = adminAPIService.updateScheme(updateScheme.schemeId(), updateScheme);
             String schemeName = updatedSchemes.stream().map(SchemeResponse::schemeName).findFirst().orElse("");
             return ResponseEntity
                     .ok(general.response("success", schemeName + " is updated..", updatedSchemes));
@@ -249,10 +250,9 @@ public class AdminAPIController {
             return ResponseEntity.ok(general.response("success", "Remitter added successfully", ar));
         } catch (Exception e) {
             log.error("Error while adding remitter: " + e.getMessage(), e);
-            return ResponseEntity.ok(general.response("error",
+            return ResponseEntity.internalServerError().body(general.response("error",
                     e.getMessage(), null));
         }
-
     }
 
     @GetMapping("/remitters")

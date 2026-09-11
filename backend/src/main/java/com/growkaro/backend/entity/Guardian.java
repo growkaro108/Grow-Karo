@@ -1,5 +1,7 @@
 package com.growkaro.backend.entity;
 
+import org.hibernate.envers.Audited;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.*;
@@ -12,6 +14,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Entity
 @Table(name = "guardians")
+@Audited
 public class Guardian {
 
     @Id
@@ -26,6 +29,6 @@ public class Guardian {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
-    @JsonIgnoreProperties({"guardian", "nominee", "bankDetails", "enrolledSchemes"})
+    @JsonIgnoreProperties({ "guardian", "nominee", "bankDetails", "enrolledSchemes" })
     private User user;
 }

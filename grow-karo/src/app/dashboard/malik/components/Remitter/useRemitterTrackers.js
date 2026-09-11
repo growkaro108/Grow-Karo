@@ -10,7 +10,7 @@ import { adminContext } from "@/context/AdminContext";
 
 export function useRemitterTrackers() {
   const { codes, setCodes, isLoading, LoadCodes } = use(adminContext);
-
+const [isLoadingState, setIsLoadingState] = useState(isLoading);
   useEffect(() => {
     let cancelled = false;
     LoadCodes();
@@ -20,11 +20,7 @@ export function useRemitterTrackers() {
   }, [LoadCodes]);
 
   const createTracker = async (sanitizedData) => {
-    // TODO(backend): POST /api/admin/remitter-trackers
-    // console.log(
-    //   "Dispatching secure sanitized payload to remote server node...",
-    //   sanitizedData,
-    // );
+  setIsLoadingState(true);
     const response = await createRemitter(sanitizedData);
 
     if (!response) return false;
@@ -41,6 +37,7 @@ export function useRemitterTrackers() {
     // console.log(codes);
     //RELOAD REMITEERS
     LoadCodes();
+    setIsLoadingState(false);
 
     return mockServerResponse;
   };
@@ -98,5 +95,6 @@ export function useRemitterTrackers() {
     updateTracker,
     removeTracker,
     sendCredentialEmail,
+    isLoadingState
   };
 }

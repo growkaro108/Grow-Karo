@@ -11,13 +11,18 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+
+import org.hibernate.envers.Audited;
 
 @Getter
 @Setter
 @Entity
 @Table(name = "remitters")
+@Audited
 public class Remitter {
 
     @Id
@@ -48,7 +53,7 @@ public class Remitter {
     private BigDecimal totalPaid = BigDecimal.ZERO;
 
     @NotBlank(message = "PAN number is required")
-    @Pattern(regexp = "^[A-Z]{5}[0-9]{4}[A-Z]$", message = "Please provide a valid PAN number")
+    @Pattern(regexp = "^[A-Z]{5}\\d{4}[A-Z]$", message = "Please provide a valid PAN number")
     @Column(nullable = false, unique = true, length = 10)
     private String panNumber;
 
@@ -66,6 +71,9 @@ public class Remitter {
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "remitter_users", joinColumns = @JoinColumn(name = "remitter_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
     private Set<User> users = new HashSet<>();
+
+    @OneToMany(mappedBy = "remitter", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Transaction> transactions = new ArrayList<>();
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

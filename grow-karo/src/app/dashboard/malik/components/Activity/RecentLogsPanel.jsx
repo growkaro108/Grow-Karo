@@ -147,7 +147,7 @@ export default function RecentLogsPanel({
           </button>
         </div>
 
-        {status === "error" ? (
+        {status === "error" && (
           <div className="flex flex-col items-center justify-center gap-2 py-14 text-center">
             <AlertTriangle className="h-6 w-6 text-amber-500" />
             <p className="text-sm text-slate-400 font-body">
@@ -162,7 +162,7 @@ export default function RecentLogsPanel({
               Try again
             </button>
           </div>
-        ) : !isLoading && items.length === 0 ? (
+        )} {status === "error" &&!isLoading && items.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-14 text-center">
             <AlertTriangle className="h-6 w-6 text-slate-600" />
             <p className="text-sm text-slate-400 font-body">

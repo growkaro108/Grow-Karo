@@ -6,8 +6,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.sql.Timestamp;
 
+import org.hibernate.envers.Audited;
+
 @Entity
 @Table(name = "shedlock")
+@Audited
 public class Shedlock {
 
     @Id

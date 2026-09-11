@@ -162,8 +162,7 @@ public class CrucialNotificationService {
 
     /** 3. Notify Remitter individually */
     @Transactional
-    public void notifyRemitter(EssentialActionType action, Remitter remitter, String actionUrl,
-            Map<String, Object> params) {
+    public void notifyRemitter(EssentialActionType action, Remitter remitter, String actionUrl, Map<String, Object> params) {
         if (remitter == null) {
             return;
         }
@@ -228,7 +227,7 @@ public class CrucialNotificationService {
     }
 
     @Async
-    private void dispatchNotification(
+    public void dispatchNotification(
             EssentialActionType action,
             ReceiverType role,
             String receiverId,

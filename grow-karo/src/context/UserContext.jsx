@@ -120,12 +120,12 @@ export const UserProvider = ({ children }) => {
         );
         if (response) {
           showLoader("Logging out...");
-          const response = await logoutApi(authUser?.id, authUser?.name);
-          // console.log("logout response", response)
-          if (response.status !== "success") {
-            errorMessage("Logout failed", "Logout");
-            return;
-          }
+          // const response = await logoutApi(authUser?.id, authUser?.name);
+          // // console.log("logout response", response)
+          // if (response.status !== "success") {
+          //   errorMessage("Logout failed", "Logout");
+          //   return;
+          // }
           await deleteSecureCookie("authToken");
           const status = await deleteSecureCookie("authUser");
           if (typeof window !== "undefined") {

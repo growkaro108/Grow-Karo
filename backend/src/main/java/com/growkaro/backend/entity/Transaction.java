@@ -7,6 +7,8 @@ import java.time.format.DateTimeFormatter;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.envers.Audited;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -26,9 +28,12 @@ import lombok.Setter;
 @Setter
 @Entity
 @Table(name = "transactions", indexes = {
+        @Index(name = "idx_transactions_id", columnList = "id"),
+        @Index(name = "idx_transactions_status", columnList = "status"),
         @Index(name = "idx_transactions_user_id", columnList = "user_id"),
         @Index(name = "idx_transactions_user_status", columnList = "user_id, status")
 })
+@Audited
 public class Transaction {
 
     @Id

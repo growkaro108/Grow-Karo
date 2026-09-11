@@ -3,6 +3,7 @@ package com.growkaro.backend.entity;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.envers.Audited;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -22,6 +23,7 @@ import java.time.LocalDateTime;
 @Table(name = "replies")
 @Getter
 @Setter
+@Audited
 public class Reply {
 
     @Id

@@ -13,6 +13,8 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
+import org.hibernate.envers.Audited;
+
 @Getter
 @Setter
 @ToString
@@ -24,6 +26,7 @@ import java.util.UUID;
         @Index(name = "idx_notifications_receiver_read", columnList = "receiverId, receiverType, is_read"),
         @Index(name = "idx_notifications_created_at", columnList = "createdAt")
 })
+@Audited
 public class Notification {
 
     @Id
