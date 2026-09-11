@@ -64,8 +64,17 @@ function SortIcon({ active, direction }) {
 export default function Transaction() {
   const { transactions, FetchTransactions, isLoading } = use(userContext);
   useEffect(() => {
-    FetchTransactions();
-  }, [FetchTransactions]);
+    let cancelled = false;
+
+    const load = async () => {
+      await FetchTransactions();
+    };
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const data = useMemo(
     () => (transactions && transactions.length ? transactions : []),
@@ -281,21 +290,19 @@ export default function Transaction() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowFilters((v) => !v)}
-              className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border shadow-sm transition ${
-                showFilters || activeFilterCount > 0
-                  ? "bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700"
-                  : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
-              }`}
+              className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border shadow-sm transition ${showFilters || activeFilterCount > 0
+                ? "bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700"
+                : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
+                }`}
             >
               <SlidersHorizontal className="w-4 h-4" />
               Filters
               {activeFilterCount > 0 && (
                 <span
-                  className={`inline-flex items-center justify-center min-w-4.5 h-4.5 px-1 rounded-full text-[11px] font-semibold ${
-                    showFilters || activeFilterCount > 0
-                      ? "bg-white text-indigo-600"
-                      : "bg-indigo-600 text-white"
-                  }`}
+                  className={`inline-flex items-center justify-center min-w-4.5 h-4.5 px-1 rounded-full text-[11px] font-semibold ${showFilters || activeFilterCount > 0
+                    ? "bg-white text-indigo-600"
+                    : "bg-indigo-600 text-white"
+                    }`}
                 >
                   {activeFilterCount}
                 </span>
@@ -391,9 +398,8 @@ export default function Transaction() {
         </div>
         {/* Filter panel */}
         <div
-          className={`bg-slate-50 border-slate-200 transition-all duration-300 ease-in-out overflow-hidden ${
-            showFilters ? "max-h-100 opacity-100 border-b" : "max-h-0 opacity-0"
-          }`}
+          className={`bg-slate-50 border-slate-200 transition-all duration-300 ease-in-out overflow-hidden ${showFilters ? "max-h-100 opacity-100 border-b" : "max-h-0 opacity-0"
+            }`}
         >
           <div className="p-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -546,11 +552,10 @@ export default function Transaction() {
                       <StatusBadge status={txn.status} />
                     </td>
                     <td
-                      className={`p-4 text-sm font-semibold text-right whitespace-nowrap ${
-                        txn.type === "Credit"
-                          ? "text-emerald-600"
-                          : "text-slate-900"
-                      }`}
+                      className={`p-4 text-sm font-semibold text-right whitespace-nowrap ${txn.type === "Credit"
+                        ? "text-emerald-600"
+                        : "text-slate-900"
+                        }`}
                     >
                       {txn.type === "Credit" ? "+" : "-"}₹{" "}
                       {txn.amount.toFixed(2)}

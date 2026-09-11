@@ -12,7 +12,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -110,18 +109,24 @@ public class AdminAPIController {
 
     @PutMapping("/scheme/update")
     public ResponseEntity<Map<String, Object>> updateScheme(@RequestBody ReceiveSchemeData updateScheme) {
-        if (updateScheme.schemeId() == "" || updateScheme.schemeId() == null || updateScheme == null) {
-            log.error("Invalid scheme data", updateScheme);
+        if (updateScheme == null || updateScheme.schemeId() == null || updateScheme.schemeId().isEmpty()) {
+            log.error("Invalid scheme data: {}", updateScheme);
             return ResponseEntity.badRequest().body(general.response("error", "Invalid scheme data", null));
         }
         try {
             List<SchemeResponse> updatedSchemes = adminAPIService.updateScheme(updateScheme.schemeId(), updateScheme);
-            String schemeName = updatedSchemes.stream().map(SchemeResponse::schemeName).findFirst().orElse("");
-            return ResponseEntity
-                    .ok(general.response("success", schemeName + " is updated..", updatedSchemes));
+
+            String schemeName = updatedSchemes.stream()
+                    .filter(s -> updateScheme.schemeId().equals(s.schemeId()))
+                    .map(SchemeResponse::schemeName)
+                    .findFirst()
+                    .orElse("");
+
+            return ResponseEntity.ok(general.response("success", schemeName + " is updated..", updatedSchemes));
         } catch (Exception e) {
-            log.error("Error while updating scheme: " + e.getMessage());
-            return ResponseEntity.internalServerError().build();
+            log.error("Error while updating scheme: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                    .body(general.response("error", "Failed to update scheme", null));
         }
     }
 

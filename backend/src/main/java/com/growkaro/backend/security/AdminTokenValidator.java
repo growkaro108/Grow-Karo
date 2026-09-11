@@ -13,15 +13,15 @@ package com.growkaro.backend.security;
  *     }
  *
  *     {@literal @}Override
- *     public boolean isValidAdminToken(String token) {
- *         try {
- *             var claims = jwtService.parseAndValidate(token);
- *             return "ADMIN".equals(claims.get("role"));
- *         } catch (Exception e) {
- *             return false;
- *         }
- *     }
- * }
+//  *     public boolean isValidAdminToken(String token) {
+//  *         try {
+//  *             var claims = jwtService.parseAndValidate(token);
+//  *             return "ADMIN".equals(claims.get("role"));
+//  *         } catch (Exception e) {
+//  *             return false;
+//  *         }
+//  *     }
+//  * }
  * </pre>
  */
 public interface AdminTokenValidator {

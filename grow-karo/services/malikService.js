@@ -31,7 +31,6 @@ export async function createPlan(payload) {
 export async function updatePlan(id, payload) {
   // add id to payload
   payload.schemeId = id;
-  console.log(payload);
   return await updateScheme(payload);
 }
 export async function removePlan(id) {

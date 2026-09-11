@@ -157,79 +157,36 @@ public class AdminAPIService {
             if (existingSchemeData == null) {
                 return null;
             }
-            // general.applyIfChanged(receiveData.schemeName(),
-            // existingSchemeData.getSchemeName(),
-            // existingSchemeData::setSchemeName);
-            // general.applyIfChanged(receiveData.schemeCategory(),
-            // existingSchemeData.getSchemeCategory(),
-            // existingSchemeData::setSchemeCategory);
-            // general.applyIfChanged(receiveData.schemeDetails(),
-            // existingSchemeData.getSchemeDetails(),
-            // existingSchemeData::setSchemeDetails);
-            // general.applyIfChanged(receiveData.payoutFrequency(),
-            // existingSchemeData.getPayoutFrequency(),
-            // existingSchemeData::setPayoutFrequency);
-            // general.applyIfChanged(receiveData.tenure(), existingSchemeData.getTenure(),
-            // existingSchemeData::setTenure);
-            // general.applyIfChanged(receiveData.profitPercentage(),
-            // existingSchemeData.getProfitPercentage(),
-            // existingSchemeData::setProfitPercentage);
-            // general.applyIfChanged(receiveData.status(), existingSchemeData.getStatus(),
-            // existingSchemeData::setStatus);
-            // general.applyIfChanged(receiveData.startDate(),
-            // existingSchemeData.getStartDate(),
-            // existingSchemeData::setStartDate);
-            // general.applyIfChanged(receiveData.endDate(),
-            // existingSchemeData.getEndDate(),
-            // existingSchemeData::setEndDate);
-            // general.applyIfChanged(receiveData.maxInvestorsAllowed(),
-            // existingSchemeData.getMaxInvestorsAllowed(),
-            // existingSchemeData::setMaxInvestorsAllowed);
-
-            Map<String, String> changes = new HashMap<>();
-            // check which feid is changed
-            if (!(receiveData.schemeName().equalsIgnoreCase(existingSchemeData.getSchemeName()))) {
-                changes.put("Name", existingSchemeData.getSchemeName() + " -> " + receiveData.schemeName());
-                existingSchemeData.setSchemeName(receiveData.schemeName());
-            }
-            if (!(receiveData.schemeCategory().equalsIgnoreCase(existingSchemeData.getSchemeCategory()))) {
-                changes.put("Category", existingSchemeData.getSchemeCategory() + " -> " + receiveData.schemeCategory());
-                existingSchemeData.setSchemeCategory(receiveData.schemeCategory());
-            }
-            if (!(receiveData.payoutFrequency().equalsIgnoreCase(existingSchemeData.getPayoutFrequency()))) {
-                changes.put("Frequency",
-                        existingSchemeData.getPayoutFrequency() + " -> " + receiveData.payoutFrequency());
-                existingSchemeData.setPayoutFrequency(receiveData.payoutFrequency());
-            }
-            if (receiveData.tenure() != existingSchemeData.getTenure()) {
-                changes.put("Tenure", existingSchemeData.getTenure() + " -> " + receiveData.tenure());
-                existingSchemeData.setTenure(receiveData.tenure());
-            }
-            if (!(receiveData.profitPercentage().equals(existingSchemeData.getProfitPercentage()))) {
-                changes.put("Percentage",
-                        existingSchemeData.getProfitPercentage() + " -> " + receiveData.profitPercentage());
-                existingSchemeData.setProfitPercentage(receiveData.profitPercentage());
-            }
-            if (receiveData.status() != existingSchemeData.getStatus()) {
-                changes.put("Status", existingSchemeData.getSchemeName() + " -> " + receiveData.status());
-                existingSchemeData.setStatus(receiveData.status());
-            }
-            if (!(receiveData.startDate().equals(existingSchemeData.getStartDate()))) {
-                changes.put("Start Date", existingSchemeData.getStartDate() + " -> " + receiveData.startDate());
-                existingSchemeData.setStartDate(receiveData.startDate());
-            }
-            if (!(receiveData.endDate().equals(existingSchemeData.getEndDate()))) {
-                changes.put("Start Date", existingSchemeData.getEndDate() + " -> " + receiveData.endDate());
-                existingSchemeData.setEndDate(receiveData.endDate());
-            }
-            if (!(receiveData.maxInvestorsAllowed().equals(existingSchemeData.getMaxInvestorsAllowed()))) {
-                changes.put("Name",
-                        existingSchemeData.getMaxInvestorsAllowed() + " -> " + receiveData.maxInvestorsAllowed());
-                existingSchemeData.setMaxInvestorsAllowed(receiveData.maxInvestorsAllowed());
-            }
+            general.applyIfChanged(receiveData.schemeName(),
+                    existingSchemeData.getSchemeName(),
+                    existingSchemeData::setSchemeName);
+            general.applyIfChanged(receiveData.schemeCategory(),
+                    existingSchemeData.getSchemeCategory(),
+                    existingSchemeData::setSchemeCategory);
+            general.applyIfChanged(receiveData.schemeDetails(),
+                    existingSchemeData.getSchemeDetails(),
+                    existingSchemeData::setSchemeDetails);
+            general.applyIfChanged(receiveData.payoutFrequency(),
+                    existingSchemeData.getPayoutFrequency(),
+                    existingSchemeData::setPayoutFrequency);
+            general.applyIfChanged(receiveData.tenure(), existingSchemeData.getTenure(),
+                    existingSchemeData::setTenure);
+            general.applyIfChanged(receiveData.profitPercentage(),
+                    existingSchemeData.getProfitPercentage(),
+                    existingSchemeData::setProfitPercentage);
+            general.applyIfChanged(receiveData.status(), existingSchemeData.getStatus(),
+                    existingSchemeData::setStatus);
+            general.applyIfChanged(receiveData.startDate(),
+                    existingSchemeData.getStartDate(),
+                    existingSchemeData::setStartDate);
+            general.applyIfChanged(receiveData.endDate(),
+                    existingSchemeData.getEndDate(),
+                    existingSchemeData::setEndDate);
+            general.applyIfChanged(receiveData.maxInvestorsAllowed(),
+                    existingSchemeData.getMaxInvestorsAllowed(),
+                    existingSchemeData::setMaxInvestorsAllowed);
 
             schemeRepository.save(existingSchemeData);
-            log.info("scheme updated successfully :" + changes);
             return getAllSchemes(true);
         } catch (Exception e) {
             log.error("error in updating scheme", e.getMessage());

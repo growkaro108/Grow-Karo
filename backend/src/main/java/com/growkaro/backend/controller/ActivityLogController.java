@@ -5,14 +5,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.growkaro.backend.common.ActivityLogBroadcaster;
 import com.growkaro.backend.entity.ActivityLog;
 import com.growkaro.backend.enums.ActivityType;
-import com.growkaro.backend.security.NoOpAdminTokenValidator;
+import com.growkaro.backend.security.JwtAdminTokenValidator;
 import com.growkaro.backend.service.ActivityLogService;
 
 import java.time.Instant;
@@ -27,11 +29,11 @@ public class ActivityLogController {
     // for production
     // private final AdminTokenValidator tokenValidator;
     // for development
-    private final NoOpAdminTokenValidator tokenValidator;
+    private final JwtAdminTokenValidator tokenValidator;
 
     public ActivityLogController(ActivityLogService activityLogService,
             ActivityLogBroadcaster broadcaster,
-            NoOpAdminTokenValidator tokenValidator) {
+            JwtAdminTokenValidator tokenValidator) {
         this.activityLogService = activityLogService;
         this.broadcaster = broadcaster;
         this.tokenValidator = tokenValidator;
@@ -59,10 +61,9 @@ public class ActivityLogController {
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(@RequestParam(required = false) String token) {
         // for production or after configure admin token uncomment these lines
-        // if (!tokenValidator.isValidAdminToken(token)) {
-        // throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or
-        // expired token");
-        // }
+        if (!tokenValidator.isValidAdminToken(token)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired token");
+        }
         return broadcaster.subscribe();
     }
 

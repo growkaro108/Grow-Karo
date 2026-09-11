@@ -2,7 +2,6 @@ package com.growkaro.backend.entity;
 
 import org.hibernate.envers.Audited;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.*;
