@@ -3,7 +3,7 @@ import NotificationDropdown from "./Notifications";
 import { useEffect, useRef, useState } from "react";
 import ProfileDropdown from "./ProfileDropdown";
 
-export default function Topbar({ title, onMenuClick }) {
+export default function Topbar({ title, onMenuClick, activeTab, setActiveTab }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
@@ -26,15 +26,18 @@ export default function Topbar({ title, onMenuClick }) {
     <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-slate-800 bg-slate-950/80 px-4 py-4 backdrop-blur-md sm:px-6">
       <div className="flex items-center gap-3">
         <button
-        type="button"
+          type="button"
           onClick={onMenuClick}
-          className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200 md:hidden"
+          className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200 lg:hidden"
         >
           <Menu className="h-5 w-5" />
         </button>
         <h1 className="font-display text-lg font-semibold text-slate-100 sm:text-xl">
           {title}
         </h1>
+        {title === "Schemes"
+          //  && <button onClick={() => setActiveTab("SchemeAuditHistory")} className={`p-2 rounded-xl text-xs font-medium cursor-pointer ${activeTab === "schemeUpdateHistory" ? "bg-emerald-200" : "text-slate-200 border-2 border-amber-100"} `}>Update History</button>
+        }
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
@@ -48,16 +51,15 @@ export default function Topbar({ title, onMenuClick }) {
         {/* 1. Bell Icon Trigger Node */}
         <div className="relative" ref={notificationRef}>
           <button
-          type="button"
+            type="button"
             onClick={() => {
               setShowNotifications(!showNotifications);
               setShowProfile(false); // Close other open menus
             }}
-            className={`p-2 rounded-xl border transition-all relative ${
-              showNotifications
-                ? "bg-slate-800 text-teal-400 border-slate-700"
-                : "bg-slate-900/50 text-slate-400 border-slate-800 hover:text-slate-200 hover:bg-slate-800"
-            }`}
+            className={`p-2 rounded-xl border transition-all relative ${showNotifications
+              ? "bg-slate-800 text-teal-400 border-slate-700"
+              : "bg-slate-900/50 text-slate-400 border-slate-800 hover:text-slate-200 hover:bg-slate-800"
+              }`}
           >
             <Bell className="h-5 w-5" />
 
@@ -70,11 +72,10 @@ export default function Topbar({ title, onMenuClick }) {
 
           {/* Notification Menu Slide Overlay */}
           <div
-            className={`absolute right-0 top-full mt-2 transition-all duration-300 origin-top-right ${
-              showNotifications
-                ? "opacity-100 scale-100 pointer-events-auto"
-                : "opacity-0 scale-95 pointer-events-none"
-            }`}
+            className={`absolute right-0 top-full mt-2 transition-all duration-300 origin-top-right ${showNotifications
+              ? "opacity-100 scale-100 pointer-events-auto"
+              : "opacity-0 scale-95 pointer-events-none"
+              }`}
           >
             <NotificationDropdown />
           </div>
@@ -88,22 +89,20 @@ export default function Topbar({ title, onMenuClick }) {
               setShowProfile(!showProfile);
               setShowNotifications(false); // Close other open menus
             }}
-            className={`h-9 w-9 rounded-xl font-bold text-xs transition-all border flex items-center justify-center ${
-              showProfile
-                ? "bg-slate-800 text-teal-400 border-slate-700 ring-2 ring-teal-500/20"
-                : "bg-teal-500/10 text-teal-400 border-teal-500/20 hover:bg-teal-500/20"
-            }`}
+            className={`h-9 w-9 rounded-xl font-bold text-xs transition-all border flex items-center justify-center ${showProfile
+              ? "bg-slate-800 text-teal-400 border-slate-700 ring-2 ring-teal-500/20"
+              : "bg-teal-500/10 text-teal-400 border-teal-500/20 hover:bg-teal-500/20"
+              }`}
           >
             AD
           </button>
 
           {/* Profile Menu Slide Overlay */}
           <div
-            className={`absolute right-0 top-full mt-2 transition-all duration-300 origin-top-right ${
-              showProfile
-                ? "opacity-100 scale-100 pointer-events-auto"
-                : "opacity-0 scale-95 pointer-events-none"
-            }`}
+            className={`absolute right-0 top-full mt-2 transition-all duration-300 origin-top-right ${showProfile
+              ? "opacity-100 scale-100 pointer-events-auto"
+              : "opacity-0 scale-95 pointer-events-none"
+              }`}
           >
             <ProfileDropdown />
           </div>

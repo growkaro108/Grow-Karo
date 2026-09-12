@@ -128,25 +128,25 @@ public class UserAPIController {
         }
     }
 
-  @PostMapping("/login")
+    @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, Object> credentials) {
         String email = general.stringValue(credentials.get("email"));
         String password = general.stringValue(credentials.get("password"));
- 
+
         if (email == null || !general.validateEmail(email) || password == null || password.isBlank()) {
             log.warn("Login request rejected: malformed credentials"); // no email/password value logged
             return ResponseEntity.badRequest()
                     .body(general.response("error", "Invalid credentials", Map.of()));
         }
- 
+
         Map<String, Object> loginResponse = userAPIService.login(email, password);
- 
+
         boolean success = "success".equals(loginResponse.get("status"));
         if (!success) {
             // 401, not 200-with-error-field, so the client can branch on HTTP status.
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(loginResponse);
         }
- 
+
         if (!(loginResponse.get("data") instanceof UserProfile userProfile) || userProfile.token() == null) {
             // Success status but no usable profile/token is an internal
             // inconsistency, not a client error — treat as 500, not 200.
@@ -154,11 +154,11 @@ public class UserAPIController {
             return ResponseEntity.internalServerError()
                     .body(general.response("error", "Something went wrong.", Map.of()));
         }
- 
+
         ResponseCookie cookie = jwtService.generateJwtCookie(userProfile.token());
         UserProfile safeProfile = UserProfile.removeToken(userProfile);
         loginResponse.put("data", safeProfile);
- 
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
                 .body(loginResponse);

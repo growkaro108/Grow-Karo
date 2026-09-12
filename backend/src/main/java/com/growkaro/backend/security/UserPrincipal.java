@@ -15,13 +15,15 @@ import lombok.Getter;
 public class UserPrincipal implements UserDetails {
 
     private final String id;
+    private final String name;
     private final String email;
     private final String password;
     private final Collection<? extends GrantedAuthority> authorities;
 
-    public UserPrincipal(String id, String email, String password,
+    public UserPrincipal(String id, String name, String email, String password,
             Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
+        this.name = name;
         this.email = email;
         this.password = password;
         this.authorities = authorities;
@@ -32,17 +34,19 @@ public class UserPrincipal implements UserDetails {
 
         return new UserPrincipal(
                 user.getId(),
+                user.getName(),
                 user.getEmail(),
                 user.getPasswordHash(),
                 authorities);
     }
 
-    public static UserPrincipal createFromClaims(String id, String email, String role) {
+    public static UserPrincipal createFromClaims(String id, String name, String email, String role) {
         String roleWithPrefix = role.startsWith("ROLE_") ? role : "ROLE_" + role;
         List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(roleWithPrefix));
 
         return new UserPrincipal(
                 id,
+                name,
                 email,
                 "",
                 authorities);

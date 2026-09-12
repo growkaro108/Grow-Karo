@@ -61,9 +61,11 @@ public class ActivityLogController {
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(@RequestParam(required = false) String token) {
         // for production or after configure admin token uncomment these lines
-        if (!tokenValidator.isValidAdminToken(token)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired token");
-        }
+
+        // if (!tokenValidator.isValidAdminToken(token)) {
+        // throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or
+        // expired token");
+        // }
         return broadcaster.subscribe();
     }
 

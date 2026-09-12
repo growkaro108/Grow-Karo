@@ -8,4 +8,5 @@ import com.growkaro.backend.entity.Scheme;
 
 @Repository
 public interface SchemeRepository extends JpaRepository<Scheme, String>, RevisionRepository<Scheme, String, Integer> {
+
 }

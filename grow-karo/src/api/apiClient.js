@@ -82,6 +82,8 @@ apiClient.interceptors.response.use(
       // handling 401 in every individual call site.
       console.log("unauthorised Access");
       infoMessage("your Session is expired..   Login Again...");
+      //redirect to /auth
+      // window.location.href = "/auth";
       //delete session
 
       window.dispatchEvent(new CustomEvent("auth:unauthorized"));

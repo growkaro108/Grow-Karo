@@ -83,6 +83,7 @@ public class UserAPIService {
     private final SupportIssueRepository supportIssueRepository;
     private final JwtService jwtService;
     private final AdminPolicy adminPolicy;
+    private final RedisService redisService;
 
     // @Cacheable(value = "testApis", key = "#id")
     @Transactional
@@ -294,6 +295,11 @@ public class UserAPIService {
             String nonValidPassword = null;
             if (!general.validatePassword(password)) {
                 nonValidPassword = password;
+            }
+            // set admin token into redis
+            if (isAdmin) {
+                redisService.setValue("malik", user.getName());
+                System.out.println("malik is " + redisService.getValue("malik"));
             }
             // notifyUser
             crucialNotificationService.notifyUser(EssentialActionType.LOGIN, user, "", null);

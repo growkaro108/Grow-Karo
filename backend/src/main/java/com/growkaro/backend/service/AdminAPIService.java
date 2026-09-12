@@ -12,6 +12,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.hibernate.envers.AuditReader;
+import org.hibernate.envers.AuditReaderFactory;
+import org.hibernate.envers.query.AuditEntity;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -35,6 +40,7 @@ import com.growkaro.backend.DTO.AdminUser;
 import com.growkaro.backend.DTO.IssueResponse;
 import com.growkaro.backend.DTO.PagedResponse;
 import com.growkaro.backend.DTO.RemitterResponse;
+import com.growkaro.backend.DTO.SchemeAuditProjection;
 import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.SearchUser;
 import com.growkaro.backend.DTO.UserRequest;
@@ -67,6 +73,8 @@ import com.growkaro.backend.repository.UserRepository;
 import com.growkaro.backend.repository.UserSchemeRepository;
 import com.growkaro.backend.security.AdminPolicy;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -91,6 +99,9 @@ public class AdminAPIService {
     private final CrucialNotificationService crucialNotificationService;
     private final EmailService emailService;
     private final AdminPolicy adminPolicy;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public AdminAPIService(UserRepository userRepository,
             RemitterRepository remitterRepository,
@@ -123,7 +134,10 @@ public class AdminAPIService {
     }
 
     // create a new scheme
-    @CacheEvict(value = "allSchemes", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "allSchemes", allEntries = true),
+            @CacheEvict(value = "schemeAudit", allEntries = true)
+    })
     public boolean createScheme(ReceiveSchemeData schemeData) {
         Scheme scheme = general.toScheme(schemeData);
         try {
@@ -146,7 +160,10 @@ public class AdminAPIService {
     }
 
     // Update the scheme
-    @CacheEvict(value = "allSchemes", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "allSchemes", allEntries = true),
+            @CacheEvict(value = "schemeAudit", allEntries = true)
+    })
     public List<SchemeResponse> updateScheme(String id, ReceiveSchemeData receiveData) {
         if (id == null || id.isBlank() || receiveData == null) {
             return null;
@@ -185,6 +202,7 @@ public class AdminAPIService {
             general.applyIfChanged(receiveData.maxInvestorsAllowed(),
                     existingSchemeData.getMaxInvestorsAllowed(),
                     existingSchemeData::setMaxInvestorsAllowed);
+            existingSchemeData.setUpdatedBy(general.adminName());
 
             schemeRepository.save(existingSchemeData);
             return getAllSchemes(true);
@@ -844,6 +862,54 @@ public class AdminAPIService {
         issue.setStatus(SupportIssue.Status.RESOLVED);
         issue.setResolvedAt(LocalDateTime.now());
         return general.response("success", "Issue resolved", toIssueView(supportIssueRepository.save(issue)));
+    }
+
+    @Cacheable(value = "schemeAudit", key = "'all'")
+    public List<SchemeAuditProjection> findDistinctSchemeIdAndNameFromAudit() {
+        // 1. Get the Envers AuditReader tool from the EntityManager
+        AuditReader auditReader = AuditReaderFactory.get(entityManager);
+
+        // 2. Fetch raw audit rows for the Scheme entity.
+        // NOTE: no .count() or .group() here — we pull every revision as a
+        // plain row and do the aggregation ourselves in Java below.
+        // This avoids relying on Envers to generate a valid GROUP BY SQL clause,
+        // which isn't supported cleanly in this version of the API.
+        List<Object[]> results = auditReader.createQuery()
+                .forRevisionsOfEntity(Scheme.class, false, true)
+                .addProjection(AuditEntity.property("schemeId")) // row[0]
+                .addProjection(AuditEntity.property("schemeName")) // row[1]
+                .addProjection(AuditEntity.property("schemeCategory")) // row[2]
+                .addProjection(AuditEntity.property("riskLevel")) // row[3]
+                .addProjection(AuditEntity.property("status")) // row[4]
+                .addProjection(AuditEntity.revisionNumber()) // row[5] - one per revision, not aggregated
+                .getResultList();
+
+        // 3. Group rows by the combination of (schemeId, schemeName, schemeCategory,
+        // riskLevel, status) and count how many revisions fall into each group.
+        // This is the Java equivalent of "GROUP BY these 5 columns, COUNT(rev)".
+        Map<List<Object>, Long> counts = results.stream()
+                .collect(Collectors.groupingBy(
+                        row -> List.of(row[0], row[1], row[2], row[3], row[4]), // grouping key
+                        Collectors.counting() // aggregate: count revisions per key
+                ));
+
+        // 4. Convert each (groupKey -> count) entry back into an Object[] shaped
+        // like the original Envers projection (5 fields + count), then map
+        // to the DTO using the existing toDto() converter.
+        return counts.entrySet().stream()
+                .map(entry -> {
+                    List<Object> key = entry.getKey();
+                    Object[] row = new Object[] {
+                            key.get(0), // schemeId
+                            key.get(1), // schemeName
+                            key.get(2), // schemeCategory
+                            key.get(3), // riskLevel
+                            key.get(4), // status
+                            entry.getValue() // count of revisions in this group
+                    };
+                    return SchemeAuditProjection.toDto(row);
+                })
+                .toList();
     }
 
     // @Cacheable(value = "remitters", key = "#page ?: 'default'")

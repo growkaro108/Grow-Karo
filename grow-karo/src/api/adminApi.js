@@ -167,6 +167,10 @@ export async function markResolvedApi(id) {
   });
 }
 
+export async function getAllSchemAuditHistoryApi() {
+  return await apiRequest(`${END_POINT}schemes/history`);
+}
+
 //pending----------------------------------------------------------------------
 
 export async function fetchAdminDashboard(params) {

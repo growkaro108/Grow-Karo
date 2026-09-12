@@ -22,6 +22,7 @@ import {
   getAllIssuesApi,
   sendReplyApi,
   markResolvedApi,
+  getAllSchemAuditHistoryApi,
 } from "@/api/adminApi";
 import { allRounderMessage } from "@/components/Message";
 
@@ -166,6 +167,15 @@ export async function markResolved(id) {
   const res = await markResolvedApi(id);
   allRounderMessage(res);
   if (res.status !== "success") {
+    return false;
+  }
+  return res.data;
+}
+
+export async function getAllSchemAuditHistory() {
+  const res = await getAllSchemAuditHistoryApi();
+  if (res.status !== "success") {
+    allRounderMessage(res);
     return false;
   }
   return res.data;

@@ -31,20 +31,27 @@ import com.growkaro.backend.DTO.AdminTransactionResponse;
 import com.growkaro.backend.DTO.AdminUser;
 import com.growkaro.backend.DTO.PagedResponse;
 import com.growkaro.backend.DTO.RemitterResponse;
+import com.growkaro.backend.DTO.SchemeAuditProjection;
 import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.SearchUser;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.common.NotificationBroadcaster;
 import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.entity.User;
+import com.growkaro.backend.security.JwtAuthenticationFilter;
+import com.growkaro.backend.security.JwtService;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.entity.SupportIssue.Status;
 import com.growkaro.backend.entity.SystemSettings;
 import com.growkaro.backend.service.AdminAPIService;
 import com.growkaro.backend.service.EmailService;
+import com.growkaro.backend.service.RedisService;
 import com.growkaro.backend.service.CrucialNotificationService;
 import com.growkaro.backend.service.SystemSettingsService;
+
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import lombok.extern.slf4j.Slf4j;
@@ -60,19 +67,21 @@ public class AdminAPIController {
     private final NotificationBroadcaster notificationBroadcaster;
     private final CrucialNotificationService crucialNotificationService;
     private final SystemSettingsService systemSettingsService;
+    private final JwtService jwtService;
 
     private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of("image/jpeg", "image/png", "image/webp", "image/jpg");
     private static final long MAX_FILE_SIZE_BYTES = 5L * 1024 * 1024;
 
     public AdminAPIController(AdminAPIService adminAPIService, EmailService emailService, General general,
             NotificationBroadcaster notificationBroadcaster, CrucialNotificationService crucialNotificationService,
-            SystemSettingsService systemSettingsService) {
+            SystemSettingsService systemSettingsService, JwtService jwtService) {
         this.adminAPIService = adminAPIService;
         this.emailService = emailService;
         this.general = general;
         this.notificationBroadcaster = notificationBroadcaster;
         this.crucialNotificationService = crucialNotificationService;
         this.systemSettingsService = systemSettingsService;
+        this.jwtService = jwtService;
     }
 
     @GetMapping("/overview")
@@ -92,6 +101,11 @@ public class AdminAPIController {
             if (schemeData == null) {
                 return ResponseEntity.badRequest().build();
             }
+            String AdminName = general.adminName();
+            if (AdminName == null || AdminName.isEmpty()) {
+                return ResponseEntity.status(401).body(general.response("error", "Admin not found", null));
+            }
+
             boolean status = adminAPIService.createScheme(schemeData);
             if (status) {
                 List<SchemeResponse> schemes = adminAPIService.getAllSchemes(true);
@@ -109,6 +123,10 @@ public class AdminAPIController {
 
     @PutMapping("/scheme/update")
     public ResponseEntity<Map<String, Object>> updateScheme(@RequestBody ReceiveSchemeData updateScheme) {
+        String AdminName = general.adminName();
+        if (AdminName == null || AdminName.isEmpty()) {
+            return ResponseEntity.status(401).body(general.response("error", "Admin not found", null));
+        }
         if (updateScheme == null || updateScheme.schemeId() == null || updateScheme.schemeId().isEmpty()) {
             log.error("Invalid scheme data: {}", updateScheme);
             return ResponseEntity.badRequest().body(general.response("error", "Invalid scheme data", null));
@@ -457,6 +475,19 @@ public class AdminAPIController {
         }
     }
 
+    @GetMapping("/schemes/history")
+    public ResponseEntity<Map<String, Object>> schemeUpdateHistory(HttpServletRequest request) {
+
+        try {
+            List<SchemeAuditProjection> history = adminAPIService.findDistinctSchemeIdAndNameFromAudit();
+            return ResponseEntity
+                    .ok(general.response("success", "Scheme update history fetched successfully", history));
+        } catch (Exception e) {
+            log.error("Error while fetching scheme update history: " + e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .body(general.response("error", "something went wrong..", null));
+        }
+    }
     // pendings
 
     @PutMapping("/issues/{issueId}/resolve")

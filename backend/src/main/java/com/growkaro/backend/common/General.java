@@ -40,6 +40,7 @@ import com.growkaro.backend.entity.UserProfile;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.repository.UserRepository;
 import com.growkaro.backend.security.JwtService;
+import com.growkaro.backend.service.RedisService;
 
 @Component
 public class General {
@@ -52,6 +53,8 @@ public class General {
     private UserRepository userRepository;
     @Autowired
     private JwtService jwtService;
+    @Autowired
+    private RedisService redisService;
 
     public boolean isValidId(String id) {
         Pattern idPattern = Pattern.compile("^GKUSID\\d{14}$");
@@ -163,6 +166,7 @@ public class General {
         scheme.setRiskLevel(schemeData.riskLevel());
         scheme.setProfitPercentage(schemeData.profitPercentage());
         scheme.setMaxInvestorsAllowed(schemeData.maxInvestorsAllowed());
+        scheme.setCreatedBy(adminName());
         return scheme;
     }
 
@@ -403,4 +407,7 @@ public class General {
         return jwtService.generateToken(userId, email, role);
     }
 
+    public String adminName() {
+        return redisService.getValue("malik").toString();
+    }
 }

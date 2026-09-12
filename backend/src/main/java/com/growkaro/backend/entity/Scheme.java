@@ -105,6 +105,11 @@ public class Scheme {
     @JsonManagedReference("scheme-joined-users")
     private List<UserScheme> joinedUsers = new ArrayList<>();
 
+    @Column(name = "updated_by")
+    private String updatedBy;
+
+    @Column(name = "created_by")
+    private String createdBy;
     // --- Lifecycle Callbacks ---
 
     @PrePersist

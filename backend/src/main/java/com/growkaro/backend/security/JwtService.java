@@ -105,6 +105,11 @@ public class JwtService {
         return extractClaim(token, Claims::getSubject);
     }
 
+    public String extractName(String token) {
+        Claims claims = extractAllClaims(token);
+        return claims != null ? (String) claims.get("name") : null;
+    }
+
     public String extractUserId(String token) {
         Claims claims = extractAllClaims(token);
         return claims != null ? (String) claims.get("userId") : null;
@@ -148,4 +153,5 @@ public class JwtService {
     private boolean isTokenExpired(Claims claims) {
         return claims.getExpiration().before(new Date());
     }
+
 }

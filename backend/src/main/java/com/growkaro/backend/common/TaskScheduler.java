@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import com.growkaro.backend.common.UserSchemePayoutProcessor.BatchOutcome;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.repository.UserSchemeRepository;
+import com.growkaro.backend.service.RedisService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,7 @@ public class TaskScheduler {
     private final UserSchemeRepository userSchemeRepository;
     private final UserSchemePayoutProcessor payoutProcessor;
     private final General general;
+    private final RedisService redisService;
 
     @Scheduled(cron = "0 0 3 * * *", zone = timeZone)
     @SchedulerLock(name = "DailyProfitJob", lockAtMostFor = "5m", lockAtLeastFor = "3m")
@@ -72,6 +74,11 @@ public class TaskScheduler {
                 } else {
                     skipped++;
                 }
+
+                // remove admin name
+                boolean status = redisService.delete("malik");
+                log.info("Admin name delete from redis: {}", status);
+
             } catch (Exception e) {
                 failed++;
                 log.error("Failed to send maturity notification for userScheme id={}: {}",

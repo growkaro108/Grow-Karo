@@ -12,6 +12,7 @@ import {
   ClipboardCheck,
   User2Icon,
   MessageCircleQuestionMark,
+  ShieldQuestionMark,
 } from "lucide-react";
 import {
   Chart as ChartJS,
@@ -29,11 +30,8 @@ import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import OverviewTab from "./components/OverviewTab";
 import TabLoader from "../../../loader/TabLoader";
-import { fetchMalikDashboardData } from "../../../../services/malikService";
 import dynamic from "next/dynamic";
 import { adminContext } from "@/context/AdminContext";
-
-// import SchemeApproval from "./components/SchemeAproval/SchemeApprovals";
 
 const UserManagement = dynamic(
   () => import("./components/user-management/UserManagement"),
@@ -52,6 +50,10 @@ const WithdrawalsTab = dynamic(
 
 const PlanTab = dynamic(() => import("./components/Scheme/PlanTab"), {
   loading: () => <TabLoader message={"Loading plans..."} />,
+  ssr: false,
+});
+const SchemeUpdateHistory = dynamic(() => import("./components/SchemeAuditHistory"), {
+  loading: () => <TabLoader message={"Loading scheme Update History..."} />,
   ssr: false,
 });
 const SchemeApproval = dynamic(
@@ -104,7 +106,8 @@ const NAV_ITEMS = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "activity", label: "Activity Log", icon: Activity },
   { id: "withdrawals", label: "Withdrawals", icon: Wallet },
-  { id: "plans", label: "Plans", icon: ScrollText },
+  { id: "plans", label: "Schemes", icon: ScrollText },
+  { id: "SchemeAuditHistory", label: "Scheme Audit History", icon: ShieldQuestionMark },
   { id: "approvals", label: "Approvals", icon: ClipboardCheck },
   { id: "remitter", label: "Remitter", icon: Ticket },
   { id: "user", label: "User Management", icon: User2Icon },
@@ -114,7 +117,7 @@ const NAV_ITEMS = [
 ];
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("SchemeAuditHistory");
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [toast, setToast] = useState(null);
@@ -179,6 +182,7 @@ export default function AdminPanel() {
   const titles = {
     overview: "Overview",
     activity: "Activity Log",
+    plans: "Schemes",
     withdrawals: "Withdrawal Requests",
     issues: "User Issues",
     codes: "Remitters",
@@ -199,6 +203,8 @@ export default function AdminPanel() {
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
           title={titles[activeTab]}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
           onMenuClick={() => setMobileNavOpen(true)}
         />
 
@@ -216,6 +222,8 @@ export default function AdminPanel() {
                 />
               )}
               {activeTab === "plans" && <PlanTab />}
+              {activeTab === "SchemeAuditHistory" && <SchemeUpdateHistory />}
+
               {activeTab === "approvals" && <SchemeApproval />}
               {activeTab === "issues" && (
                 <IssuesTab Admin={true} onResolve={handleResolveIssue} />
