@@ -166,9 +166,12 @@ export async function markResolvedApi(id) {
     method: "PUT",
   });
 }
-
 export async function getAllSchemAuditHistoryApi() {
   return await apiRequest(`${END_POINT}schemes/history`);
+}
+
+export async function getSelectedHistoryApi(id) {
+  return await apiRequest(`${END_POINT}schemes/history/${id}`);
 }
 
 //pending----------------------------------------------------------------------

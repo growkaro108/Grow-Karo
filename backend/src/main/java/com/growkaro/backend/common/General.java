@@ -7,13 +7,10 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Random;
-import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
@@ -25,18 +22,15 @@ import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.DTO.AdminUser;
 import com.growkaro.backend.DTO.NomineeResponse;
 import com.growkaro.backend.DTO.Payee;
-import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.DTO.UserSchemeResponse;
 import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.Nominee;
-import com.growkaro.backend.entity.Notification;
 import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
-import com.growkaro.backend.entity.UserProfile;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.repository.UserRepository;
 import com.growkaro.backend.security.JwtService;
@@ -80,6 +74,12 @@ public class General {
         Pattern PASSWORD_PATTERN = Pattern
                 .compile("^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[!@#$%^&*(),.?\":{}|<>])(?=\\S+$).{8,64}$");
         return password != null && PASSWORD_PATTERN.matcher(password).matches();
+    }
+
+    public boolean isValidSchemeId(String schemeId) {
+        Pattern pattern = Pattern.compile("^GKSID\\d{14}$");
+        return pattern.matcher(schemeId).matches();
+
     }
 
     // generate exactly 6 digit otp
@@ -200,25 +200,6 @@ public class General {
                 profitDates);
     }
 
-    public SchemeResponse toSchemeResponse(Scheme scheme) {
-        return new SchemeResponse(
-                scheme.getSchemeId(),
-                scheme.getSchemeName(),
-                scheme.getSchemeCategory(),
-                scheme.getSchemeDetails(),
-                scheme.getPayoutFrequency(),
-                scheme.getTenure(),
-                scheme.getStartDate(),
-                scheme.getEndDate(),
-                scheme.getStatus(),
-                scheme.getMinimumAmount(),
-                scheme.getProfitPercentage(),
-                scheme.getMaxInvestorsAllowed(),
-                scheme.getUpdatedAt(),
-                scheme.getRiskLevel(),
-                scheme.getJoinedUsers().stream().map(UserScheme::getUserSchemeId).toList());
-    }
-
     public <T> void applyIfChanged(T newValue, T oldValue, Consumer<T> setter) {
         if (newValue != null && !newValue.equals(oldValue)) {
             setter.accept(newValue);
@@ -282,7 +263,7 @@ public class General {
         return LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
     }
 
-    public String generateResetLink(String email, String userId) {
+    public String generateResetLink( String userId) {
         return baseUrl + "/reset/" + userId + "_user";
     }
 
@@ -290,36 +271,9 @@ public class General {
         return baseUrl + "/auth";
     }
 
-    public String generateResetLinkForRemitter(String email, String remitterId) {
+    public String generateResetLinkForRemitter(String remitterId) {
         return baseUrl + "/reset/" + remitterId + "_rem";
     }
-
-    // public UserProfile toUserProfile(User user, String token) {
-    // BankDetails bankDetails = user.getBankDetails();
-
-    // String bankName = null;
-    // String accountNumber = null;
-    // String ifscCode = null;
-    // String accountHolderName = null;
-    // String bankDetailsId = null;
-
-    // if (bankDetails != null) {
-    // bankName = bankDetails.getBankName();
-    // accountNumber = bankDetails.getAccountNumber();
-    // ifscCode = bankDetails.getIfscCode();
-    // accountHolderName = bankDetails.getAccountHolderName();
-    // bankDetailsId = bankDetails.getBank_details_id();
-    // }
-
-    // return new UserProfile(user.getId(), user.getName(), user.getEmail(),
-    // user.getPhone(),
-    // bankName,
-    // accountNumber,
-    // ifscCode,
-    // accountHolderName,
-    // user.isSecurityAlerts(), user.isSchemeAlerts(), token,
-    // bankDetailsId);
-    // }
 
     public User getUserById(String userId) {
         if (userId == null || userId.isBlank()) {

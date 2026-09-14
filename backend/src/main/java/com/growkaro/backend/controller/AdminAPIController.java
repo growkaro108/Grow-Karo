@@ -33,6 +33,7 @@ import com.growkaro.backend.DTO.PagedResponse;
 import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.DTO.SchemeAuditProjection;
 import com.growkaro.backend.DTO.SchemeResponse;
+import com.growkaro.backend.DTO.SchemeUpdateHistory;
 import com.growkaro.backend.DTO.SearchUser;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.common.NotificationBroadcaster;
@@ -476,18 +477,38 @@ public class AdminAPIController {
     }
 
     @GetMapping("/schemes/history")
-    public ResponseEntity<Map<String, Object>> schemeUpdateHistory(HttpServletRequest request) {
-
+    public ResponseEntity<Map<String, Object>> schemeUpdateHistory() {
+        int offset = 0;
+        int limit = 20;
         try {
-            List<SchemeAuditProjection> history = adminAPIService.findDistinctSchemeIdAndNameFromAudit();
+            PagedResponse<SchemeAuditProjection> history = adminAPIService.findDistinctSchemeIdAndNameFromAudit(offset, limit);
             return ResponseEntity
-                    .ok(general.response("success", "Scheme update history fetched successfully", history));
+                    .ok(general.response("success", "Scheme update history fetched successfully...", history));
         } catch (Exception e) {
-            log.error("Error while fetching scheme update history: " + e.getMessage());
+            log.error("Error while fetching scheme update history: " + e.getMessage(), e);
             return ResponseEntity.internalServerError()
                     .body(general.response("error", "something went wrong..", null));
         }
     }
+
+    @GetMapping("/schemes/history/{id}")
+    public ResponseEntity<Map<String, Object>> selectedSchemeUpdateHistory(@PathVariable String id) {
+        int offset = 0;
+        int limit = 20;
+        if (!general.isValidSchemeId(id)) {
+            return ResponseEntity.badRequest().body(general.response("error", "Invalid Id..", Map.of()));
+        }
+        try {
+            PagedResponse<SchemeUpdateHistory> selectedSchemeHistory = adminAPIService.getSelectedSchemeHistory(id,
+                    offset, limit);
+            return ResponseEntity.ok(general.response("success", "Fetch successfully...", selectedSchemeHistory));
+        } catch (Exception e) {
+            log.error("error while fetching selected scheme history, because {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+
+    }
+
     // pendings
 
     @PutMapping("/issues/{issueId}/resolve")

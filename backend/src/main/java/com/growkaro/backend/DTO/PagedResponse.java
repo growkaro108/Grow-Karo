@@ -31,4 +31,17 @@ public class PagedResponse<T> {
                 .hasPrevious(page.hasPrevious())
                 .build();
     }
+
+    // from list of entity to page response
+    public static <T> PagedResponse<T> from(List<T> content, int offset, int limit) {
+        return PagedResponse.<T>builder()
+                .content(content)
+                .totalElements(content.size())
+                .totalPages((int) Math.ceil((double) content.size() / limit))
+                .offset(offset)
+                .limit(limit)
+                .hasNext(false)
+                .hasPrevious(false)
+                .build();
+    }
 }

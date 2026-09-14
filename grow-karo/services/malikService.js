@@ -23,6 +23,7 @@ import {
   sendReplyApi,
   markResolvedApi,
   getAllSchemAuditHistoryApi,
+  getSelectedHistoryApi,
 } from "@/api/adminApi";
 import { allRounderMessage } from "@/components/Message";
 
@@ -179,4 +180,14 @@ export async function getAllSchemAuditHistory() {
     return false;
   }
   return res.data;
+}
+
+export async function getSelectedHistory(id) {
+  const res = await getSelectedHistoryApi(id);
+  if (res.status !== "success") {
+    allRounderMessage(res);
+    return [];
+  } else {
+    return res.data;
+  }
 }

@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +24,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.data.history.Revisions;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.IllegalTransactionStateException;
@@ -42,12 +41,12 @@ import com.growkaro.backend.DTO.PagedResponse;
 import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.DTO.SchemeAuditProjection;
 import com.growkaro.backend.DTO.SchemeResponse;
+import com.growkaro.backend.DTO.SchemeUpdateHistory;
 import com.growkaro.backend.DTO.SearchUser;
 import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.common.GlobalExceptionHandler.DuplicateResourceException;
 import com.growkaro.backend.entity.Notification;
-import com.growkaro.backend.entity.NotificationContentBuilder;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Reply;
 import com.growkaro.backend.entity.Scheme;
@@ -71,8 +70,6 @@ import com.growkaro.backend.repository.SupportIssueRepository;
 import com.growkaro.backend.repository.TransactionRepository;
 import com.growkaro.backend.repository.UserRepository;
 import com.growkaro.backend.repository.UserSchemeRepository;
-import com.growkaro.backend.security.AdminPolicy;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
@@ -94,11 +91,9 @@ public class AdminAPIService {
     private final LocalFileStorageService localFileStorageService;
     private final ActivityLogRepository activityLogRepository;
     private final NotificationRepository notificationRepository;
-    private final NotificationContentBuilder contentBuilder;
     private final General general;
     private final CrucialNotificationService crucialNotificationService;
     private final EmailService emailService;
-    private final AdminPolicy adminPolicy;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -110,11 +105,9 @@ public class AdminAPIService {
             SchemeRepository schemeRepository, UserSchemeRepository userSchemeRepository, @Lazy ApiService apiService,
             ActivityLogService activityLogService, LocalFileStorageService localFileStorageService,
             ActivityLogRepository activityLogRepository, NotificationRepository notificationRepository,
-            NotificationContentBuilder contentBuilder,
             General general,
             CrucialNotificationService crucialNotificationService,
-            EmailService emailService,
-            AdminPolicy adminPolicy) {
+            EmailService emailService) {
         this.userRepository = userRepository;
         this.remitterRepository = remitterRepository;
         this.transactionRepository = transactionRepository;
@@ -126,17 +119,15 @@ public class AdminAPIService {
         this.localFileStorageService = localFileStorageService;
         this.activityLogRepository = activityLogRepository;
         this.notificationRepository = notificationRepository;
-        this.contentBuilder = contentBuilder;
         this.general = general;
         this.crucialNotificationService = crucialNotificationService;
         this.emailService = emailService;
-        this.adminPolicy = adminPolicy;
     }
 
     // create a new scheme
     @Caching(evict = {
             @CacheEvict(value = "allSchemes", allEntries = true),
-            @CacheEvict(value = "schemeAudit", allEntries = true)
+            @CacheEvict(value = "schemeAudit", allEntries = true),
     })
     public boolean createScheme(ReceiveSchemeData schemeData) {
         Scheme scheme = general.toScheme(schemeData);
@@ -155,14 +146,15 @@ public class AdminAPIService {
     public List<SchemeResponse> getAllSchemes(boolean admin) {
         return schemeRepository.findAll().stream()
                 .filter(scheme -> admin || Boolean.TRUE.equals(scheme.getStatus()))
-                .map(general::toSchemeResponse)
+                .map(SchemeResponse::fromEntity)
                 .toList();
     }
 
     // Update the scheme
     @Caching(evict = {
             @CacheEvict(value = "allSchemes", allEntries = true),
-            @CacheEvict(value = "schemeAudit", allEntries = true)
+            @CacheEvict(value = "schemeAudit", allEntries = true),
+            @CacheEvict (value = "schemeUpdateHistory", key = "#id")
     })
     public List<SchemeResponse> updateScheme(String id, ReceiveSchemeData receiveData) {
         if (id == null || id.isBlank() || receiveData == null) {
@@ -864,8 +856,7 @@ public class AdminAPIService {
         return general.response("success", "Issue resolved", toIssueView(supportIssueRepository.save(issue)));
     }
 
-    @Cacheable(value = "schemeAudit", key = "'all'")
-    public List<SchemeAuditProjection> findDistinctSchemeIdAndNameFromAudit() {
+    public PagedResponse<SchemeAuditProjection> findDistinctSchemeIdAndNameFromAudit(int offset, int limit) {
         // 1. Get the Envers AuditReader tool from the EntityManager
         AuditReader auditReader = AuditReaderFactory.get(entityManager);
 
@@ -896,7 +887,7 @@ public class AdminAPIService {
         // 4. Convert each (groupKey -> count) entry back into an Object[] shaped
         // like the original Envers projection (5 fields + count), then map
         // to the DTO using the existing toDto() converter.
-        return counts.entrySet().stream()
+        return PagedResponse.from(counts.entrySet().stream()
                 .map(entry -> {
                     List<Object> key = entry.getKey();
                     Object[] row = new Object[] {
@@ -909,7 +900,17 @@ public class AdminAPIService {
                     };
                     return SchemeAuditProjection.toDto(row);
                 })
+                .toList(), offset, limit);
+    }
+
+    @Cacheable (value = "schemeUpdateHistory", key = "#schemeId + '-' + #offset + '-' + #limit")
+    @Transactional(readOnly = true)
+    public PagedResponse<SchemeUpdateHistory> getSelectedSchemeHistory(String schemeId, int offset, int limit) {
+        Revisions<Integer, Scheme> revisions = schemeRepository.findRevisions(schemeId);
+        List<SchemeUpdateHistory> schemeUpdateHistories = revisions.stream().map(r -> SchemeUpdateHistory.fromEntity(r))
                 .toList();
+        return PagedResponse.from(schemeUpdateHistories, offset, limit);
+
     }
 
     // @Cacheable(value = "remitters", key = "#page ?: 'default'")

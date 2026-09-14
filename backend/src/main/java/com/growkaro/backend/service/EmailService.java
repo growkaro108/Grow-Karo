@@ -80,7 +80,7 @@ public class EmailService {
     @Async
     public void sendResetLink(String email, String userId) {
         try {
-            String resetLink = general.generateResetLink(email, userId);
+            String resetLink = general.generateResetLink(userId);
             String subject = "Reset Password - GrowKaro";
             String body = "<div style='font-family: Arial, sans-serif; margin: 0; padding: 0;'>" +
                     "<div style='background-color: #f0f8ff; padding: 20px;'>" +
@@ -146,7 +146,7 @@ public class EmailService {
     @Async
     public void sendResetLinkToRemitter(String email, String remitterId) {
         try {
-            String resetLink = general.generateResetLinkForRemitter(email, remitterId);
+            String resetLink = general.generateResetLinkForRemitter( remitterId);
             String subject = "Reset Password - GrowKaro";
             String body = "<div style='font-family: Arial, sans-serif; margin: 0; padding: 0;'>" +
                     "<div style='background-color: #f0f8ff; padding: 20px;'>" +

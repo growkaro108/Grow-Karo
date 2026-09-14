@@ -77,6 +77,7 @@ public class RedisService {
         }
     }
 
+    // key value with duration in sec
     public boolean setValue(String key, Object value, Duration timeout) {
         try {
             redisTemplate.opsForValue().set(key, value, timeout);

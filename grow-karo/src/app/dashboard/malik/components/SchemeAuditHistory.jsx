@@ -19,7 +19,10 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
-import { getAllSchemAuditHistory } from "../../../../../services/malikService";
+import {
+  getAllSchemAuditHistory,
+  getSelectedHistory,
+} from "../../../../../services/malikService";
 
 /**
  * SchemeAuditHistory
@@ -73,51 +76,53 @@ const FIELD_META = [
 function getTokens(isDark) {
   return isDark
     ? {
-      page: "bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950",
-      heading: "text-slate-100",
-      subheading: "text-slate-400",
-      panel: "bg-slate-900 border-slate-700",
-      panelHeader: "bg-slate-800/60 border-slate-700",
-      hairline: "divide-slate-800",
-      railLine: "border-slate-700",
-      railItem: "hover:bg-slate-800/60",
-      railItemSelected: "bg-slate-800 ring-1 ring-slate-600 shadow-md",
-      text: "text-slate-100",
-      muted: "text-slate-400",
-      mutedStrike: "text-slate-500",
-      inputBg: "bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:ring-indigo-500/40 focus:border-indigo-500",
-      cardBg: "bg-slate-900 border-slate-700",
-      cardHover: "hover:shadow-lg hover:shadow-black/30",
-      badgeNeutral: "bg-slate-800 text-slate-300",
-      highlightBg: "bg-amber-400/10",
-      highlightBar: "bg-amber-400",
-      highlightBadge: "bg-amber-400/15 text-amber-300",
-      highlightText: "text-amber-300",
-      toggleBg: "bg-slate-800 border-slate-700 text-amber-300",
-    }
+        page: "bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950",
+        heading: "text-slate-100",
+        subheading: "text-slate-400",
+        panel: "bg-slate-900 border-slate-700",
+        panelHeader: "bg-slate-800/60 border-slate-700",
+        hairline: "divide-slate-800",
+        railLine: "border-slate-700",
+        railItem: "hover:bg-slate-800/60",
+        railItemSelected: "bg-slate-800 ring-1 ring-slate-600 shadow-md",
+        text: "text-slate-100",
+        muted: "text-slate-400",
+        mutedStrike: "text-slate-500",
+        inputBg:
+          "bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:ring-indigo-500/40 focus:border-indigo-500",
+        cardBg: "bg-slate-900 border-slate-700",
+        cardHover: "hover:shadow-lg hover:shadow-black/30",
+        badgeNeutral: "bg-slate-800 text-slate-300",
+        highlightBg: "bg-amber-400/10",
+        highlightBar: "bg-amber-400",
+        highlightBadge: "bg-amber-400/15 text-amber-300",
+        highlightText: "text-amber-300",
+        toggleBg: "bg-slate-800 border-slate-700 text-amber-300",
+      }
     : {
-      page: "bg-gradient-to-br from-indigo-50 via-white to-teal-50",
-      heading: "text-slate-900",
-      subheading: "text-slate-500",
-      panel: "bg-white border-slate-200",
-      panelHeader: "bg-gradient-to-r from-slate-50 to-white border-slate-200",
-      hairline: "divide-slate-100",
-      railLine: "border-slate-200",
-      railItem: "hover:bg-white/70",
-      railItemSelected: "bg-white shadow-md ring-1 ring-slate-200",
-      text: "text-slate-800",
-      muted: "text-slate-500",
-      mutedStrike: "text-slate-400",
-      inputBg: "bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:ring-indigo-300 focus:border-indigo-300",
-      cardBg: "bg-white border-slate-200",
-      cardHover: "hover:shadow-md",
-      badgeNeutral: "bg-slate-100 text-slate-600",
-      highlightBg: "bg-amber-50",
-      highlightBar: "bg-amber-400",
-      highlightBadge: "bg-amber-100 text-amber-700",
-      highlightText: "text-amber-800",
-      toggleBg: "bg-white border-slate-200 text-indigo-600",
-    };
+        page: "bg-gradient-to-br from-indigo-50 via-white to-teal-50",
+        heading: "text-slate-900",
+        subheading: "text-slate-500",
+        panel: "bg-white border-slate-200",
+        panelHeader: "bg-gradient-to-r from-slate-50 to-white border-slate-200",
+        hairline: "divide-slate-100",
+        railLine: "border-slate-200",
+        railItem: "hover:bg-white/70",
+        railItemSelected: "bg-white shadow-md ring-1 ring-slate-200",
+        text: "text-slate-800",
+        muted: "text-slate-500",
+        mutedStrike: "text-slate-400",
+        inputBg:
+          "bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:ring-indigo-300 focus:border-indigo-300",
+        cardBg: "bg-white border-slate-200",
+        cardHover: "hover:shadow-md",
+        badgeNeutral: "bg-slate-100 text-slate-600",
+        highlightBg: "bg-amber-50",
+        highlightBar: "bg-amber-400",
+        highlightBadge: "bg-amber-100 text-amber-700",
+        highlightText: "text-amber-800",
+        toggleBg: "bg-white border-slate-200 text-indigo-600",
+      };
 }
 
 const CATEGORY_PALETTE = {
@@ -158,25 +163,62 @@ const RISK_SCALE = {
 
 const REV_BADGE = {
   light: {
-    ADD: { label: "Created", cls: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500", Icon: Plus },
-    MOD: { label: "Updated", cls: "bg-violet-100 text-violet-700", dot: "bg-violet-500", Icon: Pencil },
-    DEL: { label: "Deleted", cls: "bg-rose-100 text-rose-700", dot: "bg-rose-500", Icon: Minus },
+    ADD: {
+      label: "Created",
+      cls: "bg-emerald-100 text-emerald-700",
+      dot: "bg-emerald-500",
+      Icon: Plus,
+    },
+    MOD: {
+      label: "Updated",
+      cls: "bg-violet-100 text-violet-700",
+      dot: "bg-violet-500",
+      Icon: Pencil,
+    },
+    DEL: {
+      label: "Deleted",
+      cls: "bg-rose-100 text-rose-700",
+      dot: "bg-rose-500",
+      Icon: Minus,
+    },
   },
   dark: {
-    ADD: { label: "Created", cls: "bg-emerald-500/15 text-emerald-300", dot: "bg-emerald-400", Icon: Plus },
-    MOD: { label: "Updated", cls: "bg-violet-500/15 text-violet-300", dot: "bg-violet-400", Icon: Pencil },
-    DEL: { label: "Deleted", cls: "bg-rose-500/15 text-rose-300", dot: "bg-rose-400", Icon: Minus },
+    ADD: {
+      label: "Created",
+      cls: "bg-emerald-500/15 text-emerald-300",
+      dot: "bg-emerald-400",
+      Icon: Plus,
+    },
+    MOD: {
+      label: "Updated",
+      cls: "bg-violet-500/15 text-violet-300",
+      dot: "bg-violet-400",
+      Icon: Pencil,
+    },
+    DEL: {
+      label: "Deleted",
+      cls: "bg-rose-500/15 text-rose-300",
+      dot: "bg-rose-400",
+      Icon: Minus,
+    },
   },
 };
 
 const STATUS_PILL = {
-  light: { on: "bg-emerald-100 text-emerald-700", off: "bg-rose-100 text-rose-700" },
-  dark: { on: "bg-emerald-500/15 text-emerald-300", off: "bg-rose-500/15 text-rose-300" },
+  light: {
+    on: "bg-emerald-100 text-emerald-700",
+    off: "bg-rose-100 text-rose-700",
+  },
+  dark: {
+    on: "bg-emerald-500/15 text-emerald-300",
+    off: "bg-rose-500/15 text-rose-300",
+  },
 };
 
 function categoryStyle(category, mode) {
   let hash = 0;
-  for (let i = 0; i < category.length; i++) hash = (hash * 31 + category.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < category.length; i++)
+    hash = (hash * 31 + category.charCodeAt(i)) >>> 0;
   const palette = CATEGORY_PALETTE[mode];
   return palette[hash % palette.length];
 }
@@ -230,6 +272,36 @@ function computeChangedKeys(prevData, currData) {
   return changed;
 }
 
+function normalizeFetchedRevision(rev) {
+  const entity = rev?.scheme ?? rev?.data ?? {};
+  const data = entity && typeof entity === "object" ? entity : {};
+
+  return {
+    revisionId: rev?.revNumber ?? rev?.revisionId ?? 0,
+    revisionType: rev?.type ?? rev?.revisionType ?? "MOD",
+    revisedBy: rev?.revisedBy ?? "",
+    updatedAt: rev?.changeDate
+      ? new Date(rev.changeDate).toISOString()
+      : (rev?.updatedAt ?? new Date().toISOString()),
+    data: {
+      schemeId: data.schemeId ?? rev?.schemeId ?? "",
+      schemeName: data.schemeName ?? "",
+      schemeCategory: data.schemeCategory ?? "",
+      schemeDetails: data.schemeDetails ?? "",
+      payoutFrequency: data.payoutFrequency ?? "",
+      tenure: data.tenure ?? 0,
+      startDate: data.startDate ?? "",
+      endDate: data.endDate ?? "",
+      status: Boolean(data.status),
+      minimumAmount: Number(data.minimumAmount ?? 0),
+      profitPercentage: Number(data.profitPercentage ?? 0),
+      maxInvestorsAllowed: Number(data.maxInvestorsAllowed ?? 0),
+      riskLevel: Number(data.riskLevel ?? 0),
+      joinedUsers: Array.isArray(data.joinedUsers) ? data.joinedUsers : [],
+    },
+  };
+}
+
 export default function SchemeAuditHistory({
   schemes: schemesProp,
   theme,
@@ -237,23 +309,61 @@ export default function SchemeAuditHistory({
   onThemeChange,
   showThemeToggle = true,
 }) {
-  const [allSchemes, setAllSchemes] = useState();
-  const schemes = schemesProp ?? MOCK_SCHEMES;
+  const [allSchemes, setAllSchemes] = useState([]);
+  const [detailScheme, setDetailScheme] = useState(null);
   const isControlled = theme === "light" || theme === "dark";
   const [internalTheme, setInternalTheme] = useState(defaultTheme);
   const activeTheme = isControlled ? theme : internalTheme;
   const mode = activeTheme === "dark" ? "dark" : "light";
   const isDark = mode === "dark";
   const T = getTokens(isDark);
+  const [selectedSchemeId, setSelectedSchemeId] = useState(null);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     async function fetchAllSchemeHistory() {
-      const res = await getAllSchemAuditHistory();
-      console.log(res)
-
+      try {
+        const data = await getAllSchemAuditHistory();
+        setAllSchemes(Array.isArray(data?.content) ? data.content : []);
+      } catch (error) {
+        console.error("Failed to load audit history:", error?.message || error);
+        setAllSchemes([]);
+      }
     }
+
     fetchAllSchemeHistory();
-  }, [])
+  }, []);
+
+  useEffect(() => {
+    async function fetchSelectedSchemeHistory() {
+      if (!selectedSchemeId) {
+        setDetailScheme(null);
+        return;
+      }
+
+      try {
+        const res = await getSelectedHistory(selectedSchemeId);
+        const revisions = Array.isArray(res?.content)
+          ? res.content.map(normalizeFetchedRevision)
+          : [];
+        setDetailScheme({
+          schemeId: selectedSchemeId,
+          schemeName: revisions[0]?.data?.schemeName ?? "",
+          revisions: [...revisions].sort(
+            (a, b) => Number(a.revisionId) - Number(b.revisionId),
+          ),
+        });
+      } catch (error) {
+        console.error(
+          "Failed to load selected scheme history:",
+          error?.message || error,
+        );
+        setDetailScheme({ schemeId: selectedSchemeId, revisions: [] });
+      }
+    }
+
+    fetchSelectedSchemeHistory();
+  }, [selectedSchemeId]);
 
   const toggleTheme = () => {
     const next = mode === "dark" ? "light" : "dark";
@@ -261,34 +371,65 @@ export default function SchemeAuditHistory({
     onThemeChange?.(next);
   };
 
-  const [query, setQuery] = useState("");
-  const [selectedSchemeId, setSelectedSchemeId] = useState(null);
+  const schemeCards = useMemo(() => {
+    const source =
+      Array.isArray(allSchemes) && allSchemes.length > 0
+        ? allSchemes
+        : (schemesProp ?? MOCK_SCHEMES);
 
-  const schemeCards = useMemo(
-    () =>
-      schemes.map((s) => {
-        const sorted = [...s.revisions].sort(
-          (a, b) => new Date(a.updatedAt) - new Date(b.updatedAt)
-        );
-        return { schemeId: s.schemeId, revisions: sorted, latest: sorted[sorted.length - 1] };
-      }),
-    [schemes]
-  );
+    return source.map((s) => {
+      const item = s?.data
+        ? s
+        : { schemeId: s.schemeId, revisions: s.revisions ?? [] };
+      const revisions =
+        Array.isArray(item.revisions) && item.revisions.length > 0
+          ? [...item.revisions].sort(
+              (a, b) => new Date(a.updatedAt) - new Date(b.updatedAt),
+            )
+          : [];
+
+      const latest = revisions.at(-1) ?? {
+        data: {
+          schemeId: item.schemeId ?? item.scheme?.schemeId ?? "",
+          schemeName: item.schemeName ?? item.scheme?.schemeName ?? "",
+          schemeCategory:
+            item.schemeCategory ?? item.scheme?.schemeCategory ?? "",
+          status: item.status ?? item.scheme?.status ?? true,
+          riskLevel: item.riskLevel ?? item.scheme?.riskLevel ?? 1,
+        },
+      };
+
+      return {
+        schemeId: item.schemeId ?? item.scheme?.schemeId ?? "",
+        revisions,
+        latest,
+      };
+    });
+  }, [allSchemes, schemesProp]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return schemeCards;
-    return schemeCards.filter(
-      (s) =>
-        s.latest.data.schemeName.toLowerCase().includes(q) ||
-        s.schemeId.toLowerCase().includes(q)
-    );
-  }, [schemeCards, query]);
+    // if (!q) return schemeCards;
+    if (!q) return allSchemes;
 
-  const selected = schemeCards.find((s) => s.schemeId === selectedSchemeId);
+    return allSchemes.filter((s) => {
+      const name = s.schemeName ?? "";
+      return (
+        name.toLowerCase().includes(q) || s.schemeId.toLowerCase().includes(q)
+      );
+    });
+  }, [query, allSchemes]);
+
+  const selected = selectedSchemeId
+    ? (detailScheme ??
+      schemeCards.find((s) => s.schemeId === selectedSchemeId) ??
+      null)
+    : null;
 
   return (
-    <div className={`min-h-full w-full ${T.page} -m-7 p-6 md:p-10 transition-colors`}>
+    <div
+      className={`min-h-full w-full ${T.page} -m-7 p-6 md:p-10 transition-colors`}
+    >
       <div className="max-w-5xl mx-auto">
         {/* <header className="mb-6 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -319,7 +460,10 @@ export default function SchemeAuditHistory({
         {!selected ? (
           <>
             <div className="relative mb-5">
-              <Search size={17} className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${T.muted}`} />
+              <Search
+                size={17}
+                className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${T.muted}`}
+              />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -330,8 +474,8 @@ export default function SchemeAuditHistory({
 
             <div className="grid sm:grid-cols-2 gap-3">
               {filtered.map((s) => {
-                const cat = categoryStyle(s.latest.data.schemeCategory, mode);
-                const risk = RISK_SCALE[mode][s.latest.data.riskLevel];
+                const cat = categoryStyle(s.schemeCategory, mode);
+                const risk = RISK_SCALE[mode][s.riskLevel + 1];
                 const statusPill = STATUS_PILL[mode];
                 return (
                   <button
@@ -343,29 +487,41 @@ export default function SchemeAuditHistory({
                     <div className="p-4">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <div className={`text-xs ${T.muted}`}>{s.schemeId}</div>
-                          <div className={`font-medium group-hover:text-indigo-500 transition-colors ${T.text}`}>
-                            {s.latest.data.schemeName}
+                          <div className={`text-xs ${T.muted}`}>
+                            {s.schemeId}
+                          </div>
+                          <div
+                            className={`font-medium group-hover:text-indigo-500 transition-colors ${T.text}`}
+                          >
+                            {s.schemeName}
                           </div>
                         </div>
                         <span
-                          className={`text-xs font-medium px-2 py-0.5 rounded-full ${s.latest.data.status ? statusPill.on : statusPill.off
-                            }`}
+                          className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                            s.status ? statusPill.on : statusPill.off
+                          }`}
                         >
-                          {s.latest.data.status ? "Active" : "Inactive"}
+                          {s.status ? "Active" : "Inactive"}
                         </span>
                       </div>
                       <div className="mt-3 flex flex-wrap gap-1.5">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cat.bg} ${cat.text}`}>
-                          {s.latest.data.schemeCategory}
+                        <span
+                          className={`text-xs font-medium px-2 py-0.5 rounded-full ${cat.bg} ${cat.text}`}
+                        >
+                          {s.schemeCategory}
                         </span>
                         {risk && (
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${risk.cls}`}>
+                          <span
+                            className={`text-xs font-medium px-2 py-0.5 rounded-full ${risk.cls}`}
+                          >
                             {risk.label} risk
                           </span>
                         )}
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${T.badgeNeutral}`}>
-                          {s.revisions.length} revision{s.revisions.length === 1 ? "" : "s"}
+                        <span
+                          className={`text-xs font-medium px-2 py-0.5 rounded-full ${T.badgeNeutral}`}
+                        >
+                          {s.countOfRevisions ? s.countOfRevisions : 0} revision
+                          {s.countOfRevisions?.length === 1 ? "" : "s"}
                         </span>
                       </div>
                     </div>
@@ -373,8 +529,12 @@ export default function SchemeAuditHistory({
                 );
               })}
               {filtered.length === 0 && (
-                <p className={`text-sm col-span-full text-center py-10 ${T.muted}`}>
-                  No schemes match "{query}".
+                <p
+                  className={`text-sm col-span-full text-center py-10 ${T.muted}`}
+                >
+                  {query
+                    ? `No schemes found for "${query}". Try a different search term.`
+                    : "No schemes available."}
                 </p>
               )}
             </div>
@@ -393,18 +553,38 @@ export default function SchemeAuditHistory({
 }
 
 function SchemeDetail({ scheme, onBack, mode, T }) {
-  const revisions = scheme.revisions;
-  const [selectedIdx, setSelectedIdx] = useState(revisions.length - 1);
-  const current = revisions[selectedIdx];
-  const previous = selectedIdx > 0 ? revisions[selectedIdx - 1] : null;
+  const revisions = Array.isArray(scheme?.revisions) ? scheme.revisions : [];
+  const [selectedIdx, setSelectedIdx] = useState(0);
+
+  const safeIdx =
+    revisions.length === 0
+      ? 0
+      : Math.min(Math.max(selectedIdx, 0), revisions.length - 1);
+  const current = revisions[safeIdx] ?? null;
+  const previous = current
+    ? safeIdx > 0
+      ? revisions[safeIdx - 1]
+      : null
+    : null;
 
   const changedKeys = useMemo(
     () => computeChangedKeys(previous?.data, current?.data),
-    [previous, current]
+    [previous, current],
   );
   const isFirstRevision = previous === null;
-  const cat = categoryStyle(current.data.schemeCategory, mode);
+  const cat = categoryStyle(current?.data?.schemeCategory ?? "", mode);
   const revBadges = REV_BADGE[mode];
+
+  if (!scheme || !Array.isArray(revisions) || revisions.length === 0) {
+    return (
+      <div className={`rounded-xl border ${T.panel} p-6 text-sm ${T.muted}`}>
+        <div className={`mb-3 font-medium text-base ${T.text}`}>
+          No audit data available
+        </div>
+        Loading revision history for this scheme...
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -416,10 +596,14 @@ function SchemeDetail({ scheme, onBack, mode, T }) {
       </button>
 
       <div className="flex items-center gap-2 mb-6 flex-wrap">
-        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${cat.bg} ${cat.text}`}>
+        <span
+          className={`text-xs font-medium px-2.5 py-1 rounded-full ${cat.bg} ${cat.text}`}
+        >
           {current.data.schemeCategory}
         </span>
-        <h2 className={`text-lg font-semibold ${T.heading}`}>{current.data.schemeName}</h2>
+        <h2 className={`text-lg font-semibold ${T.heading}`}>
+          {current.data.schemeName}
+        </h2>
         <span className={`text-xs ${T.muted}`}>{scheme.schemeId}</span>
       </div>
 
@@ -427,24 +611,32 @@ function SchemeDetail({ scheme, onBack, mode, T }) {
         <ol className={`relative border-l-2 pl-6 space-y-6 ${T.railLine}`}>
           {revisions.map((rev, idx) => {
             const badge = revBadges[rev.revisionType] ?? revBadges.MOD;
-            const isSelected = idx === selectedIdx;
+            const isSelected = idx === safeIdx;
             return (
               <li key={rev.revisionId} className="relative">
                 <span
-                  className={`absolute -left-[31px] top-1 h-3.5 w-3.5 rounded-full border-2 shadow ${mode === "dark" ? "border-slate-950" : "border-white"
-                    } ${isSelected ? badge.dot : "bg-slate-400"}`}
+                  className={`absolute -left-[31px] top-1 h-3.5 w-3.5 rounded-full border-2 shadow ${
+                    mode === "dark" ? "border-slate-950" : "border-white"
+                  } ${isSelected ? badge.dot : "bg-slate-400"}`}
                 />
                 <button
                   onClick={() => setSelectedIdx(idx)}
-                  className={`text-left w-full rounded-lg px-3 py-2 transition-all ${isSelected ? T.railItemSelected : T.railItem
-                    }`}
+                  className={`text-left w-full rounded-lg px-3 py-2 transition-all ${
+                    isSelected ? T.railItemSelected : T.railItem
+                  }`}
                 >
-                  <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${badge.cls}`}>
+                  <span
+                    className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${badge.cls}`}
+                  >
                     <badge.Icon size={12} />
                     {badge.label}
                   </span>
-                  <div className={`mt-1.5 text-sm font-medium ${T.text}`}>Rev #{rev.revisionId}</div>
-                  <div className={`flex items-center gap-1 text-xs mt-0.5 ${T.muted}`}>
+                  <div className={`mt-1.5 text-sm font-medium ${T.text}`}>
+                    Rev #{rev.revisionId}
+                  </div>
+                  <div
+                    className={`flex items-center gap-1 text-xs mt-0.5 ${T.muted}`}
+                  >
                     <Clock size={12} />
                     {new Date(rev.updatedAt).toLocaleString("en-IN", {
                       day: "2-digit",
@@ -455,7 +647,9 @@ function SchemeDetail({ scheme, onBack, mode, T }) {
                     })}
                   </div>
                   {rev.revisedBy && (
-                    <div className={`text-xs mt-0.5 ${T.muted}`}>by {rev.revisedBy}</div>
+                    <div className={`text-xs mt-0.5 ${T.muted}`}>
+                      by {rev.revisedBy}
+                    </div>
                   )}
                 </button>
               </li>
@@ -463,10 +657,16 @@ function SchemeDetail({ scheme, onBack, mode, T }) {
           })}
         </ol>
 
-        <div className={`rounded-xl overflow-hidden shadow-sm border ${T.panel}`}>
-          <div className={`flex items-center justify-between px-5 py-4 border-b ${T.panelHeader}`}>
+        <div
+          className={`rounded-xl overflow-hidden shadow-sm border ${T.panel}`}
+        >
+          <div
+            className={`flex items-center justify-between px-5 py-4 border-b ${T.panelHeader}`}
+          >
             <div>
-              <div className={`text-sm font-medium ${T.text}`}>Revision #{current.revisionId}</div>
+              <div className={`text-sm font-medium ${T.text}`}>
+                Revision #{current.revisionId}
+              </div>
               <div className={`text-xs ${T.muted}`}>
                 {isFirstRevision
                   ? "Initial record — no prior revision to compare"
@@ -474,8 +674,11 @@ function SchemeDetail({ scheme, onBack, mode, T }) {
               </div>
             </div>
             {!isFirstRevision && (
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${T.highlightBadge}`}>
-                {changedKeys.size} field{changedKeys.size === 1 ? "" : "s"} changed
+              <span
+                className={`text-xs px-2.5 py-1 rounded-full font-medium ${T.highlightBadge}`}
+              >
+                {changedKeys.size} field{changedKeys.size === 1 ? "" : "s"}{" "}
+                changed
               </span>
             )}
           </div>
@@ -489,23 +692,53 @@ function SchemeDetail({ scheme, onBack, mode, T }) {
               return (
                 <div
                   key={key}
-                  className={`px-5 py-3 grid grid-cols-[160px_1fr] gap-4 items-start relative ${isChanged ? T.highlightBg : ""
-                    }`}
+                  className={`px-5 py-3 grid grid-cols-[160px_1fr] gap-4 items-start relative ${
+                    isChanged ? T.highlightBg : ""
+                  }`}
                 >
-                  {isChanged && <span className={`absolute left-0 top-0 bottom-0 w-1 ${T.highlightBar}`} />}
-                  <dt className={`text-sm pt-0.5 flex items-center gap-1.5 ${T.muted}`}>
+                  {isChanged && (
+                    <span
+                      className={`absolute left-0 top-0 bottom-0 w-1 ${T.highlightBar}`}
+                    />
+                  )}
+                  <dt
+                    className={`text-sm pt-0.5 flex items-center gap-1.5 ${T.muted}`}
+                  >
                     <FieldIcon type={type} muted={T.muted} />
                     {label}
                   </dt>
                   <dd className="text-sm">
                     {type === "list" ? (
-                      <UserListDiff isChanged={isChanged} prev={prevVal} curr={currVal} T={T} />
+                      <UserListDiff
+                        isChanged={isChanged}
+                        prev={prevVal}
+                        curr={currVal}
+                        T={T}
+                      />
                     ) : type === "boolean" ? (
-                      <StatusDiff isChanged={isChanged} prev={prevVal} curr={currVal} mode={mode} T={T} />
+                      <StatusDiff
+                        isChanged={isChanged}
+                        prev={prevVal}
+                        curr={currVal}
+                        mode={mode}
+                        T={T}
+                      />
                     ) : type === "risk" ? (
-                      <RiskDiff isChanged={isChanged} prev={prevVal} curr={currVal} mode={mode} T={T} />
+                      <RiskDiff
+                        isChanged={isChanged}
+                        prev={prevVal}
+                        curr={currVal}
+                        mode={mode}
+                        T={T}
+                      />
                     ) : (
-                      <ScalarDiff isChanged={isChanged} type={type} prev={prevVal} curr={currVal} T={T} />
+                      <ScalarDiff
+                        isChanged={isChanged}
+                        type={type}
+                        prev={prevVal}
+                        curr={currVal}
+                        T={T}
+                      />
                     )}
                   </dd>
                 </div>
@@ -533,11 +766,15 @@ function ScalarDiff({ isChanged, type, prev, curr, T }) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-2">
       {isChanged && (
-        <span className={`line-through ${T.mutedStrike} ${numeric ? "font-mono" : ""}`}>
+        <span
+          className={`line-through ${T.mutedStrike} ${numeric ? "font-mono" : ""}`}
+        >
           {formatValue(type, prev)}
         </span>
       )}
-      <span className={`${isChanged ? `font-semibold ${T.highlightText}` : T.text} ${numeric ? "font-mono" : ""}`}>
+      <span
+        className={`${isChanged ? `font-semibold ${T.highlightText}` : T.text} ${numeric ? "font-mono" : ""}`}
+      >
         {formatValue(type, curr)}
       </span>
     </div>
@@ -546,31 +783,38 @@ function ScalarDiff({ isChanged, type, prev, curr, T }) {
 
 function StatusDiff({ isChanged, prev, curr, mode, T }) {
   const pill = STATUS_PILL[mode];
-  const Pill = ({ active }) => (
-    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${active ? pill.on : pill.off}`}>
-      {active ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-      {active ? "Active" : "Inactive"}
-    </span>
-  );
   return (
     <div className="flex items-center gap-2">
       {isChanged && (
         <>
-          <Pill active={prev} />
+          <span
+            className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${prev ? pill.on : pill.off}`}
+          >
+            {prev ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+            {prev ? "Active" : "Inactive"}
+          </span>
           <span className={T.muted}>→</span>
         </>
       )}
-      <Pill active={curr} />
+      <span
+        className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${curr ? pill.on : pill.off}`}
+      >
+        {curr ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+        {curr ? "Active" : "Inactive"}
+      </span>
     </div>
   );
 }
 
 function RiskDiff({ isChanged, prev, curr, mode, T }) {
   const scale = RISK_SCALE[mode];
-  const Pill = ({ level }) => {
+  const renderPill = (level) => {
     const r = scale[level];
     return (
-      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${r?.cls ?? T.badgeNeutral}`}>
+      <span
+        key={level}
+        className={`text-xs font-medium px-2 py-0.5 rounded-full ${r?.cls ?? T.badgeNeutral}`}
+      >
         {r?.label ?? level} ({level}/5)
       </span>
     );
@@ -579,18 +823,20 @@ function RiskDiff({ isChanged, prev, curr, mode, T }) {
     <div className="flex items-center gap-2">
       {isChanged && (
         <>
-          <Pill level={prev} />
+          {renderPill(prev)}
           <span className={T.muted}>→</span>
         </>
       )}
-      <Pill level={curr} />
+      {renderPill(curr)}
     </div>
   );
 }
 
 function UserListDiff({ isChanged, prev, curr, T }) {
   if (!isChanged) {
-    return <span className={`font-mono ${T.text}`}>{curr?.length ?? 0} users</span>;
+    return (
+      <span className={`font-mono ${T.text}`}>{curr?.length ?? 0} users</span>
+    );
   }
   const { added, removed } = diffJoinedUsers(prev, curr);
   return (
@@ -670,7 +916,8 @@ const MOCK_SCHEMES = [
           schemeId: "SCH-2024-088",
           schemeName: "Growth Plus Deposit — Premium",
           schemeCategory: "Fixed Deposit",
-          schemeDetails: "Quarterly payout scheme for high-value retail investors.",
+          schemeDetails:
+            "Quarterly payout scheme for high-value retail investors.",
           payoutFrequency: "Monthly",
           tenure: 24,
           startDate: "2026-06-01",
@@ -697,7 +944,8 @@ const MOCK_SCHEMES = [
           schemeId: "SCH-2024-091",
           schemeName: "Recurring Saver Lite",
           schemeCategory: "Recurring Deposit",
-          schemeDetails: "Monthly SIP-style recurring deposit for new investors.",
+          schemeDetails:
+            "Monthly SIP-style recurring deposit for new investors.",
           payoutFrequency: "Monthly",
           tenure: 12,
           startDate: "2026-04-15",
@@ -719,7 +967,8 @@ const MOCK_SCHEMES = [
           schemeId: "SCH-2024-091",
           schemeName: "Recurring Saver Lite",
           schemeCategory: "Recurring Deposit",
-          schemeDetails: "Monthly SIP-style recurring deposit for new investors.",
+          schemeDetails:
+            "Monthly SIP-style recurring deposit for new investors.",
           payoutFrequency: "Monthly",
           tenure: 12,
           startDate: "2026-04-15",
