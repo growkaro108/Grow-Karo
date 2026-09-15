@@ -5,6 +5,10 @@ import {
   deleteScheme,
   getAllUsersRequests,
   rejectUserSchemes,
+  addManualUserScheme as addManualUserSchemeApi,
+  updateUserSchemeLedger as updateUserSchemeLedgerApi,
+  getAdminUserNominees,
+  addAdminUserNominee,
   updateScheme,
   activateScheme,
   deactivateScheme,
@@ -53,8 +57,31 @@ export async function approveUserScheme(payload) {
 export async function rejectUserScheme(userSchemeId) {
   return await rejectUserSchemes(userSchemeId);
 }
-export async function addBond(userSchemeId, payload) {
-  return await addBonds(userSchemeId, payload);
+export async function addManualUserScheme(payload) {
+  const response = await addManualUserSchemeApi(payload);
+  allRounderMessage(response);
+  return response.status === "success";
+}
+export async function updateUserSchemeLedger(userSchemeId, payload) {
+  const response = await updateUserSchemeLedgerApi(userSchemeId, payload);
+  allRounderMessage(response);
+  return response.status === "success";
+}
+export async function fetchAdminUserNominees(userId) {
+  const response = await getAdminUserNominees(userId);
+  return response.status === "success" ? response.data : [];
+}
+export async function createAdminUserNominee(userId, payload) {
+  const response = await addAdminUserNominee(userId, { ...payload, userId });
+  allRounderMessage(response);
+  return response.status === "success" ? response.data : null;
+}
+export async function addBond(userSchemeId, payload, isUpdate = false) {
+  payload.isUpdate = isUpdate;
+  // console.log(payload)
+  const response = await addBonds(userSchemeId, payload);
+  allRounderMessage(response);
+  return response.status === "success";
 }
 
 export async function getAllLogTypes() {

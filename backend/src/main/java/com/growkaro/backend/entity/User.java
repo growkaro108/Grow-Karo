@@ -3,6 +3,7 @@ package com.growkaro.backend.entity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
@@ -73,6 +74,7 @@ public class User {
     @JsonManagedReference(value = "user-bankDetails")
     private BankDetails bankDetails;
 
+    @EqualsAndHashCode.Exclude
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY, optional = true)
     @JsonManagedReference(value = "user-guardian")
     private Guardian guardian;

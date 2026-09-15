@@ -114,7 +114,7 @@ public class UserAPIController {
             if (user.name() == null || user.email() == null || !general.validateEmail(user.email())
                     || user.phone() == null
                     || user.passwordHash() == null || !general.validatePassword(user.passwordHash())) {
-                return ResponseEntity.badRequest().body(general.response("error", "Invalid data", null));
+                return ResponseEntity.badRequest().body(general.response("error", "Invalid data...", null));
             }
 
             boolean result = userAPIService.userSignup(user);
@@ -123,7 +123,7 @@ public class UserAPIController {
                     : ResponseEntity.internalServerError()
                             .body(general.response("error", "Internal Server error", null));
         } catch (Exception e) {
-            log.error("Error during signup", e);
+            log.error("Error during signup because: {}", e.getMessage());
             return ResponseEntity.internalServerError().body(general.response("error", "Internal Server error", null));
         }
     }

@@ -8,6 +8,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @AllArgsConstructor
@@ -15,6 +16,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "nominees")
 @Audited
+@ToString(exclude = "user") // Avoid infinite loops in toString()
 public class Nominee {
 
     @Id

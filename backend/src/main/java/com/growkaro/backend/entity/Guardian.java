@@ -7,7 +7,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @AllArgsConstructor
@@ -15,6 +17,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "guardians")
 @Audited
+@ToString (exclude = "user") // Avoid infinite loops in toString()
 public class Guardian {
 
     @Id
@@ -27,6 +30,7 @@ public class Guardian {
     @Column(nullable = false, length = 30)
     private String relation;
 
+    @EqualsAndHashCode.Exclude
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     @JsonIgnoreProperties({ "guardian", "nominee", "bankDetails", "enrolledSchemes" })

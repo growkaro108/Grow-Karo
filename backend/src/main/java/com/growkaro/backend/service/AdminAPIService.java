@@ -32,11 +32,17 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.growkaro.backend.DRO.AddRemitter;
+import com.growkaro.backend.DRO.ManualUserScheme;
+import com.growkaro.backend.DRO.NewNominee;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
+import com.growkaro.backend.DRO.UserSchemeLedgerUpdateRequest;
+import com.growkaro.backend.DRO.UserSchemeProfitLedgerRequest;
+import com.growkaro.backend.DRO.UserSchemeReedemLedgerRequest;
 import com.growkaro.backend.DTO.AddedRemitter;
 import com.growkaro.backend.DTO.AdminTransactionResponse;
 import com.growkaro.backend.DTO.AdminUser;
 import com.growkaro.backend.DTO.IssueResponse;
+import com.growkaro.backend.DTO.NomineeResponse;
 import com.growkaro.backend.DTO.PagedResponse;
 import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.DTO.SchemeAuditProjection;
@@ -54,6 +60,9 @@ import com.growkaro.backend.entity.SupportIssue;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
+import com.growkaro.backend.entity.UserSchemeProfitLedger;
+import com.growkaro.backend.entity.UserSchemeReedemLedger;
+import com.growkaro.backend.entity.Nominee;
 import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.entity.SupportIssue.Status;
@@ -228,10 +237,145 @@ public class AdminAPIService {
 
     @Caching(evict = {
             @CacheEvict(value = "overviewStats", key = "'adminOverview'"),
-            @CacheEvict(value = "userPortfolio", key = "#userId")
+            @CacheEvict(value = "userPortfolio", key = "#p0.userId()")
     })
     @Transactional
-    public Map<String, Object> activateUsersScheme(String userSchemeId, BigDecimal paidAmount, LocalDate paidDate) {
+    public Map<String, Object> addManualUserScheme(ManualUserScheme request) {
+        if (request == null || request.userId() == null || request.userId().isBlank()
+                || request.schemeId() == null || request.schemeId().isBlank()
+                || request.nomineeId() == null || request.nomineeId().isBlank()
+                || request.paidAmount() == null || request.paidAmount().signum() <= 0
+                || request.paidDate() == null || request.profitLedger() == null || request.reedemLedger() == null) {
+            return general.response("error", "Invalid scheme details", null);
+        }
+
+        try {
+            User user = userRepository.findById(request.userId()).orElse(null);
+            Scheme scheme = schemeRepository.findById(request.schemeId()).orElse(null);
+            if (user == null || scheme == null) {
+                return general.response("error", "User or scheme not found", null);
+            }
+            var nominee = user.getNominees().stream()
+                    .filter(item -> request.nomineeId().equals(item.getNomineeId()))
+                    .findFirst().orElse(null);
+            if (nominee == null) {
+                return general.response("error", "Nominee does not belong to this user", null);
+            }
+
+            UserScheme userScheme = new UserScheme();
+            userScheme.setRequestDate(LocalDateTime.of(request.paidDate(), LocalDateTime.now(ZoneId.of("Asia/Kolkata")).toLocalTime()));
+            userScheme.setUser(user);
+            userScheme.setScheme(scheme);
+            userScheme.setNominee(nominee);
+            userScheme.setPaidAmount(request.paidAmount());
+            userScheme.setIsApproved(true);
+            userScheme.setStatus(UserSchemeStatus.ACTIVE);
+            userScheme.setEnrollmentDate(LocalDateTime.of(request.paidDate(), LocalDateTime.now(ZoneId.of("Asia/Kolkata")).toLocalTime()));
+            userScheme.setPaidDate(request.paidDate());
+            replaceLedgers(userScheme, request.profitLedger(), request.reedemLedger());
+            userScheme.setNextPayoutDate(general.calculateNextPayoutDate(userScheme.getEnrollmentDate(), scheme.getPayoutFrequency()));
+            userScheme.setMaturityDate(general.calculateMaturityDate(userScheme.getEnrollmentDate(), scheme.getTenure()));
+            user.enrollInScheme(userScheme);
+            userSchemeRepository.save(userScheme);
+            return general.response("success", "Scheme added to user successfully", userScheme);
+        } catch (Exception e) {
+            log.error("Error adding manual scheme for user {}", request.userId(), e);
+            return general.response("error", "Could not add scheme to user", null);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<NomineeResponse> getUserNominees(String userId) {
+        User user = userRepository.findById(userId).orElse(null);
+        return user == null ? List.of() : user.getNominees().stream().map(NomineeResponse::fromEntity).toList();
+    }
+
+    @Transactional
+    public Map<String, Object> addUserNominee(String userId, NewNominee request) {
+        if (userId == null || userId.isBlank() || request == null
+                || request.name() == null || request.name().isBlank()
+                || request.relation() == null || request.relation().isBlank()
+                || request.aadhaarNo() == null || request.aadhaarNo().isBlank()
+                || request.phone() == null || request.phone().isBlank()) {
+            return general.response("error", "Invalid nominee details", null);
+        }
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return general.response("error", "User not found", null);
+        }
+        Nominee nominee = new Nominee();
+        nominee.setUser(user);
+        nominee.setName(request.name().trim());
+        nominee.setRelation(request.relation().trim());
+        nominee.setAadharNo(request.aadhaarNo().trim());
+        nominee.setMobileNo(request.phone().trim());
+        user.getNominees().add(nominee);
+        userRepository.save(user);
+        return general.response("success", "Nominee added successfully", NomineeResponse.fromEntity(nominee));
+    }
+
+    @CacheEvict(value = "userPortfolio", key = "#userSchemeId")
+    @Transactional
+    public Map<String, Object> updateUserSchemeLedger(String userSchemeId, UserSchemeLedgerUpdateRequest request) {
+        if (userSchemeId == null || userSchemeId.isBlank() || request == null
+                || request.profitLedger() == null || request.reedemLedger() == null) {
+            return general.response("error", "Invalid ledger details", null);
+        }
+        UserScheme userScheme = userSchemeRepository.findById(userSchemeId).orElse(null);
+        if (userScheme == null) {
+            return general.response("error", "User scheme not found", null);
+        }
+        try {
+            replaceLedgers(userScheme, request.profitLedger(), request.reedemLedger());
+            userSchemeRepository.save(userScheme);
+            return general.response("success", "Profit and redemption ledger updated", null);
+        } catch (IllegalArgumentException e) {
+            return general.response("error", e.getMessage(), null);
+        }
+    }
+
+    private void replaceLedgers(UserScheme userScheme,
+            List<UserSchemeProfitLedgerRequest> profits,
+            List<UserSchemeReedemLedgerRequest> redeems) {
+        BigDecimal totalProfit = BigDecimal.ZERO;
+        BigDecimal totalRedeemed = BigDecimal.ZERO;
+        userScheme.getProfitLedger().clear();
+        userScheme.getReedemLedger().clear();
+        for (UserSchemeProfitLedgerRequest request : profits) {
+            if (request == null || request.profitAmount() == null || request.profitAmount().signum() < 0) {
+                throw new IllegalArgumentException("Profit amounts cannot be negative");
+            }
+            UserSchemeProfitLedger entry = new UserSchemeProfitLedger();
+            entry.setUserScheme(userScheme);
+            entry.setProfitAmount(request.profitAmount());
+            entry.setProfitDate(request.profitDate());
+            userScheme.getProfitLedger().add(entry);
+            totalProfit = totalProfit.add(request.profitAmount());
+        }
+        for (UserSchemeReedemLedgerRequest request : redeems) {
+            if (request == null || request.redeemAmount() == null || request.redeemAmount().signum() < 0) {
+                throw new IllegalArgumentException("Redeem amounts cannot be negative");
+            }
+            UserSchemeReedemLedger entry = new UserSchemeReedemLedger();
+            entry.setUserScheme(userScheme);
+            entry.setRedeemAmount(request.redeemAmount());
+            entry.setRedeemDate(request.redeemDate());
+            userScheme.getReedemLedger().add(entry);
+            totalRedeemed = totalRedeemed.add(request.redeemAmount());
+        }
+        userScheme.setProfit(totalProfit);
+        userScheme.setProfitReedemed(totalRedeemed);
+        userScheme.setRedeemAmount(totalRedeemed);
+        userScheme.setRedeemDate(redeems.stream().map(UserSchemeReedemLedgerRequest::redeemDate)
+                .filter(java.util.Objects::nonNull).max(LocalDate::compareTo).orElse(null));
+    }
+
+    @Caching(evict = {
+            @CacheEvict(value = "overviewStats", key = "'adminOverview'"),
+            @CacheEvict(value = "userPortfolio", key = "#p0")
+    })
+    @Transactional
+    public Map<String, Object> activateUsersScheme(String userId,String userSchemeId, BigDecimal paidAmount, LocalDate paidDate) {
         if (userSchemeId == null || userSchemeId.isBlank() || paidAmount == null
                 || paidAmount.compareTo(BigDecimal.ZERO) <= 0 || paidDate == null) {
             return general.response("error", "Invalid Request", null);
@@ -271,8 +415,7 @@ public class AdminAPIService {
             LocalDateTime settlementDate = LocalDateTime.of(paidDate,
                     LocalDateTime.now(ZoneId.of("Asia/Kolkata")).toLocalTime());
 
-            createTransaction(userSchemeId, user, paidAmount, settlementDate, TransactionType.DEPOSIT,
-                    "Initial Deposit");
+            createTransaction(userSchemeId, user, paidAmount, settlementDate, TransactionType.DEPOSIT,"Initial Deposit");
             return general.response("success",
                     user.getName() + " is approved for " + scheme.getSchemeName() + " successfully..", userScheme);
 
@@ -360,9 +503,9 @@ public class AdminAPIService {
         }
     }
 
-    @CacheEvict(value = "userPortfolio", key = "#userId")
+   @CacheEvict(value = "userPortfolio", key = "#p0")
     @Transactional
-    public Map<String, Object> addBondDetails(String userSchemeId, String bondNumber, MultipartFile images) {
+    public Map<String, Object> addBondDetails(String userSchemeId, String bondNumber, MultipartFile images,boolean isUpdate) {
         try {
             Optional<UserScheme> userSchemeOpt = userSchemeRepository.findById(userSchemeId);
             if (userSchemeOpt.isEmpty()) {
@@ -381,7 +524,7 @@ public class AdminAPIService {
 
             userSchemeRepository.save(userScheme);
 
-            return general.response("success", "Bond details added successfully", Map.of(
+            return general.response("success", "Bond details added successfully...", Map.of(
                     "userSchemeId", userScheme.getUserSchemeId(),
                     "bondNumber", userScheme.getBondNumber() != null ? userScheme.getBondNumber() : "",
                     "bondImageURL", userScheme.getBondImageURL() != null ? userScheme.getBondImageURL() : ""));

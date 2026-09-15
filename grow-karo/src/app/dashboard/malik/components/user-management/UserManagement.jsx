@@ -3,7 +3,6 @@ import Toolbar from "./Toolbar";
 import UserTable from "./UserTable";
 import UserCardList from "./UserCardList";
 import UserDrawer from "./UserDrawer";
-import { USERS } from "./mockData";
 import { errorMessage } from "@/components/Message";
 import { fetchAllUsers } from "../../../../../../services/malikService";
 
@@ -36,18 +35,19 @@ export default function UserManagement() {
     return list;
   }, [users, query, statusFilter, schemeFilter, sortDesc]);
 
-  useEffect(() => {
-    async function fetchAllUser() {
+  async function fetchAllUser() {
       try {
         const res = await fetchAllUsers();
-        // console.log(res);
+        // console.log(ress);
         if (!res || res?.content?.length === 0) return;
         setUsers(res.content);
       } catch (e) {
         console.log(e);
         errorMessage("something went wrong ,try later..");
       }
-    }
+  }
+
+  useEffect(() => {
     fetchAllUser();
   }, []);
 
@@ -98,7 +98,14 @@ export default function UserManagement() {
         <UserCardList users={filtered} onSelect={setSelected} />
       </div>
 
-      <UserDrawer user={selected} onClose={() => setSelected(null)} />
+      <UserDrawer
+        user={selected}
+        onClose={() => setSelected(null)}
+        onSaved={async () => {
+          await fetchAllUser();
+          setSelected(null);
+        }}
+      />
     </div>
   );
 }

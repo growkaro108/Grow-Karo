@@ -17,6 +17,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.envers.Audited;
@@ -35,6 +37,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PostUpdate;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.OneToMany;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -43,7 +47,7 @@ import jakarta.validation.constraints.Positive;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@ToString(exclude = { "user", "scheme" }) // Avoid infinite loops in toString()
+@ToString(exclude = { "user", "scheme", "profitLedger", "reedemLedger" }) // Avoid infinite loops in toString()
 @Entity
 @Table(name = "user_schemes", indexes = {
         @Index(name = "idx_user_scheme_id", columnList = "userSchemeId"),
@@ -113,6 +117,18 @@ public class UserScheme {
     @DecimalMin(value = "0.0000", message = "Profit Reedemed cannot be negative")
     @Column(name = "profit_reedemed", precision = 19, scale = 4, nullable = false, columnDefinition = "NUMERIC(19,4) DEFAULT 0.0000")
     private BigDecimal profitReedemed = BigDecimal.ZERO;
+
+    @Column(name = "redeem_amount", precision = 19, scale = 4)
+    private BigDecimal redeemAmount = BigDecimal.ZERO;
+
+    @Column(name = "redeem_date")
+    private LocalDate redeemDate;
+
+    @OneToMany(mappedBy = "userScheme", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserSchemeProfitLedger> profitLedger = new ArrayList<>();
+
+    @OneToMany(mappedBy = "userScheme", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserSchemeReedemLedger> reedemLedger = new ArrayList<>();
 
     @Column(name = "next_payout_date")
     private LocalDate nextPayoutDate;

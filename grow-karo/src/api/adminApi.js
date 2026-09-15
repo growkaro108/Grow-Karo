@@ -51,6 +51,27 @@ export async function rejectUserSchemes(userSchemeId) {
     method: "PUT",
   });
 }
+export async function addManualUserScheme(payload) {
+  return await apiRequest(`${END_POINT}user-scheme/add`, {
+    method: "POST",
+    body: payload,
+  });
+}
+export async function updateUserSchemeLedger(userSchemeId, payload) {
+  return await apiRequest(`${END_POINT}user-scheme/${userSchemeId}/ledger`, {
+    method: "PUT",
+    body: payload,
+  });
+}
+export async function getAdminUserNominees(userId) {
+  return await apiRequest(`${END_POINT}user/${userId}/nominees`);
+}
+export async function addAdminUserNominee(userId, payload) {
+  return await apiRequest(`${END_POINT}user/${userId}/nominees`, {
+    method: "POST",
+    body: payload,
+  });
+}
 export async function addBonds(userSchemeId, payload) {
   return await apiRequest(`${END_POINT}user_scheme/add-bond/${userSchemeId}`, {
     method: "POST",

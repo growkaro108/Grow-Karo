@@ -6,7 +6,7 @@ set -e
 # ==========================================
 API_BASE_URL="/api"
 ADMIN_EMAILS="mahakaldarshnain1@gmail.com,wv9304@gmail.com"
-IMAGE_TAG="v3"
+IMAGE_TAG="v4.0.0"
 COMPOSE_FILE="docker-compose.stag.yml"
 
 # ==========================================
@@ -42,25 +42,25 @@ docker push "growwkaro/frontend:$IMAGE_TAG"
 # ==========================================
 # Build & push backend
 # ==========================================
-# echo "=========================================="
-# echo "🚀 Building Backend (tag: $IMAGE_TAG)"
-# echo "=========================================="
+echo "=========================================="
+echo "🚀 Building Backend (tag: $IMAGE_TAG)"
+echo "=========================================="
 
-# docker build -t "growwkaro/backend:$IMAGE_TAG" ./backend
+docker build -t "growwkaro/backend:$IMAGE_TAG" ./backend
 
-# echo "✅ Backend image built successfully!"
-# docker push "growwkaro/backend:$IMAGE_TAG"
+echo "✅ Backend image built successfully!"
+docker push "growwkaro/backend:$IMAGE_TAG"
 
-# # ==========================================
-# # Deploy
-# # ==========================================
-# echo "=========================================="
-# echo "🎉 Starting containers..."
-# echo "=========================================="
+# ==========================================
+# Deploy
+# ==========================================
+echo "=========================================="
+echo "🎉 Starting containers..."
+echo "=========================================="
 
-# docker compose -f "$COMPOSE_FILE" down
-# docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+docker compose -f "$COMPOSE_FILE" down
+docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
 
-# echo "=========================================="
-# echo "✨ Deployment complete! (frontend & backend: $IMAGE_TAG)"
-# echo "=========================================="
+echo "=========================================="
+echo "✨ Deployment complete! (frontend & backend: $IMAGE_TAG)"
+echo "=========================================="

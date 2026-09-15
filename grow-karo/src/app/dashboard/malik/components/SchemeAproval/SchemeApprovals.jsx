@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useRef,
   useMemo,
+  use,
 } from "react";
 import { allRounderMessage, infoMessage } from "@/components/Message";
 import { ListFilterPlus } from "lucide-react";
@@ -20,6 +21,7 @@ import SchemeTable from "./components/SchemeTable";
 import Toast from "./components/Toast";
 import dynamic from "next/dynamic";
 import TabLoader from "@/loader/TabLoader";
+import { userContext } from "@/context/UserContext";
 // import AddBondModal from "./components/AddBondModal";
 const AddBondModal = dynamic(() => import("./components/AddBondModal"), {
   loading: TabLoader,
@@ -49,10 +51,10 @@ export default function SchemeApproval() {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
   const [showFilter, setShowFilter] = useState(true);
-
+  const {authUser}=use(userContext);
   const inputRef = useRef(null);
   const toastTimer = useRef(null);
-
+  const userId=authUser?.id || null;
   const showToast = useCallback((type, text) => {
     clearTimeout(toastTimer.current);
     setToast({ type, text });
@@ -192,6 +194,7 @@ export default function SchemeApproval() {
     }
 
     const payload = {
+      userId: userId,
       userSchemeId: selectedRequest.userSchemeId,
       paidAmount: numericPaid,
       paidDate: paidDate,

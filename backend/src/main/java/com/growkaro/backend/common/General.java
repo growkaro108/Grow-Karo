@@ -25,6 +25,8 @@ import com.growkaro.backend.DTO.Payee;
 import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.DTO.UserSchemeResponse;
+import com.growkaro.backend.DTO.UserSchemeProfitLedgerResponse;
+import com.growkaro.backend.DTO.UserSchemeReedemLedgerResponse;
 import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.Nominee;
 import com.growkaro.backend.entity.Recipient;
@@ -39,6 +41,7 @@ import com.growkaro.backend.service.RedisService;
 @Component
 public class General {
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy");
 
     @Value("${frontend.url}")
     private String baseUrl;
@@ -263,7 +266,7 @@ public class General {
         return LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
     }
 
-    public String generateResetLink( String userId) {
+    public String generateResetLink(String userId) {
         return baseUrl + "/reset/" + userId + "_user";
     }
 
@@ -291,17 +294,17 @@ public class General {
                 request.getId(),
                 request.getUser().getName(),
                 request.getAmount().toPlainString(),
-                request.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")),
+                request.getUpdatedAt().format(DATE_FORMATTER),
                 request.getProofUrl() != null && !request.getProofUrl().isBlank() ? request.getProofUrl()
                         : null,
                 request.getSettlementDate() != null
-                        ? request.getSettlementDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+                        ? request.getSettlementDate().format(DATE_FORMATTER)
                         : "Not Yet Settled",
                 bd.getAccountHolderName(),
                 bd.getBankName(),
                 bd.getAccountNumber(),
                 bd.getIfscCode(),
-                request.getCreatedAt().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")));
+                request.getCreatedAt().format(DATE_FORMATTER));
     }
 
     public Recipient toRecipient(List<Transaction> userTransactions) {
@@ -343,18 +346,45 @@ public class General {
                 user.getEnrolledSchemes().stream().map(this::toUserSchemeResponse).toList());
     }
 
+
     private UserSchemeResponse toUserSchemeResponse(UserScheme us) {
         boolean isJoined = us.getEnrollmentDate() != null;
+
+        BigDecimal profit = us.getProfit() != null ? us.getProfit() : BigDecimal.ZERO;
+        BigDecimal redeemAmount = us.getRedeemAmount() != null ? us.getRedeemAmount() : BigDecimal.ZERO;
+
+        boolean hasRedeemAmount = redeemAmount.signum() > 0;
+        boolean hasRedeemDate = us.getRedeemDate() != null;
+
+        List<UserSchemeProfitLedgerResponse> profitLedger = us.getProfitLedger().stream()
+            .map(entry -> new UserSchemeProfitLedgerResponse(
+                entry.getId(), entry.getProfitAmount(), entry.getProfitDate()))
+            .toList();
+        List<UserSchemeReedemLedgerResponse> reedemLedger = us.getReedemLedger().stream()
+            .map(entry -> new UserSchemeReedemLedgerResponse(
+                entry.getId(), entry.getRedeemAmount(), entry.getRedeemDate()))
+            .toList();
+
         return new UserSchemeResponse(
                 us.getUserSchemeId(),
                 us.getScheme().getSchemeName(),
+                us.getScheme().getSchemeDetails(),
                 us.getScheme().getProfitPercentage(),
                 us.getStatus().toString().toLowerCase(),
                 us.getPaidAmount(),
-                isJoined ? us.getEnrollmentDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")) : null,
-                isJoined ? us.getMaturityDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")) : null,
+                us.getProfit(),
+                us.getProfitReedemed(),
+                hasRedeemAmount ? us.getRedeemAmount() : null,
+                hasRedeemDate ? us.getRedeemDate().toString() : null,
+                us.getPaidDate() == null ? null : us.getPaidDate().toString(),
+                isJoined ? us.getEnrollmentDate().format(DATE_FORMATTER) : null,
+                isJoined ? us.getMaturityDate().format(DATE_FORMATTER) : null,
                 isJoined ? us.getBondImageURL() : null,
-                isJoined ? us.getScheme().getPayoutFrequency() : null);
+                us.getBondNumber(),
+                isJoined ? us.getScheme().getPayoutFrequency() : null,
+                profitLedger,
+                reedemLedger,
+                us.getNominee() == null ? null : NomineeResponse.fromEntity(us.getNominee()));
     }
 
     public String generateToken(String userId, String email, String role) {

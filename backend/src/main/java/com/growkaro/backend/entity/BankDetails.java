@@ -17,12 +17,14 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 @Getter
 @Setter
 @Entity
 @Table(name = "bank_details")
 @Audited
+@ToString(exclude = "user") // Avoid infinite loops in toString()
 public class BankDetails {
 
     @Id

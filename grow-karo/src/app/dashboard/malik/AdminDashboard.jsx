@@ -106,18 +106,18 @@ const NAV_ITEMS = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "activity", label: "Activity Log", icon: Activity },
   { id: "withdrawals", label: "Withdrawals", icon: Wallet },
-  { id: "plans", label: "Schemes", icon: ScrollText },
+  { id: "plans", label: "Schemes Management", icon: ScrollText },
   { id: "SchemeAuditHistory", label: "Scheme Audit History", icon: ShieldQuestionMark },
   { id: "approvals", label: "Approvals", icon: ClipboardCheck },
   { id: "remitter", label: "Remitter", icon: Ticket },
-  { id: "user", label: "User Management", icon: User2Icon },
+  { id: "user", label: "User Management", icon: User2Icon }, 
   { id: "issues", label: "User Issues", icon: MessageCircleQuestionMark },
   // { id: "contacts", label: "Contacts⏱️", icon: Contact },
   { id: "settings", label: "Settings", icon: Settings2 },
 ];
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState("SchemeAuditHistory");
+  const [activeTab, setActiveTab] = useState("user");
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [toast, setToast] = useState(null);
@@ -182,7 +182,7 @@ export default function AdminPanel() {
   const titles = {
     overview: "Overview",
     activity: "Activity Log",
-    plans: "Schemes",
+    plans: "Schemes Management",
     withdrawals: "Withdrawal Requests",
     issues: "User Issues",
     codes: "Remitters",

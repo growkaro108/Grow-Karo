@@ -24,11 +24,15 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.growkaro.backend.DRO.AddRemitter;
 import com.growkaro.backend.DRO.ApproveUserScheme;
+import com.growkaro.backend.DRO.ManualUserScheme;
+import com.growkaro.backend.DRO.NewNominee;
+import com.growkaro.backend.DRO.UserSchemeLedgerUpdateRequest;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DRO.RemitterCredentials;
 import com.growkaro.backend.DTO.AddedRemitter;
 import com.growkaro.backend.DTO.AdminTransactionResponse;
 import com.growkaro.backend.DTO.AdminUser;
+import com.growkaro.backend.DTO.NomineeResponse;
 import com.growkaro.backend.DTO.PagedResponse;
 import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.DTO.SchemeAuditProjection;
@@ -39,7 +43,6 @@ import com.growkaro.backend.common.General;
 import com.growkaro.backend.common.NotificationBroadcaster;
 import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.entity.User;
-import com.growkaro.backend.security.JwtAuthenticationFilter;
 import com.growkaro.backend.security.JwtService;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
@@ -47,11 +50,8 @@ import com.growkaro.backend.entity.SupportIssue.Status;
 import com.growkaro.backend.entity.SystemSettings;
 import com.growkaro.backend.service.AdminAPIService;
 import com.growkaro.backend.service.EmailService;
-import com.growkaro.backend.service.RedisService;
 import com.growkaro.backend.service.CrucialNotificationService;
 import com.growkaro.backend.service.SystemSettingsService;
-
-import jakarta.servlet.http.HttpServletRequest;
 
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -68,21 +68,19 @@ public class AdminAPIController {
     private final NotificationBroadcaster notificationBroadcaster;
     private final CrucialNotificationService crucialNotificationService;
     private final SystemSettingsService systemSettingsService;
-    private final JwtService jwtService;
 
     private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of("image/jpeg", "image/png", "image/webp", "image/jpg");
     private static final long MAX_FILE_SIZE_BYTES = 5L * 1024 * 1024;
 
     public AdminAPIController(AdminAPIService adminAPIService, EmailService emailService, General general,
             NotificationBroadcaster notificationBroadcaster, CrucialNotificationService crucialNotificationService,
-            SystemSettingsService systemSettingsService, JwtService jwtService) {
+            SystemSettingsService systemSettingsService) {
         this.adminAPIService = adminAPIService;
         this.emailService = emailService;
         this.general = general;
         this.notificationBroadcaster = notificationBroadcaster;
         this.crucialNotificationService = crucialNotificationService;
         this.systemSettingsService = systemSettingsService;
-        this.jwtService = jwtService;
     }
 
     @GetMapping("/overview")
@@ -102,8 +100,8 @@ public class AdminAPIController {
             if (schemeData == null) {
                 return ResponseEntity.badRequest().build();
             }
-            String AdminName = general.adminName();
-            if (AdminName == null || AdminName.isEmpty()) {
+            String adminName = general.adminName();
+            if (adminName == null || adminName.isEmpty()) {
                 return ResponseEntity.status(401).body(general.response("error", "Admin not found", null));
             }
 
@@ -124,8 +122,8 @@ public class AdminAPIController {
 
     @PutMapping("/scheme/update")
     public ResponseEntity<Map<String, Object>> updateScheme(@RequestBody ReceiveSchemeData updateScheme) {
-        String AdminName = general.adminName();
-        if (AdminName == null || AdminName.isEmpty()) {
+        String adminName = general.adminName();
+        if (adminName == null || adminName.isEmpty()) {
             return ResponseEntity.status(401).body(general.response("error", "Admin not found", null));
         }
         if (updateScheme == null || updateScheme.schemeId() == null || updateScheme.schemeId().isEmpty()) {
@@ -160,6 +158,33 @@ public class AdminAPIController {
         return ResponseEntity.ok(adminAPIService.getAllUsersRequests());
     }
 
+    @PostMapping("/user-scheme/add")
+    public ResponseEntity<Map<String, Object>> addManualUserScheme(@RequestBody ManualUserScheme request) {
+        if (request == null) {
+            return ResponseEntity.badRequest().body(general.response("error", "Invalid request", null));
+        }
+        return ResponseEntity.ok(adminAPIService.addManualUserScheme(request));
+    }
+
+    @GetMapping("/user/{userId}/nominees")
+    public ResponseEntity<Map<String, Object>> getUserNominees(@PathVariable String userId) {
+        return ResponseEntity.ok(general.response("success", "Nominees fetched", adminAPIService.getUserNominees(userId)));
+    }
+
+    @PostMapping("/user/{userId}/nominees")
+    public ResponseEntity<Map<String, Object>> addUserNominee(
+            @PathVariable String userId,
+            @RequestBody NewNominee request) {
+        return ResponseEntity.ok(adminAPIService.addUserNominee(userId, request));
+    }
+
+    @PutMapping("/user-scheme/{userSchemeId}/ledger")
+    public ResponseEntity<Map<String, Object>> updateUserSchemeLedger(
+            @PathVariable String userSchemeId,
+            @RequestBody UserSchemeLedgerUpdateRequest request) {
+        return ResponseEntity.ok(adminAPIService.updateUserSchemeLedger(userSchemeId, request));
+    }
+
     @PutMapping("/user-scheme/approve")
     public ResponseEntity<Map<String, Object>> activateUserScheme(@RequestBody ApproveUserScheme approveUserScheme) {
         if ("".equals(approveUserScheme.userSchemeId()) ||
@@ -167,7 +192,7 @@ public class AdminAPIController {
                 || approveUserScheme.paidAmount() == null) {
             return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.ok(adminAPIService.activateUsersScheme(approveUserScheme.userSchemeId(),
+        return ResponseEntity.ok(adminAPIService.activateUsersScheme(approveUserScheme.userId(),approveUserScheme.userSchemeId(),
                 approveUserScheme.paidAmount(), approveUserScheme.paidDate()));
     }
 
@@ -178,11 +203,11 @@ public class AdminAPIController {
 
     @PostMapping(value = "/user_scheme/add-bond/{userSchemeId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> addBondDetails(@PathVariable String userSchemeId,
-            @RequestParam String bondNumber,
-            @RequestParam(name = "image") MultipartFile image) {
+            @RequestParam(required = false) String bondNumber,
+            @RequestParam(name = "image") MultipartFile image,@RequestParam (required = false, defaultValue = "false") boolean isUpdate) {
         boolean hasBondNumber = bondNumber != null && !bondNumber.isBlank();
         boolean hasImage = image != null && !image.isEmpty();
-        if (userSchemeId == null || userSchemeId.isBlank() || !hasBondNumber || !hasImage) {
+        if (userSchemeId == null || userSchemeId.isBlank() || (!hasBondNumber && !hasImage)) {
             return ResponseEntity.badRequest().body(general.response("error", "Invalid request.", null));
         }
 
@@ -197,7 +222,7 @@ public class AdminAPIController {
         }
 
         return ResponseEntity.ok(adminAPIService.addBondDetails(userSchemeId,
-                bondNumber, image));
+                bondNumber, image,isUpdate));
     }
 
     @GetMapping("/activity-types")
