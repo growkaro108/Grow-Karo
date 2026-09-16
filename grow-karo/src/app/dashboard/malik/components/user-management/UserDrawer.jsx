@@ -4,15 +4,12 @@ import {
   Mail,
   Phone,
   Calendar,
-  Landmark,
-  RotateCcwKeyIcon,
   HandCoins,
   ChevronDown,
 } from "lucide-react";
 import StatusPill from "./StatusPill";
-import BondCard, { PanelToggle, Stat } from "./BondCard";
-import BondStub from "./BondStub";
-import { currency, dateFmt, initials } from "./format";
+import BondCard from "./BondCard";
+import { currency, initials } from "./format";
 import dynamic from "next/dynamic";
 import TabLoader from "@/loader/TabLoader";
 import { getAllPlans } from "@/api/generalApi";
@@ -32,176 +29,6 @@ const CertificateLightbox = dynamic(() => import("../Certificatelightbox"), {
 const inputClass =
   "w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-teal-500 [color-scheme:dark]";
 
-/* Legacy inline card retained temporarily while the extracted card is adopted. */
-function LegacyBondCard({
-  bond,
-  user,
-  profitRows,
-  reedemRows,
-  bondFormState,
-  onProfitFieldChange,
-  onReedemFieldChange,
-  onAddProfitRow,
-  onAddReedemRow,
-  onSaveLedgers,
-  onBondFormChange,
-  onSaveBond,
-  onViewBond,
-}) {
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const entryCount = (bond.profitLedger?.length ?? 0) + (bond.reedemLedger?.length ?? 0);
-
-  return (
-    <div className="overflow-hidden rounded-xl border border-slate-800 bg-white/2">
-      {/* Header */}
-      <div
-        className={`flex items-center justify-between gap-3 bg-linear-to-br px-4 py-3.5 text-white ${
-          bond.enrollmentDate
-            ? "from-teal-900 to-[#0c3b3d]"
-            : "from-amber-700 to-[#3d2c0c]"
-        }`}
-      >
-        <div className="flex min-w-0 items-center gap-2.5">
-          {bond.bondUrl ? (
-            <Landmark className="h-5 w-5 shrink-0 text-[#D8B77B]" />
-          ) : (
-            <RotateCcwKeyIcon className="h-5 w-5 shrink-0 text-[#D8B77B]" />
-          )}
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{bond.schemeName}</p>
-            <p className="text-xs text-white/50">
-              {entryCount} ledger {entryCount === 1 ? "entry" : "entries"}
-            </p>
-          </div>
-        </div>
-        <p className="shrink-0 font-[Space_Grotesk] text-sm font-semibold tabular-nums text-[#D8B77B]">
-          {currency(bond.paidAmount)}
-        </p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 px-4 py-3.5 sm:grid-cols-4">
-        <Stat label="Profit" value={currency(bond.profit)} tone="emerald" />
-        <Stat
-          label="Redeemed"
-          value={currency(bond.redeemAmount ?? bond.profitRedeemed)}
-          tone="amber"
-        />
-        <Stat label="Paid" value={bond.paidDate ? dateFmt(bond.paidDate) : "—"} />
-        <Stat label="Redeem date" value={bond.redeemDate ? dateFmt(bond.redeemDate) : "—"} />
-      </div>
-
-      {/* Panel toggles */}
-      <div className="flex gap-2 border-t border-slate-800/70 px-4 py-2.5">
-        <PanelToggle open={historyOpen} onClick={() => setHistoryOpen((v) => !v)}>
-          Ledger
-        </PanelToggle>
-        <PanelToggle open={detailsOpen} onClick={() => setDetailsOpen((v) => !v)}>
-          Bond details
-        </PanelToggle>
-      </div>
-
-      {/* Ledger editor */}
-      {historyOpen && (
-        <div className="space-y-2.5 border-t border-slate-800/70 bg-slate-950/40 px-4 py-3.5">
-          {profitRows.length === 0 && reedemRows.length === 0 && (
-            <p className="text-xs text-slate-500">No ledger entries yet.</p>
-          )}
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-300">Profit history</p>
-          {profitRows.map((entry, index) => (
-            <div key={entry.id ?? index} className="grid grid-cols-2 gap-2">
-              <input
-                aria-label="Profit amount"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="Profit amount"
-                value={entry.profitAmount}
-                onChange={(e) => onProfitFieldChange(index, "profitAmount", e.target.value)}
-                className={inputClass}
-              />
-              <input
-                aria-label="Profit date"
-                type="date"
-                value={entry.profitDate}
-                onChange={(e) => onProfitFieldChange(index, "profitDate", e.target.value)}
-                className={inputClass}
-              />
-            </div>
-          ))}
-          <button type="button" onClick={onAddProfitRow} className="text-xs font-medium text-teal-300 hover:text-teal-200">+ Add profit row</button>
-          <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-amber-300">Redeem history</p>
-          {reedemRows.map((entry, index) => (
-            <div key={entry.id ?? index} className="grid grid-cols-2 gap-2">
-              <input aria-label="Redeem amount" type="number" min="0" step="0.01" placeholder="Redeem amount" value={entry.redeemAmount} onChange={(e) => onReedemFieldChange(index, "redeemAmount", e.target.value)} className={inputClass} />
-              <input aria-label="Redeem date" type="date" value={entry.redeemDate} onChange={(e) => onReedemFieldChange(index, "redeemDate", e.target.value)} className={inputClass} />
-            </div>
-          ))}
-          <div className="flex items-center justify-between pt-1">
-            <button type="button" onClick={onAddReedemRow} className="text-xs font-medium text-teal-300 hover:text-teal-200">+ Add redeem row</button>
-            <p className="text-xs text-slate-500">
-              Total redeemed:{" "}
-              <strong className="text-amber-300">{currency(bond.profitRedeemed)}</strong>
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onSaveLedgers}
-            className="w-full rounded-md border border-amber-700 px-3 py-2 text-xs font-semibold text-amber-300 transition hover:bg-amber-950/50"
-          >
-            Save ledgers
-          </button>
-        </div>
-      )}
-
-      {/* Bond details editor */}
-      {detailsOpen && (
-        <div className="space-y-2.5 border-t border-slate-800/70 bg-slate-950/40 px-4 py-3.5">
-          <input
-            aria-label="Bond number"
-            placeholder={bond.bondNumber || "Bond number"}
-            value={bondFormState.bondNumber ?? ""}
-            onChange={(e) => onBondFormChange("bondNumber", e.target.value)}
-            className={inputClass}
-          />
-          <input
-            aria-label="Bond image"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={(e) => onBondFormChange("image", e.target.files?.[0])}
-            className="w-full text-xs text-slate-400 file:mr-3 file:rounded-md file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-xs file:text-slate-200 hover:file:bg-slate-700"
-          />
-          <button
-            type="button"
-            onClick={onSaveBond}
-            className="w-full rounded-md border border-teal-700 px-3 py-2 text-xs font-semibold text-teal-300 transition hover:bg-teal-950/50"
-          >
-            Save bond details
-          </button>
-        </div>
-      )}
-
-      {/* Certificate */}
-      <div className="border-t border-slate-800/70 px-4 py-3.5">
-        <p className="mb-2 text-[10px] uppercase tracking-wide text-slate-500">Certificate</p>
-        {!bond.bondUrl ? (
-          <div className="rounded-lg border border-dashed border-slate-700 px-4 py-6 text-center text-sm text-slate-500">
-            No bond issued yet.
-          </div>
-        ) : (
-          <BondStub bond={bond} userName={user.name} scheme={user.scheme} onView={onViewBond} />
-        )}
-        {bond.nominee && (
-          <div className="border-t border-slate-800/70 px-4 py-3 text-xs text-slate-400">
-            Nominee: <strong className="text-slate-200">{bond.nominee.name}</strong>
-            <span className="ml-2 text-slate-500">({bond.nominee.relation})</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 export default function UserDrawer({ user, onClose, onSaved }) {
   const [viewingBond, setViewingBond] = useState(null);
@@ -374,17 +201,21 @@ export default function UserDrawer({ user, onClose, onSaved }) {
   const updateExistingProfit = (userSchemeId, index, field, value) => {
     setLedgerEdits((current) => ({
       ...current,
-      [userSchemeId]: { ...current[userSchemeId], profitLedger: (current[userSchemeId]?.profitLedger ?? []).map((entry, entryIndex) =>
-        entryIndex === index ? { ...entry, [field]: value } : entry,
-      ) },
+      [userSchemeId]: {
+        ...current[userSchemeId], profitLedger: (current[userSchemeId]?.profitLedger ?? []).map((entry, entryIndex) =>
+          entryIndex === index ? { ...entry, [field]: value } : entry,
+        )
+      },
     }));
   };
   const updateExistingReedem = (userSchemeId, index, field, value) => {
     setLedgerEdits((current) => ({
       ...current,
-      [userSchemeId]: { ...current[userSchemeId], reedemLedger: (current[userSchemeId]?.reedemLedger ?? []).map((entry, entryIndex) =>
-        entryIndex === index ? { ...entry, [field]: value } : entry,
-      ) },
+      [userSchemeId]: {
+        ...current[userSchemeId], reedemLedger: (current[userSchemeId]?.reedemLedger ?? []).map((entry, entryIndex) =>
+          entryIndex === index ? { ...entry, [field]: value } : entry,
+        )
+      },
     }));
   };
 
@@ -401,7 +232,7 @@ export default function UserDrawer({ user, onClose, onSaved }) {
     const payload = new FormData();
     if (details.bondNumber) payload.append("bondNumber", details.bondNumber);
     if (details.image) payload.append("image", details.image);
-    const saved = await addBond(bond.userSchemeId, payload,true);
+    const saved = await addBond(bond.userSchemeId, payload, true);
     if (saved) await onSaved?.();
   };
 
@@ -442,7 +273,7 @@ export default function UserDrawer({ user, onClose, onSaved }) {
             <StatusPill status={user.status} />
           </div>
 
-          <div className="mb-6 space-y-2 rounded-xl border border-slate-800 bg-white/[0.02] p-4">
+          <div className="mb-6 space-y-2 rounded-xl border border-slate-800 bg-white/2 p-4">
             <div className="flex items-center gap-2 text-sm text-slate-300">
               <HandCoins className="h-4 w-4 text-slate-500" />
               <span className="font-medium">
@@ -471,9 +302,8 @@ export default function UserDrawer({ user, onClose, onSaved }) {
               <span className="flex items-center gap-2 text-[10px] text-slate-500">
                 Admin only
                 <ChevronDown
-                  className={`h-3.5 w-3.5 text-teal-300 transition-transform ${
-                    addFormOpen ? "rotate-180" : ""
-                  }`}
+                  className={`h-3.5 w-3.5 text-teal-300 transition-transform ${addFormOpen ? "rotate-180" : ""
+                    }`}
                 />
               </span>
             </button>
@@ -506,7 +336,7 @@ export default function UserDrawer({ user, onClose, onSaved }) {
 
                 <label className="block text-xs text-slate-400">
                   Nominee for this scheme
-                  <select 
+                  <select
                     name="nomineeId"
                     value={form.nomineeId}
                     onChange={updateForm}
@@ -535,8 +365,8 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                   <div className="space-y-2 rounded-md border border-slate-800 bg-slate-950/40 p-3">
                     <input name="name" value={nomineeForm.name} onChange={updateNomineeForm} placeholder="Nominee name" required className={inputClass} />
                     <input name="relation" value={nomineeForm.relation} onChange={updateNomineeForm} placeholder="Relation" required className={inputClass} />
-                    <input name="aadhaarNo" value={nomineeForm.aadhaarNo} onChange={updateNomineeForm} placeholder="Aadhaar number" inputMode="numeric" required className={inputClass} />
-                    <input name="phone" value={nomineeForm.phone} onChange={updateNomineeForm} placeholder="Mobile number" inputMode="tel" required className={inputClass} />
+                    <input name="aadhaarNo" value={nomineeForm.aadhaarNo} onChange={updateNomineeForm} placeholder="Aadhaar number" type="text" maxlength="12" inputmode="numeric" pattern="[0-9]*" required className={inputClass} />
+                    <input name="phone" value={nomineeForm.phone} onChange={updateNomineeForm} type="text" maxlength="10" inputmode="numeric" pattern="[0-9]*" placeholder="Phone Number" required className={inputClass} />
                     <button type="button" onClick={saveNominee} disabled={nomineeSaving} className="w-full rounded-md bg-teal-400 px-3 py-2 text-xs font-semibold text-slate-950 disabled:opacity-50">
                       {nomineeSaving ? "Saving nominee..." : "Save nominee"}
                     </button>

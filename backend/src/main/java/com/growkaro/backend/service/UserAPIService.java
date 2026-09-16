@@ -335,9 +335,9 @@ public class UserAPIService {
     }
 
     @Caching(evict = {
-            @CacheEvict(value = "userPortfolio", key = "#userId"),
-            @CacheEvict(value = "userSchemes", key = "#userId"),
-            @CacheEvict(value = "userTransactions", key = "#userId")
+            @CacheEvict(value = "userPortfolio", key = "#p1"),
+            @CacheEvict(value = "userSchemes", key = "#p1"),
+            @CacheEvict(value = "userTransactions", key = "#p1")
     })
     @Transactional
     public Map<String, Object> enrollInScheme(String schemeId, String userId, BigDecimal amount, String nomineId) {
@@ -395,7 +395,7 @@ public class UserAPIService {
         }
     }
 
-    @Cacheable(value = "userSchemes", key = "#userId")
+    @Cacheable(value = "userSchemes", key = "#p0")
     @Transactional(readOnly = true)
     public Map<String, Object> getMyScheme(String userId) {
         try {
@@ -411,7 +411,7 @@ public class UserAPIService {
         }
     }
 
-    @Cacheable(value = "userPortfolio", key = "#userId")
+    @Cacheable(value = "userPortfolio", key = "#p0")
     @Transactional(readOnly = true)
     public Map<String, Object> getUserPortfolio(String userId) {
         try {
@@ -423,7 +423,7 @@ public class UserAPIService {
                     .stream()
                     .sorted((a, b) -> b.getRequestDate().compareTo(a.getRequestDate()))
                     // .filter(us -> us.getIsApproved())
-                    .map(general::toUserPortfolio)
+                    .map(UserPortfolio::fromEntity)
                     .toList();
 
             TransactionSummary summary = transactionRepository.getTransactionSummaryByUser(user.getId());
@@ -439,8 +439,8 @@ public class UserAPIService {
     }
 
     @Caching(evict = {
-            @CacheEvict(value = "userPortfolio", key = "#userId"),
-            @CacheEvict(value = "userSchemes", key = "#userId")
+            @CacheEvict(value = "userPortfolio", key = "#p1"),
+            @CacheEvict(value = "userSchemes", key = "#p1")
     })
     @Transactional
     public Map<String, Object> schemeWithdrawal(String userSchemeId, String userId) {
@@ -514,9 +514,9 @@ public class UserAPIService {
         }
     }
 
-    @Caching(put = { @CachePut(value = "userProfile", key = "#up.id()") }, evict = {
-            @CacheEvict(value = "userNominees", key = "#up.id()"),
-            @CacheEvict(value = "userTransactions", key = "#up.id()")
+    @Caching(put = { @CachePut(value = "userProfile", key = "#p0.id()") }, evict = {
+            @CacheEvict(value = "userNominees", key = "#p0.id()"),
+            @CacheEvict(value = "userTransactions", key = "#p0.id()")
     })
     @Transactional
     public Map<String, Object> updateUser(UserProfile up) {
@@ -563,7 +563,7 @@ public class UserAPIService {
                 UserProfile.fromEntity(user, general.generateToken(user.getId(), user.getEmail(), "ROLE_GRAHAK")));
     }
 
-    @CacheEvict(value = "userTransactions", key = "#wa.userId()")
+    @CacheEvict(value = "userTransactions", key = "#p0.userId()")
     @Transactional
     public Map<String, Object> redeemAmount(WithdrawAmount wa) {
 
@@ -681,7 +681,7 @@ public class UserAPIService {
         }
     }
 
-    @Cacheable(value = "userTransactions", key = "#userId")
+    @Cacheable(value = "userTransactions", key = "#p0")
     public Map<String, Object> getTransactionsofUser(String userId) {
         List<Transaction> transactions = getAllUsersTransactions(userId);
         if (transactions == null) {
@@ -707,7 +707,7 @@ public class UserAPIService {
                         .toList();
     }
 
-    @CacheEvict(value = "userNominees", key = "#nominee.userId()")
+    @CacheEvict(value = "userNominees", key = "#p0.userId()")
     public NomineeResponse addNominee(NewNominee nominee) {
         try {
             User user = getUserById(nominee.userId());
@@ -734,7 +734,7 @@ public class UserAPIService {
         }
     }
 
-    @CacheEvict(value = "userNominees", key = "#userId")
+    @CacheEvict(value = "userNominees", key = "#p0")
     @Transactional
     public Map<String, Object> deleteNominee(String userId, String nomineeId) {
         User user = getUserById(userId);
@@ -758,7 +758,7 @@ public class UserAPIService {
         return general.response("success", "Nominee deleted successfully", null);
     }
 
-    @CacheEvict(value = "userNominees", key = "#userId")
+    @CacheEvict(value = "userNominees", key = "#p0")
     @Transactional
     public Map<String, Object> updateNominee(String userId, String nomineeId, NewNominee details) {
         User user = getUserById(userId);
@@ -783,7 +783,7 @@ public class UserAPIService {
         return general.response("success", "Nominee updated successfully", NomineeResponse.fromEntity(nominee));
     }
 
-    @Cacheable(value = "userNotifications", key = "#userId + ':' + #tab + ':' + #page", unless = "#result.get('status') == 'error'")
+    @Cacheable(value = "userNotifications", key = "#p0 + ':' + #p1 + ':' + #p2", unless = "#result.get('status') == 'error'")
     @Transactional(readOnly = true)
     public Map<String, Object> userNotifications(String userId, String tab, int page) {
         User user = getUserById(userId);
@@ -796,7 +796,7 @@ public class UserAPIService {
         }
         // The API exposes one-based page numbers, whereas Spring Data uses zero-based
         // indexes.
-        Pageable pageable = PageRequest.of(page - 1, 10, Sort.by(Sort.Direction.ASC, "createdAt"));
+        Pageable pageable = PageRequest.of(page - 1, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Notification> notifications;
         notifications = notificationRepository.findByReceiverIdAndReceiverTypeAndRead(
                 user.getId(), Notification.ReceiverType.User, isRead, pageable);

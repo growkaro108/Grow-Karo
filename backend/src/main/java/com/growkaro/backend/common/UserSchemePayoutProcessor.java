@@ -4,11 +4,14 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.growkaro.backend.entity.UserScheme;
+import com.growkaro.backend.entity.UserSchemeProfitLedger;
+import com.growkaro.backend.repository.ProfitLedgerRepository;
 import com.growkaro.backend.repository.UserSchemeRepository;
 import com.growkaro.backend.service.CrucialNotificationService;
 import com.growkaro.backend.service.EmailService;
@@ -22,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 public class UserSchemePayoutProcessor {
 
     private final UserSchemeRepository userSchemeRepository;
+    private final ProfitLedgerRepository profitLedgerRepository;
     private final EmailService emailService;
     private final CrucialNotificationService notificationService;
     private final General general;
@@ -43,19 +47,27 @@ public class UserSchemePayoutProcessor {
             return BatchOutcome.SKIPPED;
         }
 
+        LocalDate today = general.getCurrentDate();
+
+        // Cheap early-exit (avoids the calculation work entirely on a normal re-run)
         if (userScheme.getLastProfitUpdateDate() != null
-                && userScheme.getLastProfitUpdateDate().isEqual(general.getCurrentDate())) {
+                && userScheme.getLastProfitUpdateDate().isEqual(today)) {
+            return BatchOutcome.SKIPPED;
+        }
+
+        // Hard guard: DB is the source of truth for "already paid today",
+        // protects against races / lock expiry / manual re-trigger
+        if (profitLedgerRepository.existsByUserSchemeAndProfitDate(userScheme, today)) {
             return BatchOutcome.SKIPPED;
         }
 
         BigDecimal paidAmount = userScheme.getPaidAmount();
         Double profitPercentage = userScheme.getScheme().getProfitPercentage();
         BigDecimal minimumAmount = userScheme.getScheme().getMinimumAmount();
-        BigDecimal currentProfit = userScheme.getProfit();
         LocalDate nextPayoutDate = userScheme.getNextPayoutDate();
 
         if (paidAmount == null || profitPercentage == null || minimumAmount == null
-                || currentProfit == null || nextPayoutDate == null) {
+                || nextPayoutDate == null) {
             throw new IllegalStateException(
                     "UserScheme id=" + userSchemeId + " missing required field(s) for profit calculation");
         }
@@ -69,11 +81,23 @@ public class UserSchemePayoutProcessor {
 
         int days = general.resolvePeriodDays(userScheme.getScheme().getPayoutFrequency());
 
-        userScheme.setProfit(currentProfit.add(newProfit));
-        userScheme.setLastProfitUpdateDate(general.getCurrentDate());
-        userScheme.setNextPayoutDate(nextPayoutDate.plusDays(days));
+        UserSchemeProfitLedger ledgerEntry = new UserSchemeProfitLedger();
+        ledgerEntry.setUserScheme(userScheme);
+        ledgerEntry.setProfitAmount(newProfit);
+        ledgerEntry.setProfitDate(today);
 
+        try {
+            profitLedgerRepository.save(ledgerEntry);
+        } catch (DataIntegrityViolationException e) {
+            // Another thread/instance beat us to today's entry for this userScheme
+            log.warn("Duplicate profit ledger entry prevented for userScheme id={}, date={}", userSchemeId, today);
+            return BatchOutcome.SKIPPED;
+        }
+
+        userScheme.setLastProfitUpdateDate(today);
+        userScheme.setNextPayoutDate(nextPayoutDate.plusDays(days));
         userSchemeRepository.save(userScheme);
+
         return BatchOutcome.PROCESSED;
     }
 

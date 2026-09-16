@@ -163,7 +163,7 @@ public class AdminAPIService {
     @Caching(evict = {
             @CacheEvict(value = "allSchemes", allEntries = true),
             @CacheEvict(value = "schemeAudit", allEntries = true),
-            @CacheEvict (value = "schemeUpdateHistory", key = "#id")
+            @CacheEvict(value = "schemeUpdateHistory", key = "#id")
     })
     public List<SchemeResponse> updateScheme(String id, ReceiveSchemeData receiveData) {
         if (id == null || id.isBlank() || receiveData == null) {
@@ -263,18 +263,22 @@ public class AdminAPIService {
             }
 
             UserScheme userScheme = new UserScheme();
-            userScheme.setRequestDate(LocalDateTime.of(request.paidDate(), LocalDateTime.now(ZoneId.of("Asia/Kolkata")).toLocalTime()));
+            userScheme.setRequestDate(
+                    LocalDateTime.of(request.paidDate(), LocalDateTime.now(ZoneId.of("Asia/Kolkata")).toLocalTime()));
             userScheme.setUser(user);
             userScheme.setScheme(scheme);
             userScheme.setNominee(nominee);
             userScheme.setPaidAmount(request.paidAmount());
             userScheme.setIsApproved(true);
             userScheme.setStatus(UserSchemeStatus.ACTIVE);
-            userScheme.setEnrollmentDate(LocalDateTime.of(request.paidDate(), LocalDateTime.now(ZoneId.of("Asia/Kolkata")).toLocalTime()));
+            userScheme.setEnrollmentDate(
+                    LocalDateTime.of(request.paidDate(), LocalDateTime.now(ZoneId.of("Asia/Kolkata")).toLocalTime()));
             userScheme.setPaidDate(request.paidDate());
             replaceLedgers(userScheme, request.profitLedger(), request.reedemLedger());
-            userScheme.setNextPayoutDate(general.calculateNextPayoutDate(userScheme.getEnrollmentDate(), scheme.getPayoutFrequency()));
-            userScheme.setMaturityDate(general.calculateMaturityDate(userScheme.getEnrollmentDate(), scheme.getTenure()));
+            userScheme.setNextPayoutDate(
+                    general.calculateNextPayoutDate(userScheme.getEnrollmentDate(), scheme.getPayoutFrequency()));
+            userScheme
+                    .setMaturityDate(general.calculateMaturityDate(userScheme.getEnrollmentDate(), scheme.getTenure()));
             user.enrollInScheme(userScheme);
             userSchemeRepository.save(userScheme);
             return general.response("success", "Scheme added to user successfully", userScheme);
@@ -375,7 +379,8 @@ public class AdminAPIService {
             @CacheEvict(value = "userPortfolio", key = "#p0")
     })
     @Transactional
-    public Map<String, Object> activateUsersScheme(String userId,String userSchemeId, BigDecimal paidAmount, LocalDate paidDate) {
+    public Map<String, Object> activateUsersScheme(String userId, String userSchemeId, BigDecimal paidAmount,
+            LocalDate paidDate) {
         if (userSchemeId == null || userSchemeId.isBlank() || paidAmount == null
                 || paidAmount.compareTo(BigDecimal.ZERO) <= 0 || paidDate == null) {
             return general.response("error", "Invalid Request", null);
@@ -415,7 +420,8 @@ public class AdminAPIService {
             LocalDateTime settlementDate = LocalDateTime.of(paidDate,
                     LocalDateTime.now(ZoneId.of("Asia/Kolkata")).toLocalTime());
 
-            createTransaction(userSchemeId, user, paidAmount, settlementDate, TransactionType.DEPOSIT,"Initial Deposit");
+            createTransaction(userSchemeId, user, paidAmount, settlementDate, TransactionType.DEPOSIT,
+                    "Initial Deposit");
             return general.response("success",
                     user.getName() + " is approved for " + scheme.getSchemeName() + " successfully..", userScheme);
 
@@ -503,9 +509,10 @@ public class AdminAPIService {
         }
     }
 
-   @CacheEvict(value = "userPortfolio", key = "#p0")
+    @CacheEvict(value = "userPortfolio", key = "#p0")
     @Transactional
-    public Map<String, Object> addBondDetails(String userSchemeId, String bondNumber, MultipartFile images,boolean isUpdate) {
+    public Map<String, Object> addBondDetails(String userSchemeId, String bondNumber, MultipartFile images,
+            boolean isUpdate) {
         try {
             Optional<UserScheme> userSchemeOpt = userSchemeRepository.findById(userSchemeId);
             if (userSchemeOpt.isEmpty()) {
@@ -566,6 +573,7 @@ public class AdminAPIService {
     @Transactional
     public AdminTransactionResponse approve(String txnId, String remId) {
         Transaction txn = getPendingOrThrow(txnId);
+        User user = txn.getUser();
         Remitter rr = remitterRepository.findByRemitterId(remId)
                 .orElseThrow(() -> new RuntimeException("Remitter not found"));
         List<Transaction> remitterTransactions = rr.getTransactions() != null ? rr.getTransactions()
@@ -577,13 +585,17 @@ public class AdminAPIService {
         remitterRepository.save(rr);
         Transaction saved = transactionRepository.save(txn);
 
-        crucialNotificationService.notifyAllForEssentialAction(
-                EssentialActionType.WITHDRAWAL_APPROVED,
-                txn.getUser(),
-                List.of(),
-                rr,
-                "/dashboard/transactions",
-                Map.of("amount", txn.getAmount() != null ? txn.getAmount().toString() : "0", "txnId", txn.getId()));
+        try {
+            crucialNotificationService.notifyAllForEssentialAction(
+                    EssentialActionType.WITHDRAWAL_APPROVED,
+                    user,
+                    List.of(),
+                    rr,
+                    "/dashboard/transactions",
+                    Map.of("amount", txn.getAmount() != null ? txn.getAmount().toString() : "0", "txnId", txn.getId()));
+        } catch (Exception e) {
+            log.error("Error notifying user for withdrawal approval because: {}", e.getMessage());
+        }
 
         return AdminTransactionResponse.fromEntity(saved);
     }
@@ -609,7 +621,7 @@ public class AdminAPIService {
     }
 
     private Transaction getPendingOrThrow(String txnId) {
-        Optional<Transaction> txn = transactionRepository.findById(txnId);
+        Optional<Transaction> txn = transactionRepository.findByTxnId(txnId);
         if (!txn.isPresent() || txn.get().getStatus() != TransactionStatus.PENDING) {
             throw new IllegalTransactionStateException(
                     "Transaction " + txnId + " is not pending (current: " + txn.get().getStatus() + ")");
@@ -1046,7 +1058,7 @@ public class AdminAPIService {
                 .toList(), offset, limit);
     }
 
-    @Cacheable (value = "schemeUpdateHistory", key = "#schemeId + '-' + #offset + '-' + #limit")
+    @Cacheable(value = "schemeUpdateHistory", key = "#schemeId + '-' + #offset + '-' + #limit")
     @Transactional(readOnly = true)
     public PagedResponse<SchemeUpdateHistory> getSelectedSchemeHistory(String schemeId, int offset, int limit) {
         Revisions<Integer, Scheme> revisions = schemeRepository.findRevisions(schemeId);

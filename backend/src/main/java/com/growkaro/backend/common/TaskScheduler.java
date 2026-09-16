@@ -26,6 +26,15 @@ public class TaskScheduler {
     private final General general;
     private final RedisService redisService;
 
+    // CRON EXPLANATION
+    // 1. Minute 0
+    // 2. Hour 3
+    // 3. Day of Month Any
+    // 4. Month Any
+    // 5. Day of Week Any
+    // 6. Timezone Asia/Kolkata
+    // 7. Run every day at 3:00:00 AM (Kolkata time)
+
     @Scheduled(cron = "0 0 3 * * *", zone = timeZone)
     @SchedulerLock(name = "DailyProfitJob", lockAtMostFor = "5m", lockAtLeastFor = "3m")
     public void addProfitToUserAccount() {

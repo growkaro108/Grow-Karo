@@ -2,7 +2,6 @@ package com.growkaro.backend.repository;
 
 import com.growkaro.backend.DTO.TransactionSummary;
 import com.growkaro.backend.entity.Transaction;
-import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.Transaction.TransactionStatus;
 
 import org.springframework.data.domain.Page;
@@ -16,103 +15,108 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, String> {
 
-    @Query("SELECT " +
-            "COALESCE(SUM(CASE WHEN t.status = 'PENDING' THEN t.amount ELSE 0 END), 0) AS pendingSum, " +
-            "COALESCE(SUM(CASE WHEN t.status = 'SUCCESS' THEN t.amount ELSE 0 END), 0) AS successSum " +
-            "FROM Transaction t WHERE t.user.id = :userId")
-    TransactionSummary getTransactionSummaryByUser(@Param("userId") String userId);
-    // ── Per-user queries ─────────────────────────────────────────────────────
+  // find by transaction id with join user and remitter
+  @Query("SELECT t FROM Transaction t LEFT JOIN FETCH t.user u LEFT JOIN FETCH t.remitter r WHERE t.id = :txnId")
+  Optional<Transaction> findByTxnId(@Param("txnId") String txnId);
 
-    List<Transaction> findByUser_IdOrderByCreatedAtDesc(String userId);
+  @Query("SELECT " +
+      "COALESCE(SUM(CASE WHEN t.status = 'PENDING' THEN t.amount ELSE 0 END), 0) AS pendingSum, " +
+      "COALESCE(SUM(CASE WHEN t.status = 'SUCCESS' THEN t.amount ELSE 0 END), 0) AS successSum " +
+      "FROM Transaction t WHERE t.user.id = :userId")
+  TransactionSummary getTransactionSummaryByUser(@Param("userId") String userId);
+  // ── Per-user queries ─────────────────────────────────────────────────────
 
-    Page<Transaction> findByStatus(TransactionStatus pending, Pageable pageable);
+  List<Transaction> findByUser_IdOrderByCreatedAtDesc(String userId);
 
-    Page<Transaction> findByStatusIn(List<TransactionStatus> statuses, Pageable pageable);
+  Page<Transaction> findByStatus(TransactionStatus pending, Pageable pageable);
 
-    Page<Transaction> findAll(Pageable pageable); // already provided by JpaRepository
+  Page<Transaction> findByStatusIn(List<TransactionStatus> statuses, Pageable pageable);
 
-    long countByRemitter_RemitterIdAndStatus(String remitterId, TransactionStatus status);
+  Page<Transaction> findAll(Pageable pageable); // already provided by JpaRepository
 
-    List<Transaction> findAllByRemitter_RemitterIdAndStatus(String remitterId, TransactionStatus status);
+  long countByRemitter_RemitterIdAndStatus(String remitterId, TransactionStatus status);
 
-    Page<Transaction> findByRemitter_RemitterId(String remitterId, Pageable pageable);
+  List<Transaction> findAllByRemitter_RemitterIdAndStatus(String remitterId, TransactionStatus status);
 
-    // fetch all user and its transaction in which status is success and remiiter is
-    // this
-    @Query("SELECT t FROM Transaction t " +
-            "WHERE t.remitter.remitterId = :remitterId And t.status = 'SUCCESS'" +
-            "ORDER BY t.createdAt DESC")
-    List<Transaction> findAllByRemitter_RemitterId(@Param("remitterId") String remitterId);
+  Page<Transaction> findByRemitter_RemitterId(String remitterId, Pageable pageable);
 
-    // Page<Transaction> findByUserIdAndStatus(String userId, Transaction.Status
-    // status, Pageable pageable);
+  // fetch all user and its transaction in which status is success and remiiter is
+  // this
+  @Query("SELECT t FROM Transaction t " +
+      "WHERE t.remitter.remitterId = :remitterId And t.status = 'SUCCESS'" +
+      "ORDER BY t.createdAt DESC")
+  List<Transaction> findAllByRemitter_RemitterId(@Param("remitterId") String remitterId);
 
-    // List<Transaction> findByUserIdAndCreatedAtBetween(String userId,
-    // LocalDateTime from, LocalDateTime to);
+  // Page<Transaction> findByUserIdAndStatus(String userId, Transaction.Status
+  // status, Pageable pageable);
 
-    // ── Per-remitter queries ─────────────────────────────────────────────────
+  // List<Transaction> findByUserIdAndCreatedAtBetween(String userId,
+  // LocalDateTime from, LocalDateTime to);
 
-    // Page<Transaction> findByRemitterIdAndStatus(String remitterId,
-    // Transaction.Status status, Pageable pageable);
+  // ── Per-remitter queries ─────────────────────────────────────────────────
 
-    // ── Status filters ───────────────────────────────────────────────────────
+  // Page<Transaction> findByRemitterIdAndStatus(String remitterId,
+  // Transaction.Status status, Pageable pageable);
 
-    // Page<Transaction> findByStatus(Transaction.Status status, Pageable pageable);
+  // ── Status filters ───────────────────────────────────────────────────────
 
-    // long countByStatus(Transaction.Status status);
+  // Page<Transaction> findByStatus(Transaction.Status status, Pageable pageable);
 
-    // ── Aggregates for dashboards ─────────────────────────────────────────────
+  // long countByStatus(Transaction.Status status);
 
-    // @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.user.id
-    // = :userId AND t.status = 'SUCCESS'")
-    // BigDecimal sumSuccessfulAmountByUser(@Param("userId") String userId);
+  // ── Aggregates for dashboards ─────────────────────────────────────────────
 
-    // @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.status =
-    // 'SUCCESS' AND t.createdAt BETWEEN :from AND :to")
-    // BigDecimal sumSuccessfulAmountBetween(@Param("from") LocalDateTime from,
-    // @Param("to") LocalDateTime to);
+  // @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.user.id
+  // = :userId AND t.status = 'SUCCESS'")
+  // BigDecimal sumSuccessfulAmountByUser(@Param("userId") String userId);
 
-    // ── Count stats ───────────────────────────────────────────────────────────
+  // @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.status =
+  // 'SUCCESS' AND t.createdAt BETWEEN :from AND :to")
+  // BigDecimal sumSuccessfulAmountBetween(@Param("from") LocalDateTime from,
+  // @Param("to") LocalDateTime to);
 
-    // long countByUserId(String userId);
+  // ── Count stats ───────────────────────────────────────────────────────────
 
-    // long countByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
+  // long countByUserId(String userId);
 
-    // ── Reference ID lookup ───────────────────────────────────────────────────
+  // long countByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
 
-    // ── Overview dashboard queries ────────────────────────────────────────────
+  // ── Reference ID lookup ───────────────────────────────────────────────────
 
-    /** Daily inflow (DEPOSIT, SUCCESS) for the last N days, newest first. */
-    @Query("""
-            SELECT CAST(t.createdAt AS LocalDate) AS day,
-                   COALESCE(SUM(t.amount), 0)     AS amount
-            FROM Transaction t
-            WHERE t.type = 'DEPOSIT'
-              AND t.status = 'SUCCESS'
-              AND t.createdAt >= :since
-            GROUP BY CAST(t.createdAt AS LocalDate)
-            ORDER BY CAST(t.createdAt AS LocalDate) ASC
-            """)
-    List<Map<String, Object>> findDailyInflow(@Param("since") LocalDateTime since);
+  // ── Overview dashboard queries ────────────────────────────────────────────
 
-    /** Count of transactions per status (PENDING, SUCCESS, …). */
-    @Query("""
-            SELECT t.status AS status, COUNT(t) AS count
-            FROM Transaction t
-            GROUP BY t.status
-            """)
-    List<Map<String, Object>> findStatusBreakdown();
+  /** Daily inflow (DEPOSIT, SUCCESS) for the last N days, newest first. */
+  @Query("""
+      SELECT CAST(t.createdAt AS LocalDate) AS day,
+             COALESCE(SUM(t.amount), 0)     AS amount
+      FROM Transaction t
+      WHERE t.type = 'DEPOSIT'
+        AND t.status = 'SUCCESS'
+        AND t.createdAt >= :since
+      GROUP BY CAST(t.createdAt AS LocalDate)
+      ORDER BY CAST(t.createdAt AS LocalDate) ASC
+      """)
+  List<Map<String, Object>> findDailyInflow(@Param("since") LocalDateTime since);
 
-    /** Total pending withdrawal amount. */
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.status = 'PENDING' AND t.type <> 'DEPOSIT'")
-    BigDecimal sumPendingWithdrawalAmount();
+  /** Count of transactions per status (PENDING, SUCCESS, …). */
+  @Query("""
+      SELECT t.status AS status, COUNT(t) AS count
+      FROM Transaction t
+      GROUP BY t.status
+      """)
+  List<Map<String, Object>> findStatusBreakdown();
 
-    /** Count of pending withdrawals. */
-    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.status = 'PENDING' AND t.type <> 'DEPOSIT'")
-    long countPendingWithdrawals();
+  /** Total pending withdrawal amount. */
+  @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.status = 'PENDING' AND t.type <> 'DEPOSIT'")
+  BigDecimal sumPendingWithdrawalAmount();
+
+  /** Count of pending withdrawals. */
+  @Query("SELECT COUNT(t) FROM Transaction t WHERE t.status = 'PENDING' AND t.type <> 'DEPOSIT'")
+  long countPendingWithdrawals();
 
 }

@@ -1,4 +1,4 @@
-import React, { use, useState } from "react";
+import React, { use } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import TabLoader from "../../../loader/TabLoader";
@@ -57,6 +57,11 @@ const Overview = () => {
     (sum, scheme) => sum + (scheme.profit || 0),
     0,
   );
+  const totalProfitReedemed = approvedSchemes?.reduce(
+    (sum, scheme) => sum + (scheme.profitReedemed || 0),
+    0,
+  );
+  // console.log(totalProfit, totalProfitReedemed)
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const today = new Date(
@@ -107,8 +112,8 @@ const Overview = () => {
     {
       id: "total-profit",
       title: "Available Balance",
-      value: currency((totalProfit - portfolio?.pendingSum - portfolio?.successSum) > 0 ? (totalProfit - portfolio?.pendingSum - portfolio?.successSum) : 0),
-      badge: `Total redeemed : ${currency(portfolio?.successSum || 0)}`,
+      value: currency(totalProfit - totalProfitReedemed - portfolio?.pendingSum),
+      badge: `Total redeemed : ${currency(totalProfitReedemed || 0)}`,
       // isPositiveBadge: true,
       imageSrc: "/profit.png", // Unique decorative asset
     },
@@ -147,8 +152,8 @@ const Overview = () => {
 
               <span
                 className={`text-[11px] font-bold px-2 py-0.5 rounded-md inline-block mt-3 wrap-break-word max-w-full ${card.isPositiveBadge
-                    ? "text-emerald-600 bg-emerald-50"
-                    : "text-slate-500 bg-slate-50"
+                  ? "text-emerald-600 bg-emerald-50"
+                  : "text-slate-500 bg-slate-50"
                   }`}
               >
                 {card.badge}

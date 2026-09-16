@@ -37,6 +37,42 @@ class StorageService {
   }
 
   /**
+   * CREATE / SET: Store an item in storage.
+   * @param {string} key - The key name.
+   * @param {any} value - Data to store (objects/arrays will be JSON stringified automatically).
+   * @param {"local" | "session"} [storageType="local"]
+   * @TTL {Number}TTL in seconds default is 24 hours
+   * @returns {boolean} Returns true if successful, false if failed.
+   *
+   */
+  setWithTTL(key, value, storageType = "local", ttl = 60 * 60 * 24) {
+    const now = Date.now();
+    const item = { value, expiry: now + ttl * 1000 };
+    return this.set(key, item, storageType);
+  }
+
+  /**
+   * READ / GET: Retrieve an item from storage with TTL check.
+   * @param {string} key - The key name.
+   * @param {any} [defaultValue=null] - Value to return if key doesn't exist or is expired.
+   * @param {"local" | "session"} [storageType="local"]
+   * @returns {any}
+   */
+  getWithTTL(key, defaultValue = null, storageType = "local") {
+    const item = this.get(key, null, storageType);
+
+    if (item === null) return defaultValue;
+
+    const now = Date.now();
+    if (now > item.expiry) {
+      this.remove(key, storageType);
+      return defaultValue;
+    }
+
+    return item.value;
+  }
+
+  /**
    * READ / GET: Retrieve an item from storage.
    * @param {string} key - The key name.
    * @param {any} [defaultValue=null] - Value to return if key doesn't exist.

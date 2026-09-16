@@ -173,36 +173,6 @@ public class General {
         return scheme;
     }
 
-    public UserPortfolio toUserPortfolio(UserScheme us) {
-        Scheme scheme = us.getScheme();
-        Nominee nominee = us.getNominee();
-        NomineeResponse nomineeResponse = null;
-        if (nominee != null) {
-            nomineeResponse = NomineeResponse.fromEntity(nominee);
-        }
-        List<LocalDateTime> profitDates = new ArrayList<>(us.getProfitDates());
-        return new UserPortfolio(
-                scheme.getSchemeId(),
-                scheme.getSchemeName(),
-                scheme.getTenure(),
-                scheme.getPayoutFrequency(),
-                scheme.getProfitPercentage(),
-                us.getEnrollmentDate(),
-                us.getBondImageURL(),
-                us.getBondNumber(),
-                us.getRequestDate(),
-                us.getUserSchemeId(),
-                us.getPaidAmount(),
-                us.getIsApproved(),
-                us.getProfit(),
-                us.getProfitReedemed(),
-                us.getNextPayoutDate(),
-                us.getPaidDate(), us.getStatus(),
-                us.getMaturityDate(), nomineeResponse,
-                us.getUpdatedAt(),
-                profitDates);
-    }
-
     public <T> void applyIfChanged(T newValue, T oldValue, Consumer<T> setter) {
         if (newValue != null && !newValue.equals(oldValue)) {
             setter.accept(newValue);
@@ -346,7 +316,6 @@ public class General {
                 user.getEnrolledSchemes().stream().map(this::toUserSchemeResponse).toList());
     }
 
-
     private UserSchemeResponse toUserSchemeResponse(UserScheme us) {
         boolean isJoined = us.getEnrollmentDate() != null;
 
@@ -357,13 +326,13 @@ public class General {
         boolean hasRedeemDate = us.getRedeemDate() != null;
 
         List<UserSchemeProfitLedgerResponse> profitLedger = us.getProfitLedger().stream()
-            .map(entry -> new UserSchemeProfitLedgerResponse(
-                entry.getId(), entry.getProfitAmount(), entry.getProfitDate()))
-            .toList();
+                .map(entry -> new UserSchemeProfitLedgerResponse(
+                        entry.getId(), entry.getProfitAmount(), entry.getProfitDate()))
+                .toList();
         List<UserSchemeReedemLedgerResponse> reedemLedger = us.getReedemLedger().stream()
-            .map(entry -> new UserSchemeReedemLedgerResponse(
-                entry.getId(), entry.getRedeemAmount(), entry.getRedeemDate()))
-            .toList();
+                .map(entry -> new UserSchemeReedemLedgerResponse(
+                        entry.getId(), entry.getRedeemAmount(), entry.getRedeemDate()))
+                .toList();
 
         return new UserSchemeResponse(
                 us.getUserSchemeId(),

@@ -8,6 +8,7 @@ import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
+import com.growkaro.backend.entity.UserSchemeReedemLedger;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.entity.Transaction.TransactionStatus;
 import com.growkaro.backend.entity.Notification;
@@ -15,6 +16,8 @@ import com.growkaro.backend.entity.NotificationContentBuilder;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.repository.NotificationRepository;
+import com.growkaro.backend.repository.ProfitLedgerRepository;
+import com.growkaro.backend.repository.ReedemLedgerRepository;
 import com.growkaro.backend.repository.RemitterRepository;
 import com.growkaro.backend.repository.TransactionRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -53,8 +57,9 @@ public class RemitterAPIService {
     private final LocalFileStorageService localFileStorageService;
     private final NotificationRepository notificationRepository;
     private final CrucialNotificationService crucialNotificationService;
-    private final NotificationContentBuilder notificationContentBuilder;
     private final com.growkaro.backend.security.JwtService jwtService;
+    private final ProfitLedgerRepository profitLedgerRepository;
+    private final ReedemLedgerRepository reedemLedgerRepository;
 
     private static final Set<String> ALLOWED_DOCUMENT_TYPES = Set.of("application/pdf", "image/jpeg", "image/png",
             "image/webp");
@@ -70,8 +75,9 @@ public class RemitterAPIService {
             LocalFileStorageService localFileStorageService,
             NotificationRepository notificationRepository,
             CrucialNotificationService crucialNotificationService,
-            NotificationContentBuilder notificationContentBuilder,
-            com.growkaro.backend.security.JwtService jwtService) {
+            com.growkaro.backend.security.JwtService jwtService,
+            ProfitLedgerRepository profitLedgerRepository,
+            ReedemLedgerRepository reedemLedgerRepository) {
         this.remitterRepository = remitterRepository;
         this.emailService = emailService;
         this.apiService = apiService;
@@ -81,8 +87,9 @@ public class RemitterAPIService {
         this.localFileStorageService = localFileStorageService;
         this.notificationRepository = notificationRepository;
         this.crucialNotificationService = crucialNotificationService;
-        this.notificationContentBuilder = notificationContentBuilder;
         this.jwtService = jwtService;
+        this.profitLedgerRepository = profitLedgerRepository;
+        this.reedemLedgerRepository = reedemLedgerRepository;
     }
 
     @Cacheable(value = "AllRemittersEmail")
@@ -125,9 +132,8 @@ public class RemitterAPIService {
                 log.info("remitter login with email: {} and nonvalid password: {}", email, password);
             String token = jwtService.generateToken(remitter.getRemitterId(), remitter.getRemitterEmail(),
                     "ROLE_REMITTER");
-            return RemitterResponse.fromEntity(remitter,token);
+            return RemitterResponse.fromEntity(remitter, token);
 
-    
         } catch (Exception e) {
             log.error("Error in login : email=" + email + " error:" + e.getMessage());
             return null;
@@ -192,65 +198,86 @@ public class RemitterAPIService {
         }
     }
 
+    @Transactional
     public String settlements(PaymentSettlement paymentSettlement) {
+        if (paymentSettlement == null || paymentSettlement.txnId() == null) {
+            log.error("Error in remitter settlements: null payload/txnId");
+            return null;
+        }
+
         try {
+            Transaction transaction = transactionRepository.findByTxnId(paymentSettlement.txnId()).orElse(null);
 
-            Transaction transaction = transactionRepository.findById(paymentSettlement.txnId()).orElse(null);
-            if (transaction == null // check is valid transaction id
-                    || !transaction.getRemitter().getRemitterId().equals(paymentSettlement.remitterId()) // check is
-                                                                                                         // valid
-                                                                                                         // remitter
-                    || transaction.getStatus() != TransactionStatus.PROCESSED // check is valid status
-                    || transaction.getAmount().compareTo(paymentSettlement.amount()) != 0) { // check is valid amount
-                log.error("Error in remitter settlements: remitterId {}", paymentSettlement.remitterId());
+            if (transaction == null
+                    || transaction.getRemitter() == null
+                    || !transaction.getRemitter().getRemitterId().equals(paymentSettlement.remitterId())
+                    || transaction.getStatus() != TransactionStatus.PROCESSED
+                    || transaction.getAmount().compareTo(paymentSettlement.amount()) != 0) {
+                log.error("Error in remitter settlements: invalid txn/remitter/status/amount. txnId={}, remitterId={}",
+                        paymentSettlement.txnId(), paymentSettlement.remitterId());
                 return null;
             }
-            // validate file
-            if (paymentSettlement.file() == null || paymentSettlement.file().isEmpty() // check is valid file
-                    || !ALLOWED_DOCUMENT_TYPES.contains(paymentSettlement.file().getContentType()) // check is valid
-                                                                                                   // file type
-                    || paymentSettlement.file().getSize() > MAX_DOCUMENT_SIZE_BYTES) { // check is valid file size
-                log.error("Error in remitter settlements: remitterId {}", paymentSettlement.remitterId());
+
+            if (paymentSettlement.file() == null || paymentSettlement.file().isEmpty()
+                    || !ALLOWED_DOCUMENT_TYPES.contains(paymentSettlement.file().getContentType())
+                    || paymentSettlement.file().getSize() > MAX_DOCUMENT_SIZE_BYTES) {
+                log.error("Error in remitter settlements: invalid file. txnId={}, remitterId={}",
+                        paymentSettlement.txnId(), paymentSettlement.remitterId());
                 return null;
             }
-            Remitter remitter = transaction.getRemitter();
-            BigDecimal remitterCurrentBalance = remitter.getTotalPaid();
-
-            User user = transaction.getUser();
-            Set<User> users = remitter.getUsers();
-            if (users == null) {
-                users = new HashSet<>();
-            }
-            users.add(user);
 
             String uploadedUrl = localFileStorageService.store(paymentSettlement.file(),
                     "settlements/" + paymentSettlement.txnId());
             if (uploadedUrl == null || uploadedUrl.isEmpty()) {
-                log.error("Error in remitter settlements: remitterId {}", paymentSettlement.remitterId());
+                log.error("Error in remitter settlements: file storage failed. txnId={}, remitterId={}",
+                        paymentSettlement.txnId(), paymentSettlement.remitterId());
                 return null;
             }
+
+            LocalDateTime now = general.getCurrentDateTime();
+            Remitter remitter = transaction.getRemitter();
+            User user = transaction.getUser();
+
             transaction.setStatus(TransactionStatus.SUCCESS);
             transaction.setProofUrl(uploadedUrl);
-            transaction.setSettlementDate(general.getCurrentDateTime());
+            transaction.setSettlementDate(now);
             transactionRepository.save(transaction);
-            if (!users.contains(user)) {
+
+            Set<User> users = remitter.getUsers();
+            if (users == null) {
+                users = new HashSet<>();
+            }
+            if (users.add(user)) { // only re-attach if user is actually new
                 remitter.setUsers(users);
             }
-            remitter.setTotalPaid(remitterCurrentBalance.add(transaction.getAmount()));
+            remitter.setTotalPaid(remitter.getTotalPaid().add(transaction.getAmount()));
             remitterRepository.save(remitter);
 
-            crucialNotificationService.notifyAllForEssentialAction(
-                    NotificationContentBuilder.EssentialActionType.WITHDRAWAL_DISBURSED,
-                    user,
-                    List.of(),
-                    remitter,
-                    "/dashboard/transactions",
-                    Map.of("amount", paymentSettlement.amount().toString(), "txnId", transaction.getId()));
+            UserSchemeReedemLedger reedemLedger = new UserSchemeReedemLedger();
+            reedemLedger.setRedeemAmount(transaction.getAmount());
+            reedemLedger.setRedeemDate(now.toLocalDate());
+            reedemLedger.setUserScheme(transaction.getUserScheme());
+            reedemLedgerRepository.save(reedemLedger);
+
+            try {
+                crucialNotificationService.notifyAllForEssentialAction(
+                        NotificationContentBuilder.EssentialActionType.WITHDRAWAL_DISBURSED,
+                        user,
+                        List.of(),
+                        remitter,
+                        "/dashboard/transactions",
+                        Map.of("amount", paymentSettlement.amount().toString(), "txnId", transaction.getId()));
+            } catch (Exception notifyEx) {
+                // Settlement already succeeded — don't let a notification failure look like a
+                // failed settlement
+                log.error("Settlement succeeded but notification failed. txnId={}", paymentSettlement.txnId(),
+                        notifyEx);
+            }
 
             return uploadedUrl;
         } catch (Exception e) {
-            log.error("Error in remitter settlements: remitterId {} because {}", paymentSettlement.remitterId(),
-                    e.getMessage());
+            log.error("Error in remitter settlements: remitterId={} txnId={}",
+                    paymentSettlement.remitterId(), paymentSettlement.txnId(), e);
             return null;
         }
     }

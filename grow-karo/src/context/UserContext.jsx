@@ -20,6 +20,7 @@ import {
   logoutApi,
 } from "../../services/grahakService";
 import { useLoader } from "./LoaderContext";
+import { storage } from "../../services/storageService";
 
 export const userContext = createContext({});
 export const UserProvider = ({ children }) => {
@@ -94,20 +95,29 @@ export const UserProvider = ({ children }) => {
     const userId = authUser?.id;
     if (!userId) return;
     try {
+      console.log("called")
+
+      const storedTransactions = storage.getWithTTL("transactions", null, "local");
+      if (storedTransactions) {
+        setTransactions(storedTransactions);
+        return;
+      }
       setIsLoading(true);
       const res = await getAllUserTransaction(userId);
       if (res.status === "success") {
+        //set transaction to storage with ttl of 1 min 
+        storage.setWithTTL("transactions", res.data, "local", 60);
         setTransactions(res.data);
+        return;
       } else {
         errorMessage(res.message);
         console.table(res);
+        return;
       }
     } catch (error) {
       console.log(error);
     } finally {
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 300);
+      setIsLoading(false);
     }
   }, [authUser]);
 
