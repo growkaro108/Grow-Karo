@@ -50,7 +50,7 @@ export default function PlanDetailsPage({
       >
         <Tab
           title={"Profit Rate"}
-          data={plan.profitPercentage + "% " + plan.payoutFrequency}
+          data={plan.profitPercentage + "% "}
           margin={"1"}
         />
         <Tab
@@ -59,8 +59,8 @@ export default function PlanDetailsPage({
           margin={"1"}
         />
         <Tab
-          title={"Maturity Value"}
-          data={currency(plan.maturityValue)}
+          title={"Max. Investment"}
+          data={currency(plan.maximumAmount)}
           margin={"1"}
         />
         <Tab title={"Payout"} data={plan.payoutFrequency} margin={"1"} />

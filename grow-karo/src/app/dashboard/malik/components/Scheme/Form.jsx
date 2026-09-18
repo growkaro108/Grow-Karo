@@ -8,6 +8,7 @@ import {
 } from "../../../../../../services/malikService";
 import { errorMessage, successMessage } from "@/components/Message";
 import { Suggestion } from "./Suggestion";
+import { formatDateTime } from "@/app/plan/utils/planUtils";
 
 export default function FormModal({
   editingId,
@@ -113,7 +114,7 @@ export default function FormModal({
                 : "Deploy New Asset Plan"}
             </h2>
             {editingId && (
-              <p className="text-xs">Last Updated : {form.updatedAt}</p>
+              <p className="text-xs">Last Updated : {formatDateTime(form.updatedAt)}</p>
             )}
           </div>
           <button
@@ -141,7 +142,8 @@ export default function FormModal({
                   name="schemeName"
                   value={form.schemeName || ""}
                   onChange={handleChange}
-                  placeholder="e.g. Sovereign Secure Treasury Capital"
+                  placeholder="e.g. Growth funds.."
+                  autocomplete="off"
                   className={INPUT_CLS}
                   onFocus={() => setShowSuggestions(true)}
                   onBlur={() =>
@@ -184,6 +186,17 @@ export default function FormModal({
                 className={INPUT_CLS}
               />
             </Field>
+            <Field label="Max. Investment (₹)">
+              <input
+                type="number"
+                required
+                name="maximumAmount"
+                value={form.maximumAmount || ""}
+                onChange={handleChange}
+                placeholder="100000"
+                className={INPUT_CLS}
+              />
+            </Field>
 
             <Field label="Asset Tenure (Days)">
               <input
@@ -209,24 +222,11 @@ export default function FormModal({
               />
             </Field>
 
-            <Field label="Risk Level">
-              <select
-                name="riskLevel"
-                value={form.riskLevel || "1"}
-                onChange={handleChange}
-                className={INPUT_CLS}
-              >
-                {RISK_LEVELS.map((risk, idx) => (
-                  <option key={risk} value={idx}>
-                    {risk}
-                  </option>
-                ))}
-              </select>
-            </Field>
+
           </div>
 
           {/* Schedule */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
             <Field label="Payout Frequency">
               <select
                 name="payoutFrequency"
@@ -237,6 +237,20 @@ export default function FormModal({
                 {PAYOUT_FREQUENCIES.map((freq) => (
                   <option key={freq} value={freq}>
                     {freq}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Risk Level">
+              <select
+                name="riskLevel"
+                value={form.riskLevel || "1"}
+                onChange={handleChange}
+                className={INPUT_CLS}
+              >
+                {RISK_LEVELS.map((risk, idx) => (
+                  <option key={risk} value={idx}>
+                    {risk}
                   </option>
                 ))}
               </select>

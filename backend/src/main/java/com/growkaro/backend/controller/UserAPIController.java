@@ -408,6 +408,22 @@ public class UserAPIController {
         }
     }
 
+    @PostMapping("schemes/reinvest")
+    public ResponseEntity<Map<String, Object>> reinvest(@RequestBody Map<String, String> payload) {
+        String userSchemeId = general.stringValue(payload.get("userSchemeId"));
+        String nomineeId = general.stringValue(payload.get("nomineeId"));
+        if (!general.isValidSchemeId(userSchemeId)) {
+            return ResponseEntity.badRequest().body(general.response("error", "Invalid Id..", Map.of()));
+        }
+        try {
+            boolean isReinvested = userAPIService.reinvest(userSchemeId, nomineeId);
+            return ResponseEntity.ok(general.response("success", "Reinvested successfully..", isReinvested));
+        } catch (Exception e) {
+            log.error("error while reinvesting, because {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     /// pending
     // @DeleteMapping("/{userId}")
     // public ResponseEntity<Map<String, Object>> deleteUser(@PathVariable String

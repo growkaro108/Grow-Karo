@@ -51,6 +51,11 @@ public class Scheme {
     @Column(name = "minimum_amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal minimumAmount;
 
+    @NotNull(message = "Maximum amount is required")
+    @Positive(message = "Maximum amount must be greater than 0")
+    @Column(name = "maximum_amount", nullable = false, precision = 19, scale = 2)
+    private BigDecimal maximumAmount;
+
     @NotBlank(message = "Scheme category is required")
     @Column(name = "scheme_category", nullable = false)
     private String schemeCategory;

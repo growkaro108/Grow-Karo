@@ -33,7 +33,8 @@ public record UserPortfolio(
         LocalDate maturityDate,
         NomineeResponse nominee,
         LocalDateTime update_on,
-        List<LocalDateTime> profitDates) {
+        BigDecimal minimumAmount,
+        BigDecimal maximumAmount) {
 
     public static UserPortfolio fromEntity(UserScheme us) {
         BigDecimal totalprofit = BigDecimal.ZERO;
@@ -53,7 +54,6 @@ public record UserPortfolio(
         }
         Scheme scheme = us.getScheme();
         Nominee nominee = us.getNominee();
-        List<LocalDateTime> profitDates = new ArrayList<>(us.getProfitDates());
         return new UserPortfolio(
                 scheme.getSchemeId(),
                 scheme.getSchemeName(),
@@ -74,7 +74,8 @@ public record UserPortfolio(
                 us.getMaturityDate(),
                 nominee != null ? NomineeResponse.fromEntity(nominee) : null,
                 us.getUpdatedAt(),
-                profitDates);
+                scheme.getMinimumAmount(),
+                scheme.getMaximumAmount());
     }
 
 }

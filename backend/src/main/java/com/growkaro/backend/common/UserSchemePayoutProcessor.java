@@ -38,12 +38,10 @@ public class UserSchemePayoutProcessor {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public BatchOutcome processSingleUserScheme(String userSchemeId) {
-        UserScheme userScheme = userSchemeRepository.findByUserSchemeId(userSchemeId)
-                .orElseThrow(() -> new IllegalStateException("UserScheme not found: " + userSchemeId));
+    public BatchOutcome processSingleUserScheme(UserScheme userScheme) {
 
         if (userScheme.getScheme() == null) {
-            log.warn("Skipping userScheme id={}: no scheme attached", userSchemeId);
+            log.warn("Skipping userScheme id={}: no scheme attached", userScheme.getUserSchemeId());
             return BatchOutcome.SKIPPED;
         }
 
@@ -69,14 +67,15 @@ public class UserSchemePayoutProcessor {
         if (paidAmount == null || profitPercentage == null || minimumAmount == null
                 || nextPayoutDate == null) {
             throw new IllegalStateException(
-                    "UserScheme id=" + userSchemeId + " missing required field(s) for profit calculation");
+                    "UserScheme id=" + userScheme.getUserSchemeId()
+                            + " missing required field(s) for profit calculation");
         }
 
         BigDecimal newProfit = general.calculateProfit(paidAmount, profitPercentage, minimumAmount);
 
         if (newProfit == null || newProfit.signum() < 0) {
             throw new IllegalStateException(
-                    "UserScheme id=" + userSchemeId + " computed invalid profit: " + newProfit);
+                    "UserScheme id=" + userScheme.getUserSchemeId() + " computed invalid profit: " + newProfit);
         }
 
         int days = general.resolvePeriodDays(userScheme.getScheme().getPayoutFrequency());
@@ -90,7 +89,8 @@ public class UserSchemePayoutProcessor {
             profitLedgerRepository.save(ledgerEntry);
         } catch (DataIntegrityViolationException e) {
             // Another thread/instance beat us to today's entry for this userScheme
-            log.warn("Duplicate profit ledger entry prevented for userScheme id={}, date={}", userSchemeId, today);
+            log.warn("Duplicate profit ledger entry prevented for userScheme id={}, date={}",
+                    userScheme.getUserSchemeId(), today);
             return BatchOutcome.SKIPPED;
         }
 
@@ -102,15 +102,13 @@ public class UserSchemePayoutProcessor {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public BatchOutcome notifySingleUserScheme(String userSchemeId) {
-        UserScheme userScheme = userSchemeRepository.findByUserSchemeId(userSchemeId)
-                .orElseThrow(() -> new IllegalStateException("UserScheme not found: " + userSchemeId));
+    public BatchOutcome notifySingleUserScheme(UserScheme userScheme) {
 
         if (Boolean.TRUE.equals(userScheme.getMaturityNotificationSent())) {
             return BatchOutcome.SKIPPED;
         }
         if (userScheme.getMaturityDate() == null) {
-            log.warn("Skipping userScheme id={}: no maturity date set", userSchemeId);
+            log.warn("Skipping userScheme id={}: no maturity date set", userScheme.getUserSchemeId());
             return BatchOutcome.SKIPPED;
         }
 
@@ -124,7 +122,7 @@ public class UserSchemePayoutProcessor {
         userScheme.setMaturityNotificationSent(true);
         userSchemeRepository.save(userScheme);
 
-        log.info("Scheme maturing in {} days, notification sent: {}", daysUntilMaturity, userSchemeId);
+        log.info("Scheme maturing in {} days, notification sent: {}", daysUntilMaturity, userScheme.getUserSchemeId());
         return BatchOutcome.PROCESSED;
     }
 }

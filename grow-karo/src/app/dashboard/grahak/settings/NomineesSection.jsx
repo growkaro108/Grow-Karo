@@ -39,7 +39,7 @@ export default function NomineesSection() {
     if (authUser?.id && !nominees) {
       FetchNominees();
     }
-    console.log("nominees", nominees);
+    // console.log("nominees", nominees);
   }, [authUser?.id, FetchNominees, nominees]);
 
   const handleDelete = async (nominee) => {

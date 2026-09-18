@@ -146,7 +146,7 @@ public class EmailService {
     @Async
     public void sendResetLinkToRemitter(String email, String remitterId) {
         try {
-            String resetLink = general.generateResetLinkForRemitter( remitterId);
+            String resetLink = general.generateResetLinkForRemitter(remitterId);
             String subject = "Reset Password - GrowKaro";
             String body = "<div style='font-family: Arial, sans-serif; margin: 0; padding: 0;'>" +
                     "<div style='background-color: #f0f8ff; padding: 20px;'>" +
@@ -253,7 +253,7 @@ public class EmailService {
                 String subject = "New Scheme Launched - " + scheme.getSchemeName();
                 String body = "<div style='font-family: Arial, sans-serif; margin: 0; padding: 0;'>" +
                         "<div style='background-color: #f0f8ff; padding: 20px;'>" +
-                        "<h1 style='color: #004d40;'>GrowKaro</h1>" +
+                        "<h1 style='color: #004d40;'>GrowwKaro</h1>" +
                         "</div>" +
                         "<div style='padding: 20px;'>" +
                         "<p>Dear Investor,</p>" +

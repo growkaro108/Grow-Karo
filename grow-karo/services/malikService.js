@@ -28,6 +28,7 @@ import {
   markResolvedApi,
   getAllSchemAuditHistoryApi,
   getSelectedHistoryApi,
+  onReInvestApi,
 } from "@/api/adminApi";
 import { allRounderMessage } from "@/components/Message";
 

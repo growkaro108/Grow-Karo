@@ -41,7 +41,7 @@ import com.growkaro.backend.service.RedisService;
 @Component
 public class General {
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+    public static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy");
 
     @Value("${frontend.url}")
     private String baseUrl;
@@ -165,6 +165,7 @@ public class General {
         scheme.setStartDate(schemeData.startDate());
         scheme.setEndDate(schemeData.endDate());
         scheme.setMinimumAmount(schemeData.minimumAmount());
+        scheme.setMaximumAmount(schemeData.maximumAmount());
         scheme.setStatus(schemeData.status());
         scheme.setRiskLevel(schemeData.riskLevel());
         scheme.setProfitPercentage(schemeData.profitPercentage());
@@ -298,62 +299,6 @@ public class General {
                 user.getEmail(),
                 user.getPhone(),
                 transfers);
-    }
-
-    public AdminUser toAdminUser(User user) {
-        BigDecimal totalRedeemed = BigDecimal.ZERO;
-        for (UserScheme us : user.getEnrolledSchemes()) {
-            totalRedeemed = totalRedeemed.add(us.getProfitReedemed());
-        }
-        return new AdminUser(
-                user.getId(),
-                user.getName(),
-                user.getEmail(),
-                user.getPhone(),
-                user.isActive(),
-                user.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
-                totalRedeemed.longValue(),
-                user.getEnrolledSchemes().stream().map(this::toUserSchemeResponse).toList());
-    }
-
-    private UserSchemeResponse toUserSchemeResponse(UserScheme us) {
-        boolean isJoined = us.getEnrollmentDate() != null;
-
-        BigDecimal profit = us.getProfit() != null ? us.getProfit() : BigDecimal.ZERO;
-        BigDecimal redeemAmount = us.getRedeemAmount() != null ? us.getRedeemAmount() : BigDecimal.ZERO;
-
-        boolean hasRedeemAmount = redeemAmount.signum() > 0;
-        boolean hasRedeemDate = us.getRedeemDate() != null;
-
-        List<UserSchemeProfitLedgerResponse> profitLedger = us.getProfitLedger().stream()
-                .map(entry -> new UserSchemeProfitLedgerResponse(
-                        entry.getId(), entry.getProfitAmount(), entry.getProfitDate()))
-                .toList();
-        List<UserSchemeReedemLedgerResponse> reedemLedger = us.getReedemLedger().stream()
-                .map(entry -> new UserSchemeReedemLedgerResponse(
-                        entry.getId(), entry.getRedeemAmount(), entry.getRedeemDate()))
-                .toList();
-
-        return new UserSchemeResponse(
-                us.getUserSchemeId(),
-                us.getScheme().getSchemeName(),
-                us.getScheme().getSchemeDetails(),
-                us.getScheme().getProfitPercentage(),
-                us.getStatus().toString().toLowerCase(),
-                us.getPaidAmount(),
-                us.getProfit(),
-                us.getProfitReedemed(),
-                hasRedeemAmount ? us.getRedeemAmount() : null,
-                hasRedeemDate ? us.getRedeemDate().toString() : null,
-                us.getPaidDate() == null ? null : us.getPaidDate().toString(),
-                isJoined ? us.getEnrollmentDate().format(DATE_FORMATTER) : null,
-                isJoined ? us.getMaturityDate().format(DATE_FORMATTER) : null,
-                isJoined ? us.getBondImageURL() : null,
-                us.getBondNumber(),
-                isJoined ? us.getScheme().getPayoutFrequency() : null,
-                profitLedger,
-                reedemLedger,
-                us.getNominee() == null ? null : NomineeResponse.fromEntity(us.getNominee()));
     }
 
     public String generateToken(String userId, String email, String role) {

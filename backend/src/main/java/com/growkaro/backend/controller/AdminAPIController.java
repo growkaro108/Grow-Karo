@@ -168,7 +168,8 @@ public class AdminAPIController {
 
     @GetMapping("/user/{userId}/nominees")
     public ResponseEntity<Map<String, Object>> getUserNominees(@PathVariable String userId) {
-        return ResponseEntity.ok(general.response("success", "Nominees fetched", adminAPIService.getUserNominees(userId)));
+        return ResponseEntity
+                .ok(general.response("success", "Nominees fetched", adminAPIService.getUserNominees(userId)));
     }
 
     @PostMapping("/user/{userId}/nominees")
@@ -192,8 +193,9 @@ public class AdminAPIController {
                 || approveUserScheme.paidAmount() == null) {
             return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.ok(adminAPIService.activateUsersScheme(approveUserScheme.userId(),approveUserScheme.userSchemeId(),
-                approveUserScheme.paidAmount(), approveUserScheme.paidDate()));
+        return ResponseEntity
+                .ok(adminAPIService.activateUsersScheme(approveUserScheme.userId(), approveUserScheme.userSchemeId(),
+                        approveUserScheme.paidAmount(), approveUserScheme.paidDate()));
     }
 
     @PutMapping("/user-scheme/reject/{userSchemeId}")
@@ -204,7 +206,8 @@ public class AdminAPIController {
     @PostMapping(value = "/user_scheme/add-bond/{userSchemeId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> addBondDetails(@PathVariable String userSchemeId,
             @RequestParam(required = false) String bondNumber,
-            @RequestParam(name = "image") MultipartFile image,@RequestParam (required = false, defaultValue = "false") boolean isUpdate) {
+            @RequestParam(name = "image") MultipartFile image,
+            @RequestParam(required = false, defaultValue = "false") boolean isUpdate) {
         boolean hasBondNumber = bondNumber != null && !bondNumber.isBlank();
         boolean hasImage = image != null && !image.isEmpty();
         if (userSchemeId == null || userSchemeId.isBlank() || (!hasBondNumber && !hasImage)) {
@@ -222,7 +225,7 @@ public class AdminAPIController {
         }
 
         return ResponseEntity.ok(adminAPIService.addBondDetails(userSchemeId,
-                bondNumber, image,isUpdate));
+                bondNumber, image, isUpdate));
     }
 
     @GetMapping("/activity-types")
@@ -506,7 +509,8 @@ public class AdminAPIController {
         int offset = 0;
         int limit = 20;
         try {
-            PagedResponse<SchemeAuditProjection> history = adminAPIService.findDistinctSchemeIdAndNameFromAudit(offset, limit);
+            PagedResponse<SchemeAuditProjection> history = adminAPIService.findDistinctSchemeIdAndNameFromAudit(offset,
+                    limit);
             return ResponseEntity
                     .ok(general.response("success", "Scheme update history fetched successfully...", history));
         } catch (Exception e) {

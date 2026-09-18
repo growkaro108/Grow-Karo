@@ -2,11 +2,12 @@ import React from "react";
 import { ZoomIn } from "lucide-react";
 import StatusPill from "./StatusPill";
 import { currency, dateFmt } from "./format";
-import BondCertificate from "../BondCertificate.jsx";
+// import BondCertificate from "../BondCertificate.jsx";
 import { resolveMediaUrl } from "../../../../../api/apiClient";
 import Image from "next/image";
 
 export default function BondStub({ bond, userName, scheme, onView }) {
+  console.log(bond.paidAmount, bond.maturityDate)
   return (
     <div className="overflow-hidden rounded-xl border border-slate-800">
       {/* counterfoil */}
@@ -40,14 +41,17 @@ export default function BondStub({ bond, userName, scheme, onView }) {
             alt={`Bond certificate for ${userName}`}
             className="h-full w-full object-cover"
           />
-        ) : (
-          <BondCertificate
-            bond={bond}
-            userName={userName}
-            scheme={scheme}
-            className="h-full w-full"
-          />
-        )}
+        ) :
+
+          //    ( <BondCertificate
+          //     bond={bond}
+          //     userName={userName}
+          //     scheme={scheme}
+          //     className="h-full w-full"
+          //   />
+          // )
+          ""
+        }
         <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-medium text-white">
             <ZoomIn className="h-3.5 w-3.5" /> View bond
@@ -78,7 +82,7 @@ export default function BondStub({ bond, userName, scheme, onView }) {
             Maturity
           </p>
           <p className="text-sm font-medium text-slate-200">
-            {dateFmt(bond.maturityDate)}
+            {bond.maturityDate}
           </p>
         </div>
       </div>

@@ -140,10 +140,8 @@ public class UserScheme {
     @ColumnDefault("false")
     private Boolean maturityNotificationSent = false;
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "user_scheme_profit_dates", joinColumns = @JoinColumn(name = "user_scheme_id", referencedColumnName = "user_scheme_id"))
-    @Column(name = "profit_date")
-    private Set<LocalDateTime> profitDates = new HashSet<>();
+    @Column(name = "reinvested_into")
+    private String reinvestedIntoUserSchemeId = null;
 
     private LocalDateTime updatedAt;
 

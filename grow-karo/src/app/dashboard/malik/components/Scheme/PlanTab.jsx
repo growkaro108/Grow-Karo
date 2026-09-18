@@ -51,6 +51,7 @@ const emptyPlan = {
   startDate: "",
   endDate: "",
   minimumAmount: "",
+  maximumAmount: "",
   status: true,
   profitPercentage: "",
   maxInvestorsAllowed: "",

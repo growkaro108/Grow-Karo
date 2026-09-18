@@ -156,8 +156,8 @@ export default function Plans({ initialPlans = EMPTY_ARRAY }) {
     async (amount) => {
       // 1. Guard clauses
       if (!confirmPlan || !authUser?.id) return;
-      if (amount < confirmPlan.minimumAmount) {
-        infoMessage("Amount should be greater than or equal to minimum amount");
+      if (amount < confirmPlan.minimumAmount || amount > confirmPlan.maximumAmount) {
+        infoMessage("Amount should be greater than OR equal to minimum amount OR less than or equal to maximum amount ");
         return;
       }
       if (!nomineeId || nomineeId === "") {

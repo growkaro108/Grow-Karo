@@ -5,6 +5,7 @@ import java.time.LocalDate;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -25,14 +26,15 @@ import org.hibernate.envers.Audited;
 @Audited
 @Entity
 @Table(name = "user_scheme_profit_ledger", uniqueConstraints = @UniqueConstraint(name = "uk_user_scheme_profit_date", columnNames = {
-        "profit_date" }))
+        "user_scheme_id", "profit_date" }))
 public class UserSchemeProfitLedger {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_scheme_id", nullable = false)
     private UserScheme userScheme;
 

@@ -8,7 +8,6 @@ import {
   ChevronDown,
 } from "lucide-react";
 import StatusPill from "./StatusPill";
-import BondCard from "./BondCard";
 import { currency, initials } from "./format";
 import dynamic from "next/dynamic";
 import TabLoader from "@/loader/TabLoader";
@@ -23,6 +22,10 @@ import {
 
 const CertificateLightbox = dynamic(() => import("../Certificatelightbox"), {
   loading: () => <TabLoader message="Loading certificate..." />,
+  ssr: false,
+});
+const BondCard = dynamic(() => import("./BondCard"), {
+  loading: () => <TabLoader message="Loading bond card..." />,
   ssr: false,
 });
 

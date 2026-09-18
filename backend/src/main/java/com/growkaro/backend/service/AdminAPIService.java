@@ -143,11 +143,11 @@ public class AdminAPIService {
         try {
             schemeRepository.save(scheme);
             // notify all user and admin by notification
-            List<String> userEmails = userRepository.findEmailOfUsersWantSchemeAlerts();
-            emailService.notifyAllUsers(userEmails, scheme);
+            // List<String> userEmails = userRepository.findEmailOfUsersWantSchemeAlerts();
+            // emailService.notifyAllUsers(userEmails, scheme); //some email issue
             return true;
         } catch (Exception e) {
-            log.error("error in creating scheme", e.getMessage());
+            log.error("error in creating scheme because of {}", e.getMessage(), e);
             return false;
         }
     }
@@ -640,6 +640,7 @@ public class AdminAPIService {
     }
 
     @Transactional
+    @CacheEvict(value = "remitters", allEntries = true)
     public AddedRemitter createRemitter(AddRemitter addRemitter) {
 
         if (userRepository.existsByEmail(addRemitter.getRemitterEmail())) {
@@ -747,6 +748,7 @@ public class AdminAPIService {
         return sb.toString();
     }
 
+    @Cacheable(value = "remitters", key = "#pageable")
     public PagedResponse<RemitterResponse> getAllRemitters(Pageable pageable) {
 
         var remitters = remitterRepository.findAll(pageable);
@@ -755,6 +757,7 @@ public class AdminAPIService {
     }
 
     @Transactional
+    @CacheEvict(value = "remitters", allEntries = true)
     public boolean updateRemitter(String id, AddRemitter updateRemitter) {
 
         Remitter existing = remitterRepository.findById(id)
@@ -824,6 +827,7 @@ public class AdminAPIService {
         return true;
     }
 
+    @CacheEvict(value = "remitters", allEntries = true)
     public boolean removeRemitter(String id) {
         if (id == null || id.isBlank()) {
             return false;
@@ -851,7 +855,7 @@ public class AdminAPIService {
         try {
             var users = userRepository.findAllWithUserScheme(pageable);
             // remove admin users from the list admin users are not needed in the list
-            var mapped = users.map(general::toAdminUser);
+            var mapped = users.map(AdminUser::toAdminUser);
             return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
         } catch (Exception e) {
             log.error("Error while fetching all users: " + e.getMessage());

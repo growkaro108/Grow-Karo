@@ -79,8 +79,9 @@ export default function BondCard({
             </p>
           </div>
         </div>
-        <p className="shrink-0 font-[Space_Grotesk] text-sm font-semibold tabular-nums text-[#D8B77B]">
-          {currency(bond.paidAmount)}
+        <p className="shrink-0 font-[Space_Grotesk] text-sm font-semibold tabular-nums text-[#D8B77B] align-center justify-center text-right">
+          {currency(bond.paidAmount)}<br />
+          <span className="text-[10px] text-white/50">Enroll on: {bond.enrollmentDate}</span>
         </p>
       </div>
       <div className="grid grid-cols-2 gap-3 px-4 py-3.5 sm:grid-cols-4">
@@ -104,13 +105,13 @@ export default function BondCard({
           open={historyOpen}
           onClick={() => setHistoryOpen((v) => !v)}
         >
-         Update Ledger
+          Update Ledger
         </PanelToggle>
         <PanelToggle
           open={detailsOpen}
           onClick={() => setDetailsOpen((v) => !v)}
         >
-          Update Bond
+          {!bond.bondUrl ? "Add Bond" : "Update Bond"}
         </PanelToggle>
       </div>
       {historyOpen && (
@@ -122,7 +123,7 @@ export default function BondCard({
             Profit history
           </p>
           {profitRows.map((entry, index) => (
-            <div key={entry.id ?? index} className="grid grid-cols-2 gap-2">
+            <div key={entry.id ?? index + 1} className="grid grid-cols-2 gap-2">
               <input
                 aria-label="Profit amount"
                 type="number"
@@ -134,6 +135,7 @@ export default function BondCard({
                   onProfitFieldChange(index, "profitAmount", e.target.value)
                 }
                 className={inputClass}
+                disabled={entry.id}
               />
               <input
                 aria-label="Profit date"
@@ -143,6 +145,7 @@ export default function BondCard({
                   onProfitFieldChange(index, "profitDate", e.target.value)
                 }
                 className={inputClass}
+                disabled={entry.id}
               />
             </div>
           ))}
@@ -169,6 +172,7 @@ export default function BondCard({
                   onReedemFieldChange(index, "redeemAmount", e.target.value)
                 }
                 className={inputClass}
+                disabled={entry.id}
               />
               <input
                 aria-label="Redeem date"
@@ -178,6 +182,7 @@ export default function BondCard({
                   onReedemFieldChange(index, "redeemDate", e.target.value)
                 }
                 className={inputClass}
+                disabled={entry.id}
               />
             </div>
           ))}

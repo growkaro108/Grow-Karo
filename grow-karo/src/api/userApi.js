@@ -143,6 +143,12 @@ export async function userCommentApi(payload) {
     body: payload,
   });
 }
+export async function onReInvestApi(payload) {
+  return await apiRequest(`${base}/schemes/reinvest`, {
+    method: "POST",
+    body: payload,
+  });
+}
 
 //implement but not used
 export async function deleteNomineeApi(userId, nomineeId) {

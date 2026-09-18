@@ -22,6 +22,7 @@ import {
   submitIssueApi,
   fetchUserIssuesApi,
   userCommentApi,
+  onReInvestApi,
 } from "@/api/userApi";
 import { allRounderMessage } from "@/components/Message";
 
@@ -315,4 +316,17 @@ export async function fetchGrahakDashboardData(userId = "me") {
     transactions: Array.isArray(transactions) ? transactions : [],
     graphDataMap: profile?.graphDataMap ?? {},
   };
+}
+export async function onReInvest(userSchemeId, amount, nomineeId) {
+  const payload = {
+    userSchemeId: userSchemeId,
+    amount: amount,
+    nomineeId: nomineeId,
+  };
+  const res = await onReInvestApi(payload);
+  allRounderMessage(res);
+  if (res.status !== "success") {
+    return false;
+  }
+  return res.data;
 }

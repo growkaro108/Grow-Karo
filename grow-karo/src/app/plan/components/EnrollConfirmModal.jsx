@@ -15,8 +15,10 @@ export default function EnrollConfirmModal({
   enrolling,
   onConfirm,
   onCancel,
+  preAmount = 0,
+  isReInvest = false
 }) {
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState(preAmount);
   const { nominees, FetchNominees, nomineeId, setNomineeId } = use(userContext);
   const [showAddForm, setShowAddForm] = useState(false);
 
@@ -83,14 +85,13 @@ export default function EnrollConfirmModal({
         <div className="overflow-y-auto">
           {/* Plan summary */}
           <div className="px-5 pt-5 pb-4">
-            <p className="text-sm" style={{ color: "#475569" }}>
-              You&apos;re about to enroll in
-            </p>
-            <p
-              className="text-base font-semibold mt-1"
-              style={{ color: "#1e293b" }}
-            >
-              {plan.schemeName}
+            <p className="text-sm flex justify-between" style={{ color: "#475569" }}>
+              <span>
+                {isReInvest ? "You're about to reinvest in" : "You're about to enroll in"}
+              </span>
+              <span className="text-base font-semibold" style={{ color: "#1e293b" }}>
+                {plan.schemeName}
+              </span>
             </p>
             <div
               className="mt-3 flex items-center gap-4 text-sm"
@@ -101,6 +102,7 @@ export default function EnrollConfirmModal({
               </span>
               <span>·</span>
               <span>Min. {currency(plan.minimumAmount)}</span>
+              <span>Max. {currency(plan.maximumAmount)}</span>
             </div>
           </div>
 
@@ -125,6 +127,7 @@ export default function EnrollConfirmModal({
               <input
                 type="number"
                 id="amount"
+                disabled={isReInvest}
                 className="w-full pl-8 pr-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
                 placeholder="Enter amount"
                 value={amount}

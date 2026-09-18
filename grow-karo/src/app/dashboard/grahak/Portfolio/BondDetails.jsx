@@ -5,6 +5,8 @@ import Image from "next/image";
 import {
   ArrowLeft,
   ArrowUpRight,
+  Coins,
+  HandCoins,
   ImageOff,
   Loader2,
   Trash2,
@@ -14,6 +16,14 @@ import { confirmMessage } from "@/components/Message";
 import { StatusBadge } from "../../malik/components/StatusBadge";
 import DetailField from "./DetailField";
 import { currency, formatDate } from "./portfolioUtils";
+import { isReInvestEligible } from "@/app/utils/constant";
+import dynamic from "next/dynamic";
+import TabLoader from "@/loader/TabLoader";
+import { onReInvest } from "../../../../../services/grahakService";
+const EnrollConfirmModal = dynamic(() => import("@/app/plan/components/EnrollConfirmModal"), {
+  loading: () => <TabLoader message={"Loading Reinvest Form..."} />,
+  ssr: false
+})
 
 export default function BondDetails({
   bond,
@@ -22,6 +32,8 @@ export default function BondDetails({
   onWithdraw,
 }) {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [isShowReInvestForm, setIsShowReInvestForm] = useState(false);
+  const [isReInvesting, setIsReInvesting] = useState(false);
   const isApproved = bond.isApproved;
   const handleWithdraw = async () => {
     if (!(await confirmMessage("you want to withdraw this application?")))
@@ -30,6 +42,27 @@ export default function BondDetails({
     await onWithdraw(bond.userSchemeId);
     setIsWithdrawing(false);
   };
+
+  const handleReInvest = async (amount, nomineeId) => {
+    if (!(await confirmMessage("you want to reinvest this application?"))) return;
+    setIsReInvesting(true);
+    try {
+      console.log(bond.userSchemeId, amount, nomineeId);
+      const res = await onReInvest(bond.userSchemeId, amount, nomineeId);
+      if (res) {
+        console.log("Reinvest Successfully...")
+        setIsShowReInvestForm(false);
+      }
+    } catch (error) {
+      console.log("Error...")
+    } finally {
+      setTimeout(() => {
+        setIsReInvesting(false);
+      }, 1500);
+    }
+
+  };
+
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-blue-50/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
@@ -163,7 +196,55 @@ export default function BondDetails({
             </button>
           </div>
         )}
+        {/* reinvest button */}
+        {isReInvestEligible(bond) && (
+          <div className="mt-8 flex justify-between items-center border-t border-slate-100 pt-6">
+            <p className="text-sm font-medium text-slate-400">
+              Mature on: {formatDate(bond.maturityDate)}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setIsShowReInvestForm(true)}
+                disabled={isReInvesting}
+                className="flex items-center gap-2 rounded-lg border border-emerald-400 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-600 disabled:opacity-50 cursor-pointer transition-all duration-300 hover:bg-emerald-600 hover:text-white hover:scale-105"
+              >
+                {isReInvesting ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <HandCoins size={16} />
+                )}
+                {isReInvesting ? "Reinvesting..." : "Reinvest"}
+              </button>
+              <button
+                type="button"
+                className="flex items-center gap-2 rounded-lg border border-red-400 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 disabled:opacity-50 cursor-pointer transition-all duration-300 hover:bg-red-600 hover:text-white hover:scale-105"
+              >
+                {false ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Coins size={16} />
+                )}
+                {"Reedem"}
+              </button>
+            </div>
+          </div>
+        )}
+
+
+
+
       </div>
+      {/* show enrollment form  */}
+      {isShowReInvestForm && <EnrollConfirmModal
+        plan={bond}
+        enrolling={isReInvesting}
+        onConfirm={handleReInvest}
+        onCancel={() => setIsShowReInvestForm(false)}
+        preAmount={bond.paidAmount + bond.profit - bond.profitReedemed}
+        isReInvest={true}
+      />}
+
     </div>
   );
 }

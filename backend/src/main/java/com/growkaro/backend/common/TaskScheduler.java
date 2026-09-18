@@ -47,7 +47,7 @@ public class TaskScheduler {
 
         for (UserScheme userScheme : allApprovedUserSchemes) {
             try {
-                BatchOutcome outcome = payoutProcessor.processSingleUserScheme(userScheme.getUserSchemeId());
+                BatchOutcome outcome = payoutProcessor.processSingleUserScheme(userScheme);
                 if (outcome == BatchOutcome.PROCESSED) {
                     processed++;
                 } else {
@@ -77,7 +77,7 @@ public class TaskScheduler {
 
         for (UserScheme userScheme : allApprovedUserSchemes) {
             try {
-                BatchOutcome outcome = payoutProcessor.notifySingleUserScheme(userScheme.getUserSchemeId());
+                BatchOutcome outcome = payoutProcessor.notifySingleUserScheme(userScheme);
                 if (outcome == BatchOutcome.PROCESSED) {
                     notified++;
                 } else {

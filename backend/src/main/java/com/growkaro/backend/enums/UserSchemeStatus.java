@@ -6,5 +6,5 @@ public enum UserSchemeStatus {
     APPROVED,
     REJECTED,
     WITHDRAWN,
-    MATURED,
+    MATURED
 }

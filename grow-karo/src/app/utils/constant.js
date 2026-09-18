@@ -57,8 +57,18 @@ export function generateChartDataWithPercent(data, opts = {}) {
   const jitterPx = opts.jitterPx ?? 8;
 
   const months = {
-    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+    jan: 0,
+    feb: 1,
+    mar: 2,
+    apr: 3,
+    may: 4,
+    jun: 5,
+    jul: 6,
+    aug: 7,
+    sep: 8,
+    oct: 9,
+    nov: 10,
+    dec: 11,
   };
 
   function parseDate(s) {
@@ -70,7 +80,11 @@ export function generateChartDataWithPercent(data, opts = {}) {
       const day = Number.parseInt(parts[0], 10);
       const mon = parts[1].slice(0, 3).toLowerCase();
       const year = Number.parseInt(parts[2], 10);
-      if (months[mon] !== undefined && !Number.isNaN(day) && !Number.isNaN(year)) {
+      if (
+        months[mon] !== undefined &&
+        !Number.isNaN(day) &&
+        !Number.isNaN(year)
+      ) {
         return new Date(year, months[mon], day);
       }
     }
@@ -99,7 +113,9 @@ export function generateChartDataWithPercent(data, opts = {}) {
     .sort((a, b) => a.ts - b.ts);
 
   const tsVals = normalized.map((d) => d.ts).filter((t) => !Number.isNaN(t));
-  const amtVals = normalized.map((d) => d.amount).filter((a) => !Number.isNaN(a));
+  const amtVals = normalized
+    .map((d) => d.amount)
+    .filter((a) => !Number.isNaN(a));
 
   // Guard against empty/all-invalid data so Math.min/max don't return Infinity/-Infinity
   if (tsVals.length === 0) return [];
@@ -175,8 +191,18 @@ export function generateBarChartData(data, opts = {}) {
   const barWidthRatio = opts.barWidthRatio ?? 0.5; // fraction of each slot's width
 
   const months = {
-    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+    jan: 0,
+    feb: 1,
+    mar: 2,
+    apr: 3,
+    may: 4,
+    jun: 5,
+    jul: 6,
+    aug: 7,
+    sep: 8,
+    oct: 9,
+    nov: 10,
+    dec: 11,
   };
 
   function parseDate(s) {
@@ -185,7 +211,11 @@ export function generateBarChartData(data, opts = {}) {
       const day = Number.parseInt(parts[0], 10);
       const mon = parts[1].slice(0, 3).toLowerCase();
       const year = Number.parseInt(parts[2], 10);
-      if (months[mon] !== undefined && !Number.isNaN(day) && !Number.isNaN(year)) {
+      if (
+        months[mon] !== undefined &&
+        !Number.isNaN(day) &&
+        !Number.isNaN(year)
+      ) {
         return new Date(year, months[mon], day);
       }
     }
@@ -204,7 +234,13 @@ export function generateBarChartData(data, opts = {}) {
     if (Number.isNaN(ts)) return;
     const key = String(ts);
     if (!byDate.has(key)) {
-      byDate.set(key, { id: d.id ?? i, rawDate: d.date, ts, amount: 0, count: 0 });
+      byDate.set(key, {
+        id: d.id ?? i,
+        rawDate: d.date,
+        ts,
+        amount: 0,
+        count: 0,
+      });
     }
     const entry = byDate.get(key);
     entry.amount += Number(d.amount) || 0;
@@ -246,4 +282,14 @@ export function generateBarChartData(data, opts = {}) {
       hitHeightPercent: ((baselineY - barY) / height) * 100,
     };
   });
+}
+
+export function isReInvestEligible(scheme) {
+  // console.log(scheme);
+  const maturiyDate = new Date(scheme.maturityDate);
+  const currentDate = new Date();
+  const diffInDays = Math.floor(
+    (maturiyDate - currentDate) / (1000 * 60 * 60 * 24),
+  );
+  return diffInDays <= 10;
 }
