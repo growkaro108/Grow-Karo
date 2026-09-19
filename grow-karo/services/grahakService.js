@@ -295,7 +295,27 @@ export async function userComment(payload) {
   allRounderMessage(res);
   return null;
 }
-
+export async function onReInvest(
+  userId,
+  schemeId,
+  amount,
+  nomineeId,
+  userSchemeId,
+) {
+  const payload = {
+    userId: userId,
+    schemeId: schemeId,
+    amount: amount,
+    nomineeId: nomineeId,
+    userSchemeId: userSchemeId,
+  };
+  const res = await onReInvestApi(payload);
+  allRounderMessage(res);
+  if (res.status !== "success") {
+    return false;
+  }
+  return res.data;
+}
 export async function fetchGrahakDashboardData(userId = "me") {
   if (true) {
     return delay(mockGrahakData);
@@ -316,17 +336,4 @@ export async function fetchGrahakDashboardData(userId = "me") {
     transactions: Array.isArray(transactions) ? transactions : [],
     graphDataMap: profile?.graphDataMap ?? {},
   };
-}
-export async function onReInvest(userSchemeId, amount, nomineeId) {
-  const payload = {
-    userSchemeId: userSchemeId,
-    amount: amount,
-    nomineeId: nomineeId,
-  };
-  const res = await onReInvestApi(payload);
-  allRounderMessage(res);
-  if (res.status !== "success") {
-    return false;
-  }
-  return res.data;
 }

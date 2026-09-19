@@ -48,6 +48,9 @@ import com.growkaro.backend.entity.UserProfile;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.entity.UserSchemeProfitLedger;
 import com.growkaro.backend.entity.UserSchemeReedemLedger;
+import com.growkaro.backend.entity.Notification.ActionType;
+import com.growkaro.backend.entity.Notification.NotificationType;
+import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.entity.Reply;
 import com.growkaro.backend.entity.SupportIssue.Status;
@@ -126,16 +129,30 @@ public class UserAPIService {
             // "unread", 1);
 
             // return userRepository.findEmailOfUsersWantSchemeAlerts();
-            List<Scheme> schemes = schemeRepository.findAll();
-            for (Scheme scheme : schemes) {
-                scheme.setMaximumAmount(scheme.getMinimumAmount().add(BigDecimal.valueOf(150000)));
-                log.info("Scheme {} maximum amount updated: {}", scheme.getSchemeName(), scheme.getMaximumAmount());
-                schemeRepository.save(scheme);
-            }
+            // List<Scheme> schemes = schemeRepository.findAll();
+            // for (Scheme scheme : schemes) {
+            // scheme.setMaximumAmount(scheme.getMinimumAmount().add(BigDecimal.valueOf(150000)));
+            // log.info("Scheme {} maximum amount updated: {}", scheme.getSchemeName(),
+            // scheme.getMaximumAmount());
+            // schemeRepository.save(scheme);
+            // }
+            // LocalDate today = general.getCurrentDate();
+            // List<UserScheme> allApprovedUserSchemes = userSchemeRepository
+            // .findAllByMaturityDate(today, today);
+            // for (UserScheme userScheme : allApprovedUserSchemes) {
+            // log.info("UserScheme id={}", userScheme.getUserSchemeId());
+            // // userScheme.setStatus(UserSchemeStatus.MATURED);
+            // // userSchemeRepository.save(userScheme);
+            // log.info("Maturity date set for userScheme id={}",
+            // userScheme.getUserSchemeId());
+            // }
+            User user = userRepository.findById("GKUID20260915162721").get();
+            crucialNotificationService.sendUserNotificationWithCustomMessage("This is title", "This is description",
+                    user, "/dashboard", null);
             return true;
         } catch (Exception e) {
             log.error("Failed to set user status active", e);
-            return false;
+            return e.getMessage();
         }
     }
 
@@ -898,54 +915,106 @@ public class UserAPIService {
         }
     }
 
+    @CacheEvict(value = "userPortfolio", key = "#userId")
     @Transactional
-    public boolean reinvest(String id, String nomineeId) {
+    public Map<String, Object> reinvest(String userId, String id, String nomineeId, String schemeId) {
         try {
+            UserScheme existingUserScheme = userSchemeRepository.findByUserSchemeId(id)
+                    .orElse(null);
 
-            UserScheme us = userSchemeRepository.findByUserSchemeId(id).orElse(null);
-            if (us == null) {
-                log.error("Error reinvesting: UserScheme not found with ID: {}", id);
-                return false;
+            if (existingUserScheme == null) {
+                log.error("Reinvest failed: UserScheme not found for ID: {}", id);
+                return general.response("error", "User scheme not found", Map.of("id", id));
             }
-            BigDecimal profitEarned = us.getProfitLedger().stream().map(UserSchemeProfitLedger::getProfitAmount)
+
+            // 1. Calculate profit & redemptions cleanly
+            BigDecimal totalProfit = existingUserScheme.getProfitLedger().stream()
+                    .map(UserSchemeProfitLedger::getProfitAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal profitRedemed = us.getReedemLedger().stream().map(UserSchemeReedemLedger::getRedeemAmount)
+
+            BigDecimal totalRedeemed = existingUserScheme.getReedemLedger().stream()
+                    .map(UserSchemeReedemLedger::getRedeemAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal totalEarned = profitEarned.subtract(profitRedemed);
-            BigDecimal restAmount = us.getPaidAmount().add(totalEarned);
-            if (restAmount.compareTo(us.getScheme().getMinimumAmount()) < 0) {
-                log.error("Error reinvesting: Remaining amount is less than minimum amount for UserScheme ID: {}", id);
-                return false;
+
+            BigDecimal netProfit = totalProfit.subtract(totalRedeemed);
+            BigDecimal reinvestmentAmount = existingUserScheme.getPaidAmount().add(netProfit);
+
+            // // 2. Resolve Target Scheme
+            Scheme targetScheme = existingUserScheme.getScheme();
+            if (schemeId != null && !schemeId.isBlank() &&
+                    !targetScheme.getSchemeId().equals(schemeId)) {
+                targetScheme = schemeRepository.findById(schemeId).orElse(null);
+                if (targetScheme == null) {
+                    log.error("Reinvest failed: Target Scheme not found for ID: {}", schemeId);
+                    return general.response("error", "Target scheme not found",
+                            Map.of("schemeId", schemeId));
+                }
             }
-            if (totalEarned.compareTo(BigDecimal.ZERO) > 0) {
-                log.info("reedem amount is less than profit amount for UserScheme ID: {}", id);
-                return false;
+
+            // // 3. Amount Validation
+            if (reinvestmentAmount.compareTo(targetScheme.getMinimumAmount()) < 0) {
+                log.error("Reinvest failed: Amount {} below minimum {}", reinvestmentAmount,
+                        targetScheme.getMinimumAmount());
+                return general.response("error", "Reinvestment amount is less than minimum required", Map.of("id", id));
             }
-            BigDecimal reinvestmentAmount = restAmount.add(totalEarned);
-            if (reinvestmentAmount.compareTo(us.getScheme().getMaximumAmount()) > 0) {
-                log.error("Error reinvesting: Reinvestment amount is greater than maximum amount for UserScheme ID: {}",
-                        id);
-                return false;
+
+            if (reinvestmentAmount.compareTo(targetScheme.getMaximumAmount()) > 0) {
+                log.error("Reinvest failed: Amount {} exceeds maximum {}",
+                        reinvestmentAmount,
+                        targetScheme.getMaximumAmount());
+                return general.response("error", "Reinvestment amount exceeds maximum limit",
+                        Map.of("id", id));
             }
-            Scheme s = us.getScheme();
-            User u = us.getUser();
+
+            // // 4. Resolve Nominee
+            User user = existingUserScheme.getUser();
+            Nominee nominee = user.getNominees().stream()
+                    .filter(n -> n.getNomineeId().equals(nomineeId))
+                    .findFirst()
+                    .orElse(null);
+
+            if (nominee == null) {
+                log.error("Reinvest failed: Nominee not found for ID: {}", nomineeId);
+                return general.response("error", "Invalid nominee selected",
+                        Map.of("nomineeId", nomineeId));
+            }
+
+            // 5. Create New Reinvestment Scheme
             UserScheme newUserScheme = new UserScheme();
-            newUserScheme.setUser(u);
-            newUserScheme.setPaidAmount(reinvestmentAmount); // <-- was validated but never persisted
-            s.enrollUserInScheme(newUserScheme); // sets scheme + adds to scheme's joinedUsers
-            u.enrollInScheme(newUserScheme); // if you keep this method, make sure it doesn't create a second
-            newUserScheme.setNominee(
-                    u.getNominees().stream().filter(n -> n.getNomineeId().equals(nomineeId)).findFirst().get());
-            // add new one
+            newUserScheme.setUser(user);
+            newUserScheme.setPaidAmount(reinvestmentAmount);
+            newUserScheme.setNominee(nominee);
+
+            targetScheme.enrollUserInScheme(newUserScheme);
+            user.enrollInScheme(newUserScheme);
+
             newUserScheme = userSchemeRepository.save(newUserScheme);
-            // update old one
-            us.setReinvestedIntoUserSchemeId(newUserScheme.getUserSchemeId());
-            us.setStatus(UserSchemeStatus.MATURED);
-            userSchemeRepository.save(us);
-            return true;
+
+            // 6. Link Old Scheme to New Scheme
+            existingUserScheme.setReinvestedIntoUserSchemeId(newUserScheme.getUserSchemeId());
+            userSchemeRepository.save(existingUserScheme);
+            Map<String, Object> result = getUserPortfolio(userId);
+            if (result.get("status").equals("error")) {
+                return general.response("error", "Internal server error...", Map.of());
+            }
+            // notify user
+            crucialNotificationService.notifyUser(EssentialActionType.FUND_TRANSFER_INITIATED,
+                    user, "/dashboard",
+                    Map.of("name", user.getName(), "amount", reinvestmentAmount.toString(), "schemeName",
+                            targetScheme.getSchemeName(), "date",
+                            general.getCurrentDate().format(general.DATE_FORMATTER)));
+            // log to admin
+            activityLogService.log(user.getId(), user.getName(), user.getRole().name(), ActivityType.SCHEME_REINVESTED,
+                    user.getName() + " is reinvest in " + targetScheme.getSchemeName(), "User Scheme", user.getId(),
+                    Map.of("reinvestedAmount", reinvestmentAmount.toString(), "schemeId", targetScheme.getSchemeId(),
+                            "schemeName", targetScheme.getSchemeName(), "date",
+                            general.getCurrentDate().format(general.DATE_FORMATTER)));
+
+            return general.response("success", "Reinvestment successful", result.get("data"));
+
         } catch (Exception e) {
-            log.error("error while reinvesting, because {}", e.getMessage());
-            return false;
+            log.error("Error occurred while processing reinvestment for user {}: {}", userId, e.getMessage(), e);
+            return general.response("error", "Internal server error...", Map.of());
         }
     }
 

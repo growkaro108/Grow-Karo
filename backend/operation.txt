@@ -7,6 +7,16 @@ ADD CONSTRAINT activity_log_type_check CHECK (type = ANY (ARRAY['ACCOUNT_CREATED
 OR 
 if add one enum in notification_action_type \\
 ALTER TYPE notification_action_type ADD VALUE 'ISSUE_REPLIED';
+ALTER TYPE notification_action_type ADD VALUE 'SCHEME_REINVESTED';
 OR 
 if add one enum in activity_log_type \\
 ALTER TYPE activity_log_type ADD VALUE 'ISSUE_REPLIED';
+ALTER TYPE activity_log_type ADD VALUE 'SCHEME_REINVESTED';
+-- 1. Drop existing constraints from main and audit tables
+ALTER TABLE notifications 
+  DROP CONSTRAINT IF EXISTS notifications_action_type_check;
+  ALTER TABLE notifications 
+  ADD CONSTRAINT notifications_action_type_check 
+  CHECK (action_type IN (
+    'INFO'
+  ));

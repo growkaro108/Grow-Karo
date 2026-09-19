@@ -291,5 +291,5 @@ export function isReInvestEligible(scheme) {
   const diffInDays = Math.floor(
     (maturiyDate - currentDate) / (1000 * 60 * 60 * 24),
   );
-  return diffInDays <= 10;
+  return diffInDays <= 1;
 }

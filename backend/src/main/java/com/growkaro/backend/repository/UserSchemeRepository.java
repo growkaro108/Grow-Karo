@@ -22,57 +22,56 @@ import jakarta.persistence.LockModeType;
 @Repository
 public interface UserSchemeRepository extends JpaRepository<UserScheme, String> {
 
-    @Query("SELECT us FROM UserScheme us JOIN FETCH us.scheme AND JOIN FETCH us.user WHERE us.userSchemeId = :userSchemeId")
-    Optional<UserScheme> findByUserSchemeId(@Param("userSchemeId") String userSchemeId);
+        @Query("SELECT us FROM UserScheme us JOIN FETCH us.scheme AND JOIN FETCH us.user WHERE us.userSchemeId = :userSchemeId")
+        Optional<UserScheme> findByUserSchemeId(@Param("userSchemeId") String userSchemeId);
 
-    @Query("SELECT us FROM UserScheme us JOIN FETCH us.scheme WHERE us.user.id = :userId")
-    List<UserScheme> findAllByUserId(@Param("userId") String userId);
+        @Query("SELECT us FROM UserScheme us JOIN FETCH us.scheme WHERE us.user.id = :userId")
+        List<UserScheme> findAllByUserId(@Param("userId") String userId);
 
-    Optional<UserScheme> findBySchemeAndUser(Scheme scheme, User user);
+        Optional<UserScheme> findBySchemeAndUser(Scheme scheme, User user);
 
-    @Query("SELECT us.scheme.schemeId FROM UserScheme us WHERE us.user = :user")
-    List<String> findAllJoinedSchemeId(@Param("user") User user);
+        @Query("SELECT us.scheme.schemeId FROM UserScheme us WHERE us.user = :user")
+        List<String> findAllJoinedSchemeId(@Param("user") User user);
 
-    @Query("SELECT us FROM UserScheme us WHERE us.user.id = :userId")
-    List<UserScheme> findByUser_UserId(@Param("userId") String userId);
+        @Query("SELECT us FROM UserScheme us WHERE us.user.id = :userId")
+        List<UserScheme> findByUser_UserId(@Param("userId") String userId);
 
-    List<UserPortfolio> findByUserId(String userId);
+        List<UserPortfolio> findByUserId(String userId);
 
-    boolean existsByNomineeNomineeId(String nomineeId);
+        boolean existsByNomineeNomineeId(String nomineeId);
 
-    // get all approved user
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("""
-            SELECT us FROM UserScheme us
-            JOIN FETCH us.scheme
-            WHERE us.isApproved = true
-            AND us.nextPayoutDate = :today
-            """)
-    List<UserScheme> findAllApprovedUserSchemes(@Param("today") LocalDate today);
+        // get all approved user
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
+        @Query("""
+                        SELECT us FROM UserScheme us
+                        JOIN FETCH us.scheme
+                        WHERE us.isApproved = true
+                        AND us.nextPayoutDate = :today
+                        """)
+        List<UserScheme> findAllApprovedUserSchemes(@Param("today") LocalDate today);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    // find all user scheme whose maturity date is in range of 10 to 15 days
-    @Query("SELECT us FROM UserScheme us JOIN FETCH us.user WHERE us.maturityDate BETWEEN :today AND :endDate")
-    List<UserScheme> findAllByMaturityDate(@Param("today") LocalDate today, @Param("endDate") LocalDate endDate);
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
+        // find all user scheme whose maturity date is in range of 10 to 15 days
+        @Query("SELECT DISTINCT us FROM UserScheme us JOIN FETCH us.user JOIN FETCH us.scheme WHERE us.maturityDate BETWEEN :today AND :endDate")
+        List<UserScheme> findAllByMaturityDate(@Param("today") LocalDate today, @Param("endDate") LocalDate endDate);
+        // ── Overview dashboard queries ────────────────────────────────────────────
 
-    // ── Overview dashboard queries ────────────────────────────────────────────
+        /** Total AUM: sum of paidAmount across all approved UserSchemes. */
+        @Query("SELECT COALESCE(SUM(us.paidAmount), 0) FROM UserScheme us WHERE us.isApproved = true")
+        BigDecimal findTotalAUM();
 
-    /** Total AUM: sum of paidAmount across all approved UserSchemes. */
-    @Query("SELECT COALESCE(SUM(us.paidAmount), 0) FROM UserScheme us WHERE us.isApproved = true")
-    BigDecimal findTotalAUM();
+        /** Number of distinct investors with at least one approved scheme. */
+        @Query("SELECT COUNT(DISTINCT us.user.id) FROM UserScheme us WHERE us.isApproved = true")
+        long countActiveInvestors();
 
-    /** Number of distinct investors with at least one approved scheme. */
-    @Query("SELECT COUNT(DISTINCT us.user.id) FROM UserScheme us WHERE us.isApproved = true")
-    long countActiveInvestors();
-
-    /** Per-scheme AUM breakdown: [{schemeName, aum}] */
-    @Query("""
-            SELECT us.scheme.schemeName AS schemeName,
-                   COALESCE(SUM(us.paidAmount), 0) AS aum
-            FROM UserScheme us
-            WHERE us.isApproved = true
-            GROUP BY us.scheme.schemeName
-            """)
-    List<Map<String, Object>> findSchemeAumBreakdown();
+        /** Per-scheme AUM breakdown: [{schemeName, aum}] */
+        @Query("""
+                        SELECT us.scheme.schemeName AS schemeName,
+                               COALESCE(SUM(us.paidAmount), 0) AS aum
+                        FROM UserScheme us
+                        WHERE us.isApproved = true
+                        GROUP BY us.scheme.schemeName
+                        """)
+        List<Map<String, Object>> findSchemeAumBreakdown();
 
 }

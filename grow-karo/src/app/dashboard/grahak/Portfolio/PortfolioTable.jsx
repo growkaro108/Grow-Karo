@@ -39,7 +39,11 @@ export default function PortfolioTable({ holdings, loading, onOpenDetails, onOpe
         <td className={cells}>{bond.payoutFrequency}</td>
         <td className={`${cells} text-[#397299]`}>{bond.profitPercentage}</td>
         <td className={`${cells} text-[#397299]`}>{bond.profit === 0 ? "Pending" : bond.profit}</td>
-        <td className={cells}><StatusBadge status={(bond.status || "pending").toLowerCase()} /></td>
+        <td className={cells}>
+          {bond.reinvestedIntoUserSchemeId != null ?
+            <StatusBadge status={"Reinvested"} /> :
+            <StatusBadge status={(bond.status || "pending").toLowerCase()} />}
+        </td>
       </tr>
     ));
   };

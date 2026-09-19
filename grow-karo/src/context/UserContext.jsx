@@ -21,6 +21,7 @@ import {
 } from "../../services/grahakService";
 import { useLoader } from "./LoaderContext";
 import { storage } from "../../services/storageService";
+import { getAllPlans } from "@/api/generalApi";
 
 export const userContext = createContext({});
 export const UserProvider = ({ children }) => {
@@ -30,6 +31,7 @@ export const UserProvider = ({ children }) => {
   const [transactions, setTransactions] = useState([]);
   const [nominees, setNominees] = useState(null);
   const [nomineeId, setNomineeId] = useState("");
+  const [schemes, setSchemes] = useState([]);
 
   const { showLoader, hideLoader } = useLoader();
 
@@ -91,6 +93,10 @@ export const UserProvider = ({ children }) => {
     }
   }, [authUser]);
 
+  const updateUserPortfolio = useCallback((newPortfolio) => {
+    setPortfolio(newPortfolio);
+  }, []);
+
   const FetchTransactions = useCallback(async () => {
     const userId = authUser?.id;
     if (!userId) return;
@@ -120,6 +126,33 @@ export const UserProvider = ({ children }) => {
       setIsLoading(false);
     }
   }, [authUser]);
+
+  const getAllSchemes = useCallback(async () => {
+    try {
+      console.log("scheme fetched from context");
+      const storedSchemes = storage.getWithTTL("schemes", null, "session");
+      if (storedSchemes) {
+        setSchemes(storedSchemes);
+        return;
+      }
+      showLoader("Getting best scheme for you...");
+      const response = await getAllPlans();
+      console.log("Api called")
+      if (response.status === "success") {
+        storage.setWithTTL("schemes", response.data, "session", 60);
+        setSchemes(response.data ?? []);
+
+      } else {
+        allRounderMessage(response);
+      }
+    } catch (error) {
+      console.error("Failed to fetch plans:", error);
+      errorMessage("Something went wrong..");
+    } finally {
+      hideLoader();
+    }
+  }, [hideLoader, showLoader]);
+
 
   const logout = useCallback(async () => {
     try {
@@ -200,6 +233,7 @@ export const UserProvider = ({ children }) => {
       logout,
       getUserDataFromContext,
       portfolio,
+      updateUserPortfolio,
       fetchPortfolio,
       transactions,
       FetchTransactions,
@@ -208,21 +242,11 @@ export const UserProvider = ({ children }) => {
       FetchNominees,
       nomineeId,
       setNomineeId,
+      getAllSchemes,
+      setSchemes,
+      schemes
     }),
-    [
-      authUser,
-      isLoading,
-      logout,
-      getUserDataFromContext,
-      portfolio,
-      fetchPortfolio,
-      transactions,
-      FetchTransactions,
-      updateAuthUser,
-      nominees,
-      FetchNominees,
-      nomineeId,
-    ],
+    [authUser, isLoading, logout, getUserDataFromContext, portfolio, fetchPortfolio, transactions, FetchTransactions, updateAuthUser, nominees, FetchNominees, nomineeId, getAllSchemes, schemes],
   );
   return (
     <userContext.Provider value={contexValue}>{children}</userContext.Provider>

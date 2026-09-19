@@ -410,17 +410,23 @@ public class UserAPIController {
 
     @PostMapping("schemes/reinvest")
     public ResponseEntity<Map<String, Object>> reinvest(@RequestBody Map<String, String> payload) {
+        String userId = general.stringValue(payload.get("userId"));
         String userSchemeId = general.stringValue(payload.get("userSchemeId"));
         String nomineeId = general.stringValue(payload.get("nomineeId"));
-        if (!general.isValidSchemeId(userSchemeId)) {
-            return ResponseEntity.badRequest().body(general.response("error", "Invalid Id..", Map.of()));
+        String schemeId = general.stringValue(payload.get("schemeId"));
+
+        if (!general.isValidUserSchemeId(userSchemeId) || !general.isValidSchemeId(schemeId)
+                || !general.isValidId(userId)) {
+            log.error("Invalid Ids for reinvesting, userId: {}, userSchemeId: {}, nomineeId: {}, schemeId: {}", userId,
+                    userSchemeId, nomineeId, schemeId);
+            return ResponseEntity.ok(general.response("error", "Invalid Id..", Map.of()));
         }
+
         try {
-            boolean isReinvested = userAPIService.reinvest(userSchemeId, nomineeId);
-            return ResponseEntity.ok(general.response("success", "Reinvested successfully..", isReinvested));
+            return ResponseEntity.ok(userAPIService.reinvest(userId, userSchemeId, nomineeId, schemeId));
         } catch (Exception e) {
             log.error("error while reinvesting, because {}", e.getMessage());
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.ok(general.response("error", "Internal server error..", null));
         }
     }
 

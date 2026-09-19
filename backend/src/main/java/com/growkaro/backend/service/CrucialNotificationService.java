@@ -140,6 +140,42 @@ public class CrucialNotificationService {
         }
     }
 
+    public void sendUserNotificationWithCustomMessage(String title, String message, User user, String actionUrl,
+            Map<String, Object> params) {
+        if (user == null) {
+            return;
+        }
+        dispatchNotificationwithCustomMessage(title, message, ReceiverType.User, user, actionUrl, params);
+    }
+
+    @Async
+    private void dispatchNotificationwithCustomMessage(String title, String message, ReceiverType role,
+            User user, String actionUrl, Map<String, Object> params) {
+
+        try {
+            // A. Save to Database
+            Notification notification = new Notification();
+            notification.setReceiverType(role);
+            notification.setReceiverId(user.getId());
+            notification.setTitle(title);
+            notification.setMessage(message);
+            notification.setNotificationType(Notification.NotificationType.INFO);
+            notification.setActionType(Notification.ActionType.INFO);
+            notification.setActionUrl(actionUrl);
+            notification.setRead(false);
+
+            Notification saved = notificationRepository.save(notification);
+
+            // B. Stream live event via SSE
+            notificationBroadcaster.sendToReceiver(role, user.getId(), saved);
+
+        } catch (Exception e) {
+            log.error("Failed to dispatch custom notification for action {} to {} [ID: {}]: {}", "info", role,
+                    user.getId(),
+                    e.getMessage());
+        }
+    }
+
     /** 1. Notify User individually */
     @Async
     public void notifyUser(EssentialActionType action, User user, String actionUrl, Map<String, Object> params) {
@@ -162,7 +198,8 @@ public class CrucialNotificationService {
 
     /** 3. Notify Remitter individually */
     @Transactional
-    public void notifyRemitter(EssentialActionType action, Remitter remitter, String actionUrl, Map<String, Object> params) {
+    public void notifyRemitter(EssentialActionType action, Remitter remitter, String actionUrl,
+            Map<String, Object> params) {
         if (remitter == null) {
             return;
         }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { use, useEffect, useState } from "react";
 import Image from "next/image";
 import {
   ArrowLeft,
@@ -12,7 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { resolveMediaUrl } from "@/api/apiClient";
-import { confirmMessage } from "@/components/Message";
+import { confirmMessage, errorMessage } from "@/components/Message";
 import { StatusBadge } from "../../malik/components/StatusBadge";
 import DetailField from "./DetailField";
 import { currency, formatDate } from "./portfolioUtils";
@@ -20,6 +20,7 @@ import { isReInvestEligible } from "@/app/utils/constant";
 import dynamic from "next/dynamic";
 import TabLoader from "@/loader/TabLoader";
 import { onReInvest } from "../../../../../services/grahakService";
+import { userContext } from "@/context/UserContext";
 const EnrollConfirmModal = dynamic(() => import("@/app/plan/components/EnrollConfirmModal"), {
   loading: () => <TabLoader message={"Loading Reinvest Form..."} />,
   ssr: false
@@ -34,6 +35,7 @@ export default function BondDetails({
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [isShowReInvestForm, setIsShowReInvestForm] = useState(false);
   const [isReInvesting, setIsReInvesting] = useState(false);
+  const { authUser, schemes, getAllSchemes, updateUserPortfolio } = use(userContext);
   const isApproved = bond.isApproved;
   const handleWithdraw = async () => {
     if (!(await confirmMessage("you want to withdraw this application?")))
@@ -42,19 +44,37 @@ export default function BondDetails({
     await onWithdraw(bond.userSchemeId);
     setIsWithdrawing(false);
   };
-
-  const handleReInvest = async (amount, nomineeId) => {
+  const userId = authUser?.id;
+  const handleReInvest = async (amount, nomineeId, schemeId) => {
     if (!(await confirmMessage("you want to reinvest this application?"))) return;
     setIsReInvesting(true);
     try {
-      console.log(bond.userSchemeId, amount, nomineeId);
-      const res = await onReInvest(bond.userSchemeId, amount, nomineeId);
+
+      if (userId == "" || userId == undefined || userId == null) {
+        errorMessage("User not found")
+        return;
+      }
+      console.log(userId, schemeId, amount, nomineeId, bond.userSchemeId);
+      if (bond.minimumAmount && amount < bond.minimumAmount) {
+        errorMessage(`Amount must be greater than or equal to ${currency(bond.minInvestment)}`)
+        return;
+      }
+      if (bond.maximumAmount && amount > bond.maximumAmount) {
+        errorMessage(`Amount must be less than or equal to ${currency(bond.maxInvestment)}`)
+        return;
+      }
+      console.log("Reinvesting... with ", schemeId, amount, nomineeId, bond?.userSchemeId);
+      const res = await onReInvest(userId, schemeId, amount, nomineeId, bond?.userSchemeId);
       if (res) {
         console.log("Reinvest Successfully...")
         setIsShowReInvestForm(false);
+        if (res) {
+          updateUserPortfolio(res);
+          onBack();
+        }
       }
     } catch (error) {
-      console.log("Error...")
+      console.log("Error...", error)
     } finally {
       setTimeout(() => {
         setIsReInvesting(false);
@@ -62,6 +82,11 @@ export default function BondDetails({
     }
 
   };
+  useEffect(() => {
+    if (schemes?.length === 0) {
+      getAllSchemes();
+    }
+  }, [getAllSchemes, schemes?.length]);
 
 
   return (
@@ -75,7 +100,7 @@ export default function BondDetails({
           <ArrowLeft size={16} />
           Back to holdings
         </button>
-        <StatusBadge status={(bond.status || "pending").toLowerCase()} />
+        {bond.reinvestedIntoUserSchemeId != null ? <StatusBadge status={"Reinvested"} /> : <StatusBadge status={(bond.status || "pending").toLowerCase()} />}
       </div>
       <div className="p-6">
         <div className="flex flex-col gap-6 md:flex-row md:items-start">
@@ -108,7 +133,7 @@ export default function BondDetails({
               <p className="text-sm font-medium text-slate-400">
                 {bond.schemeName}
               </p>
-              {isApproved && (
+              {isApproved && bond.reinvestedIntoUserSchemeId == null && (
                 <span className="text-xs font-semibold text-emerald-600 border border-emerald-500 bg-emerald-50 rounded-xl px-2 py-1">
                   Next profit on {formatDate(bond.nextPayoutDate)}
                 </span>
@@ -151,10 +176,13 @@ export default function BondDetails({
                     label="Payment Dates"
                     value={formatDate(bond.paidDate)}
                   />
-                  <DetailField
+                  {bond?.reinvestedIntoUserSchemeId !== null ? <DetailField
+                    label="Re-Inevst Into"
+                    value={bond?.reinvestedIntoUserSchemeId}
+                  /> : <DetailField
                     label="Maturity Date"
                     value={formatDate(bond.maturityDate)}
-                  />
+                  />}
                 </>
               )}
               <DetailField label="Cycle" value={bond.payoutFrequency} />
@@ -197,7 +225,7 @@ export default function BondDetails({
           </div>
         )}
         {/* reinvest button */}
-        {isReInvestEligible(bond) && (
+        {(isReInvestEligible(bond) && bond.status.toLowerCase() === 'matured' && bond.reinvestedIntoUserSchemeId === null) && (
           <div className="mt-8 flex justify-between items-center border-t border-slate-100 pt-6">
             <p className="text-sm font-medium text-slate-400">
               Mature on: {formatDate(bond.maturityDate)}
@@ -237,6 +265,7 @@ export default function BondDetails({
       </div>
       {/* show enrollment form  */}
       {isShowReInvestForm && <EnrollConfirmModal
+        AllSchemes={schemes}
         plan={bond}
         enrolling={isReInvesting}
         onConfirm={handleReInvest}

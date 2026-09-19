@@ -34,7 +34,8 @@ public record UserPortfolio(
         NomineeResponse nominee,
         LocalDateTime update_on,
         BigDecimal minimumAmount,
-        BigDecimal maximumAmount) {
+        BigDecimal maximumAmount,
+        String reinvestedIntoUserSchemeId) {
 
     public static UserPortfolio fromEntity(UserScheme us) {
         BigDecimal totalprofit = BigDecimal.ZERO;
@@ -75,7 +76,8 @@ public record UserPortfolio(
                 nominee != null ? NomineeResponse.fromEntity(nominee) : null,
                 us.getUpdatedAt(),
                 scheme.getMinimumAmount(),
-                scheme.getMaximumAmount());
+                scheme.getMaximumAmount(),
+                us.getReinvestedIntoUserSchemeId());
     }
 
 }

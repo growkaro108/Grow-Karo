@@ -85,6 +85,12 @@ public class General {
 
     }
 
+    public boolean isValidUserSchemeId(String userSchemeId) {
+        Pattern pattern = Pattern.compile("^GKUSID\\d{14}$");
+        return pattern.matcher(userSchemeId).matches();
+
+    }
+
     // generate exactly 6 digit otp
     public String generate6DigitOTP() {
         Random rand = new Random();

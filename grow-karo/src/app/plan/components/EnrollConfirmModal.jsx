@@ -1,5 +1,5 @@
 import React, { use, useEffect, useMemo, useState } from "react";
-import { X, User, ChevronDown, Plus, Phone, CreditCard } from "lucide-react";
+import { X, User, ChevronDown, Plus, Phone, CreditCard, HandCoins, ListTodo } from "lucide-react";
 import { currency } from "../utils/planUtils";
 import { userContext } from "@/context/UserContext";
 import dynamic from "next/dynamic";
@@ -16,8 +16,10 @@ export default function EnrollConfirmModal({
   onConfirm,
   onCancel,
   preAmount = 0,
-  isReInvest = false
+  isReInvest = false,
+  AllSchemes,
 }) {
+  const [selectedplan, setSelectedPlan] = useState(plan)
   const [amount, setAmount] = useState(preAmount);
   const { nominees, FetchNominees, nomineeId, setNomineeId } = use(userContext);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -53,8 +55,15 @@ export default function EnrollConfirmModal({
     setShowAddForm(false);
   };
 
+
   const canConfirm = !enrolling && Number(amount) > 0 && nomineeId;
 
+  //remove scheme whose minimum investment is greater than maximum amount user had in his wallet
+  const filteredSchemes = useMemo(() => {
+    return AllSchemes?.filter(
+      (scheme) => scheme?.minimumAmount <= amount && scheme?.maximumAmount >= amount
+    );
+  }, [AllSchemes, amount]);
   return (
     <div
       className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
@@ -68,8 +77,18 @@ export default function EnrollConfirmModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
-          <p className="text-sm font-semibold" style={{ color: "#1e293b" }}>
-            Confirm enrollment
+          <p className="text-sm font-semibold flex items-center gap-2" style={{ color: "#1e293b" }}>
+            Confirm {isReInvest ? (
+              <>
+                Re-investing
+                <HandCoins className="inline-block ml-2 text-yellow-500" size={16} />
+              </>
+            ) : (
+              <>
+                enrollment
+                <ListTodo className="inline-block ml-2 text-green-500" size={16} />
+              </>
+            )}
           </p>
           {!enrolling && (
             <button
@@ -90,7 +109,7 @@ export default function EnrollConfirmModal({
                 {isReInvest ? "You're about to reinvest in" : "You're about to enroll in"}
               </span>
               <span className="text-base font-semibold" style={{ color: "#1e293b" }}>
-                {plan.schemeName}
+                {selectedplan.schemeName}
               </span>
             </p>
             <div
@@ -98,16 +117,49 @@ export default function EnrollConfirmModal({
               style={{ color: "#64748b" }}
             >
               <span>
-                {plan.profitPercentage}% - {plan.payoutFrequency}
+                {selectedplan.profitPercentage}% - {selectedplan.payoutFrequency}
               </span>
               <span>·</span>
-              <span>Min. {currency(plan.minimumAmount)}</span>
-              <span>Max. {currency(plan.maximumAmount)}</span>
+              <span>Min. {currency(selectedplan.minimumAmount)}</span>
+              <span>Max. {currency(selectedplan.maximumAmount)}</span>
             </div>
           </div>
 
           <div className="h-px bg-slate-100 mx-5" />
-
+          {/* in case of reinvest user can change which scheme they want to invest here is the scheme dropdown to select scheme */}
+          {isReInvest && filteredSchemes?.length > 0 && (
+            <div className="px-5 pt-4">
+              <label
+                htmlFor="scheme"
+                className="text-xs font-semibold uppercase tracking-wide"
+                style={{ color: "#94a3b8" }}
+              >
+                Re-Investing Scheme
+              </label>
+              <div className="relative mt-1.5">
+                <select
+                  id="scheme"
+                  className="w-full appearance-none pl-8 pr-8 py-2.5 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
+                  value={selectedplan.schemeId}
+                  onChange={(e) => {
+                    const selectedScheme = filteredSchemes.find((s) => s.schemeId === e.target.value);
+                    setSelectedPlan(selectedScheme);
+                  }}
+                >
+                  {filteredSchemes.map((s) => (
+                    <option key={s.schemeId} value={s.schemeId}>
+                      {s.schemeName}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={14}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: "#94a3b8" }}
+                />
+              </div>
+            </div>
+          )}
           {/* Amount */}
           <div className="px-5 pt-4">
             <label
@@ -235,7 +287,7 @@ export default function EnrollConfirmModal({
             Cancel
           </button>
           <button
-            onClick={() => onConfirm(amount, nomineeId)}
+            onClick={() => onConfirm(amount, nomineeId, selectedplan.schemeId)}
             disabled={!canConfirm}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50"
             style={{ backgroundColor: "#4f46e5" }}

@@ -34,13 +34,13 @@ const PlanDetailsPage = dynamic(() => import("./components/PlanDetailsPage"), {
 const EMPTY_ARRAY = [];
 
 export default function Plans({ initialPlans = EMPTY_ARRAY }) {
-  const [plans, setPlans] = useState(initialPlans);
+  // const [plans, setPlans] = useState(initialPlans);
   //   const [plansLoading, setPlansLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [confirmPlan, setConfirmPlan] = useState(null);
   const [enrolledSchemeIds, setEnrolledSchemeIds] = useState([]);
   const [enrolling, setEnrolling] = useState(false);
-  const { authUser, nomineeId } = use(userContext);
+  const { authUser, nomineeId, schemes, getAllSchemes } = use(userContext);
   const { authRemitter } = use(remitterContext);
   const { showLoader, hideLoader } = useLoader();
   const router = useRouter();
@@ -56,24 +56,9 @@ export default function Plans({ initialPlans = EMPTY_ARRAY }) {
   // console.log(enrolledMap);
   useEffect(() => {
     let isMounted = true;
-
-    const getAllSchemes = async () => {
-      try {
-        showLoader("Getting best scheme for you...");
-        const response = await getAllPlans();
-        //console.log(response);
-        if (response.status === "success") {
-          if (isMounted) setPlans(response.data ?? []);
-        } else {
-          allRounderMessage(response);
-        }
-      } catch (error) {
-        console.error("Failed to fetch plans:", error);
-        errorMessage("Something went wrong..");
-      } finally {
-        hideLoader();
-      }
-    };
+    if (schemes?.length === 0) {
+      getAllSchemes();
+    }
 
     const getAllEnrolledScheme = async (userId) => {
       if (!userId || authRemitter) return;
@@ -100,7 +85,7 @@ export default function Plans({ initialPlans = EMPTY_ARRAY }) {
     return () => {
       isMounted = false;
     };
-  }, [authRemitter, authUser, hideLoader, showLoader]);
+  }, [authRemitter, authUser, getAllSchemes, hideLoader, schemes?.length, showLoader]);
 
   const enrolledSet = useMemo(() => {
     // 1. If it's already an Array, use it directly.
@@ -125,8 +110,8 @@ export default function Plans({ initialPlans = EMPTY_ARRAY }) {
   }, [enrolledSchemeIds]);
 
   const enrolledPlans = useMemo(
-    () => plans.filter((p) => enrolledSet.has(p.schemeId)),
-    [plans, enrolledSet],
+    () => schemes.filter((p) => enrolledSet.has(p.schemeId)),
+    [schemes, enrolledSet],
   );
 
   const openDetails = useCallback((plan) => setSelectedPlan(plan), []);
@@ -264,13 +249,13 @@ export default function Plans({ initialPlans = EMPTY_ARRAY }) {
               Click a plan to see full details, or enroll directly from the card
             </p>
 
-            {plans.length === 0 ? (
+            {schemes.length === 0 ? (
               <p className="text-sm" style={{ color: "#94a3b8" }}>
                 No plans available right now.
               </p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {plans.map((plan) => (
+                {schemes.map((plan) => (
                   <PlanCard
                     key={plan.schemeId}
                     plan={plan}

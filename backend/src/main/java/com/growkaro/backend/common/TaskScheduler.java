@@ -1,14 +1,19 @@
 package com.growkaro.backend.common;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.growkaro.backend.common.UserSchemePayoutProcessor.BatchOutcome;
 import com.growkaro.backend.entity.UserScheme;
+import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
+import com.growkaro.backend.enums.UserSchemeStatus;
 import com.growkaro.backend.repository.UserSchemeRepository;
+import com.growkaro.backend.service.CrucialNotificationService;
 import com.growkaro.backend.service.RedisService;
 
 import lombok.RequiredArgsConstructor;
@@ -25,6 +30,7 @@ public class TaskScheduler {
     private final UserSchemePayoutProcessor payoutProcessor;
     private final General general;
     private final RedisService redisService;
+    private final CrucialNotificationService crucialNotificationService;
 
     // CRON EXPLANATION
     // 1. Minute 0
@@ -97,6 +103,37 @@ public class TaskScheduler {
 
         log.info("Maturity notification run complete. notified={}, skipped={}, failed={}, total={}",
                 notified, skipped, failed, allApprovedUserSchemes.size());
+    }
+
+    // Runs every day at midnight (00:00:00)
+    @Scheduled(cron = "0 0 0 * * ?", zone = timeZone)
+    @Transactional
+    public void setMaturity() {
+        try {
+            LocalDate today = general.getCurrentDate();
+            List<UserScheme> allApprovedUserSchemes = userSchemeRepository
+                    .findAllByMaturityDate(today, today);
+
+            for (UserScheme userScheme : allApprovedUserSchemes) {
+                BigDecimal totalProfit = userScheme.getProfitLedger().stream().map(a -> a.getProfitAmount())
+                        .reduce((a, b) -> a.add(b)).orElse(BigDecimal.ZERO);
+                BigDecimal totalReedem = userScheme.getReedemLedger().stream().map(a -> a.getRedeemAmount())
+                        .reduce((a, b) -> a.add(b)).orElse(BigDecimal.ZERO);
+                BigDecimal netProfit = userScheme.getPaidAmount().add(totalProfit.subtract(totalReedem));
+                if (userScheme.getStatus() != UserSchemeStatus.MATURED) {
+                    // Uncomment these when ready to save
+                    userScheme.setStatus(UserSchemeStatus.MATURED);
+                    userSchemeRepository.save(userScheme);
+                    crucialNotificationService.sendUserNotificationWithCustomMessage("Scheme Matured",
+                            "Your scheme " + userScheme.getScheme().getSchemeName()
+                                    + "  matured today.\nYour total returns is: ₹ " + netProfit.toString() + "/-",
+                            userScheme.getUser(), "/dashboard", null);
+                    log.info("Maturity date set for userScheme id={}", userScheme.getUserSchemeId());
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to execute maturity scheduler: {}", e.getMessage(), e);
+        }
     }
 
 }

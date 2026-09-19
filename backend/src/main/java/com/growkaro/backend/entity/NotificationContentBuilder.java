@@ -63,7 +63,7 @@ public class NotificationContentBuilder {
                 case WITHDRAWAL_APPROVED -> "Withdrawal Approved & Processing";
                 case WITHDRAWAL_REJECTED -> "Withdrawal Request Rejected";
                 case WITHDRAWAL_DISBURSED -> "Withdrawal Funds Credited";
-                case FUND_TRANSFER_INITIATED -> "Deposit Initiated";
+                case FUND_TRANSFER_INITIATED -> "ReInvest Initiated";
                 case FUND_TRANSFER_COMPLETED -> "Funds Successfully Credited";
                 case PAYMENT_FAILED -> "Payment Transaction Failed";
                 case INVESTMENT_CONFIRMED -> "Investment Successfully Confirmed";
@@ -140,6 +140,8 @@ public class NotificationContentBuilder {
         String amount = valueOf(params, "amount");
         String txnId = valueOf(params, "txnId");
         String reason = valueOf(params, "reason");
+        String schemeName = valueOf(params, "schemeName");
+        String date = valueOf(params, "date");
 
         return switch (role) {
             case User -> switch (action) {
@@ -156,8 +158,8 @@ public class NotificationContentBuilder {
                     "Hi %s, ₹%s has been successfully credited to your bank account (Txn: %s).".formatted(name, amount,
                             txnId);
                 case FUND_TRANSFER_INITIATED ->
-                    "Hi %s, deposit transfer of ₹%s (Txn: %s) initiated. Awaiting confirmation.".formatted(name, amount,
-                            txnId);
+                    "Dear %s, your request to reinvest ₹%s into  (scheme: %s) on %s is being processed. Thank you for continuing your journey with us."
+                            .formatted(name, amount, schemeName, date);
                 case FUND_TRANSFER_COMPLETED ->
                     "Hi %s, fund deposit of ₹%s (Txn: %s) completed successfully.".formatted(name, amount, txnId);
                 case PAYMENT_FAILED ->

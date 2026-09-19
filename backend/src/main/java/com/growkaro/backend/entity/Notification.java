@@ -86,6 +86,7 @@ public class Notification {
         PROFIT_CREDITED,
         SCHEME_MATURITY_REMINDER,
         SCHEME_MATURED,
+        SCHEME_REINVESTED,
         KYC_SUBMITTED,
         KYC_APPROVED,
         KYC_REJECTED,
@@ -98,7 +99,8 @@ public class Notification {
         PASSWORD_CHANGED,
         SYSTEM_ALERT,
         ISSUE_REPLIED,
-        ISSUE_RESOLVED
+        ISSUE_RESOLVED,
+        INFO
     }
 
     @PrePersist

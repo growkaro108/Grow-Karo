@@ -21,5 +21,14 @@ export default function Portfolio({ refresh, loading }) {
     } catch (error) { console.error("Failed to withdraw application:", error); }
   }, [authUser, refresh]);
 
-  return <div className="flex flex-col gap-6 p-1 sm:p-6 bg-slate-50 min-h-screen font-sans">{selectedBond ? <BondDetails bond={selectedBond} onBack={() => setSelectedBond(null)} onExpandImage={() => setLightboxBond(selectedBond)} onWithdraw={handleWithdraw} /> : <PortfolioTable holdings={sortedHoldings} loading={loading} onOpenDetails={setSelectedBond} onOpenLightbox={setLightboxBond} />}{lightboxBond?.schemeName && <ImageLightbox bond={lightboxBond} onClose={() => setLightboxBond(null)} />}</div>;
+  return <div className="flex flex-col gap-6 p-1 sm:p-6 bg-slate-50 min-h-screen font-sans">{
+    selectedBond ?
+      <BondDetails bond={selectedBond}
+        onBack={() => setSelectedBond(null)}
+        onExpandImage={() => setLightboxBond(selectedBond)}
+        onWithdraw={handleWithdraw} /> :
+      <PortfolioTable holdings={sortedHoldings} loading={loading}
+        onOpenDetails={setSelectedBond} onOpenLightbox={setLightboxBond} />}
+    {lightboxBond?.schemeName && <ImageLightbox bond={lightboxBond}
+      onClose={() => setLightboxBond(null)} />}</div>;
 }
