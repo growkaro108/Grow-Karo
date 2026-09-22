@@ -8,15 +8,16 @@ import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
+import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.entity.UserSchemeReedemLedger;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.entity.Transaction.TransactionStatus;
+import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
 import com.growkaro.backend.entity.Notification;
 import com.growkaro.backend.entity.NotificationContentBuilder;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.repository.NotificationRepository;
-import com.growkaro.backend.repository.ProfitLedgerRepository;
 import com.growkaro.backend.repository.ReedemLedgerRepository;
 import com.growkaro.backend.repository.RemitterRepository;
 import com.growkaro.backend.repository.TransactionRepository;
@@ -31,7 +32,6 @@ import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
@@ -58,7 +58,6 @@ public class RemitterAPIService {
     private final NotificationRepository notificationRepository;
     private final CrucialNotificationService crucialNotificationService;
     private final com.growkaro.backend.security.JwtService jwtService;
-    private final ProfitLedgerRepository profitLedgerRepository;
     private final ReedemLedgerRepository reedemLedgerRepository;
 
     private static final Set<String> ALLOWED_DOCUMENT_TYPES = Set.of("application/pdf", "image/jpeg", "image/png",
@@ -76,7 +75,6 @@ public class RemitterAPIService {
             NotificationRepository notificationRepository,
             CrucialNotificationService crucialNotificationService,
             com.growkaro.backend.security.JwtService jwtService,
-            ProfitLedgerRepository profitLedgerRepository,
             ReedemLedgerRepository reedemLedgerRepository) {
         this.remitterRepository = remitterRepository;
         this.emailService = emailService;
@@ -88,7 +86,6 @@ public class RemitterAPIService {
         this.notificationRepository = notificationRepository;
         this.crucialNotificationService = crucialNotificationService;
         this.jwtService = jwtService;
-        this.profitLedgerRepository = profitLedgerRepository;
         this.reedemLedgerRepository = reedemLedgerRepository;
     }
 
@@ -207,7 +204,7 @@ public class RemitterAPIService {
 
         try {
             Transaction transaction = transactionRepository.findByTxnId(paymentSettlement.txnId()).orElse(null);
-
+            UserScheme us = transaction.getUserScheme();
             if (transaction == null
                     || transaction.getRemitter() == null
                     || !transaction.getRemitter().getRemitterId().equals(paymentSettlement.remitterId())
@@ -253,11 +250,12 @@ public class RemitterAPIService {
             remitter.setTotalPaid(remitter.getTotalPaid().add(transaction.getAmount()));
             remitterRepository.save(remitter);
 
-            UserSchemeReedemLedger reedemLedger = new UserSchemeReedemLedger();
-            reedemLedger.setRedeemAmount(transaction.getAmount());
-            reedemLedger.setRedeemDate(now.toLocalDate());
-            reedemLedger.setUserScheme(transaction.getUserScheme());
-            reedemLedgerRepository.save(reedemLedger);
+            boolean status = general.changeReedemStatus(us, paymentSettlement.amount(), ReedeemStatus.COMPLETED);
+            if (!status) {
+                log.error("Error in remitter settlements: invalid reedemLedger. txnId={}, remitterId={}",
+                        paymentSettlement.txnId(), paymentSettlement.remitterId());
+                return null;
+            }
 
             try {
                 crucialNotificationService.notifyAllForEssentialAction(

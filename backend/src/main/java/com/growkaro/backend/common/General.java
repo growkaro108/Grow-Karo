@@ -16,6 +16,8 @@ import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.DTO.Payee;
@@ -26,10 +28,17 @@ import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
+import com.growkaro.backend.entity.UserSchemeProfitLedger;
+import com.growkaro.backend.entity.UserSchemeReedemLedger;
+import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
+import com.growkaro.backend.repository.ReedemLedgerRepository;
 import com.growkaro.backend.repository.UserRepository;
 import com.growkaro.backend.security.JwtService;
 import com.growkaro.backend.service.RedisService;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Component
 public class General {
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
@@ -44,6 +53,8 @@ public class General {
     private JwtService jwtService;
     @Autowired
     private RedisService redisService;
+    @Autowired
+    private ReedemLedgerRepository reedemLedgerRepository;
 
     public boolean isValidId(String id) {
         Pattern idPattern = Pattern.compile("^GKUSID\\d{14}$");
@@ -193,7 +204,7 @@ public class General {
         return profit.setScale(2, RoundingMode.HALF_UP);
     }
 
-    public int resolvePeriodDays(String payoutFrequency,int tenure) {
+    public int resolvePeriodDays(String payoutFrequency, int tenure) {
         if (payoutFrequency == null) {
             throw new IllegalArgumentException("Payout frequency is required");
         }
@@ -206,13 +217,13 @@ public class General {
             case "quarterly" -> 90;
             case "half-yearly", "half yearly" -> 182;
             case "yearly" -> 365;
-            case "tenure-complete","tenure complete" -> tenure;
+            case "tenure-complete", "tenure complete" -> tenure;
             default -> throw new IllegalArgumentException("Unknown payout frequency: " + payoutFrequency);
         };
     }
 
-    public LocalDate calculateNextPayoutDate(LocalDateTime enrollmentDate, String payoutFrequency,int tenure) {
-        int periodDays = resolvePeriodDays(payoutFrequency,tenure);
+    public LocalDate calculateNextPayoutDate(LocalDateTime enrollmentDate, String payoutFrequency, int tenure) {
+        int periodDays = resolvePeriodDays(payoutFrequency, tenure);
         // convert to local date
         LocalDate enrollmentLocalDate = enrollmentDate.toLocalDate();
         return enrollmentLocalDate.plusDays(periodDays);
@@ -305,5 +316,31 @@ public class General {
 
     public String adminName() {
         return redisService.getValue("malik").toString();
+    }
+
+    public BigDecimal countProfit(List<UserSchemeProfitLedger> profitLedger) {
+        return profitLedger.stream()
+                .map(UserSchemeProfitLedger::getProfitAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public BigDecimal countReedem(List<UserSchemeReedemLedger> reedemLedgers) {
+        return reedemLedgers.stream()
+                .filter(reedemLedger -> reedemLedger.getStatus() == UserSchemeReedemLedger.ReedeemStatus.COMPLETED)
+                .map(UserSchemeReedemLedger::getRedeemAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public boolean changeReedemStatus(UserScheme u, BigDecimal amount, ReedeemStatus status) {
+        UserSchemeReedemLedger reedemLedger = reedemLedgerRepository
+                .findByUserSchemeAndRedeemAmount(u, amount).orElse(null);
+        if (reedemLedger == null) {
+            log.error("Error in reedem ledger : invalid reedemLedger. userSchemeId={}, amount={}",
+                    u.getUserSchemeId(), amount);
+            return false;
+        }
+        reedemLedger.setStatus(status);
+        reedemLedgerRepository.save(reedemLedger);
+        return true;
     }
 }

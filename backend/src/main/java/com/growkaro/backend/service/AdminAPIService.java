@@ -70,6 +70,7 @@ import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionTyp
 import com.growkaro.backend.entity.SupportIssue.Status;
 import com.growkaro.backend.entity.Transaction.TransactionStatus;
 import com.growkaro.backend.entity.Transaction.TransactionType;
+import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.enums.UserSchemeStatus;
 import com.growkaro.backend.enums.WithdrawalStatus;
@@ -282,7 +283,8 @@ public class AdminAPIService {
             userScheme.setPaidDate(request.paidDate());
             replaceLedgers(userScheme, request.profitLedger(), request.reedemLedger());
             userScheme.setNextPayoutDate(
-                    general.calculateNextPayoutDate(userScheme.getEnrollmentDate(), scheme.getPayoutFrequency(),scheme.getTenure()));
+                    general.calculateNextPayoutDate(userScheme.getEnrollmentDate(), scheme.getPayoutFrequency(),
+                            scheme.getTenure()));
             userScheme
                     .setMaturityDate(general.calculateMaturityDate(userScheme.getEnrollmentDate(), scheme.getTenure()));
             user.enrollInScheme(userScheme);
@@ -421,7 +423,8 @@ public class AdminAPIService {
             userScheme.setStatus(UserSchemeStatus.ACTIVE);
             // set next payout date
             userScheme.setNextPayoutDate(
-                    general.calculateNextPayoutDate(userScheme.getEnrollmentDate(), scheme.getPayoutFrequency(),scheme.getTenure()));
+                    general.calculateNextPayoutDate(userScheme.getEnrollmentDate(), scheme.getPayoutFrequency(),
+                            scheme.getTenure()));
             // set maturity date
             userScheme.setMaturityDate(
                     general.calculateMaturityDate(userScheme.getEnrollmentDate(), userScheme.getScheme().getTenure()));
@@ -615,19 +618,35 @@ public class AdminAPIService {
     @Transactional
     public AdminTransactionResponse reject(String txnId, String reason) {
         Transaction txn = getPendingOrThrow(txnId);
-        txn.setStatus(TransactionStatus.REJECTED);
-        txn.setFailureReason(reason != null ? reason : "Rejected by admin");
-        UserScheme userScheme = txn.getUserScheme();
-        userScheme.setProfitReedemed(userScheme.getProfitReedemed().subtract(txn.getAmount()));
-        userSchemeRepository.save(userScheme);
-        Transaction saved = transactionRepository.save(txn);
-
-        crucialNotificationService.notifyUser(
-                EssentialActionType.WITHDRAWAL_REJECTED,
-                txn.getUser(),
-                "/dashboard/transactions",
-                Map.of("amount", txn.getAmount() != null ? txn.getAmount().toString() : "0", "txnId", txn.getId(),
-                        "reason", reason != null ? reason : "Rejected by admin"));
+        Transaction saved;
+        try {
+            txn.setStatus(TransactionStatus.REJECTED);
+            txn.setFailureReason(reason != null ? reason : "Rejected by admin");
+            UserScheme userScheme = txn.getUserScheme();
+            userScheme.setProfitReedemed(userScheme.getProfitReedemed().subtract(txn.getAmount()));
+            userSchemeRepository.save(userScheme);
+            saved = transactionRepository.save(txn);
+            // change status of reedem
+            boolean status = general.changeReedemStatus(userScheme, txn.getAmount(), ReedeemStatus.REJECTED);
+            if (!status) {
+                log.error("Error in rejecting transaction: invalid reedemLedger. txnId={}, remitterId={}",
+                        txnId, txn.getRemitter().getRemitterId());
+                return null;
+            }
+        } catch (Exception e) {
+            log.error("Error in rejecting transaction: {}", e.getMessage());
+            return null;
+        }
+        try {
+            crucialNotificationService.notifyUser(
+                    EssentialActionType.WITHDRAWAL_REJECTED,
+                    txn.getUser(),
+                    "/dashboard/transactions",
+                    Map.of("amount", txn.getAmount() != null ? txn.getAmount().toString() : "0", "txnId", txn.getId(),
+                            "reason", reason != null ? reason : "Rejected by admin"));
+        } catch (Exception e) {
+            log.error("Error notifying user for withdrawal rejection because: {}", e.getMessage());
+        }
 
         return AdminTransactionResponse.fromEntity(saved);
     }

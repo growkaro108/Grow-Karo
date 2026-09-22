@@ -91,9 +91,8 @@ export default function RemitterSelect({ selected, onSelect, remitters }) {
           )}
           <ChevronDown
             size={18}
-            className={`shrink-0 text-slate-500 transition-transform ${
-              open ? "rotate-180" : ""
-            }`}
+            className={`shrink-0 text-slate-500 transition-transform ${open ? "rotate-180" : ""
+              }`}
           />
         </button>
 
@@ -110,7 +109,7 @@ export default function RemitterSelect({ selected, onSelect, remitters }) {
               />
             </div>
 
-            <ul className="max-h-80 overflow-y-auto py-1">
+            <ul className="max-h-100 overflow-y-scroll py-1">
               {filtered.length === 0 && (
                 <li className="px-3.5 py-6 text-center text-sm text-slate-500">
                   {activeRemitters.length === 0
@@ -138,9 +137,8 @@ export default function RemitterSelect({ selected, onSelect, remitters }) {
                         setOpen(false);
                         setQuery("");
                       }}
-                      className={`w-full px-3.5 py-2.5 text-left transition-colors hover:bg-slate-800/60 ${
-                        isSelected ? "bg-indigo-500/10" : ""
-                      }`}
+                      className={`w-full px-3.5 py-2.5 text-left transition-colors hover:bg-slate-800/60 ${isSelected ? "bg-indigo-500/10" : ""
+                        }`}
                     >
                       <div className="flex items-start gap-3">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-500/15 text-xs font-semibold text-indigo-300">
@@ -190,7 +188,7 @@ export default function RemitterSelect({ selected, onSelect, remitters }) {
                                   Users
                                 </div>
                                 <div className="text-xs font-semibold text-slate-200">
-                                  {r.users?.length ?? 0}
+                                  {r.totalUsers ?? 0}
                                 </div>
                               </div>
                             </div>

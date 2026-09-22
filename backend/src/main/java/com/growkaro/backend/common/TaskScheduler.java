@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.growkaro.backend.common.UserSchemePayoutProcessor.BatchOutcome;
 import com.growkaro.backend.entity.UserScheme;
-import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.enums.UserSchemeStatus;
 import com.growkaro.backend.repository.UserSchemeRepository;
 import com.growkaro.backend.service.CrucialNotificationService;

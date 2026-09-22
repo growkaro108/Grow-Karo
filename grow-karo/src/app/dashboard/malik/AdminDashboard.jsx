@@ -13,6 +13,7 @@ import {
   User2Icon,
   MessageCircleQuestionMark,
   ShieldQuestionMark,
+  BarChart3,
 } from "lucide-react";
 import {
   Chart as ChartJS,
@@ -32,7 +33,13 @@ import OverviewTab from "./components/OverviewTab";
 import TabLoader from "../../../loader/TabLoader";
 import dynamic from "next/dynamic";
 import { adminContext } from "@/context/AdminContext";
-
+const Reports = dynamic(
+  () => import("./components/Report"),
+  {
+    loading: () => <TabLoader message={"Loading Reports..."} />,
+    ssr: false,
+  },
+);
 const UserManagement = dynamic(
   () => import("./components/user-management/UserManagement"),
   {
@@ -110,8 +117,9 @@ const NAV_ITEMS = [
   { id: "SchemeAuditHistory", label: "Scheme Audit History", icon: ShieldQuestionMark },
   { id: "approvals", label: "Approvals", icon: ClipboardCheck },
   { id: "remitter", label: "Remitter", icon: Ticket },
-  { id: "user", label: "User Management", icon: User2Icon }, 
+  { id: "user", label: "User Management", icon: User2Icon },
   { id: "issues", label: "User Issues", icon: MessageCircleQuestionMark },
+  { id: "reports", label: "Reports", icon: BarChart3 },
   // { id: "contacts", label: "Contacts⏱️", icon: Contact },
   { id: "settings", label: "Settings", icon: Settings2 },
 ];
@@ -186,6 +194,7 @@ export default function AdminPanel() {
     withdrawals: "Withdrawal Requests",
     issues: "User Issues",
     codes: "Remitters",
+    reports: "Reports",
     settings: "Admin Settings",
   };
 
@@ -231,6 +240,7 @@ export default function AdminPanel() {
               {activeTab === "remitter" && <AdminRemitterTrackersTab />}
               {activeTab === "user" && <UserManagement />}
               {activeTab === "contacts" && <ContactsComponent />}
+              {activeTab === "reports" && <Reports />}
               {activeTab === "settings" && <Settings />}
             </div>
           )}

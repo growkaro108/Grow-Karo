@@ -168,6 +168,7 @@ export function useWithdrawals(onDecision) {
         }
         res = await rejectUserTranactions(row.id, sanitizedReason);
       }
+      console.log(res);
       if (!res) {
         return;
       }

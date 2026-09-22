@@ -39,7 +39,7 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("overview");
 
   const [withdrawType, setWithdrawType] = useState("general");
-  const { authUser, fetchPortfolio, isLoading } = use(userContext);
+  const { authUser, fetchPortfolio, isLoading, portfolio } = use(userContext);
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
@@ -98,13 +98,13 @@ export default function DashboardPage() {
               >
                 Agresive Withdraw
               </button> */}
-              <button
+              {portfolio?.pendingSum === 0 && <button
                 type="button"
                 onClick={() => openGeneralWithdrawModal()}
                 className="flex-1 sm:flex-none text-center bg-green-500 text-white hover:bg-green-600 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm cursor-pointer focus:cursor-wait"
               >
                 Withdraw
-              </button>
+              </button>}
               {/* refresh dashboard button */}
               <button
                 type="button"

@@ -1,12 +1,15 @@
 import React from "react";
 import { ZoomIn } from "lucide-react";
 import StatusPill from "./StatusPill";
-import { currency, dateFmt } from "./format";
+import { calculateMaturityAmount, currency, dateFmt } from "./format";
 // import BondCertificate from "../BondCertificate.jsx";
 import { resolveMediaUrl } from "../../../../../api/apiClient";
 import Image from "next/image";
 
+
+
 export default function BondStub({ bond, userName, scheme, onView }) {
+
   return (
     <div className="overflow-hidden rounded-xl border border-slate-800">
       {/* counterfoil */}
@@ -76,12 +79,20 @@ export default function BondStub({ bond, userName, scheme, onView }) {
             {bond.profitPercentage}% per {bond.payoutCycle}
           </p>
         </div>
-        <div className="col-span-2">
+        <div className="">
           <p className="text-[11px] uppercase tracking-wide text-slate-500">
             Maturity
           </p>
           <p className="text-sm font-medium text-slate-200">
             {bond.maturityDate}
+          </p>
+        </div>
+        <div className="">
+          <p className="text-[11px] uppercase tracking-wide text-slate-500">
+            Pay At Maturity
+          </p>
+          <p className="text-sm font-medium text-slate-200">
+            {currency(calculateMaturityAmount(bond))}
           </p>
         </div>
       </div>

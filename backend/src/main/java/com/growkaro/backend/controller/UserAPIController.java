@@ -285,7 +285,8 @@ public class UserAPIController {
     @PostMapping("/redeemProfit")
     public ResponseEntity<Map<String, Object>> redeem(@RequestBody WithdrawAmount wa) {
         try {
-            if (wa.userId().isBlank() || wa.schemeId().isBlank() || wa.amount().compareTo(BigDecimal.ZERO) <= 0
+            if (wa.userId().isBlank() || !general.isValidSchemeId(wa.schemeId())
+                    || !general.isValidUserSchemeId(wa.userSchemeId()) || wa.amount().compareTo(BigDecimal.ZERO) <= 0
                     || !general.isValidId(wa.userId())) {
                 log.error("Invalid data for user {} schemeId {} amount {} isAggressive {} isValidId {}", wa.userId(),
                         wa.schemeId(),

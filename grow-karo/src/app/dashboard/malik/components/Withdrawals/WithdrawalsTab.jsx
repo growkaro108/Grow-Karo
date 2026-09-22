@@ -1,8 +1,11 @@
+import dynamic from "next/dynamic";
 import { useWithdrawals } from "./useWithdrawals";
 import WithdrawalFilters from "./WithdrawalFilters";
-import WithdrawalTable from "./WithdrawalTable";
-import WithdrawalConfirmModal from "./WithdrawalConfirmModal";
-
+import { TableRowLoader } from "@/loader/TableRowLoader";
+// import WithdrawalTable from "./WithdrawalTable";
+// import WithdrawalConfirmModal from "./WithdrawalConfirmModal";
+const WithdrawalConfirmModal = dynamic(() => import("./WithdrawalConfirmModal"), { ssr: false, loading: () => <div className="flex items-center justify-center p-12 text-sm font-medium text-slate-400">Loading withdrawal modal...</div> });
+const WithdrawalTable = dynamic(() => import("./WithdrawalTable"), { ssr: false, loading: <TableRowLoader colSpan={5} loading={"withdraw pending request"} /> });
 export default function WithdrawalsTab({ onDecision }) {
   const {
     filter,

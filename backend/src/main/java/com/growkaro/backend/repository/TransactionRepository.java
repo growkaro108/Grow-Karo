@@ -21,7 +21,11 @@ import java.util.Optional;
 public interface TransactionRepository extends JpaRepository<Transaction, String> {
 
   // find by transaction id with join user and remitter
-  @Query("SELECT t FROM Transaction t LEFT JOIN FETCH t.user u LEFT JOIN FETCH t.remitter r WHERE t.id = :txnId")
+  @Query("SELECT DISTINCT t FROM Transaction t " +
+      "LEFT JOIN FETCH t.userScheme " +
+      "LEFT JOIN FETCH t.user " +
+      "LEFT JOIN FETCH t.remitter " +
+      "WHERE t.id = :txnId")
   Optional<Transaction> findByTxnId(@Param("txnId") String txnId);
 
   @Query("SELECT " +

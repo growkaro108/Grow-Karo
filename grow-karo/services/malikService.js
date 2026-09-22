@@ -67,7 +67,9 @@ export async function addManualUserScheme(payload) {
 export async function createManualUser(payload) {
   const response = await userRegister(payload);
   allRounderMessage(response);
-  return response?.status === "ok" || response?.status === "success" ? response : null;
+  return response?.status === "ok" || response?.status === "success"
+    ? response
+    : null;
 }
 export async function updateUserSchemeLedger(userSchemeId, payload) {
   const response = await updateUserSchemeLedgerApi(userSchemeId, payload);
@@ -101,6 +103,7 @@ export async function getAllTransaction(params) {
 
 export async function approveUserTranactions(userTranactionId, remId) {
   const res = await approveUsersTransactions(userTranactionId, remId);
+  console.log(res);
   allRounderMessage(res);
   if (res.status !== "success") {
     return false;

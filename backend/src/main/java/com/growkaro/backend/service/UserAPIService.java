@@ -54,10 +54,12 @@ import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.entity.Reply;
 import com.growkaro.backend.entity.SupportIssue.Status;
+import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.enums.UserSchemeStatus;
 import com.growkaro.backend.repository.BankDetailsRepository;
 import com.growkaro.backend.repository.NotificationRepository;
+import com.growkaro.backend.repository.ReedemLedgerRepository;
 import com.growkaro.backend.repository.SchemeRepository;
 import com.growkaro.backend.repository.SupportIssueRepository;
 import com.growkaro.backend.repository.TransactionRepository;
@@ -90,66 +92,16 @@ public class UserAPIService {
     private final JwtService jwtService;
     private final AdminPolicy adminPolicy;
     private final RedisService redisService;
+    private final ReedemLedgerRepository reedemLedgerRepository;
 
     // @Cacheable(value = "testApis", key = "#id")
     @Transactional
     public Object testApis() {
         try {
-            // User u = userRepository.findById("GKUSID20260731180215").get();
-            // Page<List<IssueResponse>> issues =
-            // supportIssueRepository.findUnResolvedIssue(PageRequest.of(0,
-            // DEFAULT_PAGE_SIZE)).map(SupportIssue::fromEntity);
-            // for(IssueResponse issue : issues) {
-            // System.out.println(issue);
-            // }
-            // LocalDateTime time = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
-
-            // List<UserScheme> list = userSchemeRepository.findAll();
-            // for (UserScheme userScheme : list) {
-            // // userScheme.setUpdatedAt(time.minusDays(5));
-            // if (userScheme.getProfitDates() == null) {
-            // userScheme.setProfitDates(new HashSet<>());
-            // // userSchemeRepository.save(userScheme);
-            // }
-            // if (userScheme.getProfit().compareTo(BigDecimal.ZERO) > 0) {
-            // Set<LocalDateTime> profitDates = new HashSet<>();
-
-            // profitDates.add(time.minusDays(30));
-            // profitDates.add(time.minusDays(20));
-            // profitDates.add(time.minusDays(5));
-            // userScheme.setProfitDates(profitDates);
-            // }
-            // userSchemeRepository.save(userScheme);
-            // }
-
-            // UserScheme userSchemes = getUserSchemeById("GKUSID20260728184654");
-            // System.out.println(userSchemes);
-            // Map<String, Object> userNotifications =
-            // userNotifications("GKUSID20260731180215",
-            // "unread", 1);
-
-            // return userRepository.findEmailOfUsersWantSchemeAlerts();
-            // List<Scheme> schemes = schemeRepository.findAll();
-            // for (Scheme scheme : schemes) {
-            // scheme.setMaximumAmount(scheme.getMinimumAmount().add(BigDecimal.valueOf(150000)));
-            // log.info("Scheme {} maximum amount updated: {}", scheme.getSchemeName(),
-            // scheme.getMaximumAmount());
-            // schemeRepository.save(scheme);
-            // }
-            // LocalDate today = general.getCurrentDate();
-            // List<UserScheme> allApprovedUserSchemes = userSchemeRepository
-            // .findAllByMaturityDate(today, today);
-            // for (UserScheme userScheme : allApprovedUserSchemes) {
-            // log.info("UserScheme id={}", userScheme.getUserSchemeId());
-            // // userScheme.setStatus(UserSchemeStatus.MATURED);
-            // // userSchemeRepository.save(userScheme);
-            // log.info("Maturity date set for userScheme id={}",
-            // userScheme.getUserSchemeId());
-            // }
-            User user = userRepository.findById("GKUID20260915162721").get();
-            crucialNotificationService.sendUserNotificationWithCustomMessage("This is title", "This is description",
-                    user, "/dashboard", null);
-            return true;
+            UserScheme us = userSchemeRepository.findById("GKUSID20260915192126").get();
+            UserSchemeReedemLedger reedemLedger = reedemLedgerRepository
+                    .findByUserSchemeAndRedeemAmount(us, new BigDecimal(30000)).orElse(null);
+            return reedemLedger == null ? "Not found" : reedemLedger.getStatus().toString();
         } catch (Exception e) {
             log.error("Failed to set user status active", e);
             return e.getMessage();
@@ -623,7 +575,16 @@ public class UserAPIService {
                 UserProfile.fromEntity(user, general.generateToken(user.getId(), user.getEmail(), "ROLE_GRAHAK")));
     }
 
-    @CacheEvict(value = "userTransactions", key = "#p0.userId()")
+    /**
+     * Handles a withdrawal/redemption request for a user's scheme.
+     * Supports two modes:
+     * - General withdrawal: redeem profit up to the un-redeemed profit balance
+     * (calculated live from the profit and redeem ledgers).
+     * - Aggressive withdrawal: full payout of the scheme's paidAmount.
+     */
+    @Caching(evict = {
+            @CacheEvict(value = "userTransactions", key = "#p0.userId()"),
+            @CacheEvict(value = "userPortfolio", key = "#p0.userId()") })
     @Transactional
     public Map<String, Object> redeemAmount(WithdrawAmount wa) {
 
@@ -639,6 +600,21 @@ public class UserAPIService {
                 log.error("userScheme not found for userSchemeId :{}", wa.userSchemeId());
                 return general.response("error", "Invalid userSchemeId...", null);
             }
+
+            // check if user have already pending reddem then return
+            List<UserSchemeReedemLedger> reedemLedger = us.getReedemLedger();
+            for (UserSchemeReedemLedger ledger : reedemLedger) {
+                if (ledger.getStatus().equals(ReedeemStatus.REQUESTED)) {
+                    return general.response("error",
+                            "You have already pending reedem of amount : " + ledger.getRedeemAmount(), null);
+                }
+            }
+            // Compute totals live from the ledgers (source of truth) instead of
+            // relying on cached fields on UserScheme.
+            BigDecimal totalProfit = general.countProfit(us.getProfitLedger());
+
+            BigDecimal totalRedeemed = general.countReedem(reedemLedger);
+
             User user = us.getUser();
             // ownership check: scheme must belong to this user
             if (user == null || !user.getId().equals(wa.userId())) {
@@ -646,26 +622,31 @@ public class UserAPIService {
                         Map.of("userSchemeId", us.getUserSchemeId(), "userId", wa.userId()));
                 return general.response("error", "userScheme does not belong to user...", null);
             }
+
+            // Amount still available to redeem = total profit accrued - total profit
+            // already redeemed.
+            BigDecimal availableToRedeem = totalProfit.subtract(totalRedeemed);
+
             if (!wa.isAggressive()) { // general withdrawal and redeem profit
-                // guard against re-redeeming the same profit(profit==redeemed)
+
+                // guard against re-redeeming when everything has already been redeemed
                 // this check is optional as user can redeem his profit multiple times
-                if (us.getProfit().subtract(us.getProfitReedemed()).compareTo(BigDecimal.ZERO) == 0) {
+                if (availableToRedeem.compareTo(BigDecimal.ZERO) == 0) {
                     log.info("profit already redeemed..., {}",
-                            Map.of("userSchemeId", us.getUserSchemeId(), "profit", us.getProfit(), "profitRedeemed",
-                                    us.getProfitReedemed(), "amount", wa.amount(), "userId", user.getId(),
-                                    "redeemed_already",
-                                    us.getProfitReedemed()));
+                            Map.of("userSchemeId", us.getUserSchemeId(), "totalProfit", totalProfit,
+                                    "totalRedeemed", totalRedeemed, "amount", wa.amount(), "userId", user.getId()));
                     return general.response("info", "profit already redeemed...", null);
                 }
-                if (us.getProfit() == null
-                        || (us.getProfit().subtract(us.getProfitReedemed())).compareTo(wa.amount()) < 0) {
+
+                // ensure the requested amount does not exceed what's actually available
+                if (availableToRedeem.compareTo(wa.amount()) < 0) {
                     log.info("Insufficient Profit...",
-                            Map.of("userSchemeId", us.getUserSchemeId(), "profit", us.getProfit(), "profitRedeemed",
-                                    us.getProfitReedemed(), "amount", wa.amount(), "userId", user.getId()));
+                            Map.of("userSchemeId", us.getUserSchemeId(), "totalProfit", totalProfit,
+                                    "totalRedeemed", totalRedeemed, "amount", wa.amount(), "userId", user.getId()));
                     return general.response("error", "Insufficient Profit...", null);
                 }
 
-            } else { // aggressive withdrawal
+            } else { // aggressive withdrawal — must redeem the full paid amount at once
                 if (us.getPaidAmount() == null || us.getPaidAmount().compareTo(wa.amount()) != 0) {
                     log.info("paidAmount and amount doesn't match..., {}", Map.of("userSchemeId", us.getUserSchemeId(),
                             "paidAmount", us.getPaidAmount(), "amount", wa.amount(), "userId", user.getId()));
@@ -692,6 +673,8 @@ public class UserAPIService {
                     return general.response("error", "bankDetails does not belong to user...", null);
                 }
             }
+
+            // create the pending withdrawal transaction
             Transaction txn = new Transaction();
             txn.setUser(user);
             txn.setAmount(wa.amount());
@@ -713,24 +696,17 @@ public class UserAPIService {
                     Map.of("amount", wa.amount().toString(), "txnId",
                             savedTxn.getId() != null ? savedTxn.getId() : ""));
 
-            // update redemption bookkeeping
+            // record this redemption in the ledger so future totalRedeemed
+            // calculations correctly include this amount
             if (!wa.isAggressive()) {
-                // add the redeemed amount to existing profitRedeemed
-                if (us.getProfitReedemed() == null) {
-                    us.setProfitReedemed(wa.amount());
-                } else {
-                    us.setProfitReedemed(us.getProfitReedemed().add(wa.amount()));
-                }
-            } else {
-                // if you track aggressive redemptions separately, set that field here instead
-                // e.g. us.setPaidAmountRedeemed(wa.amount());
-                if (us.getProfitReedemed() == null) {
-                    us.setProfitReedemed(wa.amount());
-                } else {
-                    us.setProfitReedemed(us.getProfitReedemed().add(wa.amount()));
-                }
+                UserSchemeReedemLedger usrl = new UserSchemeReedemLedger();
+                usrl.setRedeemAmount(wa.amount());
+                usrl.setUserScheme(us);
+                usrl.setRedeemDate(general.getCurrentDate());
+                usrl.setStatus(UserSchemeReedemLedger.ReedeemStatus.REQUESTED);
+
+                reedemLedgerRepository.save(usrl);
             }
-            userSchemeRepository.save(us);
 
             return general.response("success", "Withdraw request placed successfully", null);
         } catch (Exception e) {
@@ -961,13 +937,9 @@ public class UserAPIService {
             }
 
             // 1. Calculate profit & redemptions cleanly
-            BigDecimal totalProfit = existingUserScheme.getProfitLedger().stream()
-                    .map(UserSchemeProfitLedger::getProfitAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal totalProfit = general.countProfit(existingUserScheme.getProfitLedger());
 
-            BigDecimal totalRedeemed = existingUserScheme.getReedemLedger().stream()
-                    .map(UserSchemeReedemLedger::getRedeemAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal totalRedeemed = general.countReedem(existingUserScheme.getReedemLedger());
 
             BigDecimal netProfit = totalProfit.subtract(totalRedeemed);
             BigDecimal reinvestmentAmount = existingUserScheme.getPaidAmount().add(netProfit);

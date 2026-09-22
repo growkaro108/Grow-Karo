@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Spring Boot - BackendApplication",
+      "request": "launch",
+      "mainClass": "com.growkaro.backend.BackendApplication",
+      "env": {
+        "ADMIN_EMAIL": "wv9304@gmail.com,vikaskumar01997@gmail.com"
+      }
+    }
+  ]
+}

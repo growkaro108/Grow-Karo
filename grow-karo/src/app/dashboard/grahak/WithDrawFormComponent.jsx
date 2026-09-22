@@ -48,11 +48,10 @@ export const FormFields = ({
         value={value}
         onChange={handleInputChange}
         disabled={useProfileAccount}
-        className={`w-full px-3 py-2.5 text-sm border border-[#E4DFD3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#B4893E]/25 focus:border-[#B4893E] transition-all tracking-wider ${
-          useProfileAccount
-            ? "bg-[#FAF7F0] text-[#8C8672] cursor-not-allowed"
-            : "text-[#0B1B2E]"
-        }`}
+        className={`w-full px-3 py-2.5 text-sm border border-[#E4DFD3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#B4893E]/25 focus:border-[#B4893E] transition-all tracking-wider ${useProfileAccount
+          ? "bg-[#FAF7F0] text-[#8C8672] cursor-not-allowed"
+          : "text-[#0B1B2E]"
+          }`}
       />
     </div>
   );
@@ -65,10 +64,20 @@ export default function WithdrawFormComponent({
 }) {
   const isAggressive = withdrawType === "aggressive";
   const { fetchPortfolio } = use(userContext);
+
+  const [useProfileAccount, setUseProfileAccount] = useState(false);
+  const [selectedScheme, setSelectedScheme] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [submittedAmount, setSubmittedAmount] = useState(0);
+  const [error, setError] = useState("");
+
+  const CURRENT_BALANCE = userData?.totalProfit;
+  const [amountLevel, setAmountLevels] = useState({ minReedem: 2000, maxReedem: 1000 })
   const [payload, setPayload] = useState({
     userId: userData?.id,
     schemeId: "",
-    amount: 0,
+    amount: amountLevel.minReedem,
     bankDetailsId: userData?.bankDetailsId,
     bankDetails: {
       accountNumber: "",
@@ -78,42 +87,30 @@ export default function WithdrawFormComponent({
     },
     isAggressive: isAggressive,
   });
-  const [useProfileAccount, setUseProfileAccount] = useState(false);
-  const [selectedScheme, setSelectedScheme] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [submittedAmount, setSubmittedAmount] = useState(0);
-  const [error, setError] = useState("");
+  useEffect(() => {
+    let isMounted = true;
 
-  const CURRENT_BALANCE = userData?.totalProfit;
-  const [amountLevel,setAmountLevels]=useState({minReedem:0,maxReedem:0})
-  const MIN_WITHDRAWAL_AMOUNT = 1000.0;
-  const MAX_WITHDRAWAL_AMOUNT = 100000.0;
-// console.log(amountLevel)
- useEffect(() => {
-  let isMounted = true;
-
-  const fetchSystemSettings = async () => {
-    try {
-      const res = await getSystemSettings();
-      if (res && isMounted) {
-        // console.log(res);
-        setAmountLevels({
-          minReedem: res.minWithdrawal,
-          maxReedem: res.maxWithdrawal,
-        });
+    const fetchSystemSettings = async () => {
+      try {
+        const res = await getSystemSettings();
+        if (res && isMounted) {
+          // console.log(res);
+          setAmountLevels({
+            minReedem: res.minWithdrawal,
+            maxReedem: res.maxWithdrawal,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch system settings:", error);
       }
-    } catch (error) {
-      console.error("Failed to fetch system settings:", error);
-    }
-  };
+    };
 
-  fetchSystemSettings();
+    fetchSystemSettings();
 
-  return () => {
-    isMounted = false; // Prevents state updates if component unmounts mid-request
-  };
-}, []);
+    return () => {
+      isMounted = false; // Prevents state updates if component unmounts mid-request
+    };
+  }, []);
 
   const handleCheckboxChange = (e) => {
     // console.log(userData);
@@ -166,7 +163,7 @@ export default function WithdrawFormComponent({
       return;
     }
 
-    const numericAmount = selectedScheme.amount;
+    const numericAmount = payload.amount;
 
     if (!isAggressive && (Number.isNaN(numericAmount) || numericAmount <= 0)) {
       setError("Please enter a valid withdrawal amount." + numericAmount);
@@ -174,11 +171,11 @@ export default function WithdrawFormComponent({
     }
     if (
       !isAggressive &&
-      (numericAmount < MIN_WITHDRAWAL_AMOUNT ||
-        numericAmount > MAX_WITHDRAWAL_AMOUNT)
+      (numericAmount < amountLevel.minReedem ||
+        numericAmount > amountLevel.maxReedem)
     ) {
       setError(
-        `Please enter an amount between ${currency(MIN_WITHDRAWAL_AMOUNT)} and ${currency(MAX_WITHDRAWAL_AMOUNT)}.`,
+        `Please enter an amount between ${currency(amountLevel.minReedem)} and ${currency(amountLevel.maxReedem)}.`,
       );
       return;
     }
@@ -203,7 +200,7 @@ export default function WithdrawFormComponent({
       userId: payload.userId,
       schemeId: selectedScheme.schemeId,
       userSchemeId: selectedScheme.userSchemeId,
-      amount: selectedScheme.amount,
+      amount: payload.amount,
       bankDetailsId: payload.bankDetails.bankDetailsId,
       isAggressive: payload.isAggressive,
       profit: selectedScheme.amount,
@@ -212,7 +209,7 @@ export default function WithdrawFormComponent({
         : payload.bankDetails,
     };
 
-    // console.log(data);
+    console.log(data);
     let res;
     try {
       if (isAggressive) {
@@ -259,6 +256,7 @@ export default function WithdrawFormComponent({
 
       // Top-level inputs (amount, schemeId, etc.)
       return {
+
         ...prevPayload,
         [name]: value,
       };
@@ -413,23 +411,40 @@ export default function WithdrawFormComponent({
           onSubmit={handleSubmit}
           className="grid grid-cols-1 sm:grid-cols-2 gap-4"
         >
-          {/* {!isAggressive && (
+          {!isAggressive && (
             <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-[#5B5648] uppercase tracking-wider mb-1.5">
                 Amount to Withdraw (₹)
               </label>
               <input
                 type="number"
-                step="0.01"
+                step="any" // Allows any step while keeping native number formatting
                 required
-                placeholder="0.00"
+                placeholder={`min. ${amountLevel?.minReedem ?? 1000}`}
                 name="amount"
-                value={payload.amount}
+                value={payload.amount ?? ""}
                 onChange={handleInputChange}
                 className="w-full px-3.5 py-2.5 text-sm border border-[#E4DFD3] rounded-lg text-[#0B1B2E] placeholder-[#B7B1A0] focus:outline-none focus:ring-2 focus:ring-[#B4893E]/25 focus:border-[#B4893E] transition-all font-medium tabular-nums"
+                // Prevents typing numbers greater than max (30000) directly in the element
+                onInput={(e) => {
+                  const max = selectedScheme?.totalProfit < amountLevel?.maxReedem ? selectedScheme?.totalProfit : amountLevel?.maxReedem;
+                  if (Number(e.target.value) > max) {
+                    e.target.value = max;
+                  }
+                }}
+
+                // Resets value to minimum (1000) when the user finishes typing and leaves the field
+                onBlur={(e) => {
+                  const min = selectedScheme?.totalProfit < amountLevel?.minReedem ? selectedScheme?.totalProfit : amountLevel?.minReedem;
+                  if (e.target.value !== "" && Number(e.target.value) < min) {
+                    e.target.value = min;
+                    handleInputChange(e); // syncs reset value back to React state
+                  }
+                }}
+
               />
             </div>
-          )} */}
+          )}
           <BankSelect
             value={payload.bankDetails.bankName}
             onChange={handleInputChange}
