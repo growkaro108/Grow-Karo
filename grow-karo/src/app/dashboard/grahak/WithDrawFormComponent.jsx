@@ -1,4 +1,4 @@
-import React, { use, useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import { currency } from "../malik/utils";
 import { allRounderMessage, infoMessage } from "@/components/Message";
 import {
@@ -11,6 +11,7 @@ import {
 import dynamic from "next/dynamic";
 import BankSelect from "@/components/BankSelect";
 import {
+  getSystemSettings,
   withdrawProfit,
   withdrawProgressScheme,
 } from "../../../../services/grahakService";
@@ -85,8 +86,34 @@ export default function WithdrawFormComponent({
   const [error, setError] = useState("");
 
   const CURRENT_BALANCE = userData?.totalProfit;
+  const [amountLevel,setAmountLevels]=useState({minReedem:0,maxReedem:0})
   const MIN_WITHDRAWAL_AMOUNT = 1000.0;
   const MAX_WITHDRAWAL_AMOUNT = 100000.0;
+// console.log(amountLevel)
+ useEffect(() => {
+  let isMounted = true;
+
+  const fetchSystemSettings = async () => {
+    try {
+      const res = await getSystemSettings();
+      if (res && isMounted) {
+        // console.log(res);
+        setAmountLevels({
+          minReedem: res.minWithdrawal,
+          maxReedem: res.maxWithdrawal,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch system settings:", error);
+    }
+  };
+
+  fetchSystemSettings();
+
+  return () => {
+    isMounted = false; // Prevents state updates if component unmounts mid-request
+  };
+}, []);
 
   const handleCheckboxChange = (e) => {
     // console.log(userData);

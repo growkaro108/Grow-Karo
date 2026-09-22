@@ -18,6 +18,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
+
 import org.hibernate.envers.Audited;
 
 @Getter
@@ -25,6 +27,7 @@ import org.hibernate.envers.Audited;
 @NoArgsConstructor
 @Audited
 @Entity
+@ToString(exclude="userScheme")
 @Table(name = "user_scheme_profit_ledger", uniqueConstraints = @UniqueConstraint(name = "uk_user_scheme_profit_date", columnNames = {
         "user_scheme_id", "profit_date" }))
 public class UserSchemeProfitLedger {

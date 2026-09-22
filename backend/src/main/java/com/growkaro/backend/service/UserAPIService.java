@@ -232,60 +232,93 @@ public class UserAPIService {
         String maritalStatus = stringValue(user.maritalStatus());
         String aadharNo = stringValue(user.aadharNo());
 
-        if (name == null || email == null || phone == null || passwordHash == null || dob == null
-                || maritalStatus == null || aadharNo == null) {
+        if (name == null || email == null || phone == null || passwordHash == null) {
             return false;
         }
 
         if (isUserExists(email)) {
             return false;
         }
+
+        if (dob != null) {
+            try {
+                LocalDate.parse(dob);
+            } catch (Exception e) {
+                log.warn("Invalid DOB provided during signup for email={}", email, e);
+                return false;
+            }
+        }
+
         User newUser = new User();
         newUser.setName(name);
         newUser.setEmail(email);
         newUser.setPhone(phone);
         newUser.setPasswordHash(apiService.makePasswordHash(passwordHash));
-        newUser.setDob(LocalDate.parse(dob));
+        newUser.setDob(dob == null ? null : LocalDate.parse(dob));
         newUser.setMaritalStatus(maritalStatus);
         newUser.setAadharNo(aadharNo);
 
         if (user.guardian() != null) {
-            Guardian guardian = new Guardian();
-            guardian.setName(stringValue(user.guardian().get("name")));
-            guardian.setRelation(stringValue(user.guardian().get("relation")));
-            guardian.setUser(newUser);
-            newUser.setGuardian(guardian);
+            String guardianName = stringValue(user.guardian().get("name"));
+            String guardianRelation = stringValue(user.guardian().get("relation"));
+            if (guardianName != null || guardianRelation != null) {
+                Guardian guardian = new Guardian();
+                guardian.setName(guardianName);
+                guardian.setRelation(guardianRelation);
+                guardian.setUser(newUser);
+                newUser.setGuardian(guardian);
+            }
         }
 
         if (user.address() != null) {
-            newUser.setStreet(stringValue(user.address().get("street")));
-            newUser.setVillage(stringValue(user.address().get("village")));
-            newUser.setCity(stringValue(user.address().get("city")));
-            newUser.setState(stringValue(user.address().get("state")));
-            newUser.setPincode(stringValue(user.address().get("pincode")));
+            String street = stringValue(user.address().get("street"));
+            String village = stringValue(user.address().get("village"));
+            String city = stringValue(user.address().get("city"));
+            String state = stringValue(user.address().get("state"));
+            String pincode = stringValue(user.address().get("pincode"));
+
+            if (street != null || village != null || city != null || state != null || pincode != null) {
+                newUser.setStreet(street);
+                newUser.setVillage(village);
+                newUser.setCity(city);
+                newUser.setState(state);
+                newUser.setPincode(pincode);
+            }
         }
 
         if (user.nominee() != null) {
-            Nominee nominee = new Nominee();
-            nominee.setName(stringValue(user.nominee().get("name")));
-            nominee.setAadharNo(stringValue(user.nominee().get("aadharNo")));
-            nominee.setMobileNo(stringValue(user.nominee().get("mobileNo")));
-            nominee.setRelation(stringValue(user.nominee().get("relation")));
-            nominee.setUser(newUser);
-            List<Nominee> nominees = new ArrayList<>();
-            nominees.add(nominee);
-            newUser.setNominees(nominees);
+            String nomineeName = stringValue(user.nominee().get("name"));
+            String nomineeAadhaar = stringValue(user.nominee().get("aadharNo"));
+            String mobileNo = stringValue(user.nominee().get("mobileNo"));
+            String relation = stringValue(user.nominee().get("relation"));
+            if (nomineeName != null || nomineeAadhaar != null || mobileNo != null || relation != null) {
+                Nominee nominee = new Nominee();
+                nominee.setName(nomineeName);
+                nominee.setAadharNo(nomineeAadhaar);
+                nominee.setMobileNo(mobileNo);
+                nominee.setRelation(relation);
+                nominee.setUser(newUser);
+                List<Nominee> nominees = new ArrayList<>();
+                nominees.add(nominee);
+                newUser.setNominees(nominees);
+            }
         }
 
         newUser.setEmailVerified(true);
 
-        BankDetails bankDetails = new BankDetails();
-        bankDetails.setBankName(stringValue(user.bankName()));
-        bankDetails.setAccountHolderName(stringValue(user.accountHolderName()));
-        bankDetails.setAccountNumber(stringValue(user.accountNumber()));
-        bankDetails.setIfscCode(stringValue(user.ifscCode()));
-        bankDetails.setUser(newUser);
-        newUser.setBankDetails(bankDetails);
+        String bankName = stringValue(user.bankName());
+        String accountHolderName = stringValue(user.accountHolderName());
+        String accountNumber = stringValue(user.accountNumber());
+        String ifscCode = stringValue(user.ifscCode());
+        if (bankName != null || accountHolderName != null || accountNumber != null || ifscCode != null) {
+            BankDetails bankDetails = new BankDetails();
+            bankDetails.setBankName(bankName);
+            bankDetails.setAccountHolderName(accountHolderName);
+            bankDetails.setAccountNumber(accountNumber);
+            bankDetails.setIfscCode(ifscCode);
+            bankDetails.setUser(newUser);
+            newUser.setBankDetails(bankDetails);
+        }
 
         try {
             userRepository.save(newUser);

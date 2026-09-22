@@ -29,11 +29,14 @@ const Dashboard = () => {
 
   const isAdmin = useMemo(() => {
     if (!authUser?.email) return false;
+
     const adminEmails =
-      process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",").map((e) =>
-        e.trim(),
-      ) ?? [];
-    return adminEmails.includes(authUser.email);
+      (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? "")
+        .split(",")
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean);
+
+    return adminEmails.includes(authUser.email.trim().toLowerCase());
   }, [authUser]);
 
   const shouldRedirect = !authUser && !authRemitter;

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.entity.UserSchemeProfitLedger;
 import com.growkaro.backend.repository.ProfitLedgerRepository;
@@ -78,7 +79,8 @@ public class UserSchemePayoutProcessor {
                     "UserScheme id=" + userScheme.getUserSchemeId() + " computed invalid profit: " + newProfit);
         }
 
-        int days = general.resolvePeriodDays(userScheme.getScheme().getPayoutFrequency());
+        Scheme s=userScheme.getScheme();
+        int days = general.resolvePeriodDays(s.getPayoutFrequency(),s.getTenure());
 
         UserSchemeProfitLedger ledgerEntry = new UserSchemeProfitLedger();
         ledgerEntry.setUserScheme(userScheme);

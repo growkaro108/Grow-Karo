@@ -7,7 +7,6 @@ import { resolveMediaUrl } from "../../../../../api/apiClient";
 import Image from "next/image";
 
 export default function BondStub({ bond, userName, scheme, onView }) {
-  console.log(bond.paidAmount, bond.maturityDate)
   return (
     <div className="overflow-hidden rounded-xl border border-slate-800">
       {/* counterfoil */}

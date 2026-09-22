@@ -204,28 +204,34 @@ public class AdminAPIController {
     }
 
     @PostMapping(value = "/user_scheme/add-bond/{userSchemeId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Map<String, Object>> addBondDetails(@PathVariable String userSchemeId,
+    public ResponseEntity<Map<String, Object>> addBondDetails(
+            @PathVariable String userSchemeId,
             @RequestParam(required = false) String bondNumber,
-            @RequestParam(name = "image") MultipartFile image,
+            @RequestParam(name = "image", required = false) MultipartFile image,
             @RequestParam(required = false, defaultValue = "false") boolean isUpdate) {
+
         boolean hasBondNumber = bondNumber != null && !bondNumber.isBlank();
         boolean hasImage = image != null && !image.isEmpty();
+
         if (userSchemeId == null || userSchemeId.isBlank() || (!hasBondNumber && !hasImage)) {
             return ResponseEntity.badRequest().body(general.response("error", "Invalid request.", null));
         }
 
-        String contentType = image.getContentType();
-        if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
-            return ResponseEntity.badRequest()
-                    .body(general.response("error", "Invalid file type: " + image.getOriginalFilename(), null));
-        }
-        if (image.getSize() > MAX_FILE_SIZE_BYTES) {
-            return ResponseEntity.badRequest()
-                    .body(general.response("error", image.getOriginalFilename() + " exceeds the 5MB limit", null));
+        // Only validate the file if an image was actually provided
+        if (hasImage) {
+            String contentType = image.getContentType();
+            if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
+                return ResponseEntity.badRequest()
+                        .body(general.response("error", "Invalid file type: " + image.getOriginalFilename(), null));
+            }
+
+            if (image.getSize() > MAX_FILE_SIZE_BYTES) {
+                return ResponseEntity.badRequest()
+                        .body(general.response("error", image.getOriginalFilename() + " exceeds the 5MB limit", null));
+            }
         }
 
-        return ResponseEntity.ok(adminAPIService.addBondDetails(userSchemeId,
-                bondNumber, image, isUpdate));
+        return ResponseEntity.ok(adminAPIService.addBondDetails(userSchemeId, bondNumber, image, isUpdate));
     }
 
     @GetMapping("/activity-types")
@@ -238,7 +244,6 @@ public class AdminAPIController {
             @RequestParam(defaultValue = "pending") String filter,
             @RequestParam(defaultValue = "0") int offset,
             @RequestParam(defaultValue = "10") int limit) {
-        // System.out.println(filter + " " + offset + " " + limit);
         if (filter.isBlank() || offset < 0 || limit > 50
                 || limit < 1) {
             log.error("Invalid request: " + filter + " " + offset + " " + limit);
@@ -323,8 +328,7 @@ public class AdminAPIController {
             return ResponseEntity.ok(general.response("success", "Remitters fetched successfully", remitters));
         } catch (Exception e) {
             log.error("Error while fetching remitters: " + e.getMessage(), e);
-            return ResponseEntity.ok(general.response("error",
-                    e.getMessage(), null));
+            return ResponseEntity.ok(general.response("error", e.getMessage(), null));
         }
     }
 
@@ -339,8 +343,7 @@ public class AdminAPIController {
             return ResponseEntity.ok(general.response("success", "Remitter updated successfully", isupdatedRemitter));
         } catch (Exception e) {
             log.error("Error while updating remitter: " + e.getMessage());
-            return ResponseEntity.ok(general.response("error",
-                    e.getMessage(), null));
+            return ResponseEntity.ok(general.response("error", e.getMessage(), null));
         }
     }
 
@@ -354,8 +357,7 @@ public class AdminAPIController {
             return ResponseEntity.ok(general.response("success", "Remitter removed successfully", isRemoved));
         } catch (Exception e) {
             log.error("Error while removing remitter: " + e.getMessage());
-            return ResponseEntity.ok(general.response("error",
-                    e.getMessage(), null));
+            return ResponseEntity.ok(general.response("error", e.getMessage(), null));
         }
     }
 
@@ -481,18 +483,6 @@ public class AdminAPIController {
             return ResponseEntity.ok(general.response("error", "something went wrong..", null));
         }
     }
-
-    @GetMapping("/settings")
-    public ResponseEntity<Map<String, Object>> getSettings() {
-        try {
-            SystemSettings settings = systemSettingsService.getSettings();
-            return ResponseEntity.ok(general.response("success", "Settings fetched successfully", settings));
-        } catch (Exception e) {
-            log.error("Failed to fetch settings: {}", e.getMessage());
-            return ResponseEntity.internalServerError().body(general.response("error", e.getMessage(), null));
-        }
-    }
-
     @PutMapping("/settings")
     public ResponseEntity<Map<String, Object>> updateSettings(@RequestBody SystemSettings settings) {
         try {

@@ -58,13 +58,14 @@ export default function BondCard({
 }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const isApproved = !!bond.enrollmentDate;
   const entryCount =
     (bond.profitLedger?.length ?? 0) + (bond.reedemLedger?.length ?? 0);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-800 bg-white/2">
+    <div className="overflow-hidden rounded-xl border border-slate-800 bg-white/2" title={isApproved? "Approved":" Not Approve Yet "}>
       <div
-        className={`flex items-center justify-between gap-3 bg-linear-to-br px-4 py-3.5 text-white ${bond.enrollmentDate ? "from-teal-900 to-[#0c3b3d]" : "from-amber-700 to-[#3d2c0c]"}`}
+        className={`flex items-center justify-between gap-3 bg-linear-to-br px-4 py-3.5 text-white ${isApproved ? "from-teal-900 to-[#0c3b3d]" : "from-amber-700 to-[#3d2c0c]"}`}
       >
         <div className="flex min-w-0 items-center gap-2.5">
           {bond.bondUrl ? (
@@ -80,8 +81,12 @@ export default function BondCard({
           </div>
         </div>
         <p className="shrink-0 font-[Space_Grotesk] text-sm font-semibold tabular-nums text-[#D8B77B] align-center justify-center text-right">
-          {currency(bond.paidAmount)}<br />
-          <span className="text-[10px] text-white/50">Enroll on: {bond.enrollmentDate}</span>
+          {currency(bond.paidAmount)}
+          <br />
+          <span className="text-[10px] text-white/50">
+            {isApproved ? "Enroll on: " : "Req on. "}
+            {isApproved ? bond.enrollmentDate : bond.requestDate}
+          </span>
         </p>
       </div>
       <div className="grid grid-cols-2 gap-3 px-4 py-3.5 sm:grid-cols-4">
@@ -100,20 +105,23 @@ export default function BondCard({
           value={bond.redeemDate ? dateFmt(bond.redeemDate) : "—"}
         />
       </div>
-      <div className="flex gap-2 border-t border-slate-800/70 px-4 py-2.5">
-        <PanelToggle
-          open={historyOpen}
-          onClick={() => setHistoryOpen((v) => !v)}
-        >
-          Update Ledger
-        </PanelToggle>
-        <PanelToggle
-          open={detailsOpen}
-          onClick={() => setDetailsOpen((v) => !v)}
-        >
-          {!bond.bondUrl ? "Add Bond" : "Update Bond"}
-        </PanelToggle>
-      </div>
+      {/* hide if scheme is not approved */}
+      {isApproved && (
+        <div className="flex gap-2 border-t border-slate-800/70 px-4 py-2.5">
+          <PanelToggle
+            open={historyOpen}
+            onClick={() => setHistoryOpen((v) => !v)}
+          >
+            Update Ledger
+          </PanelToggle>
+          <PanelToggle
+            open={detailsOpen}
+            onClick={() => setDetailsOpen((v) => !v)}
+          >
+            {!bond.bondUrl ? "Add Bond" : "Update Bond"}
+          </PanelToggle>
+        </div>
+      )}
       {historyOpen && (
         <div className="space-y-2.5 border-t border-slate-800/70 bg-slate-950/40 px-4 py-3.5">
           {profitRows.length === 0 && reedemRows.length === 0 && (
@@ -241,7 +249,7 @@ export default function BondCard({
         </p>
         {!bond.bondUrl ? (
           <div className="rounded-lg border border-dashed border-slate-700 px-4 py-6 text-center text-sm text-slate-500">
-            No bond issued yet.
+           {isApproved?" No bond issued yet.":" Not Approved yet. "}
           </div>
         ) : (
           <BondStub

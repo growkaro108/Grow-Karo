@@ -62,4 +62,4 @@ app:
 frontend:
   url: ${FRONTEND_URL:http://localhost:3000} # Define the frontend URL for CORS configuration
 admin:
-  email: ${ADMIN_EMAIL:"wv9304@gmail.com"}
+  email: ${ADMIN_EMAIL}

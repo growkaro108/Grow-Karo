@@ -235,7 +235,7 @@ export default function FormModal({
                 className={INPUT_CLS}
               >
                 {PAYOUT_FREQUENCIES.map((freq) => (
-                  <option key={freq} value={freq}>
+                  <option key={freq} value={freq} className="capitalize">
                     {freq}
                   </option>
                 ))}

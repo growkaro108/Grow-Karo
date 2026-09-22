@@ -5,8 +5,8 @@ set -e
 # Configuration
 # ==========================================
 API_BASE_URL="/api"
-ADMIN_EMAILS="mahakaldarshnain1@gmail.com,wv9304@gmail.com"
-IMAGE_TAG="v4.0.0"
+ADMIN_EMAILS=wv9304@gmail.com,vikaskumar01997@gmail.com
+IMAGE_TAG="v4.2.0"
 COMPOSE_FILE="docker-compose.stag.yml"
 
 # ==========================================

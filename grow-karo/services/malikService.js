@@ -30,6 +30,7 @@ import {
   getSelectedHistoryApi,
   onReInvestApi,
 } from "@/api/adminApi";
+import { userRegister } from "@/api/userApi";
 import { allRounderMessage } from "@/components/Message";
 
 export async function createPlan(payload) {
@@ -62,6 +63,11 @@ export async function addManualUserScheme(payload) {
   const response = await addManualUserSchemeApi(payload);
   allRounderMessage(response);
   return response.status === "success";
+}
+export async function createManualUser(payload) {
+  const response = await userRegister(payload);
+  allRounderMessage(response);
+  return response?.status === "ok" || response?.status === "success" ? response : null;
 }
 export async function updateUserSchemeLedger(userSchemeId, payload) {
   const response = await updateUserSchemeLedgerApi(userSchemeId, payload);

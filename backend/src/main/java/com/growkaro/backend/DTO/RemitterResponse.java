@@ -2,9 +2,6 @@ package com.growkaro.backend.DTO;
 
 import com.growkaro.backend.entity.Remitter;
 
-import lombok.Getter;
-import lombok.Setter;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 

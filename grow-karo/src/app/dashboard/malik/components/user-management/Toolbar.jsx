@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Search, SlidersHorizontal, ArrowUpDown } from "lucide-react";
+import { Search, SlidersHorizontal, ArrowUpDown, UserCheck, UserCheckIcon } from "lucide-react";
 import SelectFilter from "./SelectFilter";
 import { SCHEMES } from "./mockData";
 
@@ -24,6 +24,7 @@ export default function Toolbar({
   onSchemeChange,
   sortDesc,
   onToggleSort,
+  onAddUserClick,
 }) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const activeFilterCount =
@@ -82,6 +83,15 @@ export default function Toolbar({
             <ArrowUpDown className="h-4 w-4" />
             {sortDesc ? "Newest" : "Oldest"}
           </button>
+          <button
+            type="button"
+            onClick={onAddUserClick}
+            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-800 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/5"
+            title="Add Existing User"
+          >
+            <UserCheckIcon className="h-4 w-4" />
+            Add User
+          </button>
           {activeFilterCount > 0 && (
             <button
               onClick={resetFilters}
@@ -114,6 +124,14 @@ export default function Toolbar({
           >
             <ArrowUpDown className="h-4 w-4" />
             Sort: {sortDesc ? "Newest first" : "Oldest first"}
+          </button>
+          <button
+            type="button"
+            onClick={onAddUserClick}
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-800 px-3 py-2.5 text-sm font-medium text-slate-300"
+          >
+            <UserCheck className="h-4 w-4" />
+            Add User
           </button>
         </div>
       )}

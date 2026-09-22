@@ -150,6 +150,14 @@ export async function onReInvestApi(payload) {
   });
 }
 
+export async function getSystemSettingsApi(){
+  return await apiRequest(`/settings`, {
+    method: "GET",
+  });
+
+}
+
+
 //implement but not used
 export async function deleteNomineeApi(userId, nomineeId) {
   return apiRequest(`/user/${userId}/nominees/${nomineeId}`, {

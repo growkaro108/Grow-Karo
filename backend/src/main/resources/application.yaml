@@ -9,7 +9,6 @@ server:
 spring:
   application:
     name: backend
-
   # 1. PostgreSQL Configuration
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:growkaro_db}
@@ -41,7 +40,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update # Change to 'validate' or 'none' for production
-    show-sql: false # Set to true during local development only
+    show-sql: true # Set to true during local development only
     properties:
       hibernate:
         format_sql: true
@@ -55,20 +54,7 @@ spring:
   #    lazy-initialization: true
 
   # Suppress most logs, show WARN and ERROR
-  # logging:
-  #   level:
-  #     root: WARN
-  #     org:
-  #       springframework: WARN
-  #       hibernate: OFF
-  #       hibernate.SQL: OFF
-  #       apache: OFF
-  #     com:
-  #       zaxxer:
-  #         hikari: OFF
-  #     io:
-  #       netty: OFF
-  #     reactor: OFF
+
 
   # 5. Mail Configuration
   mail:
@@ -92,7 +78,7 @@ spring:
   servlet:
     multipart:
       max-file-size: 5MB
-      max-request-size: 5MB
+      max-request-size: 8MB
 app:
   jwt:
     secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
@@ -108,7 +94,16 @@ frontend:
   # url: ${FRONTEND_URL:https://deer-queen-antiques-luther.trycloudflare.com}
 
 admin:
-  email: ${ADMIN_EMAIL:"wv9304@gmail.com"}
+  email: ${ADMIN_EMAIL}
+  
+logging:
+  level:
+    org:
+      hibernate:
+        engine:
+          jdbc:
+            spi:
+              SqlExceptionHelper: DEBUG
 
 # s3 storage
 #   storage:

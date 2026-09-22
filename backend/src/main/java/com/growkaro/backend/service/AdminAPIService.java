@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +51,7 @@ import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.SchemeUpdateHistory;
 import com.growkaro.backend.DTO.SearchUser;
 import com.growkaro.backend.DTO.UserRequest;
+import com.growkaro.backend.DTO.UserSchemeResponse;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.common.GlobalExceptionHandler.DuplicateResourceException;
 import com.growkaro.backend.entity.Notification;
@@ -154,7 +156,11 @@ public class AdminAPIService {
 
     public List<SchemeResponse> getAllSchemes(boolean admin) {
         return schemeRepository.findAll().stream()
-                .filter(scheme -> admin || Boolean.TRUE.equals(scheme.getStatus()))
+                // .filter(scheme -> admin || Boolean.TRUE.equals(scheme.getStatus()))
+                // Sort by startDate in DEScending order (nulls placed last to avoid
+                // NullPointerException)
+
+                .sorted(Comparator.comparing(Scheme::getStartDate, Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(SchemeResponse::fromEntity)
                 .toList();
     }
@@ -276,14 +282,19 @@ public class AdminAPIService {
             userScheme.setPaidDate(request.paidDate());
             replaceLedgers(userScheme, request.profitLedger(), request.reedemLedger());
             userScheme.setNextPayoutDate(
-                    general.calculateNextPayoutDate(userScheme.getEnrollmentDate(), scheme.getPayoutFrequency()));
+                    general.calculateNextPayoutDate(userScheme.getEnrollmentDate(), scheme.getPayoutFrequency(),scheme.getTenure()));
             userScheme
                     .setMaturityDate(general.calculateMaturityDate(userScheme.getEnrollmentDate(), scheme.getTenure()));
             user.enrollInScheme(userScheme);
+            scheme.enrollUserInScheme(userScheme);
+
             userSchemeRepository.save(userScheme);
-            return general.response("success", "Scheme added to user successfully", userScheme);
+            userRepository.save(user);
+            schemeRepository.save(scheme);
+            return general.response("success", "Scheme added to user successfully",
+                    UserSchemeResponse.toUserSchemeResponse(userScheme));
         } catch (Exception e) {
-            log.error("Error adding manual scheme for user {}", request.userId(), e);
+            log.error("Error adding manual scheme for user {}", request.userId(), e.getCause());
             return general.response("error", "Could not add scheme to user", null);
         }
     }
@@ -410,7 +421,7 @@ public class AdminAPIService {
             userScheme.setStatus(UserSchemeStatus.ACTIVE);
             // set next payout date
             userScheme.setNextPayoutDate(
-                    general.calculateNextPayoutDate(userScheme.getEnrollmentDate(), scheme.getPayoutFrequency()));
+                    general.calculateNextPayoutDate(userScheme.getEnrollmentDate(), scheme.getPayoutFrequency(),scheme.getTenure()));
             // set maturity date
             userScheme.setMaturityDate(
                     general.calculateMaturityDate(userScheme.getEnrollmentDate(), userScheme.getScheme().getTenure()));
@@ -423,7 +434,8 @@ public class AdminAPIService {
             createTransaction(userSchemeId, user, paidAmount, settlementDate, TransactionType.DEPOSIT,
                     "Initial Deposit");
             return general.response("success",
-                    user.getName() + " is approved for " + scheme.getSchemeName() + " successfully..", userScheme);
+                    user.getName() + " is approved for " + scheme.getSchemeName() + " successfully..",
+                    UserSchemeResponse.toUserSchemeResponse(userScheme));
 
         } catch (Exception e) {
             log.error("Error activating user scheme {}", userSchemeId, e);

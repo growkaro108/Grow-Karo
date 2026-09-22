@@ -23,6 +23,7 @@ import {
   fetchUserIssuesApi,
   userCommentApi,
   onReInvestApi,
+  getSystemSettingsApi,
 } from "@/api/userApi";
 import { allRounderMessage } from "@/components/Message";
 
@@ -316,6 +317,16 @@ export async function onReInvest(
   }
   return res.data;
 }
+
+export async function getSystemSettings(){
+  const res = await getSystemSettingsApi();
+  if (res.status !== "success") {
+    allRounderMessage(res);
+    return false;
+  }
+  return res.data;
+}
+
 export async function fetchGrahakDashboardData(userId = "me") {
   if (true) {
     return delay(mockGrahakData);

@@ -16,6 +16,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
+
 import org.hibernate.envers.Audited;
 
 
@@ -24,6 +26,7 @@ import org.hibernate.envers.Audited;
 @NoArgsConstructor
 @Audited
 @Entity
+@ToString(exclude="userScheme")
 @Table(name = "user_scheme_reedem_ledger")
 public class UserSchemeReedemLedger {
 

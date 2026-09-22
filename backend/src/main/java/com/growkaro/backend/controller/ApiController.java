@@ -2,8 +2,12 @@ package com.growkaro.backend.controller;
 
 import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.common.General;
+import com.growkaro.backend.entity.SystemSettings;
 import com.growkaro.backend.service.AdminAPIService;
 import com.growkaro.backend.service.ApiService;
+import com.growkaro.backend.service.SystemSettingsService;
+
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.ResponseEntity;
@@ -13,17 +17,20 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
+@Slf4j
 @RequestMapping("/api")
 public class ApiController {
 
     private final ApiService apiService;
     private final AdminAPIService adminAPIService;
     private final General general;
+    private final SystemSettingsService systemSettingsService;
 
-    public ApiController(ApiService apiService, @Lazy AdminAPIService adminAPIService, General general) {
+    public ApiController(ApiService apiService, @Lazy AdminAPIService adminAPIService, General general,SystemSettingsService systemSettingsService) {
         this.apiService = apiService;
         this.adminAPIService = adminAPIService;
         this.general = general;
+        this.systemSettingsService=systemSettingsService;
     }
 
     @GetMapping("/health")
@@ -72,6 +79,17 @@ public class ApiController {
     @GetMapping("/support")
     public ResponseEntity<Map<String, Object>> support() {
         return ResponseEntity.ok(apiService.support());
+    }
+
+     @GetMapping("/settings")
+    public ResponseEntity<Map<String, Object>> getSettings() {
+        try {
+            SystemSettings settings = systemSettingsService.getSettings();
+            return ResponseEntity.ok(general.response("success", "Settings fetched successfully", settings));
+        } catch (Exception e) {
+            log.error("Failed to fetch settings: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(general.response("error", e.getMessage(), null));
+        }
     }
 
     // @GetMapping("/search")

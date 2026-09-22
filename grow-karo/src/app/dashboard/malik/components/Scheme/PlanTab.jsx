@@ -34,6 +34,7 @@ const PAYOUT_FREQUENCIES = [
   "Quarterly",
   "Half-Yearly",
   "Yearly",
+  "tenure-complete"
 ];
 
 const RISK_LEVELS = ["Low", "Medium", "High", "Very High"];

@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 public class AdminPolicy {
     private final Set<String> adminEmails;
 
-    public AdminPolicy(@Value("${ADMIN_EMAIL:wv9304@gmail.com}") String adminEmailsCsv) {
+    public AdminPolicy(@Value("${admin.email}") String adminEmailsCsv) {
         if (adminEmailsCsv == null || adminEmailsCsv.isBlank()) {
             this.adminEmails = Collections.emptySet();
             return;

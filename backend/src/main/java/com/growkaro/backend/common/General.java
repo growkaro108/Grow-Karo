@@ -6,7 +6,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,16 +18,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DRO.UserRegister;
-import com.growkaro.backend.DTO.AdminUser;
-import com.growkaro.backend.DTO.NomineeResponse;
 import com.growkaro.backend.DTO.Payee;
-import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.DTO.UserRequest;
-import com.growkaro.backend.DTO.UserSchemeResponse;
-import com.growkaro.backend.DTO.UserSchemeProfitLedgerResponse;
-import com.growkaro.backend.DTO.UserSchemeReedemLedgerResponse;
 import com.growkaro.backend.entity.BankDetails;
-import com.growkaro.backend.entity.Nominee;
 import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.Transaction;
@@ -135,7 +127,6 @@ public class General {
                 stringValue(payload.get("ifscCode")));
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, Object> asMap(Object value) {
         if (value instanceof Map<?, ?> map) {
             Map<String, Object> converted = new LinkedHashMap<>();
@@ -202,7 +193,7 @@ public class General {
         return profit.setScale(2, RoundingMode.HALF_UP);
     }
 
-    public int resolvePeriodDays(String payoutFrequency) {
+    public int resolvePeriodDays(String payoutFrequency,int tenure) {
         if (payoutFrequency == null) {
             throw new IllegalArgumentException("Payout frequency is required");
         }
@@ -215,12 +206,13 @@ public class General {
             case "quarterly" -> 90;
             case "half-yearly", "half yearly" -> 182;
             case "yearly" -> 365;
+            case "tenure-complete","tenure complete" -> tenure;
             default -> throw new IllegalArgumentException("Unknown payout frequency: " + payoutFrequency);
         };
     }
 
-    public LocalDate calculateNextPayoutDate(LocalDateTime enrollmentDate, String payoutFrequency) {
-        int periodDays = resolvePeriodDays(payoutFrequency);
+    public LocalDate calculateNextPayoutDate(LocalDateTime enrollmentDate, String payoutFrequency,int tenure) {
+        int periodDays = resolvePeriodDays(payoutFrequency,tenure);
         // convert to local date
         LocalDate enrollmentLocalDate = enrollmentDate.toLocalDate();
         return enrollmentLocalDate.plusDays(periodDays);
