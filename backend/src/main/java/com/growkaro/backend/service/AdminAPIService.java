@@ -32,6 +32,13 @@ import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+
+import com.growkaro.backend.DRO.UserRegister;
+import com.growkaro.backend.entity.BankDetails;
+import com.growkaro.backend.entity.Guardian;
 import com.growkaro.backend.DRO.AddRemitter;
 import com.growkaro.backend.DRO.ManualUserScheme;
 import com.growkaro.backend.DRO.NewNominee;
@@ -254,7 +261,7 @@ public class AdminAPIService {
             userScheme.setNominee(nominee);
             userScheme.setPaidAmount(request.paidAmount());
             userScheme.setIsApproved(true);
-            userScheme.setStatus(UserSchemeStatus.ACTIVE);
+
             userScheme.setEnrollmentDate(
                     LocalDateTime.of(request.paidDate(), LocalDateTime.now(ZoneId.of("Asia/Kolkata")).toLocalTime()));
             userScheme.setPaidDate(request.paidDate());
@@ -262,8 +269,18 @@ public class AdminAPIService {
             userScheme.setNextPayoutDate(
                     general.calculateNextPayoutDate(userScheme.getEnrollmentDate(), scheme.getPayoutFrequency(),
                             scheme.getTenure()));
+            LocalDate today = general.getCurrentDate();
+            LocalDate maturityDate = general.calculateMaturityDate(userScheme.getEnrollmentDate(), scheme.getTenure());
             userScheme
-                    .setMaturityDate(general.calculateMaturityDate(userScheme.getEnrollmentDate(), scheme.getTenure()));
+                    .setMaturityDate(maturityDate);
+            // check is maturity date pass then change
+            if (maturityDate.isEqual(today)) {
+                userScheme.setStatus(UserSchemeStatus.MATURED);
+            } else if (maturityDate.isBefore(today)) {
+                userScheme.setStatus(UserSchemeStatus.WITHDRAWN);
+            } else {
+                userScheme.setStatus(UserSchemeStatus.ACTIVE);
+            }
             user.enrollInScheme(userScheme);
             scheme.enrollUserInScheme(userScheme);
 
@@ -475,7 +492,8 @@ public class AdminAPIService {
 
     @CacheEvict(value = "userPortfolio", key = "#p0")
     @Transactional
-    public Map<String, Object> addBondDetails(String userSchemeId, String bondNumber, MultipartFile images,
+    public Map<String, Object> addBondDetails(String userId, String userSchemeId, String bondNumber,
+            MultipartFile images,
             boolean isUpdate) {
         try {
             UserScheme userScheme = userSchemeRepository.findByUserSchemeId(userSchemeId).orElse(null);
@@ -493,11 +511,14 @@ public class AdminAPIService {
             }
             Scheme s = userScheme.getScheme();
             LocalDateTime todayDateTime = general.getCurrentDateTime();
-            userScheme.setEnrollmentDate(todayDateTime);
-            userScheme.setStatus(UserSchemeStatus.ACTIVE);
-            userScheme.setNextPayoutDate(
-                    general.calculateNextPayoutDate(todayDateTime, s.getPayoutFrequency(), s.getTenure()));
-            userScheme.setMaturityDate(general.calculateMaturityDate(todayDateTime, s.getTenure()));
+
+            if (userScheme.getEnrollmentDate() == null) {
+                userScheme.setEnrollmentDate(todayDateTime);
+                userScheme.setStatus(UserSchemeStatus.ACTIVE);
+                userScheme.setNextPayoutDate(
+                        general.calculateNextPayoutDate(todayDateTime, s.getPayoutFrequency(), s.getTenure()));
+                userScheme.setMaturityDate(general.calculateMaturityDate(todayDateTime, s.getTenure()));
+            }
             userSchemeRepository.save(userScheme);
 
             return general.response("success", "Bond details added successfully...", Map.of(
@@ -1344,6 +1365,292 @@ public class AdminAPIService {
         if (id == null || id.isBlank())
             return null;
         return remitterRepository.findById(id).orElse(null);
+    }
+
+    @Caching(evict = {
+            @CacheEvict(value = "AllUsersEmail", allEntries = true)
+    })
+    public Map<String, Object> addBulkUsers(List<Map<String, Object>> usersPayload) {
+        if (usersPayload == null || usersPayload.isEmpty()) {
+            Map<String, Object> emptyRes = new LinkedHashMap<>();
+            emptyRes.put("total", 0);
+            emptyRes.put("successCount", 0);
+            emptyRes.put("failureCount", 0);
+            emptyRes.put("errors", List.of(Map.of("row", 0, "reason", "No user records provided")));
+            emptyRes.put("createdUsers", List.of());
+            return emptyRes;
+        }
+
+        int successCount = 0;
+        int failureCount = 0;
+        List<Map<String, Object>> errors = new ArrayList<>();
+        List<Map<String, Object>> createdUsers = new ArrayList<>();
+
+        for (int i = 0; i < usersPayload.size(); i++) {
+            int rowNum = i + 1;
+            Map<String, Object> row = usersPayload.get(i);
+            try {
+                UserRegister user = general.toUserRegister(row);
+
+                String name = general.stringValue(user.name());
+                String email = general.stringValue(user.email());
+                String phone = general.stringValue(user.phone());
+                String password = general.stringValue(user.passwordHash());
+
+                if (name == null || name.isBlank()) {
+                    failureCount++;
+                    errors.add(Map.of("row", rowNum, "email", email != null ? email : "N/A", "reason",
+                            "Full name is required"));
+                    continue;
+                }
+                if (email == null || !general.validateEmail(email)) {
+                    failureCount++;
+                    errors.add(Map.of("row", rowNum, "email", email != null ? email : "N/A", "reason",
+                            "Valid email address is required"));
+                    continue;
+                }
+                if (phone == null || !phone.matches("^\\d{10}$")) {
+                    failureCount++;
+                    errors.add(
+                            Map.of("row", rowNum, "email", email, "reason", "Phone number must be exactly 10 digits"));
+                    continue;
+                }
+                if (password == null || !general.validatePassword(password)) {
+                    failureCount++;
+                    errors.add(Map.of("row", rowNum, "email", email, "reason",
+                            "Password must be 8-64 chars with uppercase, lowercase, digit, and special symbol"));
+                    continue;
+                }
+
+                if (userRepository.existsByEmail(email)) {
+                    failureCount++;
+                    errors.add(Map.of("row", rowNum, "email", email, "reason",
+                            "User with email '" + email + "' already exists"));
+                    continue;
+                }
+
+                if (userRepository.existsByPhone(phone)) {
+                    failureCount++;
+                    errors.add(Map.of("row", rowNum, "email", email, "reason",
+                            "User with phone '" + phone + "' already exists"));
+                    continue;
+                }
+
+                String aadharNo = general.stringValue(user.aadharNo());
+                if (aadharNo != null && !aadharNo.matches("^\\d{12}$")) {
+                    failureCount++;
+                    errors.add(
+                            Map.of("row", rowNum, "email", email, "reason", "Aadhar number must be exactly 12 digits"));
+                    continue;
+                }
+
+                LocalDate dob = null;
+                if (user.dob() != null) {
+                    try {
+                        dob = general.parseDob(user.dob());
+                    } catch (Exception e) {
+                        failureCount++;
+                        errors.add(Map.of("row", rowNum, "email", email, "reason",
+                                "Invalid DOB: " + user.dob() + " (supported: YYYY-MM-DD or DD-MM-YYYY)"));
+                        continue;
+                    }
+                }
+
+                String bankName = general.stringValue(user.bankName());
+                String accountHolderName = general.stringValue(user.accountHolderName());
+                String accountNumber = general.stringValue(user.accountNumber());
+                String ifscCode = general.stringValue(user.ifscCode());
+
+                boolean hasBank = bankName != null || accountHolderName != null || accountNumber != null
+                        || ifscCode != null;
+                if (hasBank) {
+                    if (bankName == null || bankName.isBlank()) {
+                        failureCount++;
+                        errors.add(Map.of("row", rowNum, "email", email, "reason",
+                                "Bank name is required when bank details are provided"));
+                        continue;
+                    }
+                    if (accountHolderName == null || !accountHolderName.matches("^[A-Za-z][A-Za-z\\s.'-]{1,49}$")) {
+                        failureCount++;
+                        errors.add(Map.of("row", rowNum, "email", email, "reason",
+                                "Account holder name must be 2-50 characters with letters and valid characters"));
+                        continue;
+                    }
+                    if (accountNumber == null || !accountNumber.matches("^\\d{9,18}$")) {
+                        failureCount++;
+                        errors.add(Map.of("row", rowNum, "email", email, "reason",
+                                "Account number must be 9 to 18 digits"));
+                        continue;
+                    }
+                    if (ifscCode == null || !ifscCode.toUpperCase().matches("^[A-Z]{4}0[A-Z0-9]{6}$")) {
+                        failureCount++;
+                        errors.add(Map.of("row", rowNum, "email", email, "reason",
+                                "IFSC code must be 11 characters (e.g. SBIN0001234). Provided: " + ifscCode));
+                        continue;
+                    }
+                }
+
+                User newUser = new User();
+                newUser.setId(general.generateUserId());
+                newUser.setName(name);
+                newUser.setEmail(email);
+                newUser.setPhone(phone);
+                newUser.setPasswordHash(apiService.makePasswordHash(password));
+                newUser.setDob(dob);
+                newUser.setMaritalStatus(
+                        general.stringValue(user.maritalStatus()) != null ? general.stringValue(user.maritalStatus())
+                                : "Single");
+                newUser.setAadharNo(aadharNo);
+                newUser.setEmailVerified(true);
+                newUser.setPhoneVerified(true);
+                newUser.setActive(true);
+
+                if (user.guardian() != null) {
+                    String gName = general.stringValue(user.guardian().get("name"));
+                    String gRel = general.stringValue(user.guardian().get("relation"));
+                    if (gName != null || gRel != null) {
+                        Guardian guardian = new Guardian();
+                        guardian.setName(gName != null ? gName : "");
+                        guardian.setRelation(gRel != null ? gRel : "");
+                        guardian.setUser(newUser);
+                        newUser.setGuardian(guardian);
+                    }
+                }
+
+                if (user.address() != null) {
+                    newUser.setStreet(general.stringValue(user.address().get("street")));
+                    newUser.setVillage(general.stringValue(user.address().get("village")));
+                    newUser.setCity(general.stringValue(user.address().get("city")));
+                    newUser.setState(general.stringValue(user.address().get("state")));
+                    newUser.setPincode(general.stringValue(user.address().get("pincode")));
+                }
+
+                if (user.nominee() != null) {
+                    String nName = general.stringValue(user.nominee().get("name"));
+                    String nAadhar = general.stringValue(user.nominee().get("aadharNo"));
+                    String nPhone = general.stringValue(user.nominee().get("mobileNo"));
+                    String nRel = general.stringValue(user.nominee().get("relation"));
+                    if (nName != null || nAadhar != null || nPhone != null || nRel != null) {
+                        Nominee nominee = new Nominee();
+                        nominee.setName(nName != null ? nName : "");
+                        nominee.setAadharNo(nAadhar != null ? nAadhar : "");
+                        nominee.setMobileNo(nPhone != null ? nPhone : "");
+                        nominee.setRelation(nRel != null ? nRel : "");
+                        nominee.setUser(newUser);
+                        List<Nominee> nominees = new ArrayList<>();
+                        nominees.add(nominee);
+                        newUser.setNominees(nominees);
+                    }
+                }
+
+                if (hasBank) {
+                    BankDetails bankDetails = new BankDetails();
+                    bankDetails.setBankName(bankName);
+                    bankDetails.setAccountHolderName(accountHolderName);
+                    bankDetails.setAccountNumber(accountNumber);
+                    bankDetails.setIfscCode(ifscCode.toUpperCase());
+                    bankDetails.setUser(newUser);
+                    newUser.setBankDetails(bankDetails);
+                }
+
+                userRepository.save(newUser);
+                successCount++;
+                createdUsers.add(Map.of("id", newUser.getId(), "name", newUser.getName(), "email", newUser.getEmail()));
+
+                try {
+                    activityLogService.log(
+                            general.adminId(), general.adminName(), "ADMIN",
+                            ActivityType.ACCOUNT_CREATED,
+                            "Admin bulk created user " + newUser.getName(),
+                            "USER", newUser.getId(),
+                            Map.of("email", newUser.getEmail(), "bulk", true));
+                } catch (Exception logEx) {
+                    log.warn("Could not log activity for bulk user {}: {}", newUser.getId(), logEx.getMessage());
+                }
+
+            } catch (Exception e) {
+                log.error("Failed to add user at row {}: {}", rowNum, e.getMessage(), e);
+                failureCount++;
+                errors.add(Map.of("row", rowNum, "email", String.valueOf(row.get("email")), "reason",
+                        e.getMessage() != null ? e.getMessage() : "Error saving user"));
+            }
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("total", usersPayload.size());
+        result.put("successCount", successCount);
+        result.put("failureCount", failureCount);
+        result.put("errors", errors);
+        result.put("createdUsers", createdUsers);
+        return result;
+    }
+
+    public Map<String, Object> addBulkUsersFromCsv(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return Map.of("total", 0, "successCount", 0, "failureCount", 0, "errors",
+                    List.of(Map.of("row", 0, "reason", "CSV file is empty or missing")), "createdUsers", List.of());
+        }
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+            List<Map<String, Object>> rows = parseCsv(reader);
+            return addBulkUsers(rows);
+        } catch (Exception e) {
+            log.error("Failed to parse CSV file: {}", e.getMessage(), e);
+            return Map.of("total", 0, "successCount", 0, "failureCount", 0, "errors",
+                    List.of(Map.of("row", 0, "reason", "Failed to read CSV: " + e.getMessage())), "createdUsers",
+                    List.of());
+        }
+    }
+
+    public List<Map<String, Object>> parseCsv(BufferedReader reader) throws Exception {
+        List<Map<String, Object>> list = new ArrayList<>();
+        String headerLine = reader.readLine();
+        if (headerLine == null) {
+            return list;
+        }
+        if (headerLine.startsWith("\uFEFF")) {
+            headerLine = headerLine.substring(1);
+        }
+        List<String> headers = parseCsvLine(headerLine);
+        String line;
+        while ((line = reader.readLine()) != null) {
+            if (line.trim().isEmpty()) {
+                continue;
+            }
+            List<String> cols = parseCsvLine(line);
+            Map<String, Object> map = new LinkedHashMap<>();
+            for (int i = 0; i < headers.size(); i++) {
+                String header = headers.get(i).trim();
+                String val = i < cols.size() ? cols.get(i).trim() : "";
+                map.put(header, val);
+            }
+            list.add(map);
+        }
+        return list;
+    }
+
+    private List<String> parseCsvLine(String line) {
+        List<String> values = new ArrayList<>();
+        StringBuilder sb = new StringBuilder();
+        boolean inQuotes = false;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (c == '"') {
+                if (inQuotes && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    sb.append('"');
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (c == ',' && !inQuotes) {
+                values.add(sb.toString().trim());
+                sb.setLength(0);
+            } else {
+                sb.append(c);
+            }
+        }
+        values.add(sb.toString().trim());
+        return values;
     }
 
 }

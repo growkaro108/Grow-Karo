@@ -15,10 +15,7 @@ import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.DTO.Payee;
@@ -27,15 +24,12 @@ import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.Transaction;
-import com.growkaro.backend.entity.Transaction.TransactionStatus;
-import com.growkaro.backend.entity.Transaction.TransactionType;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.entity.UserSchemeProfitLedger;
 import com.growkaro.backend.entity.UserSchemeReedemLedger;
 import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
 import com.growkaro.backend.repository.ReedemLedgerRepository;
-import com.growkaro.backend.repository.TransactionRepository;
 import com.growkaro.backend.repository.UserRepository;
 import com.growkaro.backend.security.JwtService;
 import com.growkaro.backend.service.RedisService;
@@ -59,8 +53,6 @@ public class General {
     private RedisService redisService;
     @Autowired
     private ReedemLedgerRepository reedemLedgerRepository;
-    @Autowired
-    private TransactionRepository transactionRepository;
 
     public boolean isValidId(String id) {
         Pattern idPattern = Pattern.compile("^GKUSID\\d{14}$");
@@ -107,6 +99,36 @@ public class General {
         return String.valueOf(number);
     }
 
+    private final java.util.concurrent.atomic.AtomicLong lastIdTimestamp = new java.util.concurrent.atomic.AtomicLong(0);
+
+    public synchronized String generateUserId() {
+        long now = Long.parseLong(LocalDateTime.now(ZoneId.of("Asia/Kolkata"))
+                .format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")));
+        long idNum = lastIdTimestamp.updateAndGet(prev -> Math.max(now, prev + 1));
+        return "GKUID" + idNum;
+    }
+
+    public LocalDate parseDob(String dobStr) {
+        if (dobStr == null || dobStr.isBlank()) {
+            return null;
+        }
+        dobStr = dobStr.trim();
+        List<DateTimeFormatter> formatters = List.of(
+                DateTimeFormatter.ISO_LOCAL_DATE, // yyyy-MM-dd
+                DateTimeFormatter.ofPattern("dd-MM-yyyy"),
+                DateTimeFormatter.ofPattern("dd/MM/yyyy"),
+                DateTimeFormatter.ofPattern("d-M-yyyy"),
+                DateTimeFormatter.ofPattern("d/M/yyyy")
+        );
+        for (DateTimeFormatter formatter : formatters) {
+            try {
+                return LocalDate.parse(dobStr, formatter);
+            } catch (Exception ignored) {
+            }
+        }
+        throw new IllegalArgumentException("Invalid date format for DOB: " + dobStr + ". Expected YYYY-MM-DD or DD-MM-YYYY");
+    }
+
     public UserRegister toUserRegister(Map<String, Object> payload) {
         String name = stringValue(payload.get("name"));
         if (name == null) {
@@ -124,8 +146,59 @@ public class General {
         }
 
         Map<String, Object> guardian = asMap(payload.get("guardian"));
+        if (guardian == null) {
+            String gName = stringValue(payload.get("guardian.name"));
+            if (gName == null) gName = stringValue(payload.get("guardianName"));
+            String gRel = stringValue(payload.get("guardian.relation"));
+            if (gRel == null) gRel = stringValue(payload.get("guardianRelation"));
+            if (gName != null || gRel != null) {
+                guardian = new LinkedHashMap<>();
+                if (gName != null) guardian.put("name", gName);
+                if (gRel != null) guardian.put("relation", gRel);
+            }
+        }
+
         Map<String, Object> address = asMap(payload.get("address"));
+        if (address == null) {
+            String street = stringValue(payload.get("address.street"));
+            if (street == null) street = stringValue(payload.get("street"));
+            String village = stringValue(payload.get("address.village"));
+            if (village == null) village = stringValue(payload.get("village"));
+            String city = stringValue(payload.get("address.city"));
+            if (city == null) city = stringValue(payload.get("city"));
+            String state = stringValue(payload.get("address.state"));
+            if (state == null) state = stringValue(payload.get("state"));
+            String pincode = stringValue(payload.get("address.pincode"));
+            if (pincode == null) pincode = stringValue(payload.get("pincode"));
+            if (street != null || village != null || city != null || state != null || pincode != null) {
+                address = new LinkedHashMap<>();
+                if (street != null) address.put("street", street);
+                if (village != null) address.put("village", village);
+                if (city != null) address.put("city", city);
+                if (state != null) address.put("state", state);
+                if (pincode != null) address.put("pincode", pincode);
+            }
+        }
+
         Map<String, Object> nominee = asMap(payload.get("nominee"));
+        if (nominee == null) {
+            String nName = stringValue(payload.get("nominee.name"));
+            if (nName == null) nName = stringValue(payload.get("nomineeName"));
+            String nAadhar = stringValue(payload.get("nominee.aadharNo"));
+            if (nAadhar == null) nAadhar = stringValue(payload.get("nomineeAadharNo"));
+            String nPhone = stringValue(payload.get("nominee.mobileNo"));
+            if (nPhone == null) nPhone = stringValue(payload.get("nomineeMobileNo"));
+            if (nPhone == null) nPhone = stringValue(payload.get("nominee.phone"));
+            String nRel = stringValue(payload.get("nominee.relation"));
+            if (nRel == null) nRel = stringValue(payload.get("nomineeRelation"));
+            if (nName != null || nAadhar != null || nPhone != null || nRel != null) {
+                nominee = new LinkedHashMap<>();
+                if (nName != null) nominee.put("name", nName);
+                if (nAadhar != null) nominee.put("aadharNo", nAadhar);
+                if (nPhone != null) nominee.put("mobileNo", nPhone);
+                if (nRel != null) nominee.put("relation", nRel);
+            }
+        }
 
         return new UserRegister(
                 name,

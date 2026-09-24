@@ -29,6 +29,8 @@ import {
   getAllSchemAuditHistoryApi,
   getSelectedHistoryApi,
   onReInvestApi,
+  addBulkUsersApi,
+  addBulkUsersCsvApi,
 } from "@/api/adminApi";
 import { userRegister } from "@/api/userApi";
 import { allRounderMessage } from "@/components/Message";
@@ -85,10 +87,10 @@ export async function createAdminUserNominee(userId, payload) {
   allRounderMessage(response);
   return response.status === "success" ? response.data : null;
 }
-export async function addBond(userSchemeId, payload, isUpdate = false) {
+export async function addBond(userId, userSchemeId, payload, isUpdate = false) {
   payload.isUpdate = isUpdate;
   // console.log(payload)
-  const response = await addBonds(userSchemeId, payload);
+  const response = await addBonds(userId, userSchemeId, payload);
   allRounderMessage(response);
   return response.status === "success";
 }
@@ -227,4 +229,18 @@ export async function getSelectedHistory(id) {
   } else {
     return res.data;
   }
+}
+
+export async function addBulkUsers(payload) {
+  const response = await addBulkUsersApi(payload);
+  allRounderMessage(response);
+  return response?.status === "success" ? response.data : null;
+}
+
+export async function addBulkUsersCsv(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await addBulkUsersCsvApi(formData);
+  allRounderMessage(response);
+  return response?.status === "success" ? response.data : null;
 }

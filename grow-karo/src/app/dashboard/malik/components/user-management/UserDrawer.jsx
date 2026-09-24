@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { X, Mail, Phone, Calendar, HandCoins, ChevronDown } from "lucide-react";
+import { X, Mail, Phone, Calendar, HandCoins, ChevronDown, CalendarClock, Percent, ArrowUpToLine, ArrowDownToLine } from "lucide-react";
 import StatusPill from "./StatusPill";
 import { currency, initials } from "./format";
 import dynamic from "next/dynamic";
@@ -50,7 +50,7 @@ export default function UserDrawer({ user, onClose, onSaved }) {
     aadhaarNo: "",
     phone: "",
   });
-
+  const [savingBond, setSavingBond] = useState(false)
   useEffect(() => {
     getAllPlans()
       .then((response) => setSchemes(response?.data ?? []))
@@ -91,7 +91,6 @@ export default function UserDrawer({ user, onClose, onSaved }) {
       ),
     );
   }, [user]);
-
   // Bonds without a certificate image first, then newest first.
   const sortedBonds = useMemo(() => {
     return [...(user?.enrolledSchemes ?? [])].sort((a, b) => {
@@ -158,13 +157,13 @@ export default function UserDrawer({ user, onClose, onSaved }) {
         acc.push(
           type === "profit"
             ? {
-                profitAmount: Number.isFinite(cleanedValue) ? cleanedValue : 0,
-                profitDate: rawDate || null,
-              }
+              profitAmount: Number.isFinite(cleanedValue) ? cleanedValue : 0,
+              profitDate: rawDate || null,
+            }
             : {
-                redeemAmount: Number.isFinite(cleanedValue) ? cleanedValue : 0,
-                redeemDate: rawDate || null,
-              },
+              redeemAmount: Number.isFinite(cleanedValue) ? cleanedValue : 0,
+              redeemDate: rawDate || null,
+            },
         );
       }
       return acc;
@@ -300,13 +299,15 @@ export default function UserDrawer({ user, onClose, onSaved }) {
   };
 
   const updateBond = async (bond) => {
+    setSavingBond(true)
     const details = bondForms[bond.userSchemeId] ?? {};
     if (!details.bondNumber && !details.image) return;
     const payload = new FormData();
     if (details.bondNumber) payload.append("bondNumber", details.bondNumber);
     if (details.image) payload.append("image", details.image);
-    const saved = await addBond(bond.userSchemeId, payload, true);
+    const saved = await addBond(user.userId, bond.userSchemeId, payload, true);
     if (saved) await onSaved?.();
+    setSavingBond(false)
   };
 
   return (
@@ -382,9 +383,8 @@ export default function UserDrawer({ user, onClose, onSaved }) {
               <span className="flex items-center gap-2 text-[10px] text-slate-500">
                 Admin only
                 <ChevronDown
-                  className={`h-3.5 w-3.5 text-teal-300 transition-transform ${
-                    addFormOpen ? "rotate-180" : ""
-                  }`}
+                  className={`h-3.5 w-3.5 text-teal-300 transition-transform ${addFormOpen ? "rotate-180" : ""
+                    }`}
                 />
               </span>
             </button>
@@ -413,9 +413,47 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                 </label>
 
                 {selectedScheme && (
-                  <p className="rounded-md bg-slate-900/70 p-2 text-xs leading-5 text-slate-400">
-                    {selectedScheme.schemeDetails}
-                  </p>
+                  // <p className="rounded-md bg-slate-900/70 p-2 text-xs leading-5 text-slate-400">
+                  //   {selectedScheme.schemeDetails}
+                  // </p> 
+                  //show four thing 1)scheme min amount 2)scheme max amount 3) scheme interest rate 4) tenure
+
+                  <div className="grid grid-cols-2 items-center gap-x-6 gap-y-3 rounded-xl border border-slate-800 bg-slate-900/60 px-5 py-3.5">
+                    <div className="flex items-center gap-2">
+                      <ArrowDownToLine className="h-4 w-4 text-slate-500" />
+                      <span className="text-[13px] text-slate-500">Min</span>
+                      <span className="text-[15px] font-medium text-slate-100">
+                        {currency(selectedScheme.minimumAmount) ?? "0"}
+                      </span>
+                    </div>
+
+
+                    <div className="flex items-center gap-2">
+                      <ArrowUpToLine className="h-4 w-4 text-slate-500" />
+                      <span className="text-[13px] text-slate-500">Max</span>
+                      <span className="text-[15px] font-medium text-slate-100">
+                        {currency(selectedScheme.maximumAmount) ?? "0"}
+                      </span>
+                    </div>
+
+
+                    <div className="flex items-center gap-2">
+                      <Percent className="h-4 w-4 text-emerald-500" />
+                      <span className="text-[13px] text-slate-500">Interest</span>
+                      <span className="text-[15px] font-semibold text-emerald-400">
+                        {selectedScheme.profitPercentage ?? "0"}%
+                      </span>
+                    </div>
+
+
+                    <div className="flex items-center gap-2">
+                      <CalendarClock className="h-4 w-4 text-slate-500" />
+                      <span className="text-[13px] text-slate-500">Tenure</span>
+                      <span className="text-[14px] font-medium text-slate-100">
+                        {selectedScheme.tenure ?? "0"} days
+                      </span>
+                    </div>
+                  </div>
                 )}
 
                 <label className="block text-xs text-slate-400">
@@ -504,7 +542,7 @@ export default function UserDrawer({ user, onClose, onSaved }) {
 
                 <div className="grid grid-cols-2 gap-3">
                   <label className="text-xs text-slate-400">
-                    Paid amount
+                    Invested amount
                     <input
                       name="paidAmount"
                       type="number"
@@ -542,8 +580,8 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                         <input
                           aria-label="Profit amount"
                           type="number"
-                          min="0"
-                          step="0.01"
+                          min="100"
+                          step="100"
                           placeholder="Profit amount"
                           value={entry.profitAmount}
                           onChange={(e) =>
@@ -553,7 +591,6 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                               e.target.value,
                             )
                           }
-                          required
                           className={inputClass}
                         />
                         <input
@@ -699,6 +736,8 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                   }
                   onSaveBond={() => updateBond(bond)}
                   onViewBond={setViewingBond}
+                  savingBond={savingBond}
+                  setSavingBond={setSavingBond}
                 />
               ))}
             </div>

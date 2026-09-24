@@ -203,8 +203,9 @@ public class AdminAPIController {
         return ResponseEntity.ok(adminAPIService.rejectUserScheme(userSchemeId));
     }
 
-    @PostMapping(value = "/user_scheme/add-bond/{userSchemeId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/user_scheme/add-bond/{userId}/{userSchemeId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> addBondDetails(
+            @PathVariable String userId,
             @PathVariable String userSchemeId,
             @RequestParam(required = false) String bondNumber,
             @RequestParam(name = "image", required = false) MultipartFile image,
@@ -231,7 +232,7 @@ public class AdminAPIController {
             }
         }
 
-        return ResponseEntity.ok(adminAPIService.addBondDetails(userSchemeId, bondNumber, image, isUpdate));
+        return ResponseEntity.ok(adminAPIService.addBondDetails(userId, userSchemeId, bondNumber, image, isUpdate));
     }
 
     @GetMapping("/activity-types")
@@ -417,6 +418,30 @@ public class AdminAPIController {
             log.error("Error while fetching users: " + e.getMessage());
             return ResponseEntity.ok(general.response("error",
                     e.getMessage(), null));
+        }
+    }
+
+    @PostMapping("/user/bulk")
+    public ResponseEntity<Map<String, Object>> addBulkUsers(@RequestBody List<Map<String, Object>> usersPayload) {
+        try {
+            Map<String, Object> result = adminAPIService.addBulkUsers(usersPayload);
+            return ResponseEntity.ok(general.response("success", "Bulk user processing completed", result));
+        } catch (Exception e) {
+            log.error("Error in bulk user registration: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(general.response("error", "Bulk registration failed: " + e.getMessage(), null));
+        }
+    }
+
+    @PostMapping(value = "/user/bulk-csv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Object>> addBulkUsersCsv(@RequestParam("file") MultipartFile file) {
+        try {
+            Map<String, Object> result = adminAPIService.addBulkUsersFromCsv(file);
+            return ResponseEntity.ok(general.response("success", "CSV user processing completed", result));
+        } catch (Exception e) {
+            log.error("Error in CSV bulk user registration: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(general.response("error", "CSV bulk registration failed: " + e.getMessage(), null));
         }
     }
 

@@ -55,6 +55,8 @@ export default function BondCard({
   onBondFormChange,
   onSaveBond,
   onViewBond,
+  savingBond,
+  setSavingBond,
 }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -63,7 +65,7 @@ export default function BondCard({
     (bond.profitLedger?.length ?? 0) + (bond.reedemLedger?.length ?? 0);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-800 bg-white/2" title={isApproved? "Approved":" Not Approve Yet "}>
+    <div className="overflow-hidden rounded-xl border border-slate-800 bg-white/2" title={isApproved ? "Approved" : " Not Approve Yet "}>
       <div
         className={`flex items-center justify-between gap-3 bg-linear-to-br px-4 py-3.5 text-white ${isApproved ? "from-teal-900 to-[#0c3b3d]" : "from-amber-700 to-[#3d2c0c]"}`}
       >
@@ -236,10 +238,14 @@ export default function BondCard({
           />
           <button
             type="button"
+            disabled={savingBond}
             onClick={onSaveBond}
-            className="w-full rounded-md border border-teal-700 px-3 py-2 text-xs font-semibold text-teal-300 transition hover:bg-teal-950/50"
+            className={`w-full rounded-md px-3 py-2 text-xs font-semibold transition ${savingBond
+              ? "cursor-not-allowed border-slate-600 bg-slate-950/30 text-slate-600"
+              : "border border-teal-700 text-teal-300 hover:bg-teal-950/50 focus:cursor-none focus:opacity-50"
+              }`}
           >
-            Save bond details
+            {savingBond ? "Saving..." : "Save bond details"}
           </button>
         </div>
       )}
@@ -249,7 +255,7 @@ export default function BondCard({
         </p>
         {!bond.bondUrl ? (
           <div className="rounded-lg border border-dashed border-slate-700 px-4 py-6 text-center text-sm text-slate-500">
-           {isApproved?" No bond issued yet.":" Not Approved yet. "}
+            {isApproved ? " No bond issued yet." : " Not Approved yet. "}
           </div>
         ) : (
           <BondStub

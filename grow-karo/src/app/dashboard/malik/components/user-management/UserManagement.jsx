@@ -15,6 +15,13 @@ const AddUser = dynamic(() => import("./AddUser"), {
   ssr: false,
 });
 
+const AddBulkUserModal = dynamic(() => import("./AddBulkUserModal"), {
+  loading: () => (
+    <div className="p-4 h-7 w-7 z-60 animate-pulse justify-center flex items-center text-center text-slate-400"></div>
+  ),
+  ssr: false,
+});
+
 const UserDrawer = dynamic(() => import("./UserDrawer"), {
   loading: () => (
     <div className="p-4 text-center text-slate-400">Loading...</div>
@@ -50,6 +57,7 @@ export default function UserManagement() {
   const [selected, setSelected] = useState(null);
   const [users, setUsers] = useState([]);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [showBulkUserModal, setShowBulkUserModal] = useState(false);
   const [newUserForm, setNewUserForm] = useState(EMPTY_NEW_USER);
   const [creatingUser, setCreatingUser] = useState(false);
   // Pagination
@@ -185,6 +193,7 @@ export default function UserManagement() {
           sortDesc={sortDesc}
           onToggleSort={() => setSortDesc((v) => !v)}
           onAddUserClick={() => setShowAddUserModal(true)}
+          onAddBulkUserClick={() => setShowBulkUserModal(true)}
         />
 
         {/* <p className="mb-3 text-sm text-slate-400">
@@ -211,6 +220,14 @@ export default function UserManagement() {
         setShowAddUserModal={setShowAddUserModal}
         creatingUser={creatingUser}
       />}
+
+      {showBulkUserModal && (
+        <AddBulkUserModal
+          isOpen={showBulkUserModal}
+          onClose={() => setShowBulkUserModal(false)}
+          onUsersAdded={fetchAllUser}
+        />
+      )}
 
       <UserDrawer
         user={selected}

@@ -124,7 +124,9 @@ public class User {
 
     @PrePersist
     protected void onCreate() {
-        this.id = "GKUID" + getTime().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        if (this.id == null || this.id.isBlank()) {
+            this.id = "GKUID" + getTime().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        }
     }
 
     @PreUpdate

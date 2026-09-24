@@ -211,9 +211,10 @@ public class UserAPIService {
             return false;
         }
 
+        LocalDate parsedDob = null;
         if (dob != null) {
             try {
-                LocalDate.parse(dob);
+                parsedDob = general.parseDob(dob);
             } catch (Exception e) {
                 log.warn("Invalid DOB provided during signup for email={}", email, e);
                 return false;
@@ -221,11 +222,12 @@ public class UserAPIService {
         }
 
         User newUser = new User();
+        newUser.setId(general.generateUserId());
         newUser.setName(name);
         newUser.setEmail(email);
         newUser.setPhone(phone);
         newUser.setPasswordHash(apiService.makePasswordHash(passwordHash));
-        newUser.setDob(dob == null ? null : LocalDate.parse(dob));
+        newUser.setDob(parsedDob);
         newUser.setMaritalStatus(maritalStatus);
         newUser.setAadharNo(aadharNo);
 

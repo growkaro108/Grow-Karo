@@ -34,8 +34,8 @@ export default function Sidebar({
                 onCloseMobile?.();
               }}
               className={`group flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium font-body transition-colors duration-200 ${isActive
-                  ? "bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20"
-                  : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                ? "bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20"
+                : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
                 }`}
             >
               <span className="flex items-center gap-3">
@@ -56,7 +56,7 @@ export default function Sidebar({
         })}
       </nav>
 
-      <div className="mx-3 mb-5 rounded-xl border border-slate-800 bg-slate-800/40 p-3.5">
+      {/* <div className="mx-3 mb-5 rounded-xl border border-slate-800 bg-slate-800/40 p-3.5">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-700 text-xs font-semibold text-slate-200 font-mono animate-bounce">
             AD
@@ -70,7 +70,7 @@ export default function Sidebar({
             </p>
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 

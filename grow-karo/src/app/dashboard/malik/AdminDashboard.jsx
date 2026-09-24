@@ -14,6 +14,7 @@ import {
   MessageCircleQuestionMark,
   ShieldQuestionMark,
   BarChart3,
+  Timer,
 } from "lucide-react";
 import {
   Chart as ChartJS,
@@ -33,6 +34,13 @@ import OverviewTab from "./components/OverviewTab";
 import TabLoader from "../../../loader/TabLoader";
 import dynamic from "next/dynamic";
 import { adminContext } from "@/context/AdminContext";
+const MaturingSchemesPanel = dynamic(
+  () => import("./components/MaturingSchemesPanel"),
+  {
+    loading: () => <TabLoader message={"Loading Maturing Schemes..."} />,
+    ssr: false,
+  },
+);
 const Reports = dynamic(
   () => import("./components/Report"),
   {
@@ -112,6 +120,7 @@ ChartJS.register(
 const NAV_ITEMS = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "activity", label: "Activity Log", icon: Activity },
+  { id: "maturity", label: "Near Maturity", icon: Timer },
   { id: "withdrawals", label: "Withdrawals", icon: Wallet },
   { id: "plans", label: "Schemes Management", icon: ScrollText },
   { id: "SchemeAuditHistory", label: "Scheme Audit History", icon: ShieldQuestionMark },
@@ -125,7 +134,7 @@ const NAV_ITEMS = [
 ];
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState("user");
+  const [activeTab, setActiveTab] = useState("maturity");
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [toast, setToast] = useState(null);
@@ -195,6 +204,7 @@ export default function AdminPanel() {
     issues: "User Issues",
     codes: "Remitters",
     reports: "Reports",
+    maturity: "Maturing Schemes",
     settings: "Admin Settings",
   };
 
@@ -224,6 +234,8 @@ export default function AdminPanel() {
             <div className="animate-fade-slide-in">
               {activeTab === "overview" && <OverviewTab />}
               {activeTab === "activity" && <ActivityTab />}
+              {activeTab === "maturity" && <MaturingSchemesPanel />}
+
               {activeTab === "withdrawals" && (
                 <WithdrawalsTab
                   withdrawals={withdrawals}

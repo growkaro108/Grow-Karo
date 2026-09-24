@@ -72,11 +72,14 @@ export async function addAdminUserNominee(userId, payload) {
     body: payload,
   });
 }
-export async function addBonds(userSchemeId, payload) {
-  return await apiRequest(`${END_POINT}user_scheme/add-bond/${userSchemeId}`, {
-    method: "POST",
-    body: payload, // payload is FormData — apiClient handles multipart automatically
-  });
+export async function addBonds(userId, userSchemeId, payload) {
+  return await apiRequest(
+    `${END_POINT}user_scheme/add-bond/${userId}/${userSchemeId}`,
+    {
+      method: "POST",
+      body: payload, // payload is FormData — apiClient handles multipart automatically
+    },
+  );
 }
 
 export async function getAllActivityLogTypes() {
@@ -234,5 +237,22 @@ export async function createFundraiserCode(codeData) {
   return await apiRequest(`${END_POINT}fundraiser-codes`, {
     method: "POST",
     body: codeData,
+  });
+}
+
+export async function addBulkUsersApi(payload) {
+  return await apiRequest(`${END_POINT}user/bulk`, {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function addBulkUsersCsvApi(formData) {
+  return await apiRequest(`${END_POINT}user/bulk-csv`, {
+    method: "POST",
+    body: formData,
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
   });
 }

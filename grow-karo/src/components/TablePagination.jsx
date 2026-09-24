@@ -83,7 +83,7 @@ export default function PaginationFooter({
   }
   return (
     <div
-      className={`p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-3 text-xs ${theme.container}`}
+      className={`p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-3 text-xs ${theme.container} rounded-b-xl`}
     >
       {/* Dynamic item counters & page size picker */}
       <div className="flex items-center gap-4">
@@ -141,9 +141,8 @@ export default function PaginationFooter({
               <button
                 key={p}
                 onClick={() => onPageChange(p)}
-                className={`min-w-7 h-7 px-2 rounded-md text-xs font-medium border ${
-                  p === safePage ? theme.pageBtnActive : theme.pageBtnInactive
-                }`}
+                className={`min-w-7 h-7 px-2 rounded-md text-xs font-medium border ${p === safePage ? theme.pageBtnActive : theme.pageBtnInactive
+                  }`}
               >
                 {p}
               </button>
