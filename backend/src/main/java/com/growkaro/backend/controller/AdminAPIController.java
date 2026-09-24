@@ -401,12 +401,12 @@ public class AdminAPIController {
 
     @GetMapping("/user/all")
     public ResponseEntity<Map<String, Object>> getAllUser(@RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int limit) {
-        if (page < 0 || limit <= 0 || limit > 20 || page > 100) {
+            @RequestParam(defaultValue = "") int size) {
+        if (page < 0 || size <= 0 || size > 20 || page > 100) {
             page = 0;
-            limit = 10;
+            size = 10;
         }
-        Pageable pageable = PageRequest.of(page, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         try {
             PagedResponse<AdminUser> users = adminAPIService.getAllUsers(pageable);
             if (users == null) {
@@ -483,6 +483,7 @@ public class AdminAPIController {
             return ResponseEntity.ok(general.response("error", "something went wrong..", null));
         }
     }
+
     @PutMapping("/settings")
     public ResponseEntity<Map<String, Object>> updateSettings(@RequestBody SystemSettings settings) {
         try {

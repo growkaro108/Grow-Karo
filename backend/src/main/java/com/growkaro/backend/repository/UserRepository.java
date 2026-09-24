@@ -10,12 +10,15 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface UserRepository extends JpaRepository<User, String> {
 
     // get all user email
     @Query("SELECT u.email FROM User u")
     List<String> findAllEmail();
+
+    List<User> findAllByEmailIn(Set<String> adminEmails);
 
     // get all user email whose schemeAlerts is true
     @Query("SELECT u.email FROM User u WHERE u.schemeAlerts = true")
@@ -39,8 +42,8 @@ public interface UserRepository extends JpaRepository<User, String> {
     // get all user who joined scheme or not
     @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.enrolledSchemes us LEFT JOIN FETCH us.scheme s")
     Page<User> findAllWithUserScheme(Pageable pageable);
-    // ── Lookup ───────────────────────────────────────────────────────────────
 
+    // ── Lookup ───────────────────────────────────────────────────────────────
     Optional<User> findByEmail(String email);
 
     Optional<User> findByPhone(String phone);

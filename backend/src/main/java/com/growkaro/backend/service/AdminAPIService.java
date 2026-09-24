@@ -70,6 +70,7 @@ import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionTyp
 import com.growkaro.backend.entity.SupportIssue.Status;
 import com.growkaro.backend.entity.Transaction.TransactionStatus;
 import com.growkaro.backend.entity.Transaction.TransactionType;
+import com.growkaro.backend.entity.User.Role;
 import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.enums.UserSchemeStatus;
@@ -84,10 +85,12 @@ import com.growkaro.backend.repository.UserRepository;
 import com.growkaro.backend.repository.UserSchemeRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AdminAPIService {
 
     private static final int DEFAULT_PAGE_SIZE = 20;
@@ -106,35 +109,9 @@ public class AdminAPIService {
     private final General general;
     private final CrucialNotificationService crucialNotificationService;
     private final EmailService emailService;
-
+    private final TransactionService transactionService;
     @PersistenceContext
     private EntityManager entityManager;
-
-    public AdminAPIService(UserRepository userRepository,
-            RemitterRepository remitterRepository,
-            TransactionRepository transactionRepository,
-            SupportIssueRepository supportIssueRepository,
-            SchemeRepository schemeRepository, UserSchemeRepository userSchemeRepository, @Lazy ApiService apiService,
-            ActivityLogService activityLogService, LocalFileStorageService localFileStorageService,
-            ActivityLogRepository activityLogRepository, NotificationRepository notificationRepository,
-            General general,
-            CrucialNotificationService crucialNotificationService,
-            EmailService emailService) {
-        this.userRepository = userRepository;
-        this.remitterRepository = remitterRepository;
-        this.transactionRepository = transactionRepository;
-        this.supportIssueRepository = supportIssueRepository;
-        this.schemeRepository = schemeRepository;
-        this.userSchemeRepository = userSchemeRepository;
-        this.apiService = apiService;
-        this.activityLogService = activityLogService;
-        this.localFileStorageService = localFileStorageService;
-        this.activityLogRepository = activityLogRepository;
-        this.notificationRepository = notificationRepository;
-        this.general = general;
-        this.crucialNotificationService = crucialNotificationService;
-        this.emailService = emailService;
-    }
 
     // create a new scheme
     @Caching(evict = {
@@ -414,27 +391,17 @@ public class AdminAPIService {
             scheme = (Scheme) isUserSchemeValid.get("scheme");
             // approved user
             userScheme.setIsApproved(true);
-            // set enrollment date
-            userScheme.setEnrollmentDate(general.getCurrentDateTime());
+
             // set paid amount and date
             userScheme.setPaidAmount(paidAmount);
             userScheme.setPaidDate(paidDate);
-            // set status
-            userScheme.setStatus(UserSchemeStatus.ACTIVE);
-            // set next payout date
-            userScheme.setNextPayoutDate(
-                    general.calculateNextPayoutDate(userScheme.getEnrollmentDate(), scheme.getPayoutFrequency(),
-                            scheme.getTenure()));
-            // set maturity date
-            userScheme.setMaturityDate(
-                    general.calculateMaturityDate(userScheme.getEnrollmentDate(), userScheme.getScheme().getTenure()));
-            // save user scheme
             userSchemeRepository.save(userScheme);
             // convert localdate to localdatetime paidDate=dateTime
             LocalDateTime settlementDate = LocalDateTime.of(paidDate,
                     LocalDateTime.now(ZoneId.of("Asia/Kolkata")).toLocalTime());
 
-            createTransaction(userSchemeId, user, paidAmount, settlementDate, TransactionType.DEPOSIT,
+            transactionService.createDepositTransaction(userScheme, user, paidAmount, settlementDate,
+                    TransactionType.DEPOSIT,
                     "Initial Deposit");
             return general.response("success",
                     user.getName() + " is approved for " + scheme.getSchemeName() + " successfully..",
@@ -450,24 +417,6 @@ public class AdminAPIService {
                         user.getName() + " has approved for " + scheme.getSchemeName(), "user",
                         user.getId(), null);
             }
-        }
-    }
-
-    @Async
-    private void createTransaction(String userSchemeId, User user, BigDecimal amount, LocalDateTime settlementDate,
-            TransactionType type, String note) {
-        try {
-            Transaction transaction = new Transaction();
-            transaction.setUserScheme(userSchemeRepository.findById(userSchemeId).orElse(null));
-            transaction.setUser(user);
-            transaction.setAmount(amount);
-            transaction.setSettlementDate(settlementDate);
-            transaction.setType(type);
-            transaction.setBankDetails(user.getBankDetails());
-            transaction.setStatus(TransactionStatus.SUCCESS);
-            transactionRepository.save(transaction);
-        } catch (Exception e) {
-            log.error("Error creating transaction for user scheme {} because of :{}", userSchemeId, e.getMessage());
         }
     }
 
@@ -529,11 +478,10 @@ public class AdminAPIService {
     public Map<String, Object> addBondDetails(String userSchemeId, String bondNumber, MultipartFile images,
             boolean isUpdate) {
         try {
-            Optional<UserScheme> userSchemeOpt = userSchemeRepository.findById(userSchemeId);
-            if (userSchemeOpt.isEmpty()) {
+            UserScheme userScheme = userSchemeRepository.findByUserSchemeId(userSchemeId).orElse(null);
+            if (userScheme == null) {
                 return general.response("error", "User scheme not found", null);
             }
-            UserScheme userScheme = userSchemeOpt.get();
 
             if (bondNumber != null && !bondNumber.isBlank()) {
                 userScheme.setBondNumber(bondNumber.trim());
@@ -543,7 +491,13 @@ public class AdminAPIService {
                 String uploadedUrl = localFileStorageService.store(images, "bonds/" + userSchemeId);
                 userScheme.setBondImageURL(uploadedUrl);
             }
-
+            Scheme s = userScheme.getScheme();
+            LocalDateTime todayDateTime = general.getCurrentDateTime();
+            userScheme.setEnrollmentDate(todayDateTime);
+            userScheme.setStatus(UserSchemeStatus.ACTIVE);
+            userScheme.setNextPayoutDate(
+                    general.calculateNextPayoutDate(todayDateTime, s.getPayoutFrequency(), s.getTenure()));
+            userScheme.setMaturityDate(general.calculateMaturityDate(todayDateTime, s.getTenure()));
             userSchemeRepository.save(userScheme);
 
             return general.response("success", "Bond details added successfully...", Map.of(
@@ -884,7 +838,7 @@ public class AdminAPIService {
 
     public PagedResponse<AdminUser> getAllUsers(Pageable pageable) {
         try {
-            var users = userRepository.findAllWithUserScheme(pageable);
+            var users = userRepository.findByRole(Role.GRAHAK, pageable);
             // remove admin users from the list admin users are not needed in the list
             var mapped = users.map(AdminUser::toAdminUser);
             return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());

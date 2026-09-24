@@ -26,7 +26,7 @@
  * ---------------------------------------------------------------
  */
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
     Search,
     FileSpreadsheet,
@@ -154,9 +154,6 @@ const CATEGORY_DOT = {
     Hybrid: "bg-violet-400",
     ELSS: "bg-teal-400",
 };
-
-// const currency = (n) =>
-//     new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
 
 export default function Reports({ users = MOCK_USERS }) {
     const [view, setView] = useState("all"); // "all" | "scheme"
@@ -323,7 +320,7 @@ export default function Reports({ users = MOCK_USERS }) {
         <div className="min-h-screen bg-[#0A0D13] text-slate-200">
             <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
                 {/* Header */}
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                {/* <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                         <p className="text-xs font-medium uppercase tracking-wide text-[#C9A66B]/90">Admin · Investors</p>
                         <h1 className="mt-1 text-2xl font-semibold text-white sm:text-3xl">Investor directory</h1>
@@ -350,7 +347,7 @@ export default function Reports({ users = MOCK_USERS }) {
                             {exporting === "pdf" ? "Exporting…" : "Export PDF"}
                         </button>
                     </div>
-                </div>
+                </div> */}
 
                 {/* Nav: All Users / Scheme */}
                 <div className="mt-6 flex flex-col gap-3 border-b border-slate-800 sm:flex-row sm:items-center sm:justify-between">
@@ -398,7 +395,7 @@ export default function Reports({ users = MOCK_USERS }) {
                     )}
                 </div>
 
-                {/* Stat cards */}
+                {/* Stat cards
                 <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                     <StatCard icon={Users} label={totals.primaryLabel} value={totals.primaryValue} />
                     <StatCard icon={TrendingUp} label={totals.secondaryLabel} value={totals.secondaryValue} />
@@ -409,7 +406,7 @@ export default function Reports({ users = MOCK_USERS }) {
                         value={currency(totals.totalCurrent)}
                         trendUp={totals.totalCurrent >= totals.totalInvested}
                     />
-                </div>
+                </div> */}
 
                 {/* Filters */}
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">

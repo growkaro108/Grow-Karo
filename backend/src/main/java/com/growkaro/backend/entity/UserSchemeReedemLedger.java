@@ -50,7 +50,7 @@ public class UserSchemeReedemLedger {
 
     // Default value in Java object is REQUESTED
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'REQUESTED'")
+    @Column(name = "status")
     private ReedeemStatus status = ReedeemStatus.REQUESTED;
 
     public enum ReedeemStatus {

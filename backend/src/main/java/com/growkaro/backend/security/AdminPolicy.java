@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class AdminPolicy {
-    private final Set<String> adminEmails;
+    public final Set<String> adminEmails;
 
     public AdminPolicy(@Value("${admin.email}") String adminEmailsCsv) {
         if (adminEmailsCsv == null || adminEmailsCsv.isBlank()) {
@@ -19,7 +19,7 @@ public class AdminPolicy {
         }
         this.adminEmails = Arrays.stream(adminEmailsCsv.split(","))
                 .map(String::trim)
-            .map(String::toLowerCase)
+                .map(String::toLowerCase)
                 .filter(s -> !s.isBlank())
                 .collect(Collectors.toUnmodifiableSet());
     }

@@ -204,7 +204,7 @@ export default function BondDetails({
             </div>
           </div>
         </div>
-        {!isApproved && (
+        {/* {!isApproved && (
           <div className="mt-8 flex justify-between items-center border-t border-slate-100 pt-6">
             <p className="text-sm font-medium text-slate-400">
               Request on: {formatDate(bond.requestDate)}
@@ -223,7 +223,7 @@ export default function BondDetails({
               {isWithdrawing ? "Withdrawing..." : "Withdraw Request"}
             </button>
           </div>
-        )}
+        )} */}
         {/* reinvest button */}
         {(isReInvestEligible(bond) && bond.status.toLowerCase() === 'matured' && bond.reinvestedIntoUserSchemeId === null) && (
           <div className="mt-8 flex justify-between items-center border-t border-slate-100 pt-6">
@@ -258,9 +258,6 @@ export default function BondDetails({
             </div>
           </div>
         )}
-
-
-
 
       </div>
       {/* show enrollment form  */}

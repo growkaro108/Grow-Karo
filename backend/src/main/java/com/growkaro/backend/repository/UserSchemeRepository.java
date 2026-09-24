@@ -40,14 +40,24 @@ public interface UserSchemeRepository extends JpaRepository<UserScheme, String> 
 
         boolean existsByNomineeNomineeId(String nomineeId);
 
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
+        @Query("SELECT us FROM UserScheme us JOIN FETCH us.scheme AND JOIN FETCH us.user WHERE us.maturityDate < :today AND us.status = 'MATURED' AND us.reinvestedIntoUserSchemeId IS NULL")
+        List<UserScheme> findAllByMaturityDatePassedAndNotReInvestedYet(@Param("today") LocalDate today);
+
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
+        @Query("SELECT us FROM UserScheme us JOIN FETCH us.user WHERE us.userSchemeId = :userSchemeId")
+        Optional<UserScheme> findByUserSchemeIdWithUser(@Param("userSchemeId") String userSchemeId);
+
         // get all approved user
         @Lock(LockModeType.PESSIMISTIC_WRITE)
         @Query("""
-                        SELECT us FROM UserScheme us
-                        JOIN FETCH us.scheme
-                        WHERE us.isApproved = true
-                        AND us.nextPayoutDate = :today
-                        """)
+                                        SELECT us
+                        FROM UserScheme
+                        us JOIN
+                        FETCH us.scheme
+                                        WHERE us.isApproved=true
+                        AND us.nextPayoutDate=:today""")
+
         List<UserScheme> findAllApprovedUserSchemes(@Param("today") LocalDate today);
 
         @Lock(LockModeType.PESSIMISTIC_WRITE)

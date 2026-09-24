@@ -15,6 +15,7 @@ import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,12 +27,15 @@ import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.Transaction;
+import com.growkaro.backend.entity.Transaction.TransactionStatus;
+import com.growkaro.backend.entity.Transaction.TransactionType;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.entity.UserSchemeProfitLedger;
 import com.growkaro.backend.entity.UserSchemeReedemLedger;
 import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
 import com.growkaro.backend.repository.ReedemLedgerRepository;
+import com.growkaro.backend.repository.TransactionRepository;
 import com.growkaro.backend.repository.UserRepository;
 import com.growkaro.backend.security.JwtService;
 import com.growkaro.backend.service.RedisService;
@@ -55,6 +59,8 @@ public class General {
     private RedisService redisService;
     @Autowired
     private ReedemLedgerRepository reedemLedgerRepository;
+    @Autowired
+    private TransactionRepository transactionRepository;
 
     public boolean isValidId(String id) {
         Pattern idPattern = Pattern.compile("^GKUSID\\d{14}$");
@@ -315,7 +321,19 @@ public class General {
     }
 
     public String adminName() {
-        return redisService.getValue("malik").toString();
+        String name = redisService.getValue("malik").toString();
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
+        return name;
+    }
+
+    public String adminId() {
+        Object id = redisService.getValue("malikID");
+        if (id == null || id.toString().isBlank()) {
+            return "Admin";
+        }
+        return id.toString();
     }
 
     public BigDecimal countProfit(List<UserSchemeProfitLedger> profitLedger) {
@@ -343,4 +361,5 @@ public class General {
         reedemLedgerRepository.save(reedemLedger);
         return true;
     }
+
 }

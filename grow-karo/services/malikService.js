@@ -174,8 +174,8 @@ export async function sendCredentials(payload) {
   return true;
 }
 
-export async function fetchAllUsers() {
-  const response = await fetchAllUsersApi();
+export async function fetchAllUsers(page, size) {
+  const response = await fetchAllUsersApi(page, size);
   if (response.status !== "success") {
     allRounderMessage(response);
     return null;

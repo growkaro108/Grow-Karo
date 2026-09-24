@@ -164,8 +164,8 @@ export async function triggerEssentialNotification(payload) {
   });
 }
 
-export async function fetchAllUsersApi() {
-  return await apiRequest(`${END_POINT}user/all`);
+export async function fetchAllUsersApi(page, size) {
+  return await apiRequest(`${END_POINT}user/all?page=${page}&size=${size}`);
 }
 
 export async function getAllIssuesApi(status, page, size) {

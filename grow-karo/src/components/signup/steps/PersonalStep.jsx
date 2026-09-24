@@ -1,6 +1,6 @@
 import { TextField, SelectField } from "../formFields";
 
-const MIN_AGE_YEARS = 18;
+const MIN_AGE_YEARS = 3;
 
 export default function PersonalStep({
   formData,

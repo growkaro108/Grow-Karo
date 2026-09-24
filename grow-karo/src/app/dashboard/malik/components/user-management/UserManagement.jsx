@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Toolbar from "./Toolbar";
 import { errorMessage } from "@/components/Message";
 import {
@@ -54,7 +54,8 @@ export default function UserManagement() {
   const [creatingUser, setCreatingUser] = useState(false);
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(5);
+  const [totalUsers, setTotalUsers] = useState(0);
   const filtered = useMemo(() => {
     // Parse and normalize admin emails ONCE outside the filter loop
     const adminEmails =
@@ -93,23 +94,25 @@ export default function UserManagement() {
       return sortDesc ? dateB - dateA : dateA - dateB;
     });
   }, [users, query, statusFilter, schemeFilter, sortDesc]);
-  async function fetchAllUser() {
+  const fetchAllUser = useCallback(async () => {
     try {
-      const res = await fetchAllUsers();
+      const res = await fetchAllUsers(currentPage, pageSize);
       if (!res || !Array.isArray(res.content)) {
         setUsers([]);
         return;
       }
       setUsers(res.content);
+      setTotalUsers(res.totalElements);
     } catch (e) {
       console.log(e);
       errorMessage("something went wrong ,try later..");
     }
-  }
+  }, [currentPage, pageSize])
 
   useEffect(() => {
+    console.log("called", currentPage, pageSize)
     fetchAllUser();
-  }, []);
+  }, [currentPage, fetchAllUser, pageSize]);
 
   const updateNewUserForm = (event) => {
     const { name, value } = event.target;
@@ -172,17 +175,6 @@ export default function UserManagement() {
       `}</style>
 
       <div className="mx-auto max-w-6xl">
-        {/* Page header */}
-        {/* <div className="mb-6 flex flex-col gap-1">
-          <h1 className="font-[Space_Grotesk] text-2xl font-semibold text-slate-100">
-            User Management
-          </h1>
-          <p className="text-sm text-slate-400">
-            View accounts, joined schemes, and bond holdings across the
-            platform.
-          </p>
-        </div> */}
-
         <Toolbar
           query={query}
           onQueryChange={setQuery}
@@ -204,7 +196,7 @@ export default function UserManagement() {
           onSelect={setSelected}
           currentPage={currentPage}
           pageSize={pageSize}
-          totalItems={filtered.length}
+          totalItems={totalUsers}
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
         />

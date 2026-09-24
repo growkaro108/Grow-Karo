@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.growkaro.backend.DRO.RecipientContact;
+import com.growkaro.backend.common.General;
 import com.growkaro.backend.common.NotificationBroadcaster;
 import com.growkaro.backend.entity.Notification;
 import com.growkaro.backend.entity.Notification.ReceiverType;
@@ -34,6 +35,7 @@ public class CrucialNotificationService {
     private final NotificationContentBuilder contentBuilder;
     private final NotificationBroadcaster notificationBroadcaster;
     private final ActivityLogService activityLogService;
+    private final General general;
 
     @Value("${frontend.url}")
     private String frontendUrl;
@@ -140,23 +142,31 @@ public class CrucialNotificationService {
         }
     }
 
-    public void sendUserNotificationWithCustomMessage(String title, String message, User user, String actionUrl,
+    public void sendAdminNotificationWithCustomMessage(String title, String message, String adminId, String actionUrl,
             Map<String, Object> params) {
-        if (user == null) {
+        if (adminId == null) {
             return;
         }
-        dispatchNotificationwithCustomMessage(title, message, ReceiverType.User, user, actionUrl, params);
+        dispatchNotificationwithCustomMessage(title, message, ReceiverType.Admin, adminId, actionUrl, params);
+    }
+
+    public void sendUserNotificationWithCustomMessage(String title, String message, String userId, String actionUrl,
+            Map<String, Object> params) {
+        if (userId == null || !general.isValidId(userId)) {
+            return;
+        }
+        dispatchNotificationwithCustomMessage(title, message, ReceiverType.User, userId, actionUrl, params);
     }
 
     @Async
     private void dispatchNotificationwithCustomMessage(String title, String message, ReceiverType role,
-            User user, String actionUrl, Map<String, Object> params) {
+            String userId, String actionUrl, Map<String, Object> params) {
 
         try {
             // A. Save to Database
             Notification notification = new Notification();
             notification.setReceiverType(role);
-            notification.setReceiverId(user.getId());
+            notification.setReceiverId(userId);
             notification.setTitle(title);
             notification.setMessage(message);
             notification.setNotificationType(Notification.NotificationType.INFO);
@@ -167,11 +177,11 @@ public class CrucialNotificationService {
             Notification saved = notificationRepository.save(notification);
 
             // B. Stream live event via SSE
-            notificationBroadcaster.sendToReceiver(role, user.getId(), saved);
+            notificationBroadcaster.sendToReceiver(role, userId, saved);
 
         } catch (Exception e) {
             log.error("Failed to dispatch custom notification for action {} to {} [ID: {}]: {}", "info", role,
-                    user.getId(),
+                    userId,
                     e.getMessage());
         }
     }

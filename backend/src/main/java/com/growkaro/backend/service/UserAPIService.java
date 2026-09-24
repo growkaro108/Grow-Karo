@@ -7,6 +7,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
@@ -32,9 +34,11 @@ import com.growkaro.backend.DTO.IssueResponse;
 import com.growkaro.backend.DTO.NomineeResponse;
 import com.growkaro.backend.DTO.NotificationView;
 import com.growkaro.backend.DTO.PagedResponse;
+import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.TransactionResponse;
 import com.growkaro.backend.DTO.TransactionSummary;
 import com.growkaro.backend.DTO.UserPortfolio;
+import com.growkaro.backend.DTO.UserSchemeResponse;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.Guardian;
@@ -54,6 +58,7 @@ import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.entity.Reply;
 import com.growkaro.backend.entity.SupportIssue.Status;
+import com.growkaro.backend.entity.User.Role;
 import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.enums.UserSchemeStatus;
@@ -93,17 +98,31 @@ public class UserAPIService {
     private final AdminPolicy adminPolicy;
     private final RedisService redisService;
     private final ReedemLedgerRepository reedemLedgerRepository;
+    private final TransactionService transactionService;
 
     // @Cacheable(value = "testApis", key = "#id")
     @Transactional
     public Object testApis() {
         try {
-            UserScheme us = userSchemeRepository.findById("GKUSID20260915192126").get();
-            UserSchemeReedemLedger reedemLedger = reedemLedgerRepository
-                    .findByUserSchemeAndRedeemAmount(us, new BigDecimal(30000)).orElse(null);
-            return reedemLedger == null ? "Not found" : reedemLedger.getStatus().toString();
+            // pending
+            // Set<String> adminEmails = adminPolicy.adminEmails;
+            // if (adminEmails == null || adminEmails.isEmpty()) {
+            // log.warn("Admin emails set is empty, skipping role update");
+            // return "Admin emails set is empty";
+            // }
+            // System.out.println("adminemail:" + adminEmails);
+            // List<User> users = userRepository.findAllByEmailIn(adminEmails);
+            // return users.stream().map(u -> u.getEmail()).toList();
+            User u = userRepository.findByEmail("vikaskumar01997@gmail.com").orElse(null);
+            if (u != null) {
+                u.setRole(Role.ADMIN);
+                userRepository.save(u);
+                System.out.println("updated successfully");
+                return true;
+            }
+            return false;
         } catch (Exception e) {
-            log.error("Failed to set user status active", e);
+            log.error("Failed to set user status active", e.getMessage());
             return e.getMessage();
         }
     }
@@ -311,7 +330,7 @@ public class UserAPIService {
             // set admin token into redis
             if (isAdmin) {
                 redisService.setValue("malik", user.getName());
-                System.out.println("malik is " + redisService.getValue("malik"));
+                redisService.setValue("malikID", user.getId());
             }
             // notifyUser
             crucialNotificationService.notifyUser(EssentialActionType.LOGIN, user, "", null);
@@ -334,6 +353,9 @@ public class UserAPIService {
     public Map<String, Object> logout(String userId, String userName) {
 
         try {
+            if (userId.contentEquals(general.adminId())) {
+                redisService.delete("malik");
+            }
             activityLogService.log(
                     userId, userName, "USER",
                     ActivityType.LOGOUT,
@@ -595,7 +617,7 @@ public class UserAPIService {
                 return general.response("error", "Invalid amount...", null);
             }
 
-            UserScheme us = getUserSchemeById(wa.userSchemeId());
+            UserScheme us = userSchemeRepository.findByUserSchemeIdWithUser(wa.userSchemeId()).orElse(null);
             if (us == null) {
                 log.error("userScheme not found for userSchemeId :{}", wa.userSchemeId());
                 return general.response("error", "Invalid userSchemeId...", null);
@@ -675,17 +697,9 @@ public class UserAPIService {
             }
 
             // create the pending withdrawal transaction
-            Transaction txn = new Transaction();
-            txn.setUser(user);
-            txn.setAmount(wa.amount());
-            txn.setSchemeName(us.getScheme().getSchemeName());
-            txn.setBankDetails(bankDetails);
-            txn.setStatus(Transaction.TransactionStatus.PENDING);
-            txn.setType(wa.isAggressive()
+            transactionService.createPendingReedemTransaction(user, wa.amount(), us, bankDetails, wa.isAggressive()
                     ? Transaction.TransactionType.AGGRESSIVE_WITHDRAWAL
                     : Transaction.TransactionType.GENERAL_WITHDRAWAL);
-            txn.setUserScheme(us);
-            Transaction savedTxn = transactionRepository.save(txn);
 
             crucialNotificationService.notifyAllForEssentialAction(
                     EssentialActionType.WITHDRAWAL_REQUESTED,
@@ -694,7 +708,7 @@ public class UserAPIService {
                     null,
                     "/dashboard/requests",
                     Map.of("amount", wa.amount().toString(), "txnId",
-                            savedTxn.getId() != null ? savedTxn.getId() : ""));
+                            "check transaction for status."));
 
             // record this redemption in the ledger so future totalRedeemed
             // calculations correctly include this amount
@@ -926,14 +940,14 @@ public class UserAPIService {
 
     @CacheEvict(value = "userPortfolio", key = "#userId")
     @Transactional
-    public Map<String, Object> reinvest(String userId, String id, String nomineeId, String schemeId) {
+    public Map<String, Object> reinvest(String userId, String userSchemeId, String nomineeId, String schemeId) {
         try {
-            UserScheme existingUserScheme = userSchemeRepository.findByUserSchemeId(id)
+            UserScheme existingUserScheme = userSchemeRepository.findByUserSchemeId(userSchemeId)
                     .orElse(null);
 
             if (existingUserScheme == null) {
-                log.error("Reinvest failed: UserScheme not found for ID: {}", id);
-                return general.response("error", "User scheme not found", Map.of("id", id));
+                log.error("Reinvest failed: UserScheme not found for ID: {}", userSchemeId);
+                return general.response("error", "User scheme not found", Map.of("id", userSchemeId));
             }
 
             // 1. Calculate profit & redemptions cleanly
@@ -960,7 +974,8 @@ public class UserAPIService {
             if (reinvestmentAmount.compareTo(targetScheme.getMinimumAmount()) < 0) {
                 log.error("Reinvest failed: Amount {} below minimum {}", reinvestmentAmount,
                         targetScheme.getMinimumAmount());
-                return general.response("error", "Reinvestment amount is less than minimum required", Map.of("id", id));
+                return general.response("error", "Reinvestment amount is less than minimum required",
+                        Map.of("id", userSchemeId));
             }
 
             if (reinvestmentAmount.compareTo(targetScheme.getMaximumAmount()) > 0) {
@@ -968,7 +983,7 @@ public class UserAPIService {
                         reinvestmentAmount,
                         targetScheme.getMaximumAmount());
                 return general.response("error", "Reinvestment amount exceeds maximum limit",
-                        Map.of("id", id));
+                        Map.of("userSchemeId", userSchemeId));
             }
 
             // // 4. Resolve Nominee

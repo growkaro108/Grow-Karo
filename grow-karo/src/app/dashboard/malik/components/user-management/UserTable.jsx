@@ -64,7 +64,7 @@ export default function UserTable({
                 {/* {dateFmt(u.maturityDate)} */}
               </td>
               <td className="px-5 py-3.5 text-sm text-slate-500">
-                {u.totalRedeem ? currency(u.totalRedeem) : "N/A"}
+                {u.totalRedeem ? currency(u.totalRedeem) : "0"}
                 {/* {dateFmt(u.maturityDate)} */}
               </td>
               <td className="px-5 py-3.5 text-right">
