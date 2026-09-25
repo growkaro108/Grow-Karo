@@ -857,9 +857,9 @@ public class AdminAPIService {
         }
     }
 
-    public PagedResponse<AdminUser> getAllUsers(Pageable pageable) {
+    public PagedResponse<AdminUser> getAllUsers(String query, Pageable pageable) {
         try {
-            var users = userRepository.findByRole(Role.GRAHAK, pageable);
+            var users = userRepository.findByQueryAndRole(query, Role.GRAHAK, pageable);
             // remove admin users from the list admin users are not needed in the list
             var mapped = users.map(AdminUser::toAdminUser);
             return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());

@@ -402,14 +402,14 @@ public class AdminAPIController {
 
     @GetMapping("/user/all")
     public ResponseEntity<Map<String, Object>> getAllUser(@RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "") int size) {
+            @RequestParam(defaultValue = "") int size, @RequestParam(defaultValue = "") String query) {
         if (page < 0 || size <= 0 || size > 20 || page > 100) {
             page = 0;
             size = 10;
         }
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         try {
-            PagedResponse<AdminUser> users = adminAPIService.getAllUsers(pageable);
+            PagedResponse<AdminUser> users = adminAPIService.getAllUsers(query, pageable);
             if (users == null) {
                 return ResponseEntity.ok(general.response("error", "No users found", null));
             }

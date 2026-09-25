@@ -1,6 +1,7 @@
 package com.growkaro.backend.repository;
 
 import com.growkaro.backend.entity.User;
+import com.growkaro.backend.entity.User.Role;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +35,13 @@ public interface UserRepository extends JpaRepository<User, String> {
             "LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
             "LOWER(u.id) LIKE LOWER(CONCAT('%', :query, '%'))")
     Page<User> searchUsers(@Param("query") String query, Pageable pageable);
+
+    @Query("SELECT u FROM User u WHERE " +
+            "LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "LOWER(u.id) LIKE LOWER(CONCAT('%', :query, '%')) AND " +
+            "u.role = :role")
+    Page<User> findByQueryAndRole(@Param("query") String query, @Param("role") Role role, Pageable pageable);
 
     // fetch who have at least one userscheme
     @Query("SELECT DISTINCT u FROM User u JOIN FETCH u.enrolledSchemes us JOIN FETCH us.scheme s")

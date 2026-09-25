@@ -567,7 +567,7 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                   </label>
                 </div>
 
-                {selectedScheme.payoutFrequency !== "tenure-complete" && (
+                {selectedScheme?.payoutFrequency !== "tenure-complete" && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs text-slate-400">
                       <span>Profit and redemption entries</span>

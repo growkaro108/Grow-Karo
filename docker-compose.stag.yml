@@ -58,7 +58,7 @@ services:
           memory: 128M
 
   backend:
-    image: growwkaro/backend:v4.2.0
+    image: growwkaro/backend:v4.3.0
     container_name: growkaro-backend
     restart: unless-stopped
     depends_on:
@@ -94,7 +94,7 @@ services:
           memory: 512M
 
   frontend:
-    image: growwkaro/frontend:v4.2.0
+    image: growwkaro/frontend:v4.3.0
     container_name: growkaro-frontend
     restart: unless-stopped
     depends_on:

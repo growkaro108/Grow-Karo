@@ -64,6 +64,11 @@ export default function UserManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   const [totalUsers, setTotalUsers] = useState(0);
+  // debounce only the `query` value itself — everything downstream reacts to
+  // the debounced value instead of the raw keystroke-by-keystroke one
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
+
+
   const filtered = useMemo(() => {
     // Parse and normalize admin emails ONCE outside the filter loop
     const adminEmails =
@@ -102,9 +107,10 @@ export default function UserManagement() {
       return sortDesc ? dateB - dateA : dateA - dateB;
     });
   }, [users, query, statusFilter, schemeFilter, sortDesc]);
-  const fetchAllUser = useCallback(async () => {
+
+  const fetchAllUser = useCallback(async (signal) => {
     try {
-      const res = await fetchAllUsers(currentPage, pageSize);
+      const res = await fetchAllUsers(query, currentPage, pageSize, { signal });
       if (!res || !Array.isArray(res.content)) {
         setUsers([]);
         return;
@@ -112,15 +118,22 @@ export default function UserManagement() {
       setUsers(res.content);
       setTotalUsers(res.totalElements);
     } catch (e) {
+      if (e.name === "AbortError" || e.name === "CanceledError") return;
       console.log(e);
-      errorMessage("something went wrong ,try later..");
+      errorMessage("something went wrong, try later..");
     }
-  }, [currentPage, pageSize])
+  }, [currentPage, pageSize, query]);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query), 400); // adjust delay to taste
+    return () => clearTimeout(timer);
+  }, [query]);
 
   useEffect(() => {
-    console.log("called", currentPage, pageSize)
-    fetchAllUser();
-  }, [currentPage, fetchAllUser, pageSize]);
+    const controller = new AbortController();
+    fetchAllUser(controller.signal);
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery, currentPage, pageSize]);
 
   const updateNewUserForm = (event) => {
     const { name, value } = event.target;
