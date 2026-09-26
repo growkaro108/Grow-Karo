@@ -1,15 +1,14 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { ZoomIn } from "lucide-react";
 import StatusPill from "./StatusPill";
 import { calculateMaturityAmount, currency, dateFmt } from "./format";
-// import BondCertificate from "../BondCertificate.jsx";
+import BondCertificate from "../BondCertificate.jsx";
 import { resolveMediaUrl } from "../../../../../api/apiClient";
 import Image from "next/image";
 
 
 
-export default function BondStub({ bond, userName, scheme, onView }) {
-
+export default function BondStub({ bond, userName, scheme, onView, viewUser }) {
   return (
     <div className="overflow-hidden rounded-xl border border-slate-800">
       {/* counterfoil */}
@@ -31,29 +30,16 @@ export default function BondStub({ bond, userName, scheme, onView }) {
       {/* certificate thumbnail */}
       <button
         onClick={() => onView(bond)}
-        className="group relative block h-28 w-full overflow-hidden border-b border-slate-800 bg-[#F3ECD9] focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-in[...]"
-        aria-label={`View certificate for bond ${bond.id}`}
+        className="group relative block h-28 w-full overflow-hidden border-b border-slate-800 bg-[#F3ECD9] focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-inset"
+        aria-label={`View certificate for bond ${bond.userSchemeId || bond.id || ""}`}
       >
-        {bond.bondUrl ? (
-          <Image
-            unoptimized
-            width={500}
-            height={500}
-            src={resolveMediaUrl(bond.bondUrl)}
-            alt={`Bond certificate for ${userName}`}
-            className="h-full w-full object-cover"
-          />
-        ) :
-
-          //    ( <BondCertificate
-          //     bond={bond}
-          //     userName={userName}
-          //     scheme={scheme}
-          //     className="h-full w-full"
-          //   />
-          // )
-          ""
-        }
+        <BondCertificate
+          bond={bond}
+          userData={viewUser}
+          userName={userName}
+          scheme={scheme || bond?.schemeName}
+          className="h-full w-full"
+        />
         <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-medium text-white">
             <ZoomIn className="h-3.5 w-3.5" /> View bond

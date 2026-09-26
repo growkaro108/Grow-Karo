@@ -32,6 +32,7 @@ import {
   addBulkUsersApi,
   addBulkUsersCsvApi,
   getAllMaturityUserSchemeApi,
+  getUserProfileApi,
 } from "@/api/adminApi";
 import { userRegister } from "@/api/userApi";
 import { allRounderMessage } from "@/components/Message";
@@ -246,16 +247,25 @@ export async function addBulkUsersCsv(file) {
   return response?.status === "success" ? response.data : null;
 }
 
-export async function getAllMaturityUserScheme(debouncedSearch, daysThreshold,currentPage,itemsPerPage){
- let payload={};
- payload.query=debouncedSearch;
- payload.maturityDays=daysThreshold;
- payload.page=currentPage;
- payload.size=itemsPerPage;
- const res=await getAllMaturityUserSchemeApi(payload);
- if(res.status !=="success"){
-  allRounderMessage(res);
-  return false;
- }
- return res.data;
+export async function getAllMaturityUserScheme(debouncedSearch, daysThreshold, currentPage, itemsPerPage) {
+  let payload = {};
+  payload.query = debouncedSearch;
+  payload.maturityDays = daysThreshold;
+  payload.page = currentPage;
+  payload.size = itemsPerPage;
+  const res = await getAllMaturityUserSchemeApi(payload);
+  if (res.status !== "success") {
+    allRounderMessage(res);
+    return false;
+  }
+  return res.data;
+}
+
+export async function getUserProfile(id) {
+  const res = await getUserProfileApi(id);
+  if (res.status !== "success") {
+    allRounderMessage(res);
+    return false;
+  }
+  return res.data;
 }

@@ -7,8 +7,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
@@ -20,7 +18,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.ResponseCookie;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,14 +28,13 @@ import com.growkaro.backend.DRO.RaiseIssue;
 import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.DRO.WithdrawAmount;
 import com.growkaro.backend.DTO.IssueResponse;
+import com.growkaro.backend.DTO.NearMaturityUserSchemeResponse;
 import com.growkaro.backend.DTO.NomineeResponse;
 import com.growkaro.backend.DTO.NotificationView;
 import com.growkaro.backend.DTO.PagedResponse;
-import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.TransactionResponse;
 import com.growkaro.backend.DTO.TransactionSummary;
 import com.growkaro.backend.DTO.UserPortfolio;
-import com.growkaro.backend.DTO.UserSchemeResponse;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.Guardian;
@@ -50,18 +46,13 @@ import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserProfile;
 import com.growkaro.backend.entity.UserScheme;
-import com.growkaro.backend.entity.UserSchemeProfitLedger;
 import com.growkaro.backend.entity.UserSchemeReedemLedger;
-import com.growkaro.backend.entity.Notification.ActionType;
-import com.growkaro.backend.entity.Notification.NotificationType;
-import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.entity.Reply;
 import com.growkaro.backend.entity.SupportIssue.Status;
 import com.growkaro.backend.entity.User.Role;
 import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
 import com.growkaro.backend.enums.ActivityType;
-import com.growkaro.backend.enums.UserSchemeStatus;
 import com.growkaro.backend.repository.BankDetailsRepository;
 import com.growkaro.backend.repository.NotificationRepository;
 import com.growkaro.backend.repository.ReedemLedgerRepository;
@@ -104,23 +95,19 @@ public class UserAPIService {
     @Transactional
     public Object testApis() {
         try {
-            // pending
-            // Set<String> adminEmails = adminPolicy.adminEmails;
-            // if (adminEmails == null || adminEmails.isEmpty()) {
-            // log.warn("Admin emails set is empty, skipping role update");
-            // return "Admin emails set is empty";
+            // User u =
+            // userRepository.findByEmail("vikaskumar01997@gmail.com").orElse(null);
+            // if (u != null) {
+            // u.setRole(Role.ADMIN);
+            // userRepository.save(u);
+            // System.out.println("updated successfully");
+            // return true;
             // }
-            // System.out.println("adminemail:" + adminEmails);
-            // List<User> users = userRepository.findAllByEmailIn(adminEmails);
-            // return users.stream().map(u -> u.getEmail()).toList();
-            User u = userRepository.findByEmail("vikaskumar01997@gmail.com").orElse(null);
-            if (u != null) {
-                u.setRole(Role.ADMIN);
-                userRepository.save(u);
-                System.out.println("updated successfully");
-                return true;
-            }
-            return false;
+            Pageable pageable = PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "requestDate"));
+            var rawUsers = userSchemeRepository.findNearMaturityUsers("", 15, pageable);
+            var mapped = rawUsers.map(NearMaturityUserSchemeResponse::fromUserScheme);
+            return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
+
         } catch (Exception e) {
             log.error("Failed to set user status active", e.getMessage());
             return e.getMessage();

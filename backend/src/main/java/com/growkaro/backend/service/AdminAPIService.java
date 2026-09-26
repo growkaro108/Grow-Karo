@@ -58,6 +58,7 @@ import com.growkaro.backend.DTO.SchemeAuditProjection;
 import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.SchemeUpdateHistory;
 import com.growkaro.backend.DTO.SearchUser;
+import com.growkaro.backend.DTO.UserFullDetails;
 import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.DTO.UserSchemeResponse;
 import com.growkaro.backend.common.General;
@@ -79,6 +80,7 @@ import com.growkaro.backend.entity.SupportIssue.Status;
 import com.growkaro.backend.entity.Transaction.TransactionStatus;
 import com.growkaro.backend.entity.Transaction.TransactionType;
 import com.growkaro.backend.entity.User.Role;
+import com.growkaro.backend.entity.UserProfile;
 import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.enums.UserSchemeStatus;
@@ -1084,6 +1086,14 @@ public class AdminAPIService {
         var rawUsers = userSchemeRepository.findNearMaturityUsers(query, days, pageable);
         var mapped = rawUsers.map(NearMaturityUserSchemeResponse::fromUserScheme);
         return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
+    }
+
+    public UserFullDetails userProfile(String userId) {
+        User u = userRepository.findUserFullDetails(userId);
+        if (u == null) {
+            return null;
+        }
+        return UserFullDetails.fromEntity(u);
     }
 
     // @Cacheable(value = "remitters", key = "#page ?: 'default'")

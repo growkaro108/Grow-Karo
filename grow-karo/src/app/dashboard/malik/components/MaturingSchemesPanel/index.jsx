@@ -268,39 +268,39 @@ export default function MaturingSchemesAdminDark() {
     return () => clearTimeout(handler);
   }, [searchTerm]);
   //  Fetch data safely with cleanup (AbortController to prevent race conditions)
-  useEffect(() => {
-    let isMounted = true;
-    const controller = new AbortController();
+  // useEffect(() => {
+  //   let isMounted = true;
+  //   const controller = new AbortController();
 
-    const fetchData = async () => {
-      try {
-        // Pass controller signal if your API function supports Axios / fetch cancellation
-        const res = await getAllMaturityUserScheme(
-          debouncedSearch,
-          daysThreshold,
-          currentPage,
-          itemsPerPage,
-          { signal: controller.signal },
-        );
+  //   const fetchData = async () => {
+  //     try {
+  //       // Pass controller signal if your API function supports Axios / fetch cancellation
+  //       const res = await getAllMaturityUserScheme(
+  //         debouncedSearch,
+  //         daysThreshold,
+  //         currentPage,
+  //         itemsPerPage,
+  //         { signal: controller.signal },
+  //       );
 
-        if (res && isMounted) {
-          console.log(res);
-          // setMaturityData(res.data); // Update state here
-        }
-      } catch (error) {
-        if (isMounted) {
-          console.error("Error fetching maturity user schemes:", error);
-        }
-      }
-    };
+  //       if (res && isMounted) {
+  //         console.log(res);
+  //         // setMaturityData(res.data); // Update state here
+  //       }
+  //     } catch (error) {
+  //       if (isMounted) {
+  //         console.error("Error fetching maturity user schemes:", error);
+  //       }
+  //     }
+  //   };
 
-    fetchData();
+  //   fetchData();
 
-    return () => {
-      isMounted = false;
-      controller.abort(); // Cancels pending API requests if dependencies change fast
-    };
-  }, [currentPage, daysThreshold, itemsPerPage, debouncedSearch]);
+  //   return () => {
+  //     isMounted = false;
+  //     controller.abort(); // Cancels pending API requests if dependencies change fast
+  //   };
+  // }, [currentPage, daysThreshold, itemsPerPage, debouncedSearch]);
   return (
     <div className="w-full max-w-7xl -m-7 mx-auto p-4 sm:p-6 lg:p-8 bg-slate-950 min-h-screen text-slate-100">
       {/* Control Bar: Search & Export Controls */}
@@ -430,8 +430,8 @@ export default function MaturingSchemesAdminDark() {
                   <td className="py-3 px-4">
                     <span
                       className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${scheme.daysRemaining <= 3
-                          ? "bg-rose-950/80 text-rose-300 border border-rose-800/50"
-                          : "bg-amber-950/80 text-amber-300 border border-amber-800/50"
+                        ? "bg-rose-950/80 text-rose-300 border border-rose-800/50"
+                        : "bg-amber-950/80 text-amber-300 border border-amber-800/50"
                         }`}
                     >
                       <AlertTriangle className="w-3 h-3" />
@@ -487,8 +487,8 @@ export default function MaturingSchemesAdminDark() {
                 </div>
                 <span
                   className={`px-2 py-1 rounded-full text-xs font-bold ${scheme.daysRemaining <= 3
-                      ? "bg-rose-950 text-rose-300 border border-rose-800/40"
-                      : "bg-amber-950 text-amber-300 border border-amber-800/40"
+                    ? "bg-rose-950 text-rose-300 border border-rose-800/40"
+                    : "bg-amber-950 text-amber-300 border border-amber-800/40"
                     }`}
                 >
                   {scheme.daysRemaining}d left

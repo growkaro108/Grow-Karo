@@ -57,6 +57,7 @@ export default function BondCard({
   onViewBond,
   savingBond,
   setSavingBond,
+  viewUser
 }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -253,16 +254,17 @@ export default function BondCard({
         <p className="mb-2 text-[10px] uppercase tracking-wide text-slate-500">
           Certificate
         </p>
-        {!bond.bondUrl ? (
+        {!isApproved && !bond.bondUrl ? (
           <div className="rounded-lg border border-dashed border-slate-700 px-4 py-6 text-center text-sm text-slate-500">
-            {isApproved ? " No bond issued yet." : " Not Approved yet. "}
+            Not Approved yet.
           </div>
         ) : (
           <BondStub
             bond={bond}
             userName={user.name}
-            scheme={user.scheme}
+            scheme={bond.schemeName || user.scheme}
             onView={onViewBond}
+            viewUser={viewUser}
           />
         )}
         {bond.nominee && (

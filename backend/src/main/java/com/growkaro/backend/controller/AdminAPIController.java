@@ -39,10 +39,12 @@ import com.growkaro.backend.DTO.SchemeAuditProjection;
 import com.growkaro.backend.DTO.SchemeResponse;
 import com.growkaro.backend.DTO.SchemeUpdateHistory;
 import com.growkaro.backend.DTO.SearchUser;
+import com.growkaro.backend.DTO.UserFullDetails;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.common.NotificationBroadcaster;
 import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.entity.User;
+import com.growkaro.backend.entity.UserProfile;
 import com.growkaro.backend.security.JwtService;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
@@ -554,11 +556,14 @@ public class AdminAPIController {
 
     }
 
+    @PostMapping("/maturity/user")
     public ResponseEntity<Map<String, Object>> getNearMaturityUser(@RequestBody Map<String, Object> payload) {
         String query = general.stringValue(payload.get("query"));
         int maturityDays = general.intValue(payload.get("maturityDays"));
         int page = general.intValue(payload.get("page"));
         int size = general.intValue(payload.get("size"));
+
+        // System.out.println(query + "\n" + maturityDays + "\n" + page + "\n" + size);
 
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "requestDate"));
         var result = adminAPIService.getNearMaturityUser(query, maturityDays, pageable);
@@ -567,6 +572,25 @@ public class AdminAPIController {
         }
         return ResponseEntity.ok(general.response("success", "Fetched successfully...", result));
 
+    }
+
+    @GetMapping("/userProfile/{userId}")
+    public ResponseEntity<Map<String, Object>> getUserProfile(@PathVariable String userId) {
+        // System.out.println("UserId is" + userId);
+        try {
+            if (!general.isValidId(userId)) {
+                return ResponseEntity.badRequest().build();
+            }
+            UserFullDetails up = adminAPIService.userProfile(userId);
+            if (up == null) {
+                return ResponseEntity.ok(general.response("info", "No user Found..", Map.of()));
+            }
+            return ResponseEntity.ok(general.response("success", "User Found..", up));
+
+        } catch (Exception e) {
+            log.error("Error while fetching userprofile userId : {}", userId, e);
+            return ResponseEntity.internalServerError().build(); // Added missing return
+        }
     }
 
     // pendings

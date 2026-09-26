@@ -11,6 +11,7 @@ import {
   addManualUserScheme,
   createAdminUserNominee,
   fetchAdminUserNominees,
+  getUserProfile,
   updateUserSchemeLedger,
 } from "../../../../../../services/malikService";
 
@@ -28,6 +29,7 @@ const inputClass =
 
 export default function UserDrawer({ user, onClose, onSaved }) {
   const [viewingBond, setViewingBond] = useState(null);
+  const [viewUserDetails, setViewUserDetails] = useState(null);
   const [schemes, setSchemes] = useState([]);
   const [saving, setSaving] = useState(false);
   const [addFormOpen, setAddFormOpen] = useState(false);
@@ -91,6 +93,13 @@ export default function UserDrawer({ user, onClose, onSaved }) {
       ),
     );
   }, [user]);
+
+  const currentUserId = user?.userId || user?.id;
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    getUserFullDetails(currentUserId);
+  }, [currentUserId]);
   // Bonds without a certificate image first, then newest first.
   const sortedBonds = useMemo(() => {
     return [...(user?.enrolledSchemes ?? [])].sort((a, b) => {
@@ -309,6 +318,28 @@ export default function UserDrawer({ user, onClose, onSaved }) {
     if (saved) await onSaved?.();
     setSavingBond(false)
   };
+
+
+  const getUserFullDetails = async (id) => {
+    if (!id) return;
+    try {
+      const userDetails = await getUserProfile(id);
+      if (userDetails) {
+        setViewUserDetails(userDetails);
+      }
+    } catch (e) {
+      console.error("Error fetching user details", e);
+    }
+  };
+
+  const onViewBond = async (bond) => {
+    setViewingBond(bond);
+    if (!viewUserDetails && currentUserId) {
+      await getUserFullDetails(currentUserId);
+    }
+  };
+
+
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -735,9 +766,10 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                     updateBondForm(bond.userSchemeId, field, value)
                   }
                   onSaveBond={() => updateBond(bond)}
-                  onViewBond={setViewingBond}
+                  onViewBond={onViewBond}
                   savingBond={savingBond}
                   setSavingBond={setSavingBond}
+                  viewUser={viewUserDetails}
                 />
               ))}
             </div>
@@ -753,8 +785,9 @@ export default function UserDrawer({ user, onClose, onSaved }) {
 
       <CertificateLightbox
         bond={viewingBond}
-        userName={user.name}
-        scheme={user.scheme}
+        userName={user?.name}
+        userData={viewUserDetails}
+        scheme={viewingBond?.schemeName || viewingBond?.scheme || user?.scheme}
         onClose={() => setViewingBond(null)}
       />
     </div>

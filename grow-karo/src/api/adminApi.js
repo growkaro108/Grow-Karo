@@ -206,6 +206,12 @@ export async function getAllMaturityUserSchemeApi(payload) {
     body: payload
   });
 }
+
+export async function getUserProfileApi(userId) {
+  return await apiRequest(`${END_POINT}userProfile/${userId}`, {
+    method: "GET"
+  });
+}
 //pending----------------------------------------------------------------------
 
 export async function fetchAdminDashboard(params) {

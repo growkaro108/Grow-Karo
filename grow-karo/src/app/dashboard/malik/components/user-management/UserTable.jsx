@@ -87,7 +87,7 @@ export default function UserTable({
       <TablePagination
         currentPage={currentPage}
         pageSize={pageSize}
-        totalItems={totalItems - adminEmails?.length}
+        totalItems={users?.length}
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
         darkMode={true}

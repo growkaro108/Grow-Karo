@@ -52,31 +52,49 @@ const BondCertificate = forwardRef(function BondCertificate(
     scheme,
     profilePhoto,
     logoUrl,
-    companyName = "GROWW karo",
+    companyName = "GROWW_KARO",
     companyTagline = "\u090F\u0915 \u0915\u0926\u092E \u0906\u0924\u094D\u092E\u0928\u093F\u0930\u094D\u092D\u0930\u0924\u093E \u0915\u0940 \u0913\u0930",
     className = "",
+    userData = {},
   },
   ref,
 ) {
+  const user = userData || {};
   const uid = bond.userSchemeId ?? "certificate";
   const photoClipId = `photo-clip-${uid}`;
 
-  const name = bond.fullName || userName || "";
-  const isMarried =
-    String(bond.maritalStatus || "").toLowerCase() === "married";
-  const isSingle = String(bond.maritalStatus || "").toLowerCase() === "single";
+  const name = user.name || userName || bond.fullName || "";
+  const marital = String(user.maritalStatus || bond.maritalStatus || "").toLowerCase();
+  const isMarried = marital === "married";
+  const isSingle = marital === "single";
 
   const terms =
     bond.terms && bond.terms.length
       ? bond.terms
       : [
-          "Profit will be credited 23 to 03 at every month*",
-          "Closure charge will be imposed as per the maturity tenure*",
-          "This Bond is valid only till maturity date*",
-          "Amount will be returned in 7 working days*",
-        ];
+        "Profit will be credited 23 to 03 at every month*",
+        "Closure charge will be imposed as per the maturity tenure*",
+        "This Bond is valid only till maturity date*",
+        "Amount will be returned in 7 working days*",
+      ];
+
+  const safeDate = (val) => {
+    if (!val) return "";
+    const str = String(val).trim();
+    if (/^\d{2}-\d{2}-\d{4}$/.test(str)) return str;
+    const d = new Date(val);
+    if (!Number.isNaN(d.getTime())) {
+      return d.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).replace(/\//g, "-");
+    }
+    return str;
+  };
 
   // ---- wrap helper for the Address line (rough char-count based) ----
+  const rawAddress = user.address || bond.address || "";
   const wrapText = (text, maxChars) => {
     const words = String(text || "")
       .split(/\s+/)
@@ -95,7 +113,7 @@ const BondCertificate = forwardRef(function BondCertificate(
     if (current) lines.push(current);
     return lines.slice(0, 2); // cap at 2 lines to fit the row
   };
-  const addressLines = wrapText(bond.address, 58);
+  const addressLines = wrapText(rawAddress, 58);
 
   // ---- layout constants ----
   const W = 480;
@@ -124,8 +142,8 @@ const BondCertificate = forwardRef(function BondCertificate(
   y += rowH; // 298-322
   const rRelation = y;
   y += rowH; // 322-346
-  const rNomineeMobile = y;
-  y += rowH; // 346-370
+  // const rNomineeMobile = y;
+  // y += rowH; // 346-370
   const rNomineeAadhaar = y;
   y += rowH; // 370-394
   const personalBottom = y;
@@ -171,6 +189,7 @@ const BondCertificate = forwardRef(function BondCertificate(
       </tspan>
     </text>
   );
+  // console.log(userData);
 
   return (
     <svg
@@ -259,7 +278,7 @@ const BondCertificate = forwardRef(function BondCertificate(
       >
         Investment Bond
       </text>
-      {scheme ? (
+      {scheme || bond.schemeName ? (
         <text
           x={270}
           y={60}
@@ -269,7 +288,7 @@ const BondCertificate = forwardRef(function BondCertificate(
           letterSpacing="2"
           fill="#B98B3E"
         >
-          {scheme.toUpperCase()}
+          {String(scheme || bond.schemeName).toUpperCase()}
         </text>
       ) : null}
 
@@ -314,7 +333,7 @@ const BondCertificate = forwardRef(function BondCertificate(
         fontSize="8.5"
         fill="#1F2937"
       >
-        Date - <tspan fontWeight="600">{bond.date}</tspan>
+        Date - <tspan fontWeight="600">{safeDate(bond.enrollmentDate || bond.date || bond.paidDate || bond.requestDate)}</tspan>
       </text>
       <rect
         x={325}
@@ -331,7 +350,7 @@ const BondCertificate = forwardRef(function BondCertificate(
         fontSize="8.5"
         fill="#1F2937"
       >
-        Mob No. - <tspan fontWeight="600">{bond.mobileNo}</tspan>
+        Mob No. - <tspan fontWeight="600">{user.phone || bond.mobileNo || ""}</tspan>
       </text>
 
       <text
@@ -342,7 +361,7 @@ const BondCertificate = forwardRef(function BondCertificate(
         fontSize="8"
         fill="#6B7280"
       >
-        S.No. - {bond.userSchemeId}
+        S.No. - {bond.userSchemeId || bond.id || ""}
       </text>
 
       {/* ---------- Personal Information ---------- */}
@@ -374,7 +393,7 @@ const BondCertificate = forwardRef(function BondCertificate(
         rAadhaar,
         rNomineeName,
         rRelation,
-        rNomineeMobile,
+        // rNomineeMobile,
         rNomineeAadhaar,
       ].map((ly, i) => (
         <line
@@ -389,7 +408,7 @@ const BondCertificate = forwardRef(function BondCertificate(
       ))}
 
       {rowText(rFullName, rowH, "Full Name", name)}
-      {rowText(rFatherName, rowH, "Father Name", bond.fatherName)}
+      {rowText(rFatherName, rowH, "Gaurdian Name", user.gaurdianName || user.guardianName || bond.fatherName || "")}
 
       {/* DOB | Email split row */}
       <line
@@ -409,7 +428,7 @@ const BondCertificate = forwardRef(function BondCertificate(
       >
         DOB -{" "}
         <tspan fontWeight="600">
-          {formatDate ? formatDate(bond.dob) : bond.dob}
+          {safeDate(user.dob || bond.dob)}
         </tspan>
       </text>
       <text
@@ -419,7 +438,7 @@ const BondCertificate = forwardRef(function BondCertificate(
         fontSize="9.5"
         fill="#1F2937"
       >
-        Email - <tspan fontWeight="600">{bond.email}</tspan>
+        Email - <tspan fontWeight="600">{user.email || bond.email || ""}</tspan>
       </text>
 
       {/* Address (wraps up to 2 lines) */}
@@ -430,7 +449,7 @@ const BondCertificate = forwardRef(function BondCertificate(
         fontSize="9.5"
         fill="#1F2937"
       >
-        Address - <tspan fontWeight="600">{addressLines[0]}</tspan>
+        Address - <tspan fontWeight="600">{addressLines[0] || ""}</tspan>
       </text>
       {addressLines[1] && (
         <text
@@ -512,15 +531,15 @@ const BondCertificate = forwardRef(function BondCertificate(
         Married
       </text>
 
-      {rowText(rAadhaar, rowH, "Aadhaar No", bond.aadhaarNo)}
-      {rowText(rNomineeName, rowH, "Nominee Name", bond.nomineeName)}
-      {rowText(rRelation, rowH, "Relation", bond.nomineeRelation)}
-      {rowText(rNomineeMobile, rowH, "Nominee Mob. No", bond.nomineeMobile)}
+      {rowText(rAadhaar, rowH, "Aadhaar No", user.aadhaarNo || user.aadharNo || bond.aadhaarNo || bond.aadharNo || "")}
+      {rowText(rNomineeName, rowH, "Nominee Name", bond.nominee?.name || bond.nomineeName || user.nomineeName || "")}
+      {rowText(rRelation, rowH, "Relation", bond.nominee?.relation || bond.nomineeRelation || user.nomineeRelation || "")}
+      {/* {rowText(rNomineeMobile, rowH, "Nominee Mob. No", bond.nominee?.phone || bond.nominee?.mobile || bond.nomineeMobile || user.nomineeMobile || "")} */}
       {rowText(
         rNomineeAadhaar,
         rowH,
         "Nominee Aadhaar No",
-        bond.nomineeAadhaar,
+        bond.nominee?.aadharNo || bond.nominee?.aadhaarNo || bond.nomineeAadhaar || user.nomineeAadhaar || "",
       )}
 
       {/* ---------- Customer A/C Details ---------- */}
@@ -559,14 +578,14 @@ const BondCertificate = forwardRef(function BondCertificate(
         stroke="#0E4749"
         strokeOpacity="0.35"
       />
-      {rowText(rAccNo, custRowH, "Account No.", bond.accountNo)}
+      {rowText(rAccNo, custRowH, "Account No.", user.accountNo || user.accountNumber || bond.accountNo || "")}
       {rowText(
         rIfsc,
         custRowH,
         "IFSC",
-        `${bond.ifsc || ""}${bond.bankName ? ` ( ${bond.bankName} )` : ""}`,
+        `${user.ifsc || bond.ifsc || ""}${(user.bankName || bond.bankName) ? ` ( ${user.bankName || bond.bankName} )` : ""}`,
       )}
-      {rowText(rAccHolder, custRowH, "A/C Holder Name", bond.accountHolderName)}
+      {rowText(rAccHolder, custRowH, "A/C Holder Name", user.accountHolderName || bond.accountHolderName || name || "")}
 
       {/* ---------- Terms ---------- */}
       {terms.map((t, i) => (
@@ -637,11 +656,11 @@ const BondCertificate = forwardRef(function BondCertificate(
         ),
       )}
       {[
-        bond.tenureMonths ? `${bond.tenureMonths} Month` : "",
-        currency ? currency(bond.paidAmount) : bond.paidAmount,
+        bond.tenure ? `${bond.tenure} Days` : (bond.tenureMonths ? `${bond.tenureMonths} Months` : ""),
+        currency ? currency(bond.paidAmount) : (bond.paidAmount || ""),
         bond.investmentMode ||
-          (bond.profitPercentage ? `${bond.profitPercentage}% Flat` : ""),
-        formatDate ? formatDate(bond.maturityDate) : bond.maturityDate,
+        (bond.profitPercentage ? `${bond.profitPercentage}% Flat` : ""),
+        safeDate(bond.maturityDate),
       ].map((val, i) => (
         <text
           key={i}
@@ -692,13 +711,13 @@ const BondCertificate = forwardRef(function BondCertificate(
         stroke="#0E4749"
         strokeOpacity="0.35"
       />
-      {rowText(rCompAccNo, custRowH, "Account No.", bond.companyAccountNo)}
-      {rowText(rCompIfsc, custRowH, "IFSC", bond.companyIfsc)}
+      {rowText(rCompAccNo, custRowH, "Account No.", bond.companyAccountNo || "531110110003289")}
+      {rowText(rCompIfsc, custRowH, "IFSC", bond.companyIfsc || "SBIN0007834")}
       {rowText(
         rCompAccHolder,
         custRowH,
         "A/C Holder Name",
-        bond.companyAccountHolderName,
+        bond.companyAccountHolderName || "GROWWKARO",
       )}
 
       {/* ---------- Footer ---------- */}

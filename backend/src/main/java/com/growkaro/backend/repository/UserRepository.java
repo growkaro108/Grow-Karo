@@ -51,6 +51,9 @@ public interface UserRepository extends JpaRepository<User, String> {
         @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.enrolledSchemes us LEFT JOIN FETCH us.scheme s")
         Page<User> findAllWithUserScheme(Pageable pageable);
 
+        @Query("SELECT u FROM User u LEFT JOIN FETCH u.guardian ug LEFT JOIN FETCH u.bankDetails bkd WHERE u.id = :userId")
+        User findUserFullDetails(@Param("userId") String userId);
+
         // ── Lookup ───────────────────────────────────────────────────────────────
         Optional<User> findByEmail(String email);
 
