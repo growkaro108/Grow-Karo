@@ -554,6 +554,21 @@ public class AdminAPIController {
 
     }
 
+    public ResponseEntity<Map<String, Object>> getNearMaturityUser(@RequestBody Map<String, Object> payload) {
+        String query = general.stringValue(payload.get("query"));
+        int maturityDays = general.intValue(payload.get("maturityDays"));
+        int page = general.intValue(payload.get("page"));
+        int size = general.intValue(payload.get("size"));
+
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "requestDate"));
+        var result = adminAPIService.getNearMaturityUser(query, maturityDays, pageable);
+        if (result == null) {
+            return ResponseEntity.internalServerError().build();
+        }
+        return ResponseEntity.ok(general.response("success", "Fetched successfully...", result));
+
+    }
+
     // pendings
 
     @PutMapping("/issues/{issueId}/resolve")

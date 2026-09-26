@@ -1,3 +1,4 @@
+import { body } from "framer-motion/client";
 import { apiRequest } from "./apiClient";
 
 const END_POINT = "/admin/";
@@ -199,7 +200,12 @@ export async function getAllSchemAuditHistoryApi() {
 export async function getSelectedHistoryApi(id) {
   return await apiRequest(`${END_POINT}schemes/history/${id}`);
 }
-
+export async function getAllMaturityUserSchemeApi(payload) {
+  return await apiRequest(`${END_POINT}maturity/user`, {
+    method: "POST",
+    body: payload
+  });
+}
 //pending----------------------------------------------------------------------
 
 export async function fetchAdminDashboard(params) {

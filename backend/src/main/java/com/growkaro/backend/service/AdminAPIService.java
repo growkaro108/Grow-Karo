@@ -50,6 +50,7 @@ import com.growkaro.backend.DTO.AddedRemitter;
 import com.growkaro.backend.DTO.AdminTransactionResponse;
 import com.growkaro.backend.DTO.AdminUser;
 import com.growkaro.backend.DTO.IssueResponse;
+import com.growkaro.backend.DTO.NearMaturityUserSchemeResponse;
 import com.growkaro.backend.DTO.NomineeResponse;
 import com.growkaro.backend.DTO.PagedResponse;
 import com.growkaro.backend.DTO.RemitterResponse;
@@ -1076,6 +1077,13 @@ public class AdminAPIService {
                 .toList();
         return PagedResponse.from(schemeUpdateHistories, offset, limit);
 
+    }
+
+    public PagedResponse<NearMaturityUserSchemeResponse> getNearMaturityUser(String query, int days,
+            Pageable pageable) {
+        var rawUsers = userSchemeRepository.findNearMaturityUsers(query, days, pageable);
+        var mapped = rawUsers.map(NearMaturityUserSchemeResponse::fromUserScheme);
+        return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
     }
 
     // @Cacheable(value = "remitters", key = "#page ?: 'default'")

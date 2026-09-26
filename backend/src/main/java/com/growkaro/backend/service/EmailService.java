@@ -23,7 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class EmailService {
 
-    @Lazy
+   
     @Autowired
     private JavaMailSender mailSender;
     @Autowired
@@ -46,7 +46,7 @@ public class EmailService {
         // System.out.println("Email sent successfully to " + to);
     }
 
-    @Async
+    // @Async
     public void sendOtp(String email, String remark) {
         String otp = general.generate6DigitOTP(); // Your generated OTP string
         String subject = "Your Verification Code";

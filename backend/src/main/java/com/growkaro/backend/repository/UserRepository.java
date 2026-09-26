@@ -15,78 +15,78 @@ import java.util.Set;
 
 public interface UserRepository extends JpaRepository<User, String> {
 
-    // get all user email
-    @Query("SELECT u.email FROM User u")
-    List<String> findAllEmail();
+        // get all user email
+        @Query("SELECT u.email FROM User u")
+        List<String> findAllEmail();
 
-    List<User> findAllByEmailIn(Set<String> adminEmails);
+        List<User> findAllByEmailIn(Set<String> adminEmails);
 
-    // get all user email whose schemeAlerts is true
-    @Query("SELECT u.email FROM User u WHERE u.schemeAlerts = true")
-    List<String> findEmailOfUsersWantSchemeAlerts();
+        // get all user email whose schemeAlerts is true
+        @Query("SELECT u.email FROM User u WHERE u.schemeAlerts = true")
+        List<String> findEmailOfUsersWantSchemeAlerts();
 
-    // get all user phone no.
-    @Query("SELECT u.phone FROM User u")
-    List<String> findAllPhoneNo();
-    // ── Search ───────────────────────────────────────────────────────────────
+        // get all user phone no.
+        @Query("SELECT u.phone FROM User u")
+        List<String> findAllPhoneNo();
+        // ── Search ───────────────────────────────────────────────────────────────
 
-    @Query("SELECT u FROM User u WHERE " +
-            "LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(u.id) LIKE LOWER(CONCAT('%', :query, '%'))")
-    Page<User> searchUsers(@Param("query") String query, Pageable pageable);
+        @Query("SELECT u FROM User u WHERE " +
+                        "LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                        "LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                        "LOWER(u.id) LIKE LOWER(CONCAT('%', :query, '%'))")
+        Page<User> searchUsers(@Param("query") String query, Pageable pageable);
 
-    @Query("SELECT u FROM User u WHERE " +
-            "LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(u.id) LIKE LOWER(CONCAT('%', :query, '%')) AND " +
-            "u.role = :role")
-    Page<User> findByQueryAndRole(@Param("query") String query, @Param("role") Role role, Pageable pageable);
+        @Query("SELECT u FROM User u WHERE " +
+                        "LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                        "LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                        "LOWER(u.id) LIKE LOWER(CONCAT('%', :query, '%')) AND " +
+                        "u.role = :role")
+        Page<User> findByQueryAndRole(@Param("query") String query, @Param("role") Role role, Pageable pageable);
 
-    // fetch who have at least one userscheme
-    @Query("SELECT DISTINCT u FROM User u JOIN FETCH u.enrolledSchemes us JOIN FETCH us.scheme s")
-    Page<User> findWithUserScheme(Pageable pageable);
+        // fetch who have at least one userscheme
+        @Query("SELECT DISTINCT u FROM User u JOIN FETCH u.enrolledSchemes us JOIN FETCH us.scheme s")
+        Page<User> findWithUserScheme(Pageable pageable);
 
-    // get all user who joined scheme or not
-    @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.enrolledSchemes us LEFT JOIN FETCH us.scheme s")
-    Page<User> findAllWithUserScheme(Pageable pageable);
+        // get all user who joined scheme or not
+        @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.enrolledSchemes us LEFT JOIN FETCH us.scheme s")
+        Page<User> findAllWithUserScheme(Pageable pageable);
 
-    // ── Lookup ───────────────────────────────────────────────────────────────
-    Optional<User> findByEmail(String email);
+        // ── Lookup ───────────────────────────────────────────────────────────────
+        Optional<User> findByEmail(String email);
 
-    Optional<User> findByPhone(String phone);
+        Optional<User> findByPhone(String phone);
 
-    Optional<User> findByEmailOrPhone(String email, String phone);
+        Optional<User> findByEmailOrPhone(String email, String phone);
 
-    // ── Existence checks ─────────────────────────────────────────────────────
+        // ── Existence checks ─────────────────────────────────────────────────────
 
-    boolean existsByEmail(String email);
+        boolean existsByEmail(String email);
 
-    boolean existsByPhone(String phone);
+        boolean existsByPhone(String phone);
 
-    // ── Role-based queries ───────────────────────────────────────────────────
+        // ── Role-based queries ───────────────────────────────────────────────────
 
-    List<User> findByRole(User.Role role);
+        List<User> findByRole(User.Role role);
 
-    Page<User> findByRole(User.Role role, Pageable pageable);
+        Page<User> findByRole(User.Role role, Pageable pageable);
 
-    long countByRole(User.Role role);
+        long countByRole(User.Role role);
 
-    // ── Status filters ───────────────────────────────────────────────────────
+        // ── Status filters ───────────────────────────────────────────────────────
 
-    Page<User> findByActive(boolean active, Pageable pageable);
+        Page<User> findByActive(boolean active, Pageable pageable);
 
-    List<User> findByActiveAndRole(boolean active, User.Role role);
+        List<User> findByActiveAndRole(boolean active, User.Role role);
 
-    // ── Date range ───────────────────────────────────────────────────────────
+        // ── Date range ───────────────────────────────────────────────────────────
 
-    List<User> findByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
+        List<User> findByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
 
-    long countByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
+        long countByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
 
-    // ── Dashboard stats ──────────────────────────────────────────────────────
+        // ── Dashboard stats ──────────────────────────────────────────────────────
 
-    long countByActive(boolean active);
+        long countByActive(boolean active);
 
-    long countByEmailVerified(boolean verified);
+        long countByEmailVerified(boolean verified);
 }

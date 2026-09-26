@@ -15,6 +15,8 @@ import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DRO.UserRegister;
@@ -41,7 +43,7 @@ import lombok.extern.slf4j.Slf4j;
 public class General {
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     public static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-
+    private static final int DEFAULT_PAGE_SIZE = 20;
     @Value("${frontend.url}")
     private String baseUrl;
 
@@ -99,7 +101,8 @@ public class General {
         return String.valueOf(number);
     }
 
-    private final java.util.concurrent.atomic.AtomicLong lastIdTimestamp = new java.util.concurrent.atomic.AtomicLong(0);
+    private final java.util.concurrent.atomic.AtomicLong lastIdTimestamp = new java.util.concurrent.atomic.AtomicLong(
+            0);
 
     public synchronized String generateUserId() {
         long now = Long.parseLong(LocalDateTime.now(ZoneId.of("Asia/Kolkata"))
@@ -118,15 +121,15 @@ public class General {
                 DateTimeFormatter.ofPattern("dd-MM-yyyy"),
                 DateTimeFormatter.ofPattern("dd/MM/yyyy"),
                 DateTimeFormatter.ofPattern("d-M-yyyy"),
-                DateTimeFormatter.ofPattern("d/M/yyyy")
-        );
+                DateTimeFormatter.ofPattern("d/M/yyyy"));
         for (DateTimeFormatter formatter : formatters) {
             try {
                 return LocalDate.parse(dobStr, formatter);
             } catch (Exception ignored) {
             }
         }
-        throw new IllegalArgumentException("Invalid date format for DOB: " + dobStr + ". Expected YYYY-MM-DD or DD-MM-YYYY");
+        throw new IllegalArgumentException(
+                "Invalid date format for DOB: " + dobStr + ". Expected YYYY-MM-DD or DD-MM-YYYY");
     }
 
     public UserRegister toUserRegister(Map<String, Object> payload) {
@@ -148,55 +151,78 @@ public class General {
         Map<String, Object> guardian = asMap(payload.get("guardian"));
         if (guardian == null) {
             String gName = stringValue(payload.get("guardian.name"));
-            if (gName == null) gName = stringValue(payload.get("guardianName"));
+            if (gName == null)
+                gName = stringValue(payload.get("guardianName"));
             String gRel = stringValue(payload.get("guardian.relation"));
-            if (gRel == null) gRel = stringValue(payload.get("guardianRelation"));
+            if (gRel == null)
+                gRel = stringValue(payload.get("guardianRelation"));
             if (gName != null || gRel != null) {
                 guardian = new LinkedHashMap<>();
-                if (gName != null) guardian.put("name", gName);
-                if (gRel != null) guardian.put("relation", gRel);
+                if (gName != null)
+                    guardian.put("name", gName);
+                if (gRel != null)
+                    guardian.put("relation", gRel);
             }
         }
 
         Map<String, Object> address = asMap(payload.get("address"));
         if (address == null) {
             String street = stringValue(payload.get("address.street"));
-            if (street == null) street = stringValue(payload.get("street"));
+            if (street == null)
+                street = stringValue(payload.get("street"));
             String village = stringValue(payload.get("address.village"));
-            if (village == null) village = stringValue(payload.get("village"));
+            if (village == null)
+                village = stringValue(payload.get("village"));
             String city = stringValue(payload.get("address.city"));
-            if (city == null) city = stringValue(payload.get("city"));
+            if (city == null)
+                city = stringValue(payload.get("city"));
             String state = stringValue(payload.get("address.state"));
-            if (state == null) state = stringValue(payload.get("state"));
+            if (state == null)
+                state = stringValue(payload.get("state"));
             String pincode = stringValue(payload.get("address.pincode"));
-            if (pincode == null) pincode = stringValue(payload.get("pincode"));
+            if (pincode == null)
+                pincode = stringValue(payload.get("pincode"));
             if (street != null || village != null || city != null || state != null || pincode != null) {
                 address = new LinkedHashMap<>();
-                if (street != null) address.put("street", street);
-                if (village != null) address.put("village", village);
-                if (city != null) address.put("city", city);
-                if (state != null) address.put("state", state);
-                if (pincode != null) address.put("pincode", pincode);
+                if (street != null)
+                    address.put("street", street);
+                if (village != null)
+                    address.put("village", village);
+                if (city != null)
+                    address.put("city", city);
+                if (state != null)
+                    address.put("state", state);
+                if (pincode != null)
+                    address.put("pincode", pincode);
             }
         }
 
         Map<String, Object> nominee = asMap(payload.get("nominee"));
         if (nominee == null) {
             String nName = stringValue(payload.get("nominee.name"));
-            if (nName == null) nName = stringValue(payload.get("nomineeName"));
+            if (nName == null)
+                nName = stringValue(payload.get("nomineeName"));
             String nAadhar = stringValue(payload.get("nominee.aadharNo"));
-            if (nAadhar == null) nAadhar = stringValue(payload.get("nomineeAadharNo"));
+            if (nAadhar == null)
+                nAadhar = stringValue(payload.get("nomineeAadharNo"));
             String nPhone = stringValue(payload.get("nominee.mobileNo"));
-            if (nPhone == null) nPhone = stringValue(payload.get("nomineeMobileNo"));
-            if (nPhone == null) nPhone = stringValue(payload.get("nominee.phone"));
+            if (nPhone == null)
+                nPhone = stringValue(payload.get("nomineeMobileNo"));
+            if (nPhone == null)
+                nPhone = stringValue(payload.get("nominee.phone"));
             String nRel = stringValue(payload.get("nominee.relation"));
-            if (nRel == null) nRel = stringValue(payload.get("nomineeRelation"));
+            if (nRel == null)
+                nRel = stringValue(payload.get("nomineeRelation"));
             if (nName != null || nAadhar != null || nPhone != null || nRel != null) {
                 nominee = new LinkedHashMap<>();
-                if (nName != null) nominee.put("name", nName);
-                if (nAadhar != null) nominee.put("aadharNo", nAadhar);
-                if (nPhone != null) nominee.put("mobileNo", nPhone);
-                if (nRel != null) nominee.put("relation", nRel);
+                if (nName != null)
+                    nominee.put("name", nName);
+                if (nAadhar != null)
+                    nominee.put("aadharNo", nAadhar);
+                if (nPhone != null)
+                    nominee.put("mobileNo", nPhone);
+                if (nRel != null)
+                    nominee.put("relation", nRel);
             }
         }
 
@@ -232,6 +258,14 @@ public class General {
         }
         String text = value.toString().trim();
         return text.isEmpty() ? null : text;
+    }
+
+    public Integer intValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        String text = value.toString().trim();
+        return text.isEmpty() ? null : Integer.parseInt(text);
     }
 
     public Map<String, Object> response(String status, String message, Object data) {
@@ -435,4 +469,18 @@ public class General {
         return true;
     }
 
+    public Pageable pageable(String page) {
+        return PageRequest.of(Math.max(parsePage(page), 1) - 1, DEFAULT_PAGE_SIZE);
+    }
+
+    private int parsePage(String page) {
+        if (page == null || page.isBlank()) {
+            return 1;
+        }
+        try {
+            return Integer.parseInt(page);
+        } catch (NumberFormatException ex) {
+            return 1;
+        }
+    }
 }

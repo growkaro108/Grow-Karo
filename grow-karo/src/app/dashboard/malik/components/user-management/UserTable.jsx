@@ -1,9 +1,10 @@
-import React from "react";
-import { ChevronRight, StepBack, StepForward } from "lucide-react";
+import React, { use } from "react";
+import { ChevronRight } from "lucide-react";
 import StatusPill from "./StatusPill";
-import { dateFmt, initials } from "./format";
+import { initials } from "./format";
 import TablePagination from "@/components/TablePagination";
 import { currency } from "../../utils";
+import { adminContext } from "@/context/AdminContext";
 
 export default function UserTable({
   users,
@@ -14,6 +15,7 @@ export default function UserTable({
   onPageChange,
   onPageSizeChange,
 }) {
+  const { adminEmails } = use(adminContext);
   return (
     <div className="hidden overflow-hidden rounded-2xl border border-slate-800 bg-[#111827] shadow-lg shadow-black/20 sm:block">
       <table className="w-full text-left">
@@ -74,21 +76,22 @@ export default function UserTable({
           ))}
         </tbody>
       </table>
-      {/* //pagination button */}
-      <TablePagination
-        currentPage={currentPage}
-        pageSize={pageSize}
-        totalItems={totalItems}
-        onPageChange={onPageChange}
-        onPageSizeChange={onPageSizeChange}
-        darkMode={true}
-      />
 
       {users.length === 0 && (
         <div className="px-5 py-14 text-center text-sm text-slate-500">
           No users match these filters. Try adjusting your search.
         </div>
       )}
+
+      {/* //pagination button */}
+      <TablePagination
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalItems={totalItems - adminEmails?.length}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+        darkMode={true}
+      />
     </div>
   );
 }

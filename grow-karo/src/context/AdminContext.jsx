@@ -15,6 +15,11 @@ export const AdminContextProvider = ({ children }) => {
   const [codes, setCodes] = useState([]);
   const [issuesData, setIssuesData] = useState([]);
 
+  const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+
   const LoadCodes = useCallback(async () => {
     try {
       const data = await getAllRemitter();
@@ -43,6 +48,7 @@ export const AdminContextProvider = ({ children }) => {
       return false;
     }
   }, []);
+
   //malik notification provider
   const contextValue = useMemo(
     () => ({
@@ -54,8 +60,17 @@ export const AdminContextProvider = ({ children }) => {
       LoadCodes,
       issuesData,
       loadIssues,
+      adminEmails,
     }),
-    [malikNotification, codes, isLoading, LoadCodes, issuesData, loadIssues],
+    [
+      malikNotification,
+      codes,
+      isLoading,
+      LoadCodes,
+      issuesData,
+      loadIssues,
+      adminEmails,
+    ],
   );
 
   return (

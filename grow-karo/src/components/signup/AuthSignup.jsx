@@ -292,22 +292,22 @@ export default function AuthSignup({ onSwitch }) {
         accountNumber: sanitizedAccountNumber,
         ifscCode: sanitizedIfsc,
       };
-      console.log(payload)
-      //   const response = await userSignup(payload);
-      //   const successMessage = userSignUpMessage(response);
+      // console.log(payload)
+        const response = await userSignup(payload);
+        const successMessage = userSignUpMessage(response);
 
-      //   if (!successMessage) return;
-      //   setMessage(response.message || "Registration successful! Redirecting...");
-      //   setFormData(INITIAL_FORM_DATA);
-      //   setFieldErrors({});
-      //   setOtp("");
-      //   setOtpSent(false);
-      //   setEmailVerified(false);
-      //   setResendCooldown(0);
-      //   setCurrentStep(0);
-      //   setFurthestStep(0);
+        if (!successMessage) return;
+        setMessage(response.message || "Registration successful! Redirecting...");
+        setFormData(INITIAL_FORM_DATA);
+        setFieldErrors({});
+        setOtp("");
+        setOtpSent(false);
+        setEmailVerified(false);
+        setResendCooldown(0);
+        setCurrentStep(0);
+        setFurthestStep(0);
 
-      //   if (onSwitch) setTimeout(() => onSwitch("login"), 1000);
+        if (onSwitch) setTimeout(() => onSwitch("login"), 1000);
     } catch (err) {
       setError(err.message || "Network error. Please try again later.");
     } finally {

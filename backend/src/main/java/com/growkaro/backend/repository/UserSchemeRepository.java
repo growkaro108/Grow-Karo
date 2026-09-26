@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -19,7 +21,6 @@ import com.growkaro.backend.entity.UserScheme;
 
 import jakarta.persistence.LockModeType;
 
-@Repository
 public interface UserSchemeRepository extends JpaRepository<UserScheme, String> {
 
         @Query("SELECT us FROM UserScheme us JOIN FETCH us.scheme AND JOIN FETCH us.user WHERE us.userSchemeId = :userSchemeId")
@@ -47,6 +48,15 @@ public interface UserSchemeRepository extends JpaRepository<UserScheme, String> 
         @Lock(LockModeType.PESSIMISTIC_WRITE)
         @Query("SELECT us FROM UserScheme us JOIN FETCH us.user WHERE us.userSchemeId = :userSchemeId")
         Optional<UserScheme> findByUserSchemeIdWithUser(@Param("userSchemeId") String userSchemeId);
+
+        @Query("SELECT us FROM UserScheme us JOIN FETCH us.user u JOIN FETCH us.scheme s WHERE " +
+                        "(LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                        "LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                        "LOWER(u.id) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+                        "AND us.maturityDate BETWEEN CURRENT_DATE AND (CURRENT_DATE + :remainingDays DAY)")
+        Page<UserScheme> findNearMaturityUsers(@Param("query") String query,
+                        @Param("remainingDays") int remainingDays,
+                        Pageable pageable);
 
         // get all approved user
         @Lock(LockModeType.PESSIMISTIC_WRITE)

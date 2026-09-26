@@ -9,7 +9,6 @@ import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
-import com.growkaro.backend.entity.UserSchemeReedemLedger;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.entity.Transaction.TransactionStatus;
 import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
@@ -18,9 +17,10 @@ import com.growkaro.backend.entity.NotificationContentBuilder;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.repository.NotificationRepository;
-import com.growkaro.backend.repository.ReedemLedgerRepository;
 import com.growkaro.backend.repository.RemitterRepository;
 import com.growkaro.backend.repository.TransactionRepository;
+
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.cache.annotation.Cacheable;
@@ -44,6 +44,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class RemitterAPIService {
 
     private static final int DEFAULT_PAGE_SIZE = 20;
@@ -58,36 +59,10 @@ public class RemitterAPIService {
     private final NotificationRepository notificationRepository;
     private final CrucialNotificationService crucialNotificationService;
     private final com.growkaro.backend.security.JwtService jwtService;
-    private final ReedemLedgerRepository reedemLedgerRepository;
 
     private static final Set<String> ALLOWED_DOCUMENT_TYPES = Set.of("application/pdf", "image/jpeg", "image/png",
             "image/webp");
     private static final long MAX_DOCUMENT_SIZE_BYTES = 3 * 1024 * 1024; // 3MB in bytes
-
-    public RemitterAPIService(
-            RemitterRepository remitterRepository,
-            EmailService emailService,
-            ApiService apiService,
-            General general,
-            ActivityLogService activityLogService,
-            TransactionRepository transactionRepository,
-            LocalFileStorageService localFileStorageService,
-            NotificationRepository notificationRepository,
-            CrucialNotificationService crucialNotificationService,
-            com.growkaro.backend.security.JwtService jwtService,
-            ReedemLedgerRepository reedemLedgerRepository) {
-        this.remitterRepository = remitterRepository;
-        this.emailService = emailService;
-        this.apiService = apiService;
-        this.general = general;
-        this.activityLogService = activityLogService;
-        this.transactionRepository = transactionRepository;
-        this.localFileStorageService = localFileStorageService;
-        this.notificationRepository = notificationRepository;
-        this.crucialNotificationService = crucialNotificationService;
-        this.jwtService = jwtService;
-        this.reedemLedgerRepository = reedemLedgerRepository;
-    }
 
     @Cacheable(value = "AllRemittersEmail")
     public List<String> findAllRemittersEmail() {
@@ -499,16 +474,6 @@ public class RemitterAPIService {
     // toRequestView(withdrawalRequestRepository.save(request)));
     // }
 
-    private Optional<Remitter> resolveRemitter(String remitterId) {
-        if (remitterId == null || remitterId.isBlank()) {
-            return Optional.empty();
-        }
-        if ("me".equalsIgnoreCase(remitterId)) {
-            return remitterRepository.findAll().stream().findFirst();
-        }
-        return remitterRepository.findById(remitterId);
-    }
-
     // private Map<String, Object> toTransactionView(Transaction transaction) {
     // Map<String, Object> data = new LinkedHashMap<>();
     // String recipientName = transaction.getRecipient() != null ?
@@ -529,15 +494,6 @@ public class RemitterAPIService {
     // return data;
     // }
 
-    private Map<String, Object> toChartPoint(Transaction transaction) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d");
-        return Map.of(
-                "date", formatter.format(transaction.getCreatedAt()),
-                "amount", transaction.getAmount(),
-                "x", 0,
-                "y", 0);
-    }
-
     // private Map<String, Object> toRequestView(WithdrawalRequest request) {
     // Map<String, Object> data = new LinkedHashMap<>();
     // data.put("id", request.getRemitterId());
@@ -551,37 +507,6 @@ public class RemitterAPIService {
     // data.put("proofUrl", request.getProofUrl());
     // return data;
     // }
-
-    private Map<String, Object> paginatedMeta(Page<?> page) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("currentPage", page.getNumber() + 1);
-        data.put("totalPages", page.getTotalPages());
-        data.put("totalItems", page.getTotalElements());
-        return data;
-    }
-
-    private Pageable pageable(String page) {
-        return PageRequest.of(Math.max(parsePage(page), 1) - 1, DEFAULT_PAGE_SIZE);
-    }
-
-    private int parsePage(String page) {
-        if (page == null || page.isBlank()) {
-            return 1;
-        }
-        try {
-            return Integer.parseInt(page);
-        } catch (NumberFormatException ex) {
-            return 1;
-        }
-    }
-
-    private String stringValue(Object value) {
-        if (value == null) {
-            return null;
-        }
-        String text = value.toString().trim();
-        return text.isEmpty() ? null : text;
-    }
 
     @Transactional(readOnly = true)
     public Map<String, Object> getRemitterNotifications(String remitterId, int page, int size) {

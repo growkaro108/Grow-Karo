@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Search,
   ChevronLeft,
@@ -6,12 +6,13 @@ import {
   Clock,
   Eye,
   AlertTriangle,
-  FileSpreadsheet
-} from 'lucide-react';
-import * as XLSX from 'xlsx'; // Import sheetjs for XLSX export
-import Image from 'next/image';
+  FileSpreadsheet,
+} from "lucide-react";
+import * as XLSX from "xlsx"; // Import sheetjs for XLSX export
+import Image from "next/image";
 import TablePagination from "@/components/TablePagination";
-import { TableRowLoader } from '@/loader/TableRowLoader';
+import { TableRowLoader } from "@/loader/TableRowLoader";
+import { getAllMaturityUserScheme } from "../../../../../../services/malikService";
 // Mock Data Structure
 const MOCK_SCHEMES = [
   {
@@ -24,7 +25,8 @@ const MOCK_SCHEMES = [
     maturityAmount: 210000,
     maturityDate: "2026-09-28",
     daysRemaining: 4,
-    bondImage: "https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?auto=format&fit=crop&q=80&w=200"
+    bondImage:
+      "https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "SCH-002",
@@ -36,7 +38,8 @@ const MOCK_SCHEMES = [
     maturityAmount: 720000,
     maturityDate: "2026-10-02",
     daysRemaining: 8,
-    bondImage: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=200"
+    bondImage:
+      "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "SCH-003",
@@ -48,7 +51,8 @@ const MOCK_SCHEMES = [
     maturityAmount: 340000,
     maturityDate: "2026-10-08",
     daysRemaining: 14,
-    bondImage: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&q=80&w=200"
+    bondImage:
+      "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "SCH-004",
@@ -60,7 +64,8 @@ const MOCK_SCHEMES = [
     maturityAmount: 135000,
     maturityDate: "2026-09-25",
     daysRemaining: 1,
-    bondImage: "https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?auto=format&fit=crop&q=80&w=200"
+    bondImage:
+      "https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "SCH-005",
@@ -72,7 +77,8 @@ const MOCK_SCHEMES = [
     maturityAmount: 415000,
     maturityDate: "2026-09-26",
     daysRemaining: 2,
-    bondImage: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&q=80&w=200"
+    bondImage:
+      "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "SCH-006",
@@ -84,7 +90,8 @@ const MOCK_SCHEMES = [
     maturityAmount: 610000,
     maturityDate: "2026-09-29",
     daysRemaining: 5,
-    bondImage: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&q=80&w=200"
+    bondImage:
+      "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "SCH-007",
@@ -96,7 +103,8 @@ const MOCK_SCHEMES = [
     maturityAmount: 270000,
     maturityDate: "2026-09-30",
     daysRemaining: 6,
-    bondImage: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=200"
+    bondImage:
+      "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "SCH-008",
@@ -108,7 +116,8 @@ const MOCK_SCHEMES = [
     maturityAmount: 235000,
     maturityDate: "2026-10-01",
     daysRemaining: 7,
-    bondImage: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&q=80&w=200"
+    bondImage:
+      "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "SCH-009",
@@ -120,7 +129,8 @@ const MOCK_SCHEMES = [
     maturityAmount: 890000,
     maturityDate: "2026-10-03",
     daysRemaining: 9,
-    bondImage: "https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?auto=format&fit=crop&q=80&w=200"
+    bondImage:
+      "https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "SCH-010",
@@ -132,7 +142,8 @@ const MOCK_SCHEMES = [
     maturityAmount: 480000,
     maturityDate: "2026-10-04",
     daysRemaining: 10,
-    bondImage: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&q=80&w=200"
+    bondImage:
+      "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "SCH-011",
@@ -144,7 +155,8 @@ const MOCK_SCHEMES = [
     maturityAmount: 1420000,
     maturityDate: "2026-10-05",
     daysRemaining: 11,
-    bondImage: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&q=80&w=200"
+    bondImage:
+      "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "SCH-012",
@@ -156,7 +168,8 @@ const MOCK_SCHEMES = [
     maturityAmount: 560000,
     maturityDate: "2026-10-06",
     daysRemaining: 12,
-    bondImage: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=200"
+    bondImage:
+      "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "SCH-013",
@@ -168,7 +181,8 @@ const MOCK_SCHEMES = [
     maturityAmount: 295000,
     maturityDate: "2026-10-07",
     daysRemaining: 13,
-    bondImage: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&q=80&w=200"
+    bondImage:
+      "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: "SCH-014",
@@ -180,24 +194,25 @@ const MOCK_SCHEMES = [
     maturityAmount: 365000,
     maturityDate: "2026-10-09",
     daysRemaining: 15,
-    bondImage: "https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?auto=format&fit=crop&q=80&w=200"
-  }
+    bondImage:
+      "https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?auto=format&fit=crop&q=80&w=200",
+  },
 ];
 
 export default function MaturingSchemesAdminDark() {
   // Config States
   const [daysThreshold, setDaysThreshold] = useState(15);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [exportLimit, setExportLimit] = useState('100');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [exportLimit, setExportLimit] = useState("100");
   const [loading, setLoading] = useState(false);
-
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
 
   // Filter schemes based on threshold and search term
   const filteredSchemes = useMemo(() => {
-    return MOCK_SCHEMES.filter(scheme => {
+    return MOCK_SCHEMES.filter((scheme) => {
       const matchesDays = scheme.daysRemaining <= daysThreshold;
       const matchesSearch =
         scheme.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -219,12 +234,12 @@ export default function MaturingSchemesAdminDark() {
   const handleExportXLSX = () => {
     let dataToExport = [...filteredSchemes];
 
-    if (exportLimit !== 'all') {
-      const limit = parseInt(exportLimit, 10);
+    if (exportLimit !== "all") {
+      const limit = NUmber.parseInt(exportLimit, 10);
       dataToExport = dataToExport.slice(0, limit);
     }
 
-    const formattedData = dataToExport.map(item => ({
+    const formattedData = dataToExport.map((item) => ({
       "Scheme ID": item.id,
       "User Name": item.userName,
       "User Email": item.userEmail,
@@ -233,28 +248,65 @@ export default function MaturingSchemesAdminDark() {
       "Investment Amount (INR)": item.investmentAmount,
       "Maturity Amount (INR)": item.maturityAmount,
       "Maturity Date": item.maturityDate,
-      "Days Remaining": item.daysRemaining
+      "Days Remaining": item.daysRemaining,
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(formattedData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Maturing Schemes");
-    XLSX.writeFile(workbook, `Maturing_Schemes_${daysThreshold}_Days_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(
+      workbook,
+      `Maturing_Schemes_${daysThreshold}_Days_${new Date().toISOString().split("T")[0]}.xlsx`,
+    );
   };
-
+  //  Debounce the search term (e.g., 400ms delay)
   useEffect(() => {
-    // getAllMaturityUserScheme(daysThreshold, currentPage, itemsPerPage);
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 400);
 
-  }, [currentPage, daysThreshold, itemsPerPage])
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+  //  Fetch data safely with cleanup (AbortController to prevent race conditions)
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
 
+    const fetchData = async () => {
+      try {
+        // Pass controller signal if your API function supports Axios / fetch cancellation
+        const res = await getAllMaturityUserScheme(
+          debouncedSearch,
+          daysThreshold,
+          currentPage,
+          itemsPerPage,
+          { signal: controller.signal },
+        );
+
+        if (res && isMounted) {
+          console.log(res);
+          // setMaturityData(res.data); // Update state here
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error("Error fetching maturity user schemes:", error);
+        }
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      isMounted = false;
+      controller.abort(); // Cancels pending API requests if dependencies change fast
+    };
+  }, [currentPage, daysThreshold, itemsPerPage, debouncedSearch]);
   return (
     <div className="w-full max-w-7xl -m-7 mx-auto p-4 sm:p-6 lg:p-8 bg-slate-950 min-h-screen text-slate-100">
-
       {/* Control Bar: Search & Export Controls */}
       <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 shadow-md mb-6 flex flex-col md:flex-row gap-4 items-center justify-between backdrop-blur-sm">
-
         {/* Search Field */}
-        {/* <div className="relative w-full md:w-80">
+        <div className="relative w-full md:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input
             type="text"
@@ -263,11 +315,14 @@ export default function MaturingSchemesAdminDark() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm bg-slate-800/80 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
-        </div> */}
+        </div>
         {/* Days Threshold Config */}
         <div className="flex items-center gap-3">
           <Clock className="w-5 h-5 text-indigo-400" />
-          <label htmlFor="threshold" className="text-sm font-medium text-slate-300 whitespace-nowrap">
+          <label
+            htmlFor="threshold"
+            className="text-sm font-medium text-slate-300 whitespace-nowrap"
+          >
             Maturity WithIn :
           </label>
           <div className="flex items-center gap-1">
@@ -289,7 +344,9 @@ export default function MaturingSchemesAdminDark() {
         {/* Export Controls */}
         <div className="flex items-center gap-3 w-full md:w-auto justify-end">
           <div className="flex items-center gap-2 border border-slate-800 rounded-lg px-3 py-1.5 bg-slate-800/50">
-            <span className="text-xs font-semibold text-slate-400 uppercase">Export Limit:</span>
+            <span className="text-xs font-semibold text-slate-400 uppercase">
+              Export Limit:
+            </span>
             <select
               value={exportLimit}
               onChange={(e) => setExportLimit(e.target.value)}
@@ -329,7 +386,10 @@ export default function MaturingSchemesAdminDark() {
           <tbody className="divide-y divide-slate-800/60 text-sm">
             {!loading && paginatedSchemes.length > 0 ? (
               paginatedSchemes.map((scheme) => (
-                <tr key={scheme.id} className="hover:bg-slate-800/30 transition-colors">
+                <tr
+                  key={scheme.id}
+                  className="hover:bg-slate-800/30 transition-colors"
+                >
                   <td className="py-3 px-4">
                     <Image
                       src={scheme.bondImage}
@@ -341,27 +401,42 @@ export default function MaturingSchemesAdminDark() {
                     />
                   </td>
                   <td className="py-3 px-4">
-                    <div className="font-semibold text-slate-100">{scheme.userName}</div>
-                    <div className="text-xs text-slate-400">{scheme.userEmail}</div>
+                    <div className="font-semibold text-slate-100">
+                      {scheme.userName}
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      {scheme.userEmail}
+                    </div>
                   </td>
                   <td className="py-3 px-4">
-                    <div className="font-medium text-slate-200">{scheme.schemeName}</div>
-                    <div className="text-xs text-indigo-400 font-mono">{scheme.bondNumber}</div>
+                    <div className="font-medium text-slate-200">
+                      {scheme.schemeName}
+                    </div>
+                    <div className="text-xs text-indigo-400 font-mono">
+                      {scheme.bondNumber}
+                    </div>
                   </td>
                   <td className="py-3 px-4">
-                    <div className="font-bold text-slate-100">₹{scheme.maturityAmount.toLocaleString('en-IN')}</div>
-                    <div className="text-xs text-slate-500">Inv: ₹{scheme.investmentAmount.toLocaleString('en-IN')}</div>
+                    <div className="font-bold text-slate-100">
+                      ₹{scheme.maturityAmount.toLocaleString("en-IN")}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      Inv: ₹{scheme.investmentAmount.toLocaleString("en-IN")}
+                    </div>
                   </td>
                   <td className="py-3 px-4 text-slate-300 font-medium">
                     {scheme.maturityDate}
                   </td>
                   <td className="py-3 px-4">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${scheme.daysRemaining <= 3
-                      ? 'bg-rose-950/80 text-rose-300 border border-rose-800/50'
-                      : 'bg-amber-950/80 text-amber-300 border border-amber-800/50'
-                      }`}>
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${scheme.daysRemaining <= 3
+                          ? "bg-rose-950/80 text-rose-300 border border-rose-800/50"
+                          : "bg-amber-950/80 text-amber-300 border border-amber-800/50"
+                        }`}
+                    >
                       <AlertTriangle className="w-3 h-3" />
-                      {scheme.daysRemaining} {scheme.daysRemaining === 1 ? 'Day' : 'Days'}
+                      {scheme.daysRemaining}{" "}
+                      {scheme.daysRemaining === 1 ? "Day" : "Days"}
                     </span>
                   </td>
                   {/* <td className="py-3 px-4 text-right">
@@ -371,8 +446,13 @@ export default function MaturingSchemesAdminDark() {
                   </td> */}
                 </tr>
               ))
+            ) : loading ? (
+              <TableRowLoader
+                colSpan={6}
+                loading={`maturing within ${daysThreshold} days.`}
+              />
             ) : (
-              loading ? <TableRowLoader colSpan={6} loading={`maturing within ${daysThreshold} days.`} /> : <tr>
+              <tr>
                 <td colSpan="7" className="text-center py-8 text-slate-500">
                   No schemes maturing within {daysThreshold} days.
                 </td>
@@ -386,8 +466,10 @@ export default function MaturingSchemesAdminDark() {
       <div className="block md:hidden space-y-4">
         {paginatedSchemes.length > 0 ? (
           paginatedSchemes.map((scheme) => (
-            <div key={scheme.id} className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 shadow-md space-y-3">
-
+            <div
+              key={scheme.id}
+              className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 shadow-md space-y-3"
+            >
               {/* Card Header */}
               <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
                 <img
@@ -396,11 +478,19 @@ export default function MaturingSchemesAdminDark() {
                   className="w-16 h-12 object-cover rounded-md border border-slate-700"
                 />
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-slate-100 truncate">{scheme.schemeName}</h3>
-                  <p className="text-xs text-indigo-400 font-mono">{scheme.bondNumber}</p>
+                  <h3 className="font-semibold text-slate-100 truncate">
+                    {scheme.schemeName}
+                  </h3>
+                  <p className="text-xs text-indigo-400 font-mono">
+                    {scheme.bondNumber}
+                  </p>
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-bold ${scheme.daysRemaining <= 3 ? 'bg-rose-950 text-rose-300 border border-rose-800/40' : 'bg-amber-950 text-amber-300 border border-amber-800/40'
-                  }`}>
+                <span
+                  className={`px-2 py-1 rounded-full text-xs font-bold ${scheme.daysRemaining <= 3
+                      ? "bg-rose-950 text-rose-300 border border-rose-800/40"
+                      : "bg-amber-950 text-amber-300 border border-amber-800/40"
+                    }`}
+                >
                   {scheme.daysRemaining}d left
                 </span>
               </div>
@@ -409,19 +499,27 @@ export default function MaturingSchemesAdminDark() {
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
                   <p className="text-slate-500">Investor</p>
-                  <p className="font-medium text-slate-200 truncate">{scheme.userName}</p>
+                  <p className="font-medium text-slate-200 truncate">
+                    {scheme.userName}
+                  </p>
                 </div>
                 <div>
                   <p className="text-slate-500">Maturity Date</p>
-                  <p className="font-medium text-slate-200">{scheme.maturityDate}</p>
+                  <p className="font-medium text-slate-200">
+                    {scheme.maturityDate}
+                  </p>
                 </div>
                 <div>
                   <p className="text-slate-500">Invested</p>
-                  <p className="font-medium text-slate-300">₹{scheme.investmentAmount.toLocaleString('en-IN')}</p>
+                  <p className="font-medium text-slate-300">
+                    ₹{scheme.investmentAmount.toLocaleString("en-IN")}
+                  </p>
                 </div>
                 <div>
                   <p className="text-slate-500">Payout</p>
-                  <p className="font-bold text-emerald-400 text-sm">₹{scheme.maturityAmount.toLocaleString('en-IN')}</p>
+                  <p className="font-bold text-emerald-400 text-sm">
+                    ₹{scheme.maturityAmount.toLocaleString("en-IN")}
+                  </p>
                 </div>
               </div>
 
@@ -431,7 +529,6 @@ export default function MaturingSchemesAdminDark() {
                   <Eye className="w-3.5 h-3.5" /> View Details
                 </button>
               </div>*/}
-
             </div>
           ))
         ) : (
@@ -485,7 +582,6 @@ export default function MaturingSchemesAdminDark() {
         </div> */}
 
       {/* </div> */}
-
     </div>
   );
 }
