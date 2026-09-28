@@ -197,7 +197,8 @@ public class AdminAPIController {
         }
         return ResponseEntity
                 .ok(adminAPIService.activateUsersScheme(approveUserScheme.userId(), approveUserScheme.userSchemeId(),
-                        approveUserScheme.paidAmount(), approveUserScheme.paidDate()));
+                        approveUserScheme.paidAmount(), approveUserScheme.paidDate(), approveUserScheme.amountFrom(),
+                        approveUserScheme.submitTo()));
     }
 
     @PutMapping("/user-scheme/reject/{userSchemeId}")

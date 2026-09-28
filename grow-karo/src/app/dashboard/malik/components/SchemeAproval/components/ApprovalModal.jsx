@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { currency } from "./constants";
 
 export default function ApprovalModal({
@@ -12,6 +12,9 @@ export default function ApprovalModal({
   handleConfirmApproval,
   inputRef,
 }) {
+  const [amountFrom, setAmountFrom] = useState("");
+  const [submitTo, setSubmitTo] = useState("");
+
   const modalRef = useRef(null);
   const today = new Date().toISOString().split("T")[0];
   // // const existingPaidAmount = selectedRequest?.paidAmount || 0;
@@ -116,7 +119,7 @@ export default function ApprovalModal({
                 (() => {
                   const lastDate =
                     selectedRequest.paymentDates[
-                      selectedRequest.paymentDates.length - 1
+                    selectedRequest.paymentDates.length - 1
                     ];
                   return lastDate
                     ? new Date(lastDate).toLocaleDateString()
@@ -165,6 +168,34 @@ export default function ApprovalModal({
             disabled={submitting}
           />
         </div>
+        <div className="sea-field">
+          <label className="sea-label" htmlFor="sea-paid-amount-from">
+            Amount From
+          </label>
+          <input
+            id="sea-paid-amount-from"
+            className="sea-input"
+            type="text"
+            placeholder="e.g: Sonu Sah"
+            value={amountFrom}
+            onChange={(e) => setAmountFrom(e.target.value)}
+            disabled={submitting}
+          />
+        </div>
+        <div className="sea-field">
+          <label className="sea-label" htmlFor="sea-paid-submit-to">
+            Amount submitted to
+          </label>
+          <input
+            id="sea-paid-submit-to"
+            className="sea-input"
+            type="text"
+            placeholder="e.g: Prince Kumar"
+            value={submitTo}
+            onChange={(e) => setSubmitTo(e.target.value)}
+            disabled={submitting}
+          />
+        </div>
 
         <div className="sea-field">
           {/* <label className="sea-label" htmlFor="sea-remaining-balance">
@@ -195,7 +226,7 @@ export default function ApprovalModal({
           </button>
           <button
             className="sea-btn sea-btn-primary"
-            onClick={handleConfirmApproval}
+            onClick={() => handleConfirmApproval(submitTo, amountFrom)}
             disabled={submitting || !isValidAmount}
           >
             {submitting ? "Approving..." : "Confirm approval"}

@@ -53,8 +53,8 @@ export default function Navbar() {
         <Link href="/" className="flex items-center gap-3 group">
           <div className="flex h-10 w-10 items-center justify-center rounded-full overflow-hidden bg-slate-100 border border-slate-200/60 shadow-sm transition group-hover:opacity-90">
             <Image
-              src="/logo.jpg"
-              alt="Logo"
+              src="https://lh3.googleusercontent.com/d/1eezaPOLSSuTVlPV6sKiCBxpnNXbRo-Ft"
+              alt="LOGO"
               width={40}
               height={40}
               className="object-contain h-full w-full"

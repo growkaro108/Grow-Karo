@@ -15,6 +15,7 @@ import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -64,6 +65,12 @@ public class Scheme {
     @Column(name = "scheme_details", nullable = false, columnDefinition = "TEXT")
     private String schemeDetails;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "scheme_terms", joinColumns = @JoinColumn(name = "scheme_id"))
+    @OrderColumn(name = "position")
+    @Column(name = "term", length = 200)
+    private List<String> terms = new ArrayList<>();
+
     @NotBlank(message = "Payout frequency is required")
     @Column(name = "payout_frequency", nullable = false)
     private String payoutFrequency;
@@ -105,6 +112,7 @@ public class Scheme {
     @Column(name = "max_investors_allowed")
     private Integer maxInvestorsAllowed;
 
+    @NotAudited
     @OneToMany(mappedBy = "scheme", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     @JsonManagedReference("scheme-joined-users")

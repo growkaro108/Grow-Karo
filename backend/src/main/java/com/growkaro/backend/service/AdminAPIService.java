@@ -197,6 +197,12 @@ public class AdminAPIService {
             general.applyIfChanged(receiveData.maxInvestorsAllowed(),
                     existingSchemeData.getMaxInvestorsAllowed(),
                     existingSchemeData::setMaxInvestorsAllowed);
+
+            List<String> newTerms = receiveData.terms();
+            if (!existingSchemeData.getTerms().equals(newTerms)) {
+                existingSchemeData.getTerms().clear();
+                existingSchemeData.getTerms().addAll(newTerms);
+            }
             existingSchemeData.setUpdatedBy(general.adminName());
 
             schemeRepository.save(existingSchemeData);
@@ -264,11 +270,13 @@ public class AdminAPIService {
             userScheme.setNominee(nominee);
             userScheme.setPaidAmount(request.paidAmount());
             userScheme.setIsApproved(true);
-
+            userScheme.setAmountFrom("general");
+            userScheme.setSubmitTo("general");
             userScheme.setEnrollmentDate(
                     LocalDateTime.of(request.paidDate(), LocalDateTime.now(ZoneId.of("Asia/Kolkata")).toLocalTime()));
             userScheme.setPaidDate(request.paidDate());
             replaceLedgers(userScheme, request.profitLedger(), request.reedemLedger());
+
             userScheme.setNextPayoutDate(
                     general.calculateNextPayoutDate(userScheme.getEnrollmentDate(), scheme.getPayoutFrequency(),
                             scheme.getTenure()));
@@ -351,8 +359,6 @@ public class AdminAPIService {
     private void replaceLedgers(UserScheme userScheme,
             List<UserSchemeProfitLedgerRequest> profits,
             List<UserSchemeReedemLedgerRequest> redeems) {
-        BigDecimal totalProfit = BigDecimal.ZERO;
-        BigDecimal totalRedeemed = BigDecimal.ZERO;
         userScheme.getProfitLedger().clear();
         userScheme.getReedemLedger().clear();
         for (UserSchemeProfitLedgerRequest request : profits) {
@@ -364,7 +370,6 @@ public class AdminAPIService {
             entry.setProfitAmount(request.profitAmount());
             entry.setProfitDate(request.profitDate());
             userScheme.getProfitLedger().add(entry);
-            totalProfit = totalProfit.add(request.profitAmount());
         }
         for (UserSchemeReedemLedgerRequest request : redeems) {
             if (request == null || request.redeemAmount() == null || request.redeemAmount().signum() < 0) {
@@ -375,13 +380,7 @@ public class AdminAPIService {
             entry.setRedeemAmount(request.redeemAmount());
             entry.setRedeemDate(request.redeemDate());
             userScheme.getReedemLedger().add(entry);
-            totalRedeemed = totalRedeemed.add(request.redeemAmount());
         }
-        userScheme.setProfit(totalProfit);
-        userScheme.setProfitReedemed(totalRedeemed);
-        userScheme.setRedeemAmount(totalRedeemed);
-        userScheme.setRedeemDate(redeems.stream().map(UserSchemeReedemLedgerRequest::redeemDate)
-                .filter(java.util.Objects::nonNull).max(LocalDate::compareTo).orElse(null));
     }
 
     @Caching(evict = {
@@ -390,10 +389,11 @@ public class AdminAPIService {
     })
     @Transactional
     public Map<String, Object> activateUsersScheme(String userId, String userSchemeId, BigDecimal paidAmount,
-            LocalDate paidDate) {
+            LocalDate paidDate, String amountFrom, String submitTo) {
         if (userSchemeId == null || userSchemeId.isBlank() || paidAmount == null
-                || paidAmount.compareTo(BigDecimal.ZERO) <= 0 || paidDate == null) {
-            return general.response("error", "Invalid Request", null);
+                || paidAmount.compareTo(BigDecimal.ZERO) <= 0 || paidDate == null || amountFrom == null
+                || submitTo == null || amountFrom.isBlank() || submitTo.isBlank()) {
+            return general.response("error", "Please fill all feilds....", null);
         }
 
         UserScheme userScheme = null;
@@ -415,6 +415,8 @@ public class AdminAPIService {
             // set paid amount and date
             userScheme.setPaidAmount(paidAmount);
             userScheme.setPaidDate(paidDate);
+            userScheme.setAmountFrom(amountFrom);
+            userScheme.setSubmitTo(submitTo);
             userSchemeRepository.save(userScheme);
             // convert localdate to localdatetime paidDate=dateTime
             LocalDateTime settlementDate = LocalDateTime.of(paidDate,
@@ -601,7 +603,6 @@ public class AdminAPIService {
             txn.setStatus(TransactionStatus.REJECTED);
             txn.setFailureReason(reason != null ? reason : "Rejected by admin");
             UserScheme userScheme = txn.getUserScheme();
-            userScheme.setProfitReedemed(userScheme.getProfitReedemed().subtract(txn.getAmount()));
             userSchemeRepository.save(userScheme);
             saved = transactionRepository.save(txn);
             // change status of reedem
@@ -1081,8 +1082,12 @@ public class AdminAPIService {
 
     }
 
+    @Transactional(readOnly = true)
     public PagedResponse<NearMaturityUserSchemeResponse> getNearMaturityUser(String query, int days,
             Pageable pageable) {
+        if (query == null || query.trim().isEmpty()) {
+            query = "";
+        }
         var rawUsers = userSchemeRepository.findNearMaturityUsers(query, days, pageable);
         var mapped = rawUsers.map(NearMaturityUserSchemeResponse::fromUserScheme);
         return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());

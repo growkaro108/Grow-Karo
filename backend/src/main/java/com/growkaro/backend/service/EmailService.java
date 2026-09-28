@@ -2,6 +2,7 @@ package com.growkaro.backend.service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -23,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class EmailService {
 
-   
     @Autowired
     private JavaMailSender mailSender;
     @Autowired
@@ -180,8 +180,9 @@ public class EmailService {
         // same scheme
         try {
             String subject = "Scheme Maturity Reminder";
-            BigDecimal totalAmount = userScheme.getProfit().add(userScheme.getPaidAmount())
-                    .subtract(userScheme.getProfitReedemed());
+            BigDecimal profit = general.countProfit(userScheme.getProfitLedger());
+            BigDecimal reedem = general.countReedem(userScheme.getReedemLedger());
+            BigDecimal totalAmount = userScheme.getPaidAmount().add(profit.subtract(reedem));
             String body = "<div style='font-family: Arial, sans-serif; margin: 0; padding: 0;'>" +
                     "<div style='background-color: #f0f8ff; padding: 20px;'>" +
                     "<h1 style='color: #004d40;'>GrowKaro</h1>" +
@@ -192,8 +193,8 @@ public class EmailService {
                     " is set to mature in the next 10-15 days.</p>" +
                     "<p><strong>Maturity Date:</strong> " + userScheme.getMaturityDate() + "</p>" +
                     "<p><strong>Amount Invested:</strong> " + userScheme.getPaidAmount() + "</p>" +
-                    "<p><strong>Total Profit:</strong> " + userScheme.getProfit() + "</p>" +
-                    "<p><strong>Amount Reedeemed So Far:</strong> " + userScheme.getProfitReedemed() + "</p>" +
+                    "<p><strong>Total Profit:</strong> " + profit + "</p>" +
+                    "<p><strong>Amount Reedeemed So Far:</strong> " + reedem + "</p>" +
                     "<p><strong>Amount To Be Credited at Maturity:</strong> " + totalAmount + "</p>" +
                     "<p>If you wish to redeem this amount, please add a withdrawal request before the maturity date. " +
                     "If no request is made, the amount will be <strong>automatically reinvested</strong> in the same scheme.</p>"
@@ -216,8 +217,10 @@ public class EmailService {
     public void sendSchemeMaturityEmailtoAdmin(UserScheme userScheme, String adminEmail) {
         try {
             String subject = "Upcoming Scheme Maturity for User " + userScheme.getUser().getName();
-            BigDecimal totalAmount = (userScheme.getProfit().add(userScheme.getPaidAmount()))
-                    .subtract(userScheme.getProfitReedemed());
+            Map<String, BigDecimal> map = general.countTotalProfitAndRedeemAndFinalAmount(userScheme);
+            BigDecimal totalProfit = map.get("totalProfit");
+            BigDecimal totalReedem = map.get("totalReedem");
+            BigDecimal netProfit = map.get("netProfit");
             String body = "<div style='font-family: Arial, sans-serif; margin: 0; padding: 0;'>" +
                     "<div style='background-color: #f0f8ff; padding: 20px;'>" +
                     "<h1 style='color: #004d40;'>GrowKaro</h1>" +
@@ -227,10 +230,11 @@ public class EmailService {
                     "<p>Scheme " + userScheme.getScheme().getSchemeName() + " for user "
                     + userScheme.getUser().getName() + " is set to mature in the next 10-15 days.</p>" +
                     "<p><strong>Amount Invested:</strong> " + userScheme.getPaidAmount() + "</p>" +
-                    "<p><strong>Total Profit:</strong> " + userScheme.getProfit() + "</p>" +
-                    "<p><strong>Amount Reedeemed So Far:</strong> " + userScheme.getProfitReedemed() + "</p>" +
-                    "<p><strong>Amount To Be Paid at Maturity:</strong> " + totalAmount + "</p>" +
-                    "<p><strong>Maturity Date:</strong> " + userScheme.getMaturityDate() + "</p>" +
+                    "<p><strong>Total Profit:</strong> " + totalProfit + "</p>" +
+                    "<p><strong>Amount Reedeemed So Far:</strong> " + totalReedem + "</p>" +
+                    "<p><strong>Amount To Be Paid at Maturity:</strong> " + netProfit + "</p>" +
+                    "<p><strong>Maturity Date:</strong> " + userScheme.getMaturityDate().format(general.DATE_FORMATTER)
+                    + "</p>" +
                     "<a href='" + general.loginUrl() +
                     "' style='display: inline-block; background-color: #006633; color: white; padding: 10px 20px; margin: 15px 0; text-decoration: none; border-radius: 5px;'>"
                     +

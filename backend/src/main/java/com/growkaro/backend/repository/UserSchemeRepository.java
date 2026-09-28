@@ -49,23 +49,23 @@ public interface UserSchemeRepository extends JpaRepository<UserScheme, String> 
         @Query("SELECT us FROM UserScheme us JOIN FETCH us.user WHERE us.userSchemeId = :userSchemeId")
         Optional<UserScheme> findByUserSchemeIdWithUser(@Param("userSchemeId") String userSchemeId);
 
+        // query will be user name scheme name and bondnumber
         @Query("SELECT us FROM UserScheme us JOIN FETCH us.user u JOIN FETCH us.scheme s WHERE " +
                         "(LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-                        "LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-                        "LOWER(u.id) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+                        "LOWER(s.schemeName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                        "LOWER(us.bondNumber) LIKE LOWER(CONCAT('%', :query, '%'))) " +
                         "AND us.maturityDate BETWEEN CURRENT_DATE AND (CURRENT_DATE + :remainingDays DAY)")
-        Page<UserScheme> findNearMaturityUsers(@Param("query") String query,
-                        @Param("remainingDays") int remainingDays,
+        Page<UserScheme> findNearMaturityUsers(@Param("query") String query, @Param("remainingDays") int remainingDays,
                         Pageable pageable);
 
         // get all approved user
         @Lock(LockModeType.PESSIMISTIC_WRITE)
         @Query("""
-                                        SELECT us
+                        SELECT us
                         FROM UserScheme
                         us JOIN
                         FETCH us.scheme
-                                        WHERE us.isApproved=true
+                        WHERE us.isApproved=true
                         AND us.nextPayoutDate=:today""")
 
         List<UserScheme> findAllApprovedUserSchemes(@Param("today") LocalDate today);

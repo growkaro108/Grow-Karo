@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { X, Mail, Phone, Calendar, HandCoins, ChevronDown, CalendarClock, Percent, ArrowUpToLine, ArrowDownToLine } from "lucide-react";
+import { X, Mail, Phone, Calendar, HandCoins, ChevronDown, CalendarClock, Percent, ArrowUpToLine, ArrowDownToLine, User } from "lucide-react";
 import StatusPill from "./StatusPill";
 import { currency, initials } from "./format";
 import dynamic from "next/dynamic";
@@ -777,8 +777,8 @@ export default function UserDrawer({ user, onClose, onSaved }) {
         </div>
 
         <div className="border-t border-slate-800 px-6 py-4">
-          <button className="w-full rounded-lg bg-teal-500 px-4 py-2.5 text-sm font-medium text-slate-950 transition hover:bg-teal-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111827]">
-            Manage user
+          <button className="flex items-center justify-center gap-2 w-full rounded-lg bg-teal-500 px-4 py-2.5 text-sm font-medium text-slate-950 transition hover:bg-teal-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111827]">
+            <User className="h-4 w-4" /> Manage Users here
           </button>
         </div>
       </div>

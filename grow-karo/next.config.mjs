@@ -1,10 +1,21 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
-  /* config options here */
   reactCompiler: true,
-  // allowedDevOrigins: ["192.168.29.94"],
-  // allowedDevOrigins: ["deer-queen-antiques-luther.trycloudflare.com"],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "drive.google.com",
+        pathname: "/**",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

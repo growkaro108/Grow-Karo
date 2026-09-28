@@ -1,6 +1,6 @@
 "use client";
-import { Plus, Sparkles, X } from "lucide-react";
-import React, { useCallback, useMemo, useState } from "react";
+import { Plus, Sparkles, X, Trash2 } from "lucide-react";
+import React, { useCallback, useState } from "react";
 import Field from "./Field";
 import {
   createPlan,
@@ -9,6 +9,16 @@ import {
 import { errorMessage, successMessage } from "@/components/Message";
 import { Suggestion } from "./Suggestion";
 import { formatDateTime } from "@/app/plan/utils/planUtils";
+
+const MAX_TERMS = 8;
+const MAX_TERM_LENGTH = 110; // keeps a term on one line of the bond certificate
+
+// Same wording the bond certificate falls back to when a scheme has no terms.
+const DEFAULT_TERMS = [
+  "This Bond is valid only till maturity date*",
+  "Profit will be generated within 7 to 10 working days after completion of tenure*",
+  "Payment is not made on Saturday, Sunday and Bank Holidays as the office remains closed*",
+];
 
 export default function FormModal({
   editingId,
@@ -30,8 +40,9 @@ export default function FormModal({
   // and a single style tweak only needs to happen in one place.
   const INPUT_CLS =
     "w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-950/30 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-100 outline-none transition-all placeholder-slate-600";
-  const READONLY_INPUT_CLS =
-    "w-full bg-slate-900/60 border border-slate-800/60 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-400 outline-none cursor-not-allowed";
+
+  const terms = Array.isArray(form.terms) ? form.terms : [];
+
   const handleChange = useCallback(
     (e) => {
       const { name, value } = e.target;
@@ -39,7 +50,6 @@ export default function FormModal({
     },
     [setForm],
   );
-  //if existing plan are changed then enable save config button else disable save
 
   const handleStatusChange = useCallback(
     (e) => {
@@ -47,24 +57,65 @@ export default function FormModal({
     },
     [setForm],
   );
+
+  // ---- terms of scheme ----
+  const addTerm = useCallback(() => {
+    setForm((prev) => {
+      const list = Array.isArray(prev.terms) ? prev.terms : [];
+      if (list.length >= MAX_TERMS) return prev;
+      return { ...prev, terms: [...list, ""] };
+    });
+  }, [setForm]);
+
+  const updateTerm = useCallback(
+    (index, value) => {
+      setForm((prev) => {
+        const list = Array.isArray(prev.terms) ? [...prev.terms] : [];
+        list[index] = value;
+        return { ...prev, terms: list };
+      });
+    },
+    [setForm],
+  );
+
+  const removeTerm = useCallback(
+    (index) => {
+      setForm((prev) => {
+        const list = Array.isArray(prev.terms) ? prev.terms : [];
+        return { ...prev, terms: list.filter((_, i) => i !== index) };
+      });
+    },
+    [setForm],
+  );
+
+  const useDefaultTerms = useCallback(() => {
+    setForm((prev) => ({ ...prev, terms: [...DEFAULT_TERMS] }));
+  }, [setForm]);
+
   const closeModal = useCallback(() => {
     setOpen(false);
     setEditingId(null);
     setForm(emptyPlan);
     setFormError(null);
   }, [emptyPlan, setEditingId, setForm, setFormError, setOpen]);
+
   const handleSubmit = useCallback(
     async (e) => {
       e.preventDefault();
       setIsSaving(true);
       setFormError(null);
-      // console.log("Request: ", form);
       try {
         const isEditing = editingId ?? false;
+        // trim and drop blank terms before sending
+        const payload = {
+          ...form,
+          terms: (Array.isArray(form.terms) ? form.terms : [])
+            .map((t) => String(t || "").trim())
+            .filter(Boolean),
+        };
         const response = isEditing
-          ? await updatePlan(editingId, form)
-          : await createPlan(form);
-        // console.log("response", response);
+          ? await updatePlan(editingId, payload)
+          : await createPlan(payload);
         if (response.status !== "success") {
           const message = response.message || "Something went wrong..";
           errorMessage(message, "error");
@@ -92,6 +143,7 @@ export default function FormModal({
     },
     [form, setFormError, editingId, setPlans, closeModal],
   );
+
   return (
     <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex justify-center items-center z-50 p-4 transition-all duration-300">
       <form
@@ -114,7 +166,9 @@ export default function FormModal({
                 : "Deploy New Asset Plan"}
             </h2>
             {editingId && (
-              <p className="text-xs">Last Updated : {formatDateTime(form.updatedAt)}</p>
+              <p className="text-xs">
+                Last Updated : {formatDateTime(form.updatedAt)}
+              </p>
             )}
           </div>
           <button
@@ -143,7 +197,7 @@ export default function FormModal({
                   value={form.schemeName || ""}
                   onChange={handleChange}
                   placeholder="e.g. Growth funds.."
-                  autocomplete="off"
+                  autoComplete="off"
                   className={INPUT_CLS}
                   onFocus={() => setShowSuggestions(true)}
                   onBlur={() =>
@@ -221,8 +275,6 @@ export default function FormModal({
                 className={`${INPUT_CLS} font-bold text-emerald-400`}
               />
             </Field>
-
-
           </div>
 
           {/* Schedule */}
@@ -315,6 +367,87 @@ export default function FormModal({
               className={`${INPUT_CLS} resize-none`}
             />
           </Field>
+
+          {/* Terms of scheme */}
+          <div className="bg-slate-950/40 border border-slate-800/80 rounded-2xl p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-100">
+                  Terms of Scheme
+                </h3>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  Shown as bullet points on the bond certificate. Keep each term
+                  to one line.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {terms.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={useDefaultTerms}
+                    className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-slate-100"
+                  >
+                    Use default terms
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={addTerm}
+                  disabled={terms.length >= MAX_TERMS}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-300 transition-colors hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Plus size={14} /> Add term
+                </button>
+              </div>
+            </div>
+
+            {terms.length === 0 ? (
+              <p className="mt-4 rounded-xl border border-dashed border-slate-800 px-4 py-5 text-center text-sm text-slate-500">
+                No terms added yet. The bond will show the standard terms until
+                you add your own.
+              </p>
+            ) : (
+              <ol className="mt-4 space-y-2.5">
+                {terms.map((term, index) => (
+                  <li key={index} className="flex items-start gap-2.5">
+                    <span className="mt-2.5 w-5 shrink-0 text-right text-xs tabular-nums text-slate-500">
+                      {index + 1}.
+                    </span>
+                    <div className="flex-1">
+                      <input
+                        value={term}
+                        maxLength={MAX_TERM_LENGTH}
+                        onChange={(e) => updateTerm(index, e.target.value)}
+                        onKeyDown={(e) => {
+                          // Enter adds another term instead of submitting the form
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addTerm();
+                          }
+                        }}
+                        placeholder="e.g. This Bond is valid only till maturity date*"
+                        aria-label={`Term ${index + 1}`}
+                        className={INPUT_CLS}
+                      />
+                      {term.length > MAX_TERM_LENGTH - 20 && (
+                        <p className="mt-1 text-right text-[11px] tabular-nums text-slate-500">
+                          {term.length}/{MAX_TERM_LENGTH}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeTerm(index)}
+                      aria-label={`Remove term ${index + 1}`}
+                      className="mt-1.5 rounded-lg p-2 text-slate-500 transition-colors hover:bg-rose-500/10 hover:text-rose-400"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
         </div>
 
         <div className="flex justify-end gap-3 border-t border-slate-800 px-6 py-4 bg-slate-950/40">

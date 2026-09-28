@@ -8,7 +8,7 @@ import {
 import { StatusBadge } from "../StatusBadge";
 import { currency } from "../../utils";
 
-const PAGE_SIZE_OPTIONS = [10, 25, 50];
+const PAGE_SIZE_OPTIONS = [5, 10, 25, 50];
 
 export default function WithdrawalTable({
   loading,
@@ -191,11 +191,10 @@ export default function WithdrawalTable({
                     <button
                       key={p}
                       onClick={() => setCurrentPage(p)}
-                      className={`min-w-7 h-7 rounded-md border px-2 text-xs font-medium transition-colors ${
-                        p === safePage
+                      className={`min-w-7 h-7 rounded-md border px-2 text-xs font-medium transition-colors ${p === safePage
                           ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-400"
                           : "border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800"
-                      }`}
+                        }`}
                     >
                       {p}
                     </button>

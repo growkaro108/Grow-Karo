@@ -18,8 +18,7 @@ public record UserSchemeResponse(
                 BigDecimal paidAmount,
                 BigDecimal profit,
                 BigDecimal profitRedeemed,
-                BigDecimal redeemAmount,
-                String redeemDate,
+
                 String paidDate,
                 String requestDate,
                 String enrollmentDate,
@@ -33,11 +32,6 @@ public record UserSchemeResponse(
 
         public static UserSchemeResponse toUserSchemeResponse(UserScheme us) {
                 boolean isJoined = us.getEnrollmentDate() != null;
-
-                BigDecimal redeemAmount = us.getRedeemAmount() != null ? us.getRedeemAmount() : BigDecimal.ZERO;
-
-                boolean hasRedeemAmount = redeemAmount.signum() > 0;
-                boolean hasRedeemDate = us.getRedeemDate() != null;
 
                 List<UserSchemeProfitLedgerResponse> profitLedger = us.getProfitLedger().stream()
                                 .map(entry -> new UserSchemeProfitLedgerResponse(
@@ -66,8 +60,6 @@ public record UserSchemeResponse(
                                 us.getPaidAmount(),
                                 profit,
                                 profitRedeemed,
-                                hasRedeemAmount ? us.getRedeemAmount() : null,
-                                hasRedeemDate ? us.getRedeemDate().toString() : null,
                                 us.getPaidDate() == null ? null : us.getPaidDate().toString(),
                                 us.getRequestDate().format(General.DATE_FORMATTER),
                                 isJoined ? us.getEnrollmentDate().format(General.DATE_FORMATTER) : null,

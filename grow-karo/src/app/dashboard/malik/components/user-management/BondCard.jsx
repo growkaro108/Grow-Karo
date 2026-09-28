@@ -64,6 +64,7 @@ export default function BondCard({
   const isApproved = !!bond.enrollmentDate;
   const entryCount =
     (bond.profitLedger?.length ?? 0) + (bond.reedemLedger?.length ?? 0);
+  const isTenureCompleteScheme = bond.payoutCycle === "tenure-complete";
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-800 bg-white/2" title={isApproved ? "Approved" : " Not Approve Yet "}>
@@ -92,21 +93,21 @@ export default function BondCard({
           </span>
         </p>
       </div>
-      <div className="grid grid-cols-2 gap-3 px-4 py-3.5 sm:grid-cols-4">
-        <Stat label="Profit" value={currency(bond.profit)} tone="emerald" />
+      <div className={`grid grid-cols-1 ${isTenureCompleteScheme ? "sm:grid-cols-2" : "sm:grid-cols-4"} gap-3 px-4 py-3.5`}>
+        {!isTenureCompleteScheme && <><Stat label="Profit" value={currency(bond.profit)} tone="emerald" />
+          <Stat
+            label="Redeemed"
+            value={currency(bond.redeemAmount ?? bond.profitRedeemed)}
+            tone="amber"
+          /></>}
         <Stat
-          label="Redeemed"
-          value={currency(bond.redeemAmount ?? bond.profitRedeemed)}
-          tone="amber"
-        />
-        <Stat
-          label="Paid"
+          label="Paid on"
           value={bond.paidDate ? dateFmt(bond.paidDate) : "—"}
         />
-        <Stat
+        {!isTenureCompleteScheme && <Stat
           label="Redeem date"
           value={bond.redeemDate ? dateFmt(bond.redeemDate) : "—"}
-        />
+        />}
       </div>
       {/* hide if scheme is not approved */}
       {isApproved && (

@@ -13,6 +13,8 @@ import Image from "next/image";
 import TablePagination from "@/components/TablePagination";
 import { TableRowLoader } from "@/loader/TableRowLoader";
 import { getAllMaturityUserScheme } from "../../../../../../services/malikService";
+import { resolveMediaUrl } from "@/api/apiClient";
+import { storage } from "../../../../../../services/storageService";
 // Mock Data Structure
 const MOCK_SCHEMES = [
   {
@@ -28,191 +30,23 @@ const MOCK_SCHEMES = [
     bondImage:
       "https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?auto=format&fit=crop&q=80&w=200",
   },
-  {
-    id: "SCH-002",
-    userName: "Ananya Sharma",
-    userEmail: "ananya@example.com",
-    schemeName: "High Yield Corporate Bond",
-    bondNumber: "BND-492011",
-    investmentAmount: 500000,
-    maturityAmount: 720000,
-    maturityDate: "2026-10-02",
-    daysRemaining: 8,
-    bondImage:
-      "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=200",
-  },
-  {
-    id: "SCH-003",
-    userName: "Vikram Mehta",
-    userEmail: "vikram@example.com",
-    schemeName: "Infrastructure Development Fund",
-    bondNumber: "BND-109283",
-    investmentAmount: 250000,
-    maturityAmount: 340000,
-    maturityDate: "2026-10-08",
-    daysRemaining: 14,
-    bondImage:
-      "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&q=80&w=200",
-  },
-  {
-    id: "SCH-004",
-    userName: "Priya Patel",
-    userEmail: "priya@example.com",
-    schemeName: "Fixed Return Sovereign Bond",
-    bondNumber: "BND-771204",
-    investmentAmount: 100000,
-    maturityAmount: 135000,
-    maturityDate: "2026-09-25",
-    daysRemaining: 1,
-    bondImage:
-      "https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?auto=format&fit=crop&q=80&w=200",
-  },
-  {
-    id: "SCH-005",
-    userName: "Amitav Sengupta",
-    userEmail: "amitav.s@example.com",
-    schemeName: "National Highways Growth Bond",
-    bondNumber: "BND-302918",
-    investmentAmount: 300000,
-    maturityAmount: 415000,
-    maturityDate: "2026-09-26",
-    daysRemaining: 2,
-    bondImage:
-      "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&q=80&w=200",
-  },
-  {
-    id: "SCH-006",
-    userName: "Sneha Reddy",
-    userEmail: "sneha.reddy@example.com",
-    schemeName: "Green Energy Sustainability Fund",
-    bondNumber: "BND-554109",
-    investmentAmount: 450000,
-    maturityAmount: 610000,
-    maturityDate: "2026-09-29",
-    daysRemaining: 5,
-    bondImage:
-      "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&q=80&w=200",
-  },
-  {
-    id: "SCH-007",
-    userName: "Rohan Kapoor",
-    userEmail: "rohan.k@example.com",
-    schemeName: "Capital Protection Trust Bond",
-    bondNumber: "BND-901234",
-    investmentAmount: 200000,
-    maturityAmount: 270000,
-    maturityDate: "2026-09-30",
-    daysRemaining: 6,
-    bondImage:
-      "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=200",
-  },
-  {
-    id: "SCH-008",
-    userName: "Kavita Rao",
-    userEmail: "kavita.rao@example.com",
-    schemeName: "Municipal Infrastructure Note",
-    bondNumber: "BND-642189",
-    investmentAmount: 180000,
-    maturityAmount: 235000,
-    maturityDate: "2026-10-01",
-    daysRemaining: 7,
-    bondImage:
-      "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&q=80&w=200",
-  },
-  {
-    id: "SCH-009",
-    userName: "Deepak Verma",
-    userEmail: "deepak.v@example.com",
-    schemeName: "Tech Ventures Convertible Bond",
-    bondNumber: "BND-118239",
-    investmentAmount: 600000,
-    maturityAmount: 890000,
-    maturityDate: "2026-10-03",
-    daysRemaining: 9,
-    bondImage:
-      "https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?auto=format&fit=crop&q=80&w=200",
-  },
-  {
-    id: "SCH-010",
-    userName: "Neha Joshi",
-    userEmail: "neha.j@example.com",
-    schemeName: "Secure Treasury Plus",
-    bondNumber: "BND-830291",
-    investmentAmount: 350000,
-    maturityAmount: 480000,
-    maturityDate: "2026-10-04",
-    daysRemaining: 10,
-    bondImage:
-      "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&q=80&w=200",
-  },
-  {
-    id: "SCH-011",
-    userName: "Sanjay Singhania",
-    userEmail: "sanjay.s@example.com",
-    schemeName: "Banking Sector Subordinated Bond",
-    bondNumber: "BND-472910",
-    investmentAmount: 1000000,
-    maturityAmount: 1420000,
-    maturityDate: "2026-10-05",
-    daysRemaining: 11,
-    bondImage:
-      "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&q=80&w=200",
-  },
-  {
-    id: "SCH-012",
-    userName: "Pooja Hegde",
-    userEmail: "pooja.h@example.com",
-    schemeName: "Sovereign Gold Linked Bond",
-    bondNumber: "BND-629104",
-    investmentAmount: 400000,
-    maturityAmount: 560000,
-    maturityDate: "2026-10-06",
-    daysRemaining: 12,
-    bondImage:
-      "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=200",
-  },
-  {
-    id: "SCH-013",
-    userName: "Arjun Nair",
-    userEmail: "arjun.nair@example.com",
-    schemeName: "Logistics Expansion Debenture",
-    bondNumber: "BND-782019",
-    investmentAmount: 220000,
-    maturityAmount: 295000,
-    maturityDate: "2026-10-07",
-    daysRemaining: 13,
-    bondImage:
-      "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&q=80&w=200",
-  },
-  {
-    id: "SCH-014",
-    userName: "Meera Deshmukh",
-    userEmail: "meera.d@example.com",
-    schemeName: "Fixed Yield Floating Rate Note",
-    bondNumber: "BND-920183",
-    investmentAmount: 275000,
-    maturityAmount: 365000,
-    maturityDate: "2026-10-09",
-    daysRemaining: 15,
-    bondImage:
-      "https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?auto=format&fit=crop&q=80&w=200",
-  },
 ];
 
 export default function MaturingSchemesAdminDark() {
   // Config States
   const [daysThreshold, setDaysThreshold] = useState(15);
+  const [schemes, setSchemes] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [exportLimit, setExportLimit] = useState("100");
+  const [exportLimit, setExportLimit] = useState("50");
   const [loading, setLoading] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
-
+  const [totalElement, setTotalElements] = useState(0);
   // Filter schemes based on threshold and search term
   const filteredSchemes = useMemo(() => {
-    return MOCK_SCHEMES.filter((scheme) => {
+    return schemes.filter((scheme) => {
       const matchesDays = scheme.daysRemaining <= daysThreshold;
       const matchesSearch =
         scheme.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -221,7 +55,7 @@ export default function MaturingSchemesAdminDark() {
 
       return matchesDays && matchesSearch;
     });
-  }, [daysThreshold, searchTerm]);
+  }, [schemes, daysThreshold, searchTerm]);
 
   // Pagination Logic
   const totalPages = Math.ceil(filteredSchemes.length / itemsPerPage);
@@ -235,7 +69,7 @@ export default function MaturingSchemesAdminDark() {
     let dataToExport = [...filteredSchemes];
 
     if (exportLimit !== "all") {
-      const limit = NUmber.parseInt(exportLimit, 10);
+      const limit = Number.parseInt(exportLimit, 10);
       dataToExport = dataToExport.slice(0, limit);
     }
 
@@ -259,48 +93,78 @@ export default function MaturingSchemesAdminDark() {
       `Maturing_Schemes_${daysThreshold}_Days_${new Date().toISOString().split("T")[0]}.xlsx`,
     );
   };
-  //  Debounce the search term (e.g., 400ms delay)
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-    }, 400);
+  // First page index your API expects. Spring Data is 0-based.
+  // If your pager UI is 1-based, keep FIRST_PAGE = 1 here and send `currentPage - 1` to the API.
+  const FIRST_PAGE = 1;
 
+  // Debounce the search term
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedSearch(searchTerm), 700);
     return () => clearTimeout(handler);
   }, [searchTerm]);
-  //  Fetch data safely with cleanup (AbortController to prevent race conditions)
-  // useEffect(() => {
-  //   let isMounted = true;
-  //   const controller = new AbortController();
 
-  //   const fetchData = async () => {
-  //     try {
-  //       // Pass controller signal if your API function supports Axios / fetch cancellation
-  //       const res = await getAllMaturityUserScheme(
-  //         debouncedSearch,
-  //         daysThreshold,
-  //         currentPage,
-  //         itemsPerPage,
-  //         { signal: controller.signal },
-  //       );
+  // Any filter change must go back to the first page. Otherwise the server can return
+  // { content: [], totalElements: 25 } for a page that no longer exists.
+  useEffect(() => {
+    setCurrentPage(FIRST_PAGE);
+  }, [debouncedSearch, daysThreshold, itemsPerPage]);
 
-  //       if (res && isMounted) {
-  //         console.log(res);
-  //         // setMaturityData(res.data); // Update state here
-  //       }
-  //     } catch (error) {
-  //       if (isMounted) {
-  //         console.error("Error fetching maturity user schemes:", error);
-  //       }
-  //     }
-  //   };
+  // Fetch data (AbortController prevents stale responses from overwriting newer ones)
+  useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
 
-  //   fetchData();
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const res = await getAllMaturityUserScheme(
+          debouncedSearch,
+          daysThreshold,
+          currentPage,
+          itemsPerPage,
+          { signal },
+        );
+        if (signal.aborted) return;
 
-  //   return () => {
-  //     isMounted = false;
-  //     controller.abort(); // Cancels pending API requests if dependencies change fast
-  //   };
-  // }, [currentPage, daysThreshold, itemsPerPage, debouncedSearch]);
+        const content = Array.isArray(res?.content) ? res.content : [];
+        const total = res?.totalElements ?? 0;
+
+        // Page is past the end: total > 0 but nothing on this page. Jump to the last real page.
+        if (content.length === 0 && total > 0 && currentPage > FIRST_PAGE) {
+          const lastPage = FIRST_PAGE + Math.ceil(total / itemsPerPage) - 1;
+          if (lastPage !== currentPage) {
+            setCurrentPage(lastPage); // this effect re-runs with the new page
+            return;
+          }
+        }
+
+        setSchemes(content);
+        setTotalElements(total);
+
+        // Caching must never block the UI update.
+        try {
+          storage.setWithTTL("maturityUserSchemes", content, 2);
+        } catch (storageError) {
+          console.warn("Could not cache maturity schemes:", storageError);
+        }
+      } catch (error) {
+        if (
+          signal.aborted ||
+          error?.name === "AbortError" ||
+          error?.name === "CanceledError"
+        ) {
+          return; // request was cancelled on purpose
+        }
+        console.error("Error fetching maturity user schemes:", error);
+      } finally {
+        // A cancelled request must not switch off the loader of the newer one.
+        if (!signal.aborted) setLoading(false);
+      }
+    };
+
+    fetchData();
+    return () => controller.abort();
+  }, [currentPage, daysThreshold, itemsPerPage, debouncedSearch]);
   return (
     <div className="w-full max-w-7xl -m-7 mx-auto p-4 sm:p-6 lg:p-8 bg-slate-950 min-h-screen text-slate-100">
       {/* Control Bar: Search & Export Controls */}
@@ -343,7 +207,7 @@ export default function MaturingSchemesAdminDark() {
         </div>
         {/* Export Controls */}
         <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-          <div className="flex items-center gap-2 border border-slate-800 rounded-lg px-3 py-1.5 bg-slate-800/50">
+          {/* <div className="flex items-center gap-2 border border-slate-800 rounded-lg px-3 py-1.5 bg-slate-800/50">
             <span className="text-xs font-semibold text-slate-400 uppercase">
               Export Limit:
             </span>
@@ -357,7 +221,7 @@ export default function MaturingSchemesAdminDark() {
               <option value="300">300 Records</option>
               <option value="all">All Records</option>
             </select>
-          </div>
+          </div> */}
 
           <button
             onClick={handleExportXLSX}
@@ -384,15 +248,15 @@ export default function MaturingSchemesAdminDark() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60 text-sm">
-            {!loading && paginatedSchemes.length > 0 ? (
-              paginatedSchemes.map((scheme) => (
+            {!loading && filteredSchemes.length > 0 ? (
+              filteredSchemes.map((scheme) => (
                 <tr
                   key={scheme.id}
                   className="hover:bg-slate-800/30 transition-colors"
                 >
                   <td className="py-3 px-4">
                     <Image
-                      src={scheme.bondImage}
+                      src={resolveMediaUrl(scheme.bondImage)}
                       alt={scheme.schemeName}
                       className="w-14 h-10 object-cover rounded border border-slate-700 shadow-sm"
                       width={50}
@@ -464,8 +328,8 @@ export default function MaturingSchemesAdminDark() {
 
       {/* --- SMALL SCREENS: CARDS VIEW --- */}
       <div className="block md:hidden space-y-4">
-        {paginatedSchemes.length > 0 ? (
-          paginatedSchemes.map((scheme) => (
+        {filteredSchemes.length > 0 ? (
+          filteredSchemes.map((scheme) => (
             <div
               key={scheme.id}
               className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 shadow-md space-y-3"
@@ -541,7 +405,7 @@ export default function MaturingSchemesAdminDark() {
       <TablePagination
         currentPage={currentPage}
         pageSize={itemsPerPage}
-        totalItems={filteredSchemes?.length ?? 0}
+        totalItems={totalElement}
         onPageChange={setCurrentPage}
         onPageSizeChange={setItemsPerPage}
         darkMode={true}

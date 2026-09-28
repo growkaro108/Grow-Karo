@@ -258,13 +258,7 @@ public class CrucialNotificationService {
             params.put("status", userScheme.getScheme().getStatus());
             params.put("riskLevel", userScheme.getScheme().getRiskLevel());
             params.put("paidAmount", userScheme.getPaidAmount());
-            params.put("profit", userScheme.getProfit());
-            params.put("profitReedemed", userScheme.getProfitReedemed());
             params.put("txnId", userScheme.getUserSchemeId());
-            params.put("totalAmount",
-                    userScheme.getProfit().add(userScheme.getPaidAmount()).subtract(userScheme.getProfitReedemed()));
-            params.put("amount",
-                    userScheme.getProfit().add(userScheme.getPaidAmount()).subtract(userScheme.getProfitReedemed()));
             notifyUser(EssentialActionType.SCHEME_MATURITY_REMINDER, userScheme.getUser(), actionUrl, params);
             notifyAdmin(EssentialActionType.SCHEME_MATURITY_REMINDER, userScheme.getUser(), actionUrl, params);
         } catch (Exception e) {

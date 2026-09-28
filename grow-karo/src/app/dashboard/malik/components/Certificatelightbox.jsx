@@ -20,9 +20,11 @@ export default function CertificateLightbox({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  const hasUploadedImage = Boolean(bond?.bondUrl);
+  useEffect(() => {
+    setShowUploadedImage(hasUploadedImage)
+  }, [bond])
   if (!bond) return null;
-
-  const hasUploadedImage = Boolean(bond.bondUrl);
 
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center p-4 sm:p-8 mt-16">
@@ -34,8 +36,18 @@ export default function CertificateLightbox({
 
       <div className="relative w-full max-w-2xl animate-[popIn_.2s_ease-out]">
         <div className="absolute -top-11 right-0 flex items-center gap-2">
-          {hasUploadedImage && (
-            <div className="flex items-center rounded-lg bg-slate-900/90 p-1 border border-slate-700 text-xs">
+
+          <div className="flex items-center rounded-lg bg-slate-900/90 p-1 border border-slate-700 text-xs">
+            {hasUploadedImage ? <button
+              type="button"
+              onClick={() => setShowUploadedImage(true)}
+              className={`flex items-center gap-1.5 rounded px-2.5 py-1 transition ${showUploadedImage
+                ? "bg-teal-600 text-white font-medium"
+                : "text-slate-400 hover:text-slate-200"
+                }`}
+            >
+              <ImageIcon className="h-3.5 w-3.5" /> Uploaded Bond
+            </button> :
               <button
                 type="button"
                 onClick={() => setShowUploadedImage(false)}
@@ -46,18 +58,9 @@ export default function CertificateLightbox({
               >
                 <FileText className="h-3.5 w-3.5" /> Certificate
               </button>
-              <button
-                type="button"
-                onClick={() => setShowUploadedImage(true)}
-                className={`flex items-center gap-1.5 rounded px-2.5 py-1 transition ${showUploadedImage
-                  ? "bg-teal-600 text-white font-medium"
-                  : "text-slate-400 hover:text-slate-200"
-                  }`}
-              >
-                <ImageIcon className="h-3.5 w-3.5" /> Uploaded Bond
-              </button>
-            </div>
-          )}
+            }
+          </div>
+
           <button
             onClick={onClose}
             className="rounded-full p-2 text-slate-300 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
@@ -86,7 +89,9 @@ export default function CertificateLightbox({
                 userName={userName}
                 scheme={scheme}
                 className="h-auto w-full"
-                logoUrl={"/logo.jpg"}
+                logoUrl={"https://lh3.googleusercontent.com/d/1eezaPOLSSuTVlPV6sKiCBxpnNXbRo-Ft"}
+                watermarkUrl={"https://lh3.googleusercontent.com/d/1eezaPOLSSuTVlPV6sKiCBxpnNXbRo-Ft"}
+
               />
 
               <BondDownloadButton

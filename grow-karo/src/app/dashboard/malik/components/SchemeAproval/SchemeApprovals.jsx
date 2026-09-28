@@ -42,7 +42,7 @@ export default function SchemeApproval() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("pending");
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [rejectTarget, setRejectTarget] = useState(null);
   const [bondTarget, setBondTarget] = useState(null);
@@ -51,10 +51,10 @@ export default function SchemeApproval() {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
   const [showFilter, setShowFilter] = useState(true);
-  const {authUser}=use(userContext);
+  const { authUser } = use(userContext);
   const inputRef = useRef(null);
   const toastTimer = useRef(null);
-  const userId=authUser?.id || null;
+  const userId = authUser?.id || null;
   const showToast = useCallback((type, text) => {
     clearTimeout(toastTimer.current);
     setToast({ type, text });
@@ -159,7 +159,8 @@ export default function SchemeApproval() {
     paidDate >= reqDate &&
     paidDate <= getToday();
 
-  const handleConfirmApproval = useCallback(async () => {
+  const handleConfirmApproval = useCallback(async (submitTo, amountFrom) => {
+    console.log(submitTo, amountFrom);
     if (!selectedRequest || !isValidAmount) {
       // console.log(paidAmount);
       showToast("error", "Enter a valid paid amount first.");
@@ -198,6 +199,8 @@ export default function SchemeApproval() {
       userSchemeId: selectedRequest.userSchemeId,
       paidAmount: numericPaid,
       paidDate: paidDate,
+      amountFrom: amountFrom,
+      submitTo: submitTo,
     };
     // console.log(payload);
     let response = null;
@@ -210,12 +213,12 @@ export default function SchemeApproval() {
         return;
       }
 
-      const updatedRequest = response?.data;
-      if (updatedRequest?.userSchemeId) {
-        mergeRequestInState(updatedRequest);
-      } else {
-        await loadRequests();
-      }
+      // const updatedRequest = response?.data;
+      // if (updatedRequest?.userSchemeId) {
+      //   mergeRequestInState(updatedRequest);
+      // } else {
+      await loadRequests();
+      // }
 
       const isExistingCustomer =
         selectedRequest?.isApproved ||
@@ -277,32 +280,71 @@ export default function SchemeApproval() {
   }, [rejectTarget, showToast, loadRequests]);
 
   const filteredRequests = useMemo(() => {
+    if (!requests?.length) return [];
+
     const q = query.trim().toLowerCase();
-    if (requests.length === 0) return [];
-    // first sort with whose bondImageURL is null first 
-    const sortedRequests = [...requests].sort((a, b) => {
-      if (a.bondImageURL === null && b.bondImageURL !== null) return -1;
-      if (a.bondImageURL !== null && b.bondImageURL === null) return 1;
-      return 0;
-    });
-    // sort 
-    return sortedRequests.filter((r) => {
-      const matchesStatus =
-        statusFilter === "all" || r.isApproved === statusFilter;
+
+    // "has a bond" = a non-empty URL. Covers null, undefined and "" the same way
+    // everywhere (the old code used === null in the sort but == null in the filter).
+    const hasBond = (r) => Boolean(r.bondImageURL);
+
+    const matches = requests.filter((r) => {
+      // statusFilter is a FILTER_TABS key, not a boolean, so map each key to
+      // a condition. (r.isApproved === "approved" can never be true.)
+      let matchesStatus;
+      switch (statusFilter) {
+        case "approved":
+          matchesStatus = Boolean(r.isApproved) && hasBond(r);
+          break;
+        case "pending":
+          matchesStatus = !r.isApproved;
+          break;
+        case "notApproved":
+          matchesStatus = !hasBond(r);
+          break;
+        case "all":
+        default:
+          matchesStatus = true;
+      }
+
       const matchesQuery =
         !q ||
-        r.name.toLowerCase().includes(q) ||
-        r.schemeName.toLowerCase().includes(q);
+        (r.name ?? "").toLowerCase().includes(q) ||
+        (r.schemeName ?? "").toLowerCase().includes(q);
+
       return matchesStatus && matchesQuery;
     });
-  }, [requests, query, statusFilter]);
 
+    // Requests without a bond first. Array.sort is stable, so the original order
+    // is kept inside each group.
+    return matches.sort((a, b) => Number(hasBond(a)) - Number(hasBond(b)));
+  }, [requests, query, statusFilter]);
   const pendingCount = requests.filter((r) => r.isApproved === false).length;
 
+  const hasBond = (r) => Boolean(r.bondImageURL);
+
+  // Single source of truth for what each FILTER_TABS key means.
+  // Used by BOTH the tab counts and the list filter, so they can never disagree.
+  const matchesStatus = (r, key) => {
+    switch (key) {
+      case "approved":
+        return Boolean(r.isApproved) && hasBond(r);
+      case "pending":
+        return !r.isApproved;
+      case "notApproved":
+        return !hasBond(r);
+      case "all":
+      default:
+        return true;
+    }
+  };
   const statusCounts = useMemo(() => {
-    const counts = { all: requests.length };
-    requests.forEach((r) => {
-      counts[r.isApproved] = (counts[r.isApproved] || 0) + 1;
+    const counts = { all: 0, pending: 0, approved: 0, notApproved: 0 };
+    (requests ?? []).forEach((r) => {
+      counts.all += 1;
+      if (matchesStatus(r, "pending")) counts.pending += 1;
+      if (matchesStatus(r, "approved")) counts.approved += 1;
+      if (matchesStatus(r, "notApproved")) counts.notApproved += 1;
     });
     return counts;
   }, [requests]);

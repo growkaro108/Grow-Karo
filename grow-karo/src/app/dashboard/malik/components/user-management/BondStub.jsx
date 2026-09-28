@@ -1,87 +1,121 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { ZoomIn } from "lucide-react";
+import Image from "next/image";
 import StatusPill from "./StatusPill";
-import { calculateMaturityAmount, currency, dateFmt } from "./format";
+import { calculateMaturityAmount, currency } from "./format";
 import BondCertificate from "../BondCertificate.jsx";
 import { resolveMediaUrl } from "../../../../../api/apiClient";
-import Image from "next/image";
 
+// Must match the surface the card sits on so the perforation notches look "cut out".
+const NOTCH_BG = "bg-[#111827]";
 
+function Field({ label, children, emphasis = false }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-xs text-slate-400">{label}</p>
+      <p
+        className={
+          emphasis
+            ? "mt-0.5 truncate font-[Space_Grotesk] text-base font-semibold tabular-nums text-teal-300"
+            : "mt-0.5 truncate text-sm font-medium tabular-nums text-slate-100"
+        }
+      >
+        {children}
+      </p>
+    </div>
+  );
+}
 
 export default function BondStub({ bond, userName, scheme, onView, viewUser }) {
+  const bondLabel = bond.userSchemeId || bond.id || "";
+
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-800">
+    <article className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 transition-colors hover:border-slate-700">
       {/* counterfoil */}
-      <div className="flex items-center justify-between bg-white/3 px-4 py-2">
-        <span className="font-mono text-[11px] tracking-wide text-slate-500">
+      <header className="flex items-center justify-between gap-3 bg-white/5 px-4 py-2.5">
+        <span className="truncate font-mono text-xs text-slate-400">
           {bond.userSchemeId}
         </span>
         <StatusPill
-          status={bond.status === "matured" ? "active" : bond.status}
+          status={bond.status === "matured" ? "Matured" : bond.status}
         />
-      </div>
+      </header>
 
       {/* perforation */}
-      <div className="relative h-0 border-t border-dashed border-slate-700">
-        <span className="absolute -left-1.5 -top-1.5 h-3 w-3 rounded-full bg-[#111827]" />
-        <span className="absolute -right-1.5 -top-1.5 h-3 w-3 rounded-full bg-[#111827]" />
+      <div
+        className="relative h-0 border-t border-dashed border-slate-700"
+        aria-hidden="true"
+      >
+        <span
+          className={`absolute -left-1.5 -top-1.5 h-3 w-3 rounded-full border border-slate-800 ${NOTCH_BG}`}
+        />
+        <span
+          className={`absolute -right-1.5 -top-1.5 h-3 w-3 rounded-full border border-slate-800 ${NOTCH_BG}`}
+        />
       </div>
 
       {/* certificate thumbnail */}
       <button
+        type="button"
         onClick={() => onView(bond)}
-        className="group relative block h-28 w-full overflow-hidden border-b border-slate-800 bg-[#F3ECD9] focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-inset"
-        aria-label={`View certificate for bond ${bond.userSchemeId || bond.id || ""}`}
+        className="group relative block aspect-[8/3] w-full overflow-hidden border-b border-slate-800 bg-[#F3ECD9] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-500"
+        aria-label={`View certificate for bond ${bondLabel}`}
       >
-        <BondCertificate
-          bond={bond}
-          userData={viewUser}
-          userName={userName}
-          scheme={scheme || bond?.schemeName}
-          className="h-full w-full"
+        {/*
+          The full certificate is rendered at its natural 4:3 ratio (inner wrapper),
+          and the button above is only half that height, so overflow-hidden clips
+          it to the top half. To show the bottom half instead, change `top-0`
+          to `bottom-0` on the wrapper below.
+        */}
+        <div className="absolute inset-x-0 top-0 aspect-[4/3] w-full">
+          {bond.bondUrl ? (
+            <Image
+              src={resolveMediaUrl(bond.bondUrl)}
+              alt={`Certificate for bond ${bondLabel}`}
+              width={800}
+              height={600}
+              unoptimized
+              className="h-full w-full object-cover object-top"
+            />
+          ) : (
+            <BondCertificate
+              bond={bond}
+              userData={viewUser}
+              userName={userName}
+              scheme={scheme || bond?.schemeName}
+              className="h-full w-full"
+            />
+          )}
+        </div>
+
+        {/* soft fade at the cut edge so it reads as "continues" */}
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#F3ECD9] to-transparent"
+          aria-hidden="true"
         />
-        <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-medium text-white">
-            <ZoomIn className="h-3.5 w-3.5" /> View bond
+
+        {/* hover / keyboard-focus overlay */}
+        <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100 group-focus-visible:bg-black/40 group-focus-visible:opacity-100">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-black/75 px-3 py-1.5 text-xs font-medium text-white">
+            <ZoomIn className="h-3.5 w-3.5" aria-hidden="true" />
+            View bond
           </span>
         </div>
       </button>
 
       {/* details */}
-      <div className="grid grid-cols-2 gap-3 px-4 py-3">
-        <div>
-          <p className="text-[11px] uppercase tracking-wide text-slate-500">
-            Principal
-          </p>
-          <p className="font-[Space_Grotesk] text-sm font-semibold tabular-nums text-slate-100">
-            {currency(bond.paidAmount)}
-          </p>
-        </div>
-        <div>
-          <p className="text-[11px] uppercase tracking-wide text-slate-500">
-            Rate
-          </p>
-          <p className="text-sm font-medium tabular-nums text-slate-200">
-            {bond.profitPercentage}% per {bond.payoutCycle}
-          </p>
-        </div>
-        <div className="">
-          <p className="text-[11px] uppercase tracking-wide text-slate-500">
-            Maturity
-          </p>
-          <p className="text-sm font-medium text-slate-200">
-            {bond.maturityDate}
-          </p>
-        </div>
-        <div className="">
-          <p className="text-[11px] uppercase tracking-wide text-slate-500">
-            Pay At Maturity
-          </p>
-          <p className="text-sm font-medium text-slate-200">
-            {currency(calculateMaturityAmount(bond))}
-          </p>
-        </div>
-      </div>
-    </div>
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-4 px-4 py-4">
+        <Field label="Principal">{currency(bond.paidAmount)}</Field>
+        <Field label="Rate">
+          {bond.profitPercentage}% per {bond.payoutCycle}
+        </Field>
+        <Field label="Maturity date">
+          {bond.maturityDate ? bond.maturityDate : "—"}
+        </Field>
+        <Field label="Payout at maturity" emphasis>
+          {currency(calculateMaturityAmount(bond))}
+        </Field>
+      </dl>
+    </article>
   );
 }

@@ -59,3 +59,36 @@ export const calculateMaturityAmount = (bond) => {
     return bond.paidAmount + interest * times;
   }
 };
+
+// if anyone is zero not return
+// if year  eg. 1 yr 2 month 4 days
+// if months eg. 2 month 4 days
+// if days eg. 4 days
+
+export const daysToMonths = (days) => {
+  if (days === null || days === undefined || isNaN(days)) return "--";
+
+  let remaining = Number(days);
+  const result = [];
+
+  // Years
+  const years = Math.floor(remaining / 365);
+  if (years > 0) {
+    result.push(`${years} yr`);
+    remaining %= 365;
+  }
+
+  // Months
+  const months = Math.floor(remaining / 30);
+  if (months > 0) {
+    result.push(`${months} month`);
+    remaining %= 30;
+  }
+
+  // Days (only if non-zero)
+  if (remaining > 0) {
+    result.push(`${remaining} days`);
+  }
+
+  return result.length > 0 ? result.join(" ") : "0 days";
+};

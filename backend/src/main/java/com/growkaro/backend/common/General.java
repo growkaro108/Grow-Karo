@@ -6,6 +6,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -291,6 +293,7 @@ public class General {
         scheme.setRiskLevel(schemeData.riskLevel());
         scheme.setProfitPercentage(schemeData.profitPercentage());
         scheme.setMaxInvestorsAllowed(schemeData.maxInvestorsAllowed());
+        scheme.setTerms(new ArrayList<>(schemeData.terms()));
         scheme.setCreatedBy(adminName());
         return scheme;
     }
@@ -456,6 +459,27 @@ public class General {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
+    public Map<String, BigDecimal> countTotalProfitAndRedeemAndFinalAmount(UserScheme us) {
+
+        Map<String, BigDecimal> profit = new HashMap<>();
+
+        BigDecimal totalProfit = us.getProfitLedger().stream()
+                .map(UserSchemeProfitLedger::getProfitAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalReedem = us.getReedemLedger().stream()
+                .filter(reedemLedger -> reedemLedger.getStatus() == UserSchemeReedemLedger.ReedeemStatus.COMPLETED)
+                .map(UserSchemeReedemLedger::getRedeemAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal netProfit = us.getPaidAmount().add(totalProfit.subtract(totalReedem));
+
+        profit.put("totalProfit", totalProfit);
+        profit.put("totalReedem", totalReedem);
+        profit.put("netProfit", netProfit);
+        return profit;
+    }
+
     public boolean changeReedemStatus(UserScheme u, BigDecimal amount, ReedeemStatus status) {
         UserSchemeReedemLedger reedemLedger = reedemLedgerRepository
                 .findByUserSchemeAndRedeemAmount(u, amount).orElse(null);
@@ -481,6 +505,19 @@ public class General {
             return Integer.parseInt(page);
         } catch (NumberFormatException ex) {
             return 1;
+        }
+    }
+
+    public BigDecimal calculateMaturityAmount(UserScheme bond) {
+        if ("tenure-complete".equals(bond.getScheme().getPayoutFrequency())) {
+            return bond.getPaidAmount()
+                    .multiply(BigDecimal.valueOf(1 + bond.getScheme().getProfitPercentage() / 100.0));
+        } else {
+            int periodDays = resolvePeriodDays(bond.getScheme().getPayoutFrequency(), bond.getScheme().getTenure());
+            int times = bond.getScheme().getTenure() / periodDays; // Integer division automatically floors in Java
+            BigDecimal interest = bond.getPaidAmount()
+                    .multiply(BigDecimal.valueOf(bond.getScheme().getProfitPercentage() / 100.0));
+            return bond.getPaidAmount().add(interest.multiply(BigDecimal.valueOf(times)));
         }
     }
 }

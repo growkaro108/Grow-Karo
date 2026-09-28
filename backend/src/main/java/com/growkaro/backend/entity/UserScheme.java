@@ -81,6 +81,12 @@ public class UserScheme {
     @Column(name = "paid_amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal paidAmount = BigDecimal.ZERO;
 
+    @Column(name = "amount_from")
+    private String amountFrom;
+
+    @Column(name = "submit_to")
+    private String submitTo;
+
     @Column(name = "is_approved", nullable = false)
     private Boolean isApproved = false;
 
@@ -101,24 +107,25 @@ public class UserScheme {
     @Column(name = "bond_number")
     private String bondNumber;
 
-    @NotNull(message = "Profit is required")
-    @DecimalMin(value = "0.0000", message = "Profit cannot be negative")
-    @Column(name = "profit", precision = 19, scale = 4)
-    private BigDecimal profit = BigDecimal.ZERO;
+    // @NotNull(message = "Profit is required")
+    // @DecimalMin(value = "0.0000", message = "Profit cannot be negative")
+    // @Column(name = "profit", precision = 19, scale = 4)
+    // private BigDecimal profit = BigDecimal.ZERO;
 
     @Column(name = "last_profit_update_date")
     private LocalDate lastProfitUpdateDate;
 
-    @NotNull(message = "Profit Reedemed cannot be null")
-    @DecimalMin(value = "0.0000", message = "Profit Reedemed cannot be negative")
-    @Column(name = "profit_reedemed", precision = 19, scale = 4, nullable = false, columnDefinition = "NUMERIC(19,4) DEFAULT 0.0000")
-    private BigDecimal profitReedemed = BigDecimal.ZERO;
+    // @NotNull(message = "Profit Reedemed cannot be null")
+    // @DecimalMin(value = "0.0000", message = "Profit Reedemed cannot be negative")
+    // @Column(name = "profit_reedemed", precision = 19, scale = 4, nullable =
+    // false, columnDefinition = "NUMERIC(19,4) DEFAULT 0.0000")
+    // private BigDecimal profitReedemed = BigDecimal.ZERO;
 
-    @Column(name = "redeem_amount", precision = 19, scale = 4)
-    private BigDecimal redeemAmount = BigDecimal.ZERO;
+    // @Column(name = "redeem_amount", precision = 19, scale = 4)
+    // private BigDecimal redeemAmount = BigDecimal.ZERO;
 
-    @Column(name = "redeem_date")
-    private LocalDate redeemDate;
+    // @Column(name = "redeem_date")
+    // private LocalDate redeemDate;
 
     @OneToMany(mappedBy = "userScheme", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserSchemeProfitLedger> profitLedger = new ArrayList<>();

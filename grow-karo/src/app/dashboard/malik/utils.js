@@ -123,14 +123,65 @@ function loadImage(src) {
   });
 }
 
-export async function downloadSvgAsPng(svgEl, filename, opts) {
-  const blob = await svgToPngBlob(svgEl, opts);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename.endsWith(".png") ? filename : `${filename}.png`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+/**
+ * Rasterise an <svg> element to a PNG and download it.
+ * Same signature the button uses: downloadSvgAsPng(svgEl, filename, { scale }).
+ *
+ * External <image href="https://..."> tags are blocked when an SVG is drawn via
+ * <img>, so BondCertificate embeds them as data: URIs first (see its
+ * data-images-ready attribute). This util only needs to serialise and draw.
+ */
+export async function downloadSvgAsPng(
+  svgEl,
+  filename = "investment-bond",
+  { scale = 3, background = "#ffffff" } = {},
+) {
+  const { width, height } = svgEl.viewBox.baseVal;
+
+  const clone = svgEl.cloneNode(true);
+  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  clone.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
+  clone.setAttribute("width", width);
+  clone.setAttribute("height", height);
+  clone.style.width = `${width}px`;
+  clone.style.height = `${height}px`;
+
+  const xml = new XMLSerializer().serializeToString(clone);
+  const url = URL.createObjectURL(
+    new Blob([xml], { type: "image/svg+xml;charset=utf-8" }),
+  );
+
+  try {
+    const img = new Image();
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = () => reject(new Error("Could not render SVG to image"));
+      img.src = url;
+    });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(width * scale);
+    canvas.height = Math.round(height * scale);
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    const blob = await new Promise((resolve, reject) =>
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("PNG export failed"))),
+        "image/png",
+      ),
+    );
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename.endsWith(".png") ? filename : `${filename}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }

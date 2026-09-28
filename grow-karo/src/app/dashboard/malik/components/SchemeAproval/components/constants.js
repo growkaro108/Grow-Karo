@@ -14,16 +14,17 @@ export const STATUS_STYLES = {
     color: "var(--danger)",
     bg: "var(--danger-soft)",
   },
-  withdrawn: {
-    label: "Withdrawn",
+  notApproved: {
+    label: "Not Approved",
     color: "var(--text-muted)",
     bg: "rgba(140,150,172,0.14)",
   },
 };
 
 export const FILTER_TABS = [
-  { key: false, label: "Pending", ...STATUS_STYLES.pending },
-  { key: true, label: "Approved", ...STATUS_STYLES.active },
+  { key: "pending", label: "Pending", ...STATUS_STYLES.pending },
+  { key: "notApproved", label: "Not Approved", ...STATUS_STYLES.notApproved },
+  { key: "approved", label: "Approved", ...STATUS_STYLES.active },
   // { key: "rejected", label: "Rejected", ...STATUS_STYLES.rejected },
   // { key: "withdrawn", label: "Withdraw request", ...STATUS_STYLES.withdrawn },
   { key: "all", label: "All", color: "var(--gold)", bg: "var(--gold-soft)" },
