@@ -10,7 +10,7 @@ import { adminContext } from "@/context/AdminContext";
 
 export function useRemitterTrackers() {
   const { codes, setCodes, isLoading, LoadCodes } = use(adminContext);
-const [isLoadingState, setIsLoadingState] = useState(isLoading);
+  const [isLoadingState, setIsLoadingState] = useState(isLoading);
   useEffect(() => {
     let cancelled = false;
     LoadCodes();
@@ -20,7 +20,7 @@ const [isLoadingState, setIsLoadingState] = useState(isLoading);
   }, [LoadCodes]);
 
   const createTracker = async (sanitizedData) => {
-  setIsLoadingState(true);
+    setIsLoadingState(true);
     const response = await createRemitter(sanitizedData);
 
     if (!response) return false;
@@ -43,6 +43,7 @@ const [isLoadingState, setIsLoadingState] = useState(isLoading);
   };
 
   const updateTracker = async (id, sanitizedData) => {
+    setIsLoadingState(true);
     // console.log("Dispatching update for tracker", id, sanitizedData);
     const response = await updateRemitter(id, sanitizedData);
     // console.log("update response: ", response);
@@ -52,19 +53,20 @@ const [isLoadingState, setIsLoadingState] = useState(isLoading);
       prev.map((c) =>
         c.id === id
           ? {
-              ...c,
-              goal: sanitizedData.allocationLimit,
-              organizationName: sanitizedData.organizationName,
-              remitterEmail: sanitizedData.remitterEmail,
-              remitterPhone: sanitizedData.remitterPhone,
-              allocationLimit: sanitizedData.allocationLimit,
-              aadharNumber: sanitizedData.aadharNumber,
-              panNumber: sanitizedData.panNumber,
-              status: sanitizedData.status,
-            }
+            ...c,
+            goal: sanitizedData.allocationLimit,
+            organizationName: sanitizedData.organizationName,
+            remitterEmail: sanitizedData.remitterEmail,
+            remitterPhone: sanitizedData.remitterPhone,
+            allocationLimit: sanitizedData.allocationLimit,
+            aadharNumber: sanitizedData.aadharNumber,
+            panNumber: sanitizedData.panNumber,
+            status: sanitizedData.status,
+          }
           : c,
       ),
     );
+    setIsLoadingState(false);
     return true;
   };
 

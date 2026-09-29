@@ -57,12 +57,12 @@ export default function MaturingSchemesAdminDark() {
     });
   }, [schemes, daysThreshold, searchTerm]);
 
-  // Pagination Logic
-  const totalPages = Math.ceil(filteredSchemes.length / itemsPerPage);
-  const paginatedSchemes = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredSchemes.slice(start, start + itemsPerPage);
-  }, [filteredSchemes, currentPage, itemsPerPage]);
+  // // Pagination Logic
+  // const totalPages = Math.ceil(filteredSchemes.length / itemsPerPage);
+  // const paginatedSchemes = useMemo(() => {
+  //   const start = (currentPage - 1) * itemsPerPage;
+  //   return filteredSchemes.slice(start, start + itemsPerPage);
+  // }, [filteredSchemes, currentPage, itemsPerPage]);
 
   // XLSX Export Handler
   const handleExportXLSX = () => {
@@ -74,15 +74,22 @@ export default function MaturingSchemesAdminDark() {
     }
 
     const formattedData = dataToExport.map((item) => ({
-      "Scheme ID": item.id,
+      "Customer ID": item.cust_id,
       "User Name": item.userName,
       "User Email": item.userEmail,
       "Scheme Name": item.schemeName,
+      "UserScheme ID": item.id,
       "Bond Number": item.bondNumber,
       "Investment Amount (INR)": item.investmentAmount,
       "Maturity Amount (INR)": item.maturityAmount,
       "Maturity Date": item.maturityDate,
       "Days Remaining": item.daysRemaining,
+      "Enroll Date": item.enrollmentDate,
+      "Account Number": item.accountNumber,
+      "IFSC Code": item.ifsc,
+      "Account Holder Name": item.accountHolderName,
+      "Bank Name": item.bankName,
+
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(formattedData);

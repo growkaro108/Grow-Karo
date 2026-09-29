@@ -185,3 +185,13 @@ export async function downloadSvgAsPng(
     URL.revokeObjectURL(url);
   }
 }
+
+export const handleCopyCode = (code) => {
+  try {
+    navigator.clipboard?.writeText(code);
+  } catch (e) {
+    // ignore
+    alert("something went wrong while copping... Try again!");
+  }
+  // showToast(`Copied "${code}" to clipboard.`);
+};

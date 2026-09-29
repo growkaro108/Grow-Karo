@@ -3,13 +3,12 @@ package com.growkaro.backend.DTO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
+
+import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.Nominee;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.UserScheme;
-import com.growkaro.backend.entity.UserSchemeProfitLedger;
-import com.growkaro.backend.entity.UserSchemeReedemLedger;
 import com.growkaro.backend.enums.UserSchemeStatus;
 
 public record UserPortfolio(
@@ -27,6 +26,7 @@ public record UserPortfolio(
         Boolean isApproved,
         BigDecimal profit,
         BigDecimal profitReedemed,
+        BigDecimal schemeRedeem,
         LocalDate nextPayoutDate,
         LocalDate paidDate,
         UserSchemeStatus status,
@@ -37,22 +37,13 @@ public record UserPortfolio(
         BigDecimal maximumAmount,
         String reinvestedIntoUserSchemeId) {
 
+    public static final General general = new General();
+
     public static UserPortfolio fromEntity(UserScheme us) {
-        BigDecimal totalprofit = BigDecimal.ZERO;
-        BigDecimal profitreedemed = BigDecimal.ZERO;
-        List<UserSchemeProfitLedger> profitLedger = us.getProfitLedger();
-        if (profitLedger != null) {
-            profitLedger = new ArrayList<>(us.getProfitLedger());
-            for (UserSchemeProfitLedger entry : profitLedger) {
-                totalprofit = totalprofit.add(entry.getProfitAmount());
-            }
-        }
-        List<UserSchemeReedemLedger> redeemProfit = us.getReedemLedger();
-        if (redeemProfit != null) {
-            for (UserSchemeReedemLedger entry : redeemProfit) {
-                profitreedemed = profitreedemed.add(entry.getRedeemAmount());
-            }
-        }
+        Map<String, BigDecimal> profitAndReeemedProfit = general.countTotalProfitAndRedeemAndFinalAmount(us);
+        BigDecimal totalprofit = profitAndReeemedProfit.get("totalProfit");
+        BigDecimal profitreedemed = profitAndReeemedProfit.get("totalReedem");
+        BigDecimal schemeRedeem = profitAndReeemedProfit.get("schemeRedeem");
         Scheme scheme = us.getScheme();
         Nominee nominee = us.getNominee();
         return new UserPortfolio(
@@ -70,6 +61,7 @@ public record UserPortfolio(
                 us.getIsApproved(),
                 totalprofit,
                 profitreedemed,
+                schemeRedeem,
                 us.getNextPayoutDate(),
                 us.getPaidDate(), us.getStatus(),
                 us.getMaturityDate(),

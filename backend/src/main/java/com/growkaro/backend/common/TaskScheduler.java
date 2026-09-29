@@ -1,33 +1,20 @@
 package com.growkaro.backend.common;
 
+import com.growkaro.backend.service.EmailService;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Set;
-
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.growkaro.backend.DRO.MaturedUserSchemeIds;
 import com.growkaro.backend.common.UserSchemePayoutProcessor.BatchOutcome;
 import com.growkaro.backend.common.UserSchemePayoutProcessor.ReinvestResult;
-import com.growkaro.backend.entity.Nominee;
-import com.growkaro.backend.entity.Scheme;
-import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
-import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
-import com.growkaro.backend.entity.User.Role;
 import com.growkaro.backend.enums.UserSchemeStatus;
-import com.growkaro.backend.repository.UserRepository;
 import com.growkaro.backend.repository.UserSchemeRepository;
-import com.growkaro.backend.security.AdminPolicy;
-import com.growkaro.backend.service.ActivityLogService;
 import com.growkaro.backend.service.CrucialNotificationService;
 import com.growkaro.backend.service.RedisService;
-import com.growkaro.backend.service.UserAPIService;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
@@ -43,8 +30,7 @@ public class TaskScheduler {
     private final General general;
     private final RedisService redisService;
     private final CrucialNotificationService crucialNotificationService;
-    private final AdminPolicy adminPolicy;
-    private final UserRepository userRepository;
+    private final EmailService emailService;
 
     // CRON EXPLANATION
     // 1. Minute 0
@@ -154,6 +140,8 @@ public class TaskScheduler {
                                 userScheme.getUser().getId(),
                                 "/dashboard",
                                 null);
+
+                        emailService.sendSchemeMaturityTodayEmailToUser(userScheme);
                     } catch (Exception e) {
                         log.error("Failed to send maturity notification for userScheme id={}: {}",
                                 userScheme.getUserSchemeId(), e.getMessage(), e);
@@ -175,7 +163,7 @@ public class TaskScheduler {
         List<UserScheme> allApprovedUserSchemes;
         try {
             allApprovedUserSchemes = userSchemeRepository
-                    .findAllByMaturityDatePassedAndNotReInvestedYet(today);
+                    .findAllByMaturityDatePassedAndNotReInvestedYet(today.plusDays(2));
         } catch (Exception e) {
             log.error("Failed to fetch matured userSchemes: {}", e.getMessage());
             return;

@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -22,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DRO.UserRegister;
+import com.growkaro.backend.DTO.CustomerIdCodec;
 import com.growkaro.backend.DTO.Payee;
 import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.entity.BankDetails;
@@ -468,7 +470,14 @@ public class General {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalReedem = us.getReedemLedger().stream()
-                .filter(reedemLedger -> reedemLedger.getStatus() == UserSchemeReedemLedger.ReedeemStatus.COMPLETED)
+                .filter(reedemLedger -> reedemLedger.getStatus() == UserSchemeReedemLedger.ReedeemStatus.COMPLETED
+                        || reedemLedger.getRedeemType() == UserSchemeReedemLedger.RedeemType.INTEREST_REDEEM)
+                .map(UserSchemeReedemLedger::getRedeemAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal schemeRedeem = us.getReedemLedger().stream()
+                .filter(reedemLedger -> reedemLedger.getStatus() == UserSchemeReedemLedger.ReedeemStatus.COMPLETED
+                        && reedemLedger.getRedeemType() == UserSchemeReedemLedger.RedeemType.FULL_REDEEM)
                 .map(UserSchemeReedemLedger::getRedeemAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -477,6 +486,7 @@ public class General {
         profit.put("totalProfit", totalProfit);
         profit.put("totalReedem", totalReedem);
         profit.put("netProfit", netProfit);
+        profit.put("schemeRedeem", schemeRedeem);
         return profit;
     }
 
@@ -519,5 +529,17 @@ public class General {
                     .multiply(BigDecimal.valueOf(bond.getScheme().getProfitPercentage() / 100.0));
             return bond.getPaidAmount().add(interest.multiply(BigDecimal.valueOf(times)));
         }
+    }
+
+    public String getCustomerId(String Id) {
+        return isValidId(Id) ? CustomerIdCodec.toCustomerId(Id) : null;
+    }
+
+    public String getUserId(String customerId) {
+        return isValidId(customerId) ? CustomerIdCodec.toUserId(customerId) : null;
+    }
+
+    public int dayDiff(LocalDate start, LocalDate end) {
+        return (int) ChronoUnit.DAYS.between(start, end);
     }
 }

@@ -152,6 +152,29 @@ export function useWithdrawals(onDecision) {
     setActionLoadingId(row.id);
     let res = null;
     try {
+      // console.log(row)
+      // console.log(selectedRemitter);
+      const allocationLimit = Number(selectedRemitter?.allocationLimit);
+      const totalPaid = Number(selectedRemitter?.totalPaid);
+      const withdrawalAmount = Number(row.amount);
+
+      if ([allocationLimit, totalPaid, withdrawalAmount].some(Number.isNaN)) {
+        infoMessage("Invalid remitter or withdrawal amount data");
+        return;
+      }
+
+      // round to 2 decimals to avoid floating-point drift
+      const remitterRemainingAmount = Math.round((allocationLimit - totalPaid) * 100) / 100;
+
+      if (remitterRemainingAmount < withdrawalAmount) {
+        infoMessage(
+          `Remaining Amount : ₹${remitterRemainingAmount.toFixed(2)} | ` +
+          `Withdrawal Amount : ₹${withdrawalAmount.toFixed(2)}` + ".",
+          `Choose another remitter.`
+        );
+        return;
+      }
+
       if (action === "processed") {
         // Option to check if a remitter was selected or just proceed
         // If there's extra logic for associating the selected remitter, you can include it here.
@@ -168,10 +191,11 @@ export function useWithdrawals(onDecision) {
         }
         res = await rejectUserTranactions(row.id, sanitizedReason);
       }
-      console.log(res);
+      // console.log(res);
       if (!res) {
         return;
       }
+      loadWithdrawals();
       const updated = res.data;
 
       // Reflect the change locally instead of refetching the whole list
@@ -186,7 +210,6 @@ export function useWithdrawals(onDecision) {
       setError(err.message || "Could not complete this action.");
       console.error(err);
     } finally {
-      allRounderMessage(res);
       setActionLoadingId(null);
       setConfirm(null);
       setSelectedRemitter(null); // reset selected remitter

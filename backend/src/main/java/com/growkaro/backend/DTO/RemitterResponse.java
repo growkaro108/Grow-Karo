@@ -51,16 +51,15 @@ public record RemitterResponse(
         // dto.setCreatedAt(remitter.getCreatedAt());
         // dto.setUpdatedAt(remitter.getUpdatedAt());
 
-        
     }
 
     // for general response to admin
     public static RemitterResponse fromEntity(Remitter r) {
         return new RemitterResponse(r.getRemitterId(), null, r.getRemitterEmail(),
                 r.getRemitterPhone(), r.getRemitterCode(),
-                r.getOrganizationName(), r.getAllocationLimit(), r.getTotalPaid(), maskAadhar(r.getAadharNumber()),
-                maskPan(r.getPanNumber()), r.getStatus(), r.getUsers().size(), r.getCreatedAt(), r.getUpdatedAt());
-        
+                r.getOrganizationName(), r.getAllocationLimit(), r.getTotalPaid(), r.getAadharNumber(),
+                r.getPanNumber(), r.getStatus(), r.getUsers().size(), r.getCreatedAt(), r.getUpdatedAt());
+
     }
 
     private static String maskPan(String pan) {

@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import ChartComponent from "./ChartComponent";
-import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { use, useContext, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { fetchHomeChartData } from "@/api/generalApi";
 import { storage } from "../../services/storageService";
 import { currency } from "@/app/dashboard/malik/utils";
+import { userContext } from "@/context/UserContext";
+import { remitterContext } from "@/context/RemitterContext";
 
 // TODO: move to env/config or fetch live rate from backend instead of hardcoding
 const CONVERSION_RATE = 1;
@@ -14,6 +16,8 @@ export default function HeroSection() {
   const [homeChartData, setHomeChartData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { authUser } = use(userContext);
+  const { authRemitter } = use(remitterContext)
 
   useLayoutEffect(() => {
     let isMounted = true;
@@ -174,12 +178,17 @@ export default function HeroSection() {
 
           {/* Action Buttons - Full-width stacked on mobile, row on desktop */}
           <div className="flex w-full flex-col gap-3 pt-1 sm:w-auto sm:flex-row sm:items-center">
-            <Link
-              href="/auth"
+            {(authUser || authRemitter) ? <Link
+              href="/dashboard"
               className="inline-flex h-11 w-full items-center justify-center rounded-full bg-slate-900 px-6 text-sm font-semibold text-white transition-all duration-300 hover:bg-blue-600 hover:shadow-xl hover:shadow-blue-500/25 active:scale-[0.98] sm:h-12 sm:w-auto"
             >
-              Create Your Account
-            </Link>
+              See Dashboard..
+            </Link> : <Link
+              href="/auth?mode=signup"
+              className="inline-flex h-11 w-full items-center justify-center rounded-full bg-slate-900 px-6 text-sm font-semibold text-white transition-all duration-300 hover:bg-blue-600 hover:shadow-xl hover:shadow-blue-500/25 active:scale-[0.98] sm:h-12 sm:w-auto"
+            >
+              Create an Account
+            </Link>}
             <Link
               href="/plan"
               className="inline-flex h-11 w-full items-center justify-center rounded-full border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 transition-all duration-300 hover:bg-slate-50 hover:text-slate-900 active:scale-[0.98] sm:h-12 sm:w-auto"

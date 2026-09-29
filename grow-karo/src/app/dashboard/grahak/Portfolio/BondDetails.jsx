@@ -19,7 +19,7 @@ import { currency, formatDate } from "./portfolioUtils";
 import { isReInvestEligible } from "@/app/utils/constant";
 import dynamic from "next/dynamic";
 import TabLoader from "@/loader/TabLoader";
-import { onReInvest } from "../../../../../services/grahakService";
+import { onRedeem, onReInvest } from "../../../../../services/grahakService";
 import { userContext } from "@/context/UserContext";
 const EnrollConfirmModal = dynamic(() => import("@/app/plan/components/EnrollConfirmModal"), {
   loading: () => <TabLoader message={"Loading Reinvest Form..."} />,
@@ -35,6 +35,7 @@ export default function BondDetails({
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [isShowReInvestForm, setIsShowReInvestForm] = useState(false);
   const [isReInvesting, setIsReInvesting] = useState(false);
+  const [isRedeeming, setIsRedeeming] = useState(false);
   const { authUser, schemes, getAllSchemes, updateUserPortfolio } = use(userContext);
   const isApproved = bond.isApproved;
   const handleWithdraw = async () => {
@@ -82,6 +83,37 @@ export default function BondDetails({
     }
 
   };
+
+  const handleRedeem = async () => {
+    if (!(await confirmMessage("you want to reedem this application?"))) return;
+    setIsRedeeming(true);
+    try {
+      if (userId == "" || userId == undefined || userId == null) {
+        errorMessage("User not found")
+        return;
+      }
+      if (bond.status.toLowerCase() !== 'matured') {
+        errorMessage("Application is not matured...")
+        return;
+      }
+      const res = await onRedeem(bond.userSchemeId, userId);
+      if (res) {
+        console.log("Redeem Successfully...")
+        setIsShowReInvestForm(false);
+        if (res) {
+          updateUserPortfolio(res);
+          onBack();
+        }
+      }
+    } catch (error) {
+      console.log("Error...", error)
+    } finally {
+      setTimeout(() => {
+        setIsRedeeming(false);
+      }, 1500);
+    }
+  }
+
   useEffect(() => {
     if (schemes?.length === 0) {
       getAllSchemes();
@@ -133,7 +165,7 @@ export default function BondDetails({
               <p className="text-sm font-medium text-slate-400">
                 {bond.schemeName}
               </p>
-              {isApproved && bond.reinvestedIntoUserSchemeId == null && (
+              {isApproved && bond.reinvestedIntoUserSchemeId == null && bond.status.toLowerCase() !== 'matured' && bond.status.toLowerCase() !== 'withdrawn' && (
                 <span className="text-xs font-semibold text-emerald-600 border border-emerald-500 bg-emerald-50 rounded-xl px-2 py-1">
                   Next profit on {formatDate(bond.nextPayoutDate)}
                 </span>
@@ -185,7 +217,7 @@ export default function BondDetails({
                   />}
                 </>
               )}
-              <DetailField label="Cycle" value={bond.payoutFrequency} />
+              <DetailField label="Cycle" value={bond.payoutFrequency} highlight />
             </div>
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
               <DetailField label="Nominee Name" value={bond.nominee?.name} />
@@ -234,7 +266,7 @@ export default function BondDetails({
               <button
                 type="button"
                 onClick={() => setIsShowReInvestForm(true)}
-                disabled={isReInvesting}
+                disabled={isReInvesting || isRedeeming}
                 className="flex items-center gap-2 rounded-lg border border-emerald-400 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-600 disabled:opacity-50 cursor-pointer transition-all duration-300 hover:bg-emerald-600 hover:text-white hover:scale-105"
               >
                 {isReInvesting ? (
@@ -246,14 +278,16 @@ export default function BondDetails({
               </button>
               <button
                 type="button"
+                onClick={handleRedeem}
+                disabled={isRedeeming}
                 className="flex items-center gap-2 rounded-lg border border-red-400 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 disabled:opacity-50 cursor-pointer transition-all duration-300 hover:bg-red-600 hover:text-white hover:scale-105"
               >
-                {false ? (
+                {isRedeeming ? (
                   <Loader2 size={16} className="animate-spin" />
                 ) : (
                   <Coins size={16} />
                 )}
-                {"Reedem"}
+                {isRedeeming ? "Redeeming..." : "Redeem"}
               </button>
             </div>
           </div>

@@ -150,13 +150,18 @@ export async function onReInvestApi(payload) {
   });
 }
 
-export async function getSystemSettingsApi(){
+export async function getSystemSettingsApi() {
   return await apiRequest(`/settings`, {
     method: "GET",
   });
 
 }
 
+export async function onRedeemApi(userSchemeId, userId) {
+  return await apiRequest(`${base}/userscheme/redeem/${userSchemeId}/${userId}`, {
+    method: "PUT",
+  });
+}
 
 //implement but not used
 export async function deleteNomineeApi(userId, nomineeId) {

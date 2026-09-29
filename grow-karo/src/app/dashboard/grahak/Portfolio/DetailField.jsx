@@ -7,7 +7,7 @@ export default function DetailField({ label, value, highlight = false }) {
         {label}
       </span>
       <span
-        className={`text-sm font-semibold tracking-tight ${highlight ? "text-emerald-600 font-bold" : "text-slate-700"}`}
+        className={`text-sm font-semibold tracking-tight ${highlight ? "text-emerald-600 font-bold" : "text-slate-700"} capitalize`}
       >
         {Array.isArray(value)
           ? value.map((date) => <span key={date} className="block">{formatDate(date)}</span>)

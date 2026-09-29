@@ -317,7 +317,7 @@ export default function Reports({ users = MOCK_USERS }) {
     const exportDisabled = exporting !== null || filteredUsers.length === 0 || (view === "scheme" && !selectedScheme);
 
     return (
-        <div className="min-h-screen bg-[#0A0D13] text-slate-200">
+        <div className="min-h-screen bg-[#0A0D13] text-slate-200 -m-4">
             <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
                 {/* Header */}
                 {/* <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

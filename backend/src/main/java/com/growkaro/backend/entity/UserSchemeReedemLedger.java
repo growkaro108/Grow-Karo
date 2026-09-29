@@ -53,10 +53,24 @@ public class UserSchemeReedemLedger {
     @Column(name = "status")
     private ReedeemStatus status = ReedeemStatus.REQUESTED;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "redeem_type")
+    private RedeemType redeemType;
+
     public enum ReedeemStatus {
         REQUESTED,
         IN_PROGRESS,
         COMPLETED,
         REJECTED
     }
+
+    public enum RedeemType {
+        FULL_REDEEM,
+        PARTIAL_REDEEM,
+        PREMATURE_WITHDRAWAL,
+        MATURITY_WITHDRAWAL,
+        INTEREST_REDEEM,
+        BONUS_REDEEM,
+    }
+
 }

@@ -27,9 +27,9 @@ export function warningMessage(message) {
   });
 }
 
-export function infoMessage(message) {
+export function infoMessage(message, title = "Info") {
   return Swal.fire({
-    title: "Info!",
+    title: title,
     text: message,
     icon: "info",
     confirmButtonText: "OK",

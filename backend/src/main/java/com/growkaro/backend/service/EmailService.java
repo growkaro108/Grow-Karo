@@ -11,6 +11,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.HtmlUtils;
 
 import com.growkaro.backend.DRO.RemitterCredentials;
 import com.growkaro.backend.common.General;
@@ -282,4 +283,70 @@ public class EmailService {
         }
     }
 
+    @Async
+    public void sendSchemeMaturityTodayEmailToUser(UserScheme userScheme) {
+        // Scheme matures today. User must request withdrawal within 1 day,
+        // otherwise the full amount is auto-reinvested in the same scheme.
+        try {
+            String subject = "Action Required: Your Scheme Matures Today";
+
+            Map<String, BigDecimal> profits = general.countTotalProfitAndRedeemAndFinalAmount(userScheme);
+            BigDecimal totalAmount = profits.get("netProfit");
+            BigDecimal profit = profits.get("totalProfit");
+            BigDecimal redeemed = profits.get("totalReedem");
+            BigDecimal invested = userScheme.getPaidAmount();
+
+            String userName = HtmlUtils.htmlEscape(userScheme.getUser().getName());
+            String schemeName = HtmlUtils.htmlEscape(userScheme.getScheme().getSchemeName());
+
+            String body = "<div style='font-family: Arial, sans-serif; margin: 0; padding: 0;'>" +
+                    "<div style='background-color: #f0f8ff; padding: 20px;'>" +
+                    "<h1 style='color: #004d40; margin: 0;'>GrowwKaro</h1>" +
+                    "</div>" +
+                    "<div style='padding: 20px;'>" +
+                    "<p>Dear " + userName + ",</p>" +
+                    "<p>Your scheme <strong>" + schemeName + "</strong> has <strong>matured today</strong>.</p>" +
+
+                    "<table style='border-collapse: collapse; margin: 15px 0;'>" +
+                    row("Maturity Date", String.valueOf(userScheme.getMaturityDate())) +
+                    row("Amount Invested", "₹" + invested) +
+                    row("Total Profit", "₹" + profit) +
+                    row("Amount Redeemed So Far", "₹" + redeemed) +
+                    row("<strong>Total Maturity Amount</strong>", "<strong>₹" + totalAmount + "</strong>") +
+                    "</table>" +
+
+                    "<div style='background-color: #fff8e1; border-left: 4px solid #ffa000; padding: 12px 15px; margin: 15px 0;'>"
+                    +
+                    "<p style='margin: 0 0 8px 0;'><strong>What would you like to do?</strong></p>" +
+                    "<p style='margin: 0 0 6px 0;'><strong>Redeem:</strong> Add a withdrawal request within the next 24 hours "
+                    +
+                    "and the amount will be credited to you.</p>" +
+                    "<p style='margin: 0;'><strong>Reinvest:</strong> No action needed. If we don't receive a withdrawal "
+                    +
+                    "request within 24 hours, the full amount of <strong>₹" + totalAmount +
+                    "</strong> will be <strong>automatically reinvested</strong> in the same scheme.</p>" +
+                    "</div>" +
+
+                    "<a href='" + general.loginUrl() + "' style='display: inline-block; background-color: #006633; " +
+                    "color: white; padding: 10px 20px; margin: 15px 0; text-decoration: none; border-radius: 5px;'>" +
+                    "Login to Request Withdrawal" +
+                    "</a>" +
+
+                    "<p>Best regards,<br/>GrowwKaro Team</p>" +
+                    "</div>" +
+                    "</div>";
+
+            sendHtml(userScheme.getUser().getEmail(), subject, body);
+        } catch (Exception e) {
+            log.error("Failed to send scheme maturity (today) email to user {}",
+                    userScheme.getUser().getEmail(), e);
+        }
+    }
+
+    private String row(String label, String value) {
+        return "<tr>" +
+                "<td style='padding: 6px 15px 6px 0; color: #555;'>" + label + "</td>" +
+                "<td style='padding: 6px 0;'>" + value + "</td>" +
+                "</tr>";
+    }
 }

@@ -163,6 +163,7 @@ public class UserSchemePayoutProcessor {
 
         newUserScheme = userSchemeRepository.save(newUserScheme);
 
+        us.setStatus(UserSchemeStatus.REINVESTED);
         us.setReinvestedIntoUserSchemeId(newUserScheme.getUserSchemeId());
         userSchemeRepository.save(us);
 

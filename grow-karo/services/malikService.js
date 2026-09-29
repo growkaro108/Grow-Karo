@@ -107,7 +107,6 @@ export async function getAllTransaction(params) {
 
 export async function approveUserTranactions(userTranactionId, remId) {
   const res = await approveUsersTransactions(userTranactionId, remId);
-  console.log(res);
   allRounderMessage(res);
   if (res.status !== "success") {
     return false;

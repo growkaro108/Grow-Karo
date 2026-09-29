@@ -50,9 +50,11 @@ import com.growkaro.backend.entity.UserSchemeReedemLedger;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.entity.Reply;
 import com.growkaro.backend.entity.SupportIssue.Status;
+import com.growkaro.backend.entity.Transaction.TransactionType;
 import com.growkaro.backend.entity.User.Role;
 import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
 import com.growkaro.backend.enums.ActivityType;
+import com.growkaro.backend.enums.UserSchemeStatus;
 import com.growkaro.backend.repository.BankDetailsRepository;
 import com.growkaro.backend.repository.NotificationRepository;
 import com.growkaro.backend.repository.ReedemLedgerRepository;
@@ -1023,6 +1025,95 @@ public class UserAPIService {
 
         } catch (Exception e) {
             log.error("Error occurred while processing reinvestment for user {}: {}", userId, e.getMessage(), e);
+            return general.response("error", "Internal server error...", Map.of());
+        }
+    }
+
+    // create a reedem function of userscheme for user side
+    @Caching(evict = {
+            @CacheEvict(value = "userPortfolio", key = "#p1"),
+            @CacheEvict(value = "userSchemes", key = "#p1")
+    })
+    @Transactional
+    public Map<String, Object> redeem(String userSchemeId, String userId) {
+        try {
+            if (userSchemeId == null || userSchemeId.isEmpty()) {
+                return general.response("error", "Invalid request...", Map.of());
+            }
+
+            UserScheme us = userSchemeRepository.findByUserSchemeId(userSchemeId).orElse(null);
+            if (us == null) {
+                return general.response("error", "Invalid user scheme...", Map.of());
+            }
+
+            Scheme scheme = us.getScheme();
+            User user = us.getUser();
+            BankDetails bankDetails = user.getBankDetails();
+            if (bankDetails == null) {
+                return general.response("info", "Bank details are not available...", Map.of());
+            }
+            Boolean isRedeemAllowed = false;
+            if (us.getStatus().equals(UserSchemeStatus.MATURED) || us.getReinvestedIntoUserSchemeId() != null) {
+                isRedeemAllowed = true;
+            }
+
+            // Check if redemption is allowed
+            if (!isRedeemAllowed) {
+                log.warn("Redemption is not allowed for user scheme: {}", userSchemeId);
+                return general.response("error", "Redemption is not allowed...", Map.of());
+            }
+            BigDecimal maturityAmount = general.calculateMaturityAmount(us);
+            BigDecimal totalRedeem = general.countReedem(us.getReedemLedger());
+            BigDecimal finalAmount = maturityAmount.subtract(totalRedeem);
+            if (finalAmount.compareTo(BigDecimal.ZERO) < 1) {
+                return general.response("error", "Amount is not invalid...", Map.of());
+            }
+
+            UserSchemeReedemLedger usrl = new UserSchemeReedemLedger();
+            usrl.setUserScheme(us);
+            usrl.setRedeemAmount(finalAmount);
+            usrl.setRedeemDate(general.getCurrentDate());
+            usrl.setStatus(ReedeemStatus.REQUESTED);
+            usrl.setRedeemType(UserSchemeReedemLedger.RedeemType.FULL_REDEEM);
+            List<UserSchemeReedemLedger> list = us.getReedemLedger();
+            if (list == null) {
+                list = new ArrayList<>();
+            }
+            list.add(usrl);
+            us.setReedemLedger(list);
+            us.setStatus(UserSchemeStatus.WITHDRAWN);
+            userSchemeRepository.save(us);
+
+            // create transaction of userschemeReedem
+            transactionService.createPendingReedemTransaction(user, finalAmount, us, bankDetails,
+                    TransactionType.AGGRESSIVE_WITHDRAWAL);
+
+            // notify user
+            crucialNotificationService.sendUserNotificationWithCustomMessage("Redemption Request",
+                    "Your redemption request of ₹" + finalAmount + " from scheme " + scheme.getSchemeName()
+                            + " has been submitted successfully.",
+                    user.getId(), "/dashboard", null);
+
+            // notify admin
+            crucialNotificationService
+                    .sendAdminNotificationWithCustomMessage(
+                            "Redemption Request", "Redemption request of ₹" + finalAmount + " from scheme "
+                                    + scheme.getSchemeName() + " by " + user.getName(),
+                            general.adminId(), "/dashboard", null);
+            // Log to admin
+            activityLogService.log(user.getId(), user.getName(), user.getRole().name(), ActivityType.SCHEME_WITHDRAWAL,
+                    user.getName() + " redeemed bond scheme " + scheme.getSchemeName(), "USER", user.getId(),
+                    Map.of("userSchemeId", userSchemeId, "schemeId", scheme.getSchemeId()));
+
+            Map<String, Object> result = getUserPortfolio(user.getId());
+            if (result.get("status").equals("error")) {
+                return general.response("error", "Internal server error...", Map.of());
+            }
+
+            return general.response("success", "Redemption successful", result.get("data"));
+
+        } catch (Exception e) {
+            log.error("Error occurred while redeeming scheme {} : {}", userSchemeId, e.getMessage(), e);
             return general.response("error", "Internal server error...", Map.of());
         }
     }

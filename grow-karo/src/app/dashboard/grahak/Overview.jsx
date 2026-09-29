@@ -47,7 +47,7 @@ const Overview = () => {
     );
   }
 
-  const approvedSchemes = holding?.filter((scheme) => scheme.isApproved);
+  const approvedSchemes = holding?.filter((scheme) => scheme.isApproved && scheme.status !== "WITHDRAWN" && scheme.reinvestedIntoUserSchemeId === null);
 
   const totalInvestment = approvedSchemes?.reduce(
     (sum, scheme) => sum + (scheme.paidAmount || 0),
@@ -86,9 +86,8 @@ const Overview = () => {
     }, 0);
   const totalNetWorth =
     totalInvestment +
-    totalProfit -
-    portfolio?.pendingSum -
-    portfolio?.successSum;
+    totalProfit - totalProfitReedemed;
+
   const investmentSchemeCount = approvedSchemes?.length;
 
   const cardsData = [

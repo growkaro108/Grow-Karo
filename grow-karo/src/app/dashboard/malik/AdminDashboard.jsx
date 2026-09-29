@@ -134,7 +134,7 @@ const NAV_ITEMS = [
 ];
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState("approvals");
+  const [activeTab, setActiveTab] = useState("maturity");
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [toast, setToast] = useState(null);
@@ -179,14 +179,7 @@ export default function AdminPanel() {
     showToast(`Issue ${id} marked as resolved.`);
   };
 
-  const handleCopyCode = (code) => {
-    try {
-      navigator.clipboard?.writeText(code);
-    } catch (e) {
-      // ignore
-    }
-    showToast(`Copied "${code}" to clipboard.`);
-  };
+
 
   const counts = useMemo(
     () => ({

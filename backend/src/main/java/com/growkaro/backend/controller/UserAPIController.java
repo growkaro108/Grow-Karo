@@ -38,7 +38,13 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.growkaro.backend.service.RemitterAPIService;
 import com.growkaro.backend.service.UserAPIService;
 
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PathVariable;
+
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/api/user")
 public class UserAPIController {
 
@@ -51,18 +57,6 @@ public class UserAPIController {
     private final General general;
     private final NotificationBroadcaster notificationBroadcaster;
     private final JwtService jwtService;
-
-    public UserAPIController(UserAPIService userAPIService, EmailService emailService, RedisService redisService,
-            RemitterAPIService remitterAPIService, General general,
-            NotificationBroadcaster notificationBroadcaster, JwtService jwtService) {
-        this.userAPIService = userAPIService;
-        this.emailService = emailService;
-        this.redisService = redisService;
-        this.remitterAPIService = remitterAPIService;
-        this.general = general;
-        this.notificationBroadcaster = notificationBroadcaster;
-        this.jwtService = jwtService;
-    }
 
     @GetMapping("/test")
     public Object test() {
@@ -427,6 +421,21 @@ public class UserAPIController {
             return ResponseEntity.ok(userAPIService.reinvest(userId, userSchemeId, nomineeId, schemeId));
         } catch (Exception e) {
             log.error("error while reinvesting, because {}", e.getMessage());
+            return ResponseEntity.ok(general.response("error", "Internal server error..", null));
+        }
+    }
+
+    @PutMapping("/userscheme/redeem/{userSchemeId}/{userId}")
+    public ResponseEntity<Map<String, Object>> redeem(@PathVariable String userSchemeId, @PathVariable String userId) {
+        if (!general.isValidUserSchemeId(userSchemeId) || !general.isValidId(userId)) {
+            log.error("Invalid Ids for redeeming, userSchemeId: {}, userId: {}", userSchemeId, userId);
+            return ResponseEntity.ok(general.response("error", "Invalid Id..", Map.of()));
+        }
+
+        try {
+            return ResponseEntity.ok(userAPIService.redeem(userSchemeId, userId));
+        } catch (Exception e) {
+            log.error("error while redeeming, because {}", e.getMessage());
             return ResponseEntity.ok(general.response("error", "Internal server error..", null));
         }
     }

@@ -24,6 +24,7 @@ import {
   userCommentApi,
   onReInvestApi,
   getSystemSettingsApi,
+  onRedeemApi,
 } from "@/api/userApi";
 import { allRounderMessage } from "@/components/Message";
 
@@ -318,10 +319,20 @@ export async function onReInvest(
   return res.data;
 }
 
-export async function getSystemSettings(){
+export async function getSystemSettings() {
   const res = await getSystemSettingsApi();
   if (res.status !== "success") {
     allRounderMessage(res);
+    return false;
+  }
+  return res.data;
+}
+
+
+export async function onRedeem(userSchemeId, userId) {
+  const res = await onRedeemApi(userSchemeId, userId);
+  allRounderMessage(res);
+  if (res.status !== "success") {
     return false;
   }
   return res.data;
@@ -348,3 +359,4 @@ export async function fetchGrahakDashboardData(userId = "me") {
     graphDataMap: profile?.graphDataMap ?? {},
   };
 }
+

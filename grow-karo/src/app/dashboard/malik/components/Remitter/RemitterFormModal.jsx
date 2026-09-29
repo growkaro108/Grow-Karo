@@ -13,16 +13,14 @@ export function RemitterFormModal({
 }) {
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs transition-all duration-300 ${
-        isOpen
-          ? "opacity-100 pointer-events-auto"
-          : "opacity-0 pointer-events-none"
-      }`}
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs transition-all duration-300 ${isOpen
+        ? "opacity-100 pointer-events-auto"
+        : "opacity-0 pointer-events-none"
+        }`}
     >
       <div
-        className={`bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 space-y-4 shadow-2xl transition-all duration-300 transform ${
-          isOpen ? "scale-100 translate-y-0" : "scale-95 translate-y-4"
-        }`}
+        className={`bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 space-y-4 shadow-2xl transition-all duration-300 transform ${isOpen ? "scale-100 translate-y-0" : "scale-95 translate-y-4"
+          }`}
       >
         <div className="flex items-center justify-between">
           <div>
@@ -56,7 +54,7 @@ export function RemitterFormModal({
               type="text"
               name="organizationName"
               required
-              placeholder="e.g. Neha Payments Ltd"
+              placeholder="e.g. Arya Payments Ltd"
               value={formData.organizationName}
               onChange={onChange}
               className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-xl px-3.5 py-2.5 outline-none focus:border-emerald-500 transition-colors"
@@ -150,11 +148,10 @@ export function RemitterFormModal({
                 onClick={() =>
                   onChange({ target: { name: "status", value: true } })
                 }
-                className={`flex-1 py-2 rounded-lg font-semibold transition-colors ${
-                  formData.status === true
-                    ? "bg-emerald-600 text-white"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
+                className={`flex-1 py-2 rounded-lg font-semibold transition-colors ${formData.status === true
+                  ? "bg-emerald-600 text-white"
+                  : "text-slate-400 hover:text-slate-200"
+                  }`}
               >
                 Active
               </button>
@@ -163,11 +160,10 @@ export function RemitterFormModal({
                 onClick={() =>
                   onChange({ target: { name: "status", value: false } })
                 }
-                className={`flex-1 py-2 rounded-lg font-semibold transition-colors ${
-                  formData.status === false
-                    ? "bg-slate-700 text-white"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
+                className={`flex-1 py-2 rounded-lg font-semibold transition-colors ${formData.status === false
+                  ? "bg-slate-700 text-white"
+                  : "text-slate-400 hover:text-slate-200"
+                  }`}
               >
                 Inactive
               </button>
@@ -257,7 +253,7 @@ export function RemitterFormModal({
               {isLoadingState && (
                 <span className="ml-2 inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
               )}
-              {!isEditing ? "Save Changes" : "Onboard & Generate"}
+              {isEditing ? "Save Changes" : "Onboard & Generate"}
             </button>
           </div>
         </form>
