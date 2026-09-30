@@ -27,6 +27,8 @@ public record UserPortfolio(
         BigDecimal profit,
         BigDecimal profitReedemed,
         BigDecimal schemeRedeem,
+        BigDecimal pendingSchemeRedeem,
+        BigDecimal pendingSchemeInterestRedeem,
         LocalDate nextPayoutDate,
         LocalDate paidDate,
         UserSchemeStatus status,
@@ -43,7 +45,9 @@ public record UserPortfolio(
         Map<String, BigDecimal> profitAndReeemedProfit = general.countTotalProfitAndRedeemAndFinalAmount(us);
         BigDecimal totalprofit = profitAndReeemedProfit.get("totalProfit");
         BigDecimal profitreedemed = profitAndReeemedProfit.get("totalReedem");
+        BigDecimal pendingSchemeInterestRedeem = profitAndReeemedProfit.get("pendingSchemeInterestRedeem");
         BigDecimal schemeRedeem = profitAndReeemedProfit.get("schemeRedeem");
+        BigDecimal pendingSchemeRedeem = profitAndReeemedProfit.get("pendingSchemeRedeem");
         Scheme scheme = us.getScheme();
         Nominee nominee = us.getNominee();
         return new UserPortfolio(
@@ -62,6 +66,8 @@ public record UserPortfolio(
                 totalprofit,
                 profitreedemed,
                 schemeRedeem,
+                pendingSchemeRedeem,
+                pendingSchemeInterestRedeem,
                 us.getNextPayoutDate(),
                 us.getPaidDate(), us.getStatus(),
                 us.getMaturityDate(),

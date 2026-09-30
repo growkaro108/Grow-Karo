@@ -128,13 +128,13 @@ const NAV_ITEMS = [
   { id: "remitter", label: "Remitter", icon: Ticket },
   { id: "user", label: "User Management", icon: User2Icon },
   { id: "issues", label: "User Issues", icon: MessageCircleQuestionMark },
-  { id: "reports", label: "Reports", icon: BarChart3 },
+  // { id: "reports", label: "Reports", icon: BarChart3 },
   // { id: "contacts", label: "Contacts⏱️", icon: Contact },
   { id: "settings", label: "Settings", icon: Settings2 },
 ];
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState("maturity");
+  const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [toast, setToast] = useState(null);

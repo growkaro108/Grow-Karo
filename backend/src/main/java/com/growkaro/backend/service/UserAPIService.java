@@ -3,6 +3,7 @@ package com.growkaro.backend.service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +53,7 @@ import com.growkaro.backend.entity.Reply;
 import com.growkaro.backend.entity.SupportIssue.Status;
 import com.growkaro.backend.entity.Transaction.TransactionType;
 import com.growkaro.backend.entity.User.Role;
+import com.growkaro.backend.entity.UserSchemeReedemLedger.RedeemType;
 import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.enums.UserSchemeStatus;
@@ -125,6 +127,11 @@ public class UserAPIService {
         return userRepository.findAllEmail();
     }
 
+    @Cacheable(value = "AllUsersPhone")
+    public List<String> findAllUserPhone() {
+        return userRepository.findAllPhoneNo();
+    }
+
     public boolean existByUserId(String id) {
         return userRepository.existsById(id);
     }
@@ -181,7 +188,10 @@ public class UserAPIService {
         return txn.isEmpty() ? null : txn.get();
     }
 
-    @CacheEvict(value = "AllUsersEmail")
+    @Caching(evict = {
+            @CacheEvict(value = "AllUsersEmail",allEntries = true),
+            @CacheEvict(value = "AllUsersPhone",allEntries = true)
+    })
     @Transactional
     public boolean userSignup(UserRegister user) {
         String email = stringValue(user.email());
@@ -191,6 +201,7 @@ public class UserAPIService {
         String dob = stringValue(user.dob());
         String maritalStatus = stringValue(user.maritalStatus());
         String aadharNo = stringValue(user.aadharNo());
+        String fullAddress = stringValue(user.fullAddress());
 
         if (name == null || email == null || phone == null || passwordHash == null) {
             return false;
@@ -219,6 +230,7 @@ public class UserAPIService {
         newUser.setDob(parsedDob);
         newUser.setMaritalStatus(maritalStatus);
         newUser.setAadharNo(aadharNo);
+        newUser.setAddress(fullAddress);
 
         if (user.guardian() != null) {
             String guardianName = stringValue(user.guardian().get("name"));
@@ -229,22 +241,6 @@ public class UserAPIService {
                 guardian.setRelation(guardianRelation);
                 guardian.setUser(newUser);
                 newUser.setGuardian(guardian);
-            }
-        }
-
-        if (user.address() != null) {
-            String street = stringValue(user.address().get("street"));
-            String village = stringValue(user.address().get("village"));
-            String city = stringValue(user.address().get("city"));
-            String state = stringValue(user.address().get("state"));
-            String pincode = stringValue(user.address().get("pincode"));
-
-            if (street != null || village != null || city != null || state != null || pincode != null) {
-                newUser.setStreet(street);
-                newUser.setVillage(village);
-                newUser.setCity(city);
-                newUser.setState(state);
-                newUser.setPincode(pincode);
             }
         }
 
@@ -291,8 +287,8 @@ public class UserAPIService {
                     "USER", newUser.getId(),
                     Map.of("email", newUser.getEmail()));
             return true;
-        } catch (DataIntegrityViolationException e) {
-            log.warn("Signup failed due to data integrity violation for email={}", email, e);
+        } catch (Exception e) {
+            log.warn("Error while sign up beacuse {} email={}", e.getMessage(), email, e);
             return false;
         }
     }
@@ -1074,7 +1070,7 @@ public class UserAPIService {
             usrl.setRedeemAmount(finalAmount);
             usrl.setRedeemDate(general.getCurrentDate());
             usrl.setStatus(ReedeemStatus.REQUESTED);
-            usrl.setRedeemType(UserSchemeReedemLedger.RedeemType.FULL_REDEEM);
+            usrl.setRedeemType(RedeemType.FULL_REDEEM);
             List<UserSchemeReedemLedger> list = us.getReedemLedger();
             if (list == null) {
                 list = new ArrayList<>();

@@ -1,5 +1,6 @@
 package com.growkaro.backend.service;
 
+import com.growkaro.backend.repository.ReedemLedgerRepository;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDate;
@@ -78,6 +79,7 @@ import com.growkaro.backend.entity.SupportIssue.Status;
 import com.growkaro.backend.entity.Transaction.TransactionStatus;
 import com.growkaro.backend.entity.Transaction.TransactionType;
 import com.growkaro.backend.entity.User.Role;
+import com.growkaro.backend.entity.UserSchemeReedemLedger.RedeemType;
 import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.enums.UserSchemeStatus;
@@ -99,6 +101,8 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 public class AdminAPIService {
+
+    private final ReedemLedgerRepository reedemLedgerRepository;
 
     private static final int DEFAULT_PAGE_SIZE = 20;
 
@@ -566,6 +570,26 @@ public class AdminAPIService {
     public AdminTransactionResponse approve(String txnId, String remId) {
         Transaction txn = getPendingOrThrow(txnId);
         User user = txn.getUser();
+        // fetch reedeem ledger whose status is requested and type is full redeem and
+        // change status to in_progress
+        List<UserSchemeReedemLedger> usrlList = txn.getUserScheme().getReedemLedger();
+        if (usrlList != null) {
+            for (UserSchemeReedemLedger usrl : usrlList) {
+                if (usrl.getStatus().equals(ReedeemStatus.REQUESTED)
+                        && usrl.getRedeemType().equals(RedeemType.FULL_REDEEM)) {
+                    usrl.setStatus(ReedeemStatus.IN_PROGRESS);
+                    reedemLedgerRepository.save(usrl);
+                    break;
+                }
+                if (usrl.getStatus().equals(ReedeemStatus.REQUESTED)
+                        && usrl.getRedeemType().equals(RedeemType.INTEREST_REDEEM)) {
+                    usrl.setStatus(ReedeemStatus.IN_PROGRESS);
+                    reedemLedgerRepository.save(usrl);
+                    break;
+                }
+            }
+        }
+
         Remitter rr = remitterRepository.findByRemitterId(remId)
                 .orElseThrow(() -> new RuntimeException("Remitter not found"));
         List<Transaction> remitterTransactions = rr.getTransactions() != null ? rr.getTransactions()
@@ -1537,13 +1561,7 @@ public class AdminAPIService {
                     }
                 }
 
-                if (user.address() != null) {
-                    newUser.setStreet(general.stringValue(user.address().get("street")));
-                    newUser.setVillage(general.stringValue(user.address().get("village")));
-                    newUser.setCity(general.stringValue(user.address().get("city")));
-                    newUser.setState(general.stringValue(user.address().get("state")));
-                    newUser.setPincode(general.stringValue(user.address().get("pincode")));
-                }
+                newUser.setAddress(general.stringValue(user.fullAddress()));
 
                 if (user.nominee() != null) {
                     String nName = general.stringValue(user.nominee().get("name"));

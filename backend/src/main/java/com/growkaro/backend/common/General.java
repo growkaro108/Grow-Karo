@@ -8,11 +8,13 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
@@ -34,6 +36,7 @@ import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.entity.UserSchemeProfitLedger;
 import com.growkaro.backend.entity.UserSchemeReedemLedger;
+import com.growkaro.backend.entity.UserSchemeReedemLedger.RedeemType;
 import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
 import com.growkaro.backend.repository.ReedemLedgerRepository;
 import com.growkaro.backend.repository.UserRepository;
@@ -201,6 +204,19 @@ public class General {
             }
         }
 
+        Object addressValue = payload.get("address");
+        String fullAddress = addressValue instanceof String ? stringValue(addressValue) : null;
+        if (fullAddress == null && address != null) {
+            List<String> addressParts = new ArrayList<>();
+            for (String key : List.of("street", "village", "city", "state", "pincode")) {
+                String part = stringValue(address.get(key));
+                if (part != null) {
+                    addressParts.add(part);
+                }
+            }
+            fullAddress = String.join(", ", addressParts);
+        }
+
         Map<String, Object> nominee = asMap(payload.get("nominee"));
         if (nominee == null) {
             String nName = stringValue(payload.get("nominee.name"));
@@ -229,6 +245,7 @@ public class General {
                     nominee.put("relation", nRel);
             }
         }
+        
 
         return new UserRegister(
                 name,
@@ -244,7 +261,8 @@ public class General {
                 stringValue(payload.get("bankName")),
                 stringValue(payload.get("accountHolderName")),
                 stringValue(payload.get("accountNumber")),
-                stringValue(payload.get("ifscCode")));
+                stringValue(payload.get("ifscCode")),
+                fullAddress);
     }
 
     private Map<String, Object> asMap(Object value) {
@@ -469,15 +487,31 @@ public class General {
                 .map(UserSchemeProfitLedger::getProfitAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal totalReedem = us.getReedemLedger().stream()
+        List<UserSchemeReedemLedger> reedemLedgers = us.getReedemLedger();
+
+        BigDecimal totalReedem = reedemLedgers.stream()
                 .filter(reedemLedger -> reedemLedger.getStatus() == UserSchemeReedemLedger.ReedeemStatus.COMPLETED
                         || reedemLedger.getRedeemType() == UserSchemeReedemLedger.RedeemType.INTEREST_REDEEM)
                 .map(UserSchemeReedemLedger::getRedeemAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal schemeRedeem = us.getReedemLedger().stream()
+        BigDecimal schemeRedeem = reedemLedgers.stream()
                 .filter(reedemLedger -> reedemLedger.getStatus() == UserSchemeReedemLedger.ReedeemStatus.COMPLETED
                         && reedemLedger.getRedeemType() == UserSchemeReedemLedger.RedeemType.FULL_REDEEM)
+                .map(UserSchemeReedemLedger::getRedeemAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        Set<ReedeemStatus> pendingSchemeRedeemStatus = EnumSet.of(ReedeemStatus.REQUESTED, ReedeemStatus.IN_PROGRESS);
+
+        BigDecimal pendingSchemeRedeem = reedemLedgers.stream()
+                .filter(reedemLedger -> reedemLedger.getRedeemType() == UserSchemeReedemLedger.RedeemType.FULL_REDEEM
+                        && pendingSchemeRedeemStatus.contains(reedemLedger.getStatus()))
+                .map(UserSchemeReedemLedger::getRedeemAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal pendingSchemeInterestRedeem = reedemLedgers.stream()
+                .filter(reedemLedger -> reedemLedger
+                        .getRedeemType() == UserSchemeReedemLedger.RedeemType.INTEREST_REDEEM
+                        && pendingSchemeRedeemStatus.contains(reedemLedger.getStatus()))
                 .map(UserSchemeReedemLedger::getRedeemAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -487,6 +521,8 @@ public class General {
         profit.put("totalReedem", totalReedem);
         profit.put("netProfit", netProfit);
         profit.put("schemeRedeem", schemeRedeem);
+        profit.put("pendingSchemeInterestRedeem", pendingSchemeInterestRedeem);
+        profit.put("pendingSchemeRedeem", pendingSchemeRedeem);
         return profit;
     }
 

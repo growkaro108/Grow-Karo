@@ -16,6 +16,6 @@ public record UserRegister(
                 String bankName,
                 String accountHolderName,
                 String accountNumber,
-                String ifscCode) {
+                String ifscCode ,String fullAddress) {
 
 }

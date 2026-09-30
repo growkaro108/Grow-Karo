@@ -179,7 +179,7 @@ export default function AddUser({
                             <summary className="cursor-pointer mb-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
                                 Add  Address
                             </summary>
-                            <label className="block text-xs text-slate-400">
+                            {/* <label className="block text-xs text-slate-400">
                                 Street
                                 <input
                                     name="address.street"
@@ -232,7 +232,22 @@ export default function AddUser({
                                         className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:outline-none"
                                     />
                                 </label>
-                            </div></details>
+                            </div> */}
+                            <label className="block text-xs text-slate-400">
+                                Address
+                                <textarea
+                                    name="address"
+                                    value={newUserForm.address}
+                                    onChange={updateNewUserForm}
+                                    placeholder="Amanda home"
+                                    className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:outline-none"
+                                />
+                            </label>
+                            
+                                
+                            
+
+                            </details>
                     </div>
 
                     {/* ---- Guardian (all optional) ---- */}

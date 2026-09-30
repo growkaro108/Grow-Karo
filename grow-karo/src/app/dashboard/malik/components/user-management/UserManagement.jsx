@@ -47,6 +47,7 @@ const EMPTY_NEW_USER = {
   dob: "",
   maritalStatus: "Single",
   aadharNo: "",
+  address: "",
 };
 
 export default function UserManagement() {
@@ -67,7 +68,6 @@ export default function UserManagement() {
   // debounce only the `query` value itself — everything downstream reacts to
   // the debounced value instead of the raw keystroke-by-keystroke one
   const [debouncedQuery, setDebouncedQuery] = useState(query);
-
 
   const filtered = useMemo(() => {
     // Parse and normalize admin emails ONCE outside the filter loop
@@ -108,21 +108,27 @@ export default function UserManagement() {
     });
   }, [users, query, statusFilter, schemeFilter, sortDesc]);
 
-  const fetchAllUser = useCallback(async (signal) => {
-    try {
-      const res = await fetchAllUsers(query, currentPage, pageSize, { signal });
-      if (!res || !Array.isArray(res.content)) {
-        setUsers([]);
-        return;
+  const fetchAllUser = useCallback(
+    async (signal) => {
+      try {
+        const res = await fetchAllUsers(query, currentPage, pageSize, {
+          signal,
+        });
+        if (!res || !Array.isArray(res.content)) {
+          setUsers([]);
+          return;
+        }
+        // console.log(res)
+        setUsers(res.content);
+        setTotalUsers(res.totalElements);
+      } catch (e) {
+        if (e.name === "AbortError" || e.name === "CanceledError") return;
+        console.log(e);
+        errorMessage("something went wrong, try later..");
       }
-      setUsers(res.content);
-      setTotalUsers(res.totalElements);
-    } catch (e) {
-      if (e.name === "AbortError" || e.name === "CanceledError") return;
-      console.log(e);
-      errorMessage("something went wrong, try later..");
-    }
-  }, [currentPage, pageSize, query]);
+    },
+    [currentPage, pageSize, query],
+  );
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), 400); // adjust delay to taste
     return () => clearTimeout(timer);
@@ -146,6 +152,7 @@ export default function UserManagement() {
     const name = newUserForm.name.trim();
     const email = newUserForm.email.trim();
     const phone = newUserForm.phone.trim();
+    const address = newUserForm.address.trim();
     const passwordHash = newUserForm.passwordHash.trim();
 
     if (!name || !email || !phone || !passwordHash) {
@@ -155,31 +162,42 @@ export default function UserManagement() {
 
     setCreatingUser(true);
     try {
-      const payload = {
-        name,
-        email,
-        phone,
-        passwordHash,
-        dob: newUserForm.dob || null,
-        maritalStatus: newUserForm.maritalStatus || "Single",
-        aadharNo: newUserForm.aadharNo.trim(),
-        guardian: null,
-        address: {},
-        nominee: null,
-        bankName: "",
-        accountHolderName: "",
-        accountNumber: "",
-        ifscCode: "",
-      };
-
-      const response = await createManualUser(payload);
+      // const payload = {
+      //   name,
+      //   email,
+      //   phone,
+      //   passwordHash,
+      //   dob: newUserForm.dob || null,
+      //   maritalStatus: newUserForm.maritalStatus || "Single",
+      //   aadharNo: newUserForm.aadharNo.trim(),
+      //   guardian: {
+      //     name: newUserForm.guardian.name,
+      //     relation: newUserForm.guardian.relation,
+      //   },
+      //   address,
+      //   nominee: {
+      //     name: newUserForm.nominee.name,
+      //     aadharNo: newUserForm.nominee.aadharNo,
+      //     mobileNo: newUserForm.nominee.mobileNo,
+      //     relation: newUserForm.nominee.relation,
+      //   },
+      //   bankName: newUserForm.bankName,
+      //   accountHolderName: newUserForm.accountHolderName,
+      //   accountNumber: newUserForm.accountNumber,
+      //   ifscCode: newUserForm.ifscCode,
+      // };
+      console.log(newUserForm);
+      // console.log(payload);
+      const response = await createManualUser(newUserForm);
       if (!response) {
         return;
+      }else{
+        console.log(response)
       }
 
-      setShowAddUserModal(false);
-      setNewUserForm(EMPTY_NEW_USER);
-      await fetchAllUser();
+      // setShowAddUserModal(false);
+      // setNewUserForm(EMPTY_NEW_USER);
+      // await fetchAllUser();
     } catch (error) {
       console.error("Failed to create manual user:", error);
       errorMessage(error.message || "Unable to add user right now.");
@@ -226,13 +244,15 @@ export default function UserManagement() {
         <UserCardList users={filtered} onSelect={setSelected} />
       </div>
 
-      {showAddUserModal && <AddUser
-        handleCreateManualUser={handleCreateManualUser}
-        newUserForm={newUserForm}
-        updateNewUserForm={updateNewUserForm}
-        setShowAddUserModal={setShowAddUserModal}
-        creatingUser={creatingUser}
-      />}
+      {showAddUserModal && (
+        <AddUser
+          handleCreateManualUser={handleCreateManualUser}
+          newUserForm={newUserForm}
+          updateNewUserForm={updateNewUserForm}
+          setShowAddUserModal={setShowAddUserModal}
+          creatingUser={creatingUser}
+        />
+      )}
 
       {showBulkUserModal && (
         <AddBulkUserModal

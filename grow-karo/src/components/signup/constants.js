@@ -3,7 +3,6 @@ export const NAME_REGEX = /^[a-zA-Z\s'-]{2,50}$/;
 export const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 export const PASSWORD_REGEX =
   /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).+$/;
-export const PINCODE_REGEX = /^\d{6}$/;
 export const AADHAR_REGEX = /^\d{12}$/;
 export const MIN_AGE_YEARS = 3;
 export const RESEND_COOLDOWN_SECONDS = 99;
@@ -12,7 +11,6 @@ export const validateName = (n) => NAME_REGEX.test(n);
 export const validatePhone = (p) =>
   /^\+?[1-9]\d{1,14}$/.test(p.replace(/[\s()+-]/g, ""));
 export const validateIfsc = (i) => IFSC_REGEX.test(i);
-export const validatePincode = (p) => PINCODE_REGEX.test(p);
 export const validateAadhar = (a) => AADHAR_REGEX.test(a.replace(/\s/g, ""));
 
 export const RELATION_OPTIONS = [
@@ -34,45 +32,6 @@ export const MARITAL_STATUS_OPTIONS = [
   "Widowed",
 ];
 
-export const INDIAN_STATES = [
-  "Andhra Pradesh",
-  "Arunachal Pradesh",
-  "Assam",
-  "Bihar",
-  "Chhattisgarh",
-  "Goa",
-  "Gujarat",
-  "Haryana",
-  "Himachal Pradesh",
-  "Jharkhand",
-  "Karnataka",
-  "Kerala",
-  "Madhya Pradesh",
-  "Maharashtra",
-  "Manipur",
-  "Meghalaya",
-  "Mizoram",
-  "Nagaland",
-  "Odisha",
-  "Punjab",
-  "Rajasthan",
-  "Sikkim",
-  "Tamil Nadu",
-  "Telangana",
-  "Tripura",
-  "Uttar Pradesh",
-  "Uttarakhand",
-  "West Bengal",
-  "Andaman and Nicobar Islands",
-  "Chandigarh",
-  "Dadra and Nagar Haveli and Daman and Diu",
-  "Delhi",
-  "Jammu and Kashmir",
-  "Ladakh",
-  "Lakshadweep",
-  "Puducherry",
-];
-
 export const INITIAL_FORM_DATA = {
   name: "",
   email: "",
@@ -84,11 +43,7 @@ export const INITIAL_FORM_DATA = {
   aadharNo: "",
   guardianName: "",
   guardianRelation: "",
-  street: "",
-  village: "",
-  city: "",
-  state: "",
-  pincode: "",
+  address: "",
   nomineeName: "",
   nomineeAadhar: "",
   nomineeMobile: "",
@@ -130,7 +85,7 @@ export const STEPS = [
     key: "address",
     title: "Address details",
     subtitle: "Your current residential address.",
-    fields: ["street", "village", "city", "state", "pincode"],
+    fields: ["address"],
   },
   {
     key: "nominee",
@@ -212,14 +167,10 @@ export const buildValidators = (formData) => ({
       return "Select the guardian's relation.";
     return "";
   },
-  street: (v) => (!v.trim() ? "Street address is required." : ""),
-  village: (v) => (!v.trim() ? "Village / town is required." : ""),
-  city: (v) => (!v.trim() ? "City is required." : ""),
-  state: (v) => (!v ? "Select a state." : ""),
-  pincode: (v) => {
-    const t = v.trim();
-    if (!t) return "Pincode is required.";
-    if (!validatePincode(t)) return "Enter a valid 6-digit pincode.";
+  address: (v) => {
+    const value = v.trim();
+    if (!value) return "Address is required.";
+    if (value.length > 200) return "Address must be 200 characters or fewer.";
     return "";
   },
   nomineeName: (v) => {

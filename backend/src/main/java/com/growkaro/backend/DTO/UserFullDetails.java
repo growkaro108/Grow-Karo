@@ -21,12 +21,7 @@ public record UserFullDetails(String name,
         Guardian g = u.getGuardian();
         BankDetails bkd = u.getBankDetails();
 
-        java.util.List<String> addressParts = new java.util.ArrayList<>();
-        if (u.getStreet() != null && !u.getStreet().isBlank()) addressParts.add(u.getStreet().trim());
-        if (u.getVillage() != null && !u.getVillage().isBlank()) addressParts.add(u.getVillage().trim());
-        if (u.getCity() != null && !u.getCity().isBlank()) addressParts.add(u.getCity().trim());
-        if (u.getPincode() != null && !u.getPincode().isBlank()) addressParts.add(u.getPincode().trim());
-        String fullAddress = String.join(", ", addressParts);
+        String fullAddress = u.getAddress() != null ? u.getAddress().trim() : "";
 
         String dob = "";
         if (u.getDob() != null) {

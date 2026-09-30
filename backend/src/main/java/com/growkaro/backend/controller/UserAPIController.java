@@ -39,9 +39,6 @@ import com.growkaro.backend.service.RemitterAPIService;
 import com.growkaro.backend.service.UserAPIService;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.PathVariable;
 
 @RestController
 @RequiredArgsConstructor
@@ -104,7 +101,14 @@ public class UserAPIController {
     public ResponseEntity<Map<String, Object>> signUp(@RequestBody Map<String, Object> payload) {
         try {
             UserRegister user = general.toUserRegister(payload);
+            // check if user or remitter with same email exists
+            if (userAPIService.isUserExists(user.email()) || remitterAPIService.isRemitterExists(user.email())) {
+                return ResponseEntity.ok(general.response("info", "Email already registered..", null));
+            }
+            if(userAPIService.findAllUserPhone().contains(user.phone())){
+                return ResponseEntity.ok(general.response("info", "Phone already registered..", null));
 
+            }
             if (user.name() == null || user.email() == null || !general.validateEmail(user.email())
                     || user.phone() == null
                     || user.passwordHash() == null || !general.validatePassword(user.passwordHash())) {

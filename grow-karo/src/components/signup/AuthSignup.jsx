@@ -22,7 +22,7 @@ import NomineeStep from "./steps/NomineeStep";
 import BankStep from "./steps/BankStep";
 import {
   RESEND_COOLDOWN_SECONDS, RELATION_OPTIONS,
-  MARITAL_STATUS_OPTIONS, INDIAN_STATES, INITIAL_FORM_DATA, STEPS,
+  MARITAL_STATUS_OPTIONS, INITIAL_FORM_DATA, STEPS,
   buildValidators,
   validateEmail
 } from "./constants";
@@ -243,13 +243,7 @@ export default function AuthSignup({ onSwitch }) {
     const sanitizedAadhar = formData.aadharNo.trim().replace(/\s/g, "");
     const sanitizedGuardianName = formData.guardianName.trim();
 
-    const address = {
-      street: formData.street.trim(),
-      village: formData.village.trim(),
-      city: formData.city.trim(),
-      state: formData.state,
-      pincode: formData.pincode.trim(),
-    };
+    const address = formData.address.trim();
 
     const nominee = {
       name: formData.nomineeName.trim(),
@@ -365,7 +359,6 @@ export default function AuthSignup({ onSwitch }) {
             fieldErrors={fieldErrors}
             handleInputChange={handleInputChange}
             handleFieldBlur={handleFieldBlur}
-            INDIAN_STATES={INDIAN_STATES}
           />
         );
       case "nominee":

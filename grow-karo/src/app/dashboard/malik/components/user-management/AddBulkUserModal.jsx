@@ -16,12 +16,12 @@ import { addBulkUsers } from "../../../../../../services/malikService";
 import { successMessage, errorMessage } from "@/components/Message";
 
 // Standard sample template content (with valid 11-char IFSC code)
-const SAMPLE_CSV_CONTENT = `aadharNo,accountHolderName,accountNumber,address.city,address.pincode,address.state,address.street,address.village,bankName,dob,email,guardian.name,guardian.relation,ifscCode,maritalStatus,name,nominee.aadharNo,nominee.mobileNo,nominee.name,nominee.relation,passwordHash,phone
-321231234123,Premlata Devi,809990119998510,Bhagalpur,813113,Bihar,Amanda home,jkilof,Bank of Baroda,04-09-1997,hetal92208@omanarts.com,Hasrajan sah,Father,BARB0AMANDA,Single,Ankit Kumar,763274623266,7654321985,Anandi,Mother,Anand@123,9876543214
-451298761234,Sunita Devi,209990223341567,Patna,800001,Bihar,Ashok Nagar Road,rampur,State Bank of India,03-11-1998,ravi.kumar99@fakemail.com,Ramesh Prasad,Father,SBIN0001234,Married,Ravi Kumar,876234512398,9123456780,Sunita Devi,Wife,Ravi@4567,9123456781
-562341987651,Meena Kumari,109887654321234,Gaya,823001,Bihar,Station Road,belgachi,Punjab National Bank,19-02-1995,priya.singh21@fakemail.com,Meena Kumari,Mother,PUNB0123456,Single,Priya Singh,239487561234,9988776654,Meena Kumari,Mother,Priya@789,9988776655
-673452198760,Rajesh Yadav,309112233445566,Muzaffarpur,842001,Bihar,Gandhi Chowk,dumra,HDFC Bank,25-07-1989,amit.yadav88@fakemail.com,Rajesh Yadav,Father,HDFC0004567,Married,Amit Yadav,398765412309,9876123450,Kavita Yadav,Wife,Amit@2024,9876123451
-784563219870,Geeta Sharma,409223344556677,Darbhanga,846001,Bihar,Nehru Path,laheriasarai,Canara Bank,12-04-2000,neha.sharma00@fakemail.com,Geeta Sharma,Mother,CNRB0007890,Single,Neha Sharma,451234987612,9012345678,Geeta Sharma,Mother,Neha@1122,9012345679`;
+const SAMPLE_CSV_CONTENT = `aadharNo,accountHolderName,accountNumber,address,bankName,dob,email,guardian.name,guardian.relation,ifscCode,maritalStatus,name,nominee.aadharNo,nominee.mobileNo,nominee.name,nominee.relation,passwordHash,phone
+321231234123,Premlata Devi,809990119998510,"Amanda home, jkilof, Bhagalpur, Bihar, 813113",Bank of Baroda,04-09-1997,hetal92208@omanarts.com,Hasrajan sah,Father,BARB0AMANDA,Single,Ankit Kumar,763274623266,7654321985,Anandi,Mother,Anand@123,9876543214
+451298761234,Sunita Devi,209990223341567,"Ashok Nagar Road, rampur, Patna, Bihar, 800001",State Bank of India,03-11-1998,ravi.kumar99@fakemail.com,Ramesh Prasad,Father,SBIN0001234,Married,Ravi Kumar,876234512398,9123456780,Sunita Devi,Wife,Ravi@4567,9123456781
+562341987651,Meena Kumari,109887654321234,"Station Road, belgachi, Gaya, Bihar, 823001",Punjab National Bank,19-02-1995,priya.singh21@fakemail.com,Meena Kumari,Mother,PUNB0123456,Single,Priya Singh,239487561234,9988776654,Meena Kumari,Mother,Priya@789,9988776655
+673452198760,Rajesh Yadav,309112233445566,"Gandhi Chowk, dumra, Muzaffarpur, Bihar, 842001",HDFC Bank,25-07-1989,amit.yadav88@fakemail.com,Rajesh Yadav,Father,HDFC0004567,Married,Amit Yadav,398765412309,9876123450,Kavita Yadav,Wife,Amit@2024,9876123451
+784563219870,Geeta Sharma,409223344556677,"Nehru Path, laheriasarai, Darbhanga, Bihar, 846001",Canara Bank,12-04-2000,neha.sharma00@fakemail.com,Geeta Sharma,Mother,CNRB0007890,Single,Neha Sharma,451234987612,9012345678,Geeta Sharma,Mother,Neha@1122,9012345679`;
 
 export default function AddBulkUserModal({ isOpen, onClose, onUsersAdded }) {
   const [file, setFile] = useState(null);
@@ -254,13 +254,17 @@ export default function AddBulkUserModal({ isOpen, onClose, onUsersAdded }) {
             name: r["guardian.name"] || r.guardianName || "",
             relation: r["guardian.relation"] || r.guardianRelation || "",
           },
-          address: {
-            street: r["address.street"] || r.street || "",
-            village: r["address.village"] || r.village || "",
-            city: r["address.city"] || r.city || "",
-            state: r["address.state"] || r.state || "",
-            pincode: r["address.pincode"] || r.pincode || "",
-          },
+          address:
+            r.address ||
+            [
+              r["address.street"] || r.street,
+              r["address.village"] || r.village,
+              r["address.city"] || r.city,
+              r["address.state"] || r.state,
+              r["address.pincode"] || r.pincode,
+            ]
+              .filter(Boolean)
+              .join(", "),
           nominee: {
             name: r["nominee.name"] || r.nomineeName || "",
             aadharNo: r["nominee.aadharNo"] || r.nomineeAadharNo || "",

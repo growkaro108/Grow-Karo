@@ -32,6 +32,7 @@ export const UserProvider = ({ children }) => {
   const [nominees, setNominees] = useState(null);
   const [nomineeId, setNomineeId] = useState("");
   const [schemes, setSchemes] = useState([]);
+  const [hasPendingWithdrawal, setHasPendingWithdrawal] = useState(false);
 
   const { showLoader, hideLoader } = useLoader();
 
@@ -244,9 +245,11 @@ export const UserProvider = ({ children }) => {
       setNomineeId,
       getAllSchemes,
       setSchemes,
-      schemes
+      schemes,
+      hasPendingWithdrawal,
+      setHasPendingWithdrawal
     }),
-    [authUser, isLoading, logout, getUserDataFromContext, portfolio, fetchPortfolio, transactions, FetchTransactions, updateAuthUser, nominees, FetchNominees, nomineeId, getAllSchemes, schemes],
+    [authUser, isLoading, logout, getUserDataFromContext, portfolio, updateUserPortfolio, fetchPortfolio, transactions, FetchTransactions, updateAuthUser, nominees, FetchNominees, nomineeId, getAllSchemes, schemes, hasPendingWithdrawal],
   );
   return (
     <userContext.Provider value={contexValue}>{children}</userContext.Provider>

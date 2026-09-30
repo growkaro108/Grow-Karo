@@ -1,4 +1,4 @@
-import React, { use } from "react";
+import React, { use, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import TabLoader from "../../../loader/TabLoader";
@@ -12,8 +12,26 @@ const StockGraph = dynamic(() => import("./StockGraph"), {
 });
 
 const Overview = () => {
-  const { authUser, portfolio } = use(userContext);
+  const { authUser, portfolio, hasPendingWithdrawal,
+    setHasPendingWithdrawal } = use(userContext);
   const holding = portfolio?.holdings;
+  const approvedSchemes = holding?.filter((scheme) => scheme.isApproved && scheme.status !== "WITHDRAWN" && scheme.reinvestedIntoUserSchemeId === null);
+  const totalPendingForInterestWithdrawal = approvedSchemes?.reduce(
+    (sum, scheme) => sum + (scheme.pendingSchemeInterestRedeem || 0),
+    0,
+  );
+  const totalPendingWithdrawal = portfolio?.holdings?.reduce(
+    (sum, scheme) => sum + (scheme.pendingSchemeRedeem || 0),
+    0,
+  );
+
+  useEffect(() => {
+    if (totalPendingWithdrawal || totalPendingForInterestWithdrawal) {
+      setHasPendingWithdrawal(true);
+    } else {
+      setHasPendingWithdrawal(false);
+    }
+  }, [holding, totalPendingForInterestWithdrawal, totalPendingWithdrawal]);
   // console.log(authUser);
   if (!authUser || !holding) {
     return (
@@ -47,7 +65,6 @@ const Overview = () => {
     );
   }
 
-  const approvedSchemes = holding?.filter((scheme) => scheme.isApproved && scheme.status !== "WITHDRAWN" && scheme.reinvestedIntoUserSchemeId === null);
 
   const totalInvestment = approvedSchemes?.reduce(
     (sum, scheme) => sum + (scheme.paidAmount || 0),
@@ -61,6 +78,14 @@ const Overview = () => {
     (sum, scheme) => sum + (scheme.profitReedemed || 0),
     0,
   );
+
+  const totalSchemeWithdrawal = approvedSchemes?.reduce(
+    (sum, scheme) => sum + (scheme.schemeRedeem || 0),
+    0,
+  );
+
+
+
   // console.log(totalProfit, totalProfitReedemed)
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -86,10 +111,14 @@ const Overview = () => {
     }, 0);
   const totalNetWorth =
     totalInvestment +
-    totalProfit - totalProfitReedemed;
+    totalProfit - totalProfitReedemed - totalPendingForInterestWithdrawal;
 
   const investmentSchemeCount = approvedSchemes?.length;
-
+  const redeemBalance = totalProfit - totalProfitReedemed - totalPendingForInterestWithdrawal;
+  const totalReedemedProfit = totalProfitReedemed + totalSchemeWithdrawal;
+  let gridCount = "4";
+  if (redeemBalance > 0 || totalReedemedProfit > 0 || totalPendingWithdrawal > 0 || totalPendingForInterestWithdrawal > 0) gridCount = "3";
+  if (redeemBalance == 0 && totalReedemedProfit == 0 && totalPendingWithdrawal == 0 && totalPendingForInterestWithdrawal == 0) gridCount = "2";
   const cardsData = [
     {
       id: "net-worth",
@@ -105,33 +134,35 @@ const Overview = () => {
       value: currency(totalInvestment ?? 0),
       badge: `Allocated across ${investmentSchemeCount ?? 0} schemes`,
       isPositiveBadge: true,
-      imageSrc: "/money.png", // Unique decorative asset
+      imageSrc: "/money.png", // Unique decorative asset 
     },
 
     {
       id: "total-profit",
       title: "Available Balance",
-      value: currency(totalProfit - totalProfitReedemed - portfolio?.pendingSum),
-      badge: `Total redeemed : ${currency(totalProfitReedemed || 0)}`,
+      value: currency(redeemBalance),
+      badge: `Total redeemed : ${currency(totalReedemedProfit)}`,
       // isPositiveBadge: true,
       imageSrc: "/profit.png", // Unique decorative asset
     },
     {
       id: "cash-balance",
-      title: "Pending Withdrawals",
-      value: currency(portfolio?.pendingSum || 0),
+      title: totalPendingWithdrawal ? "Pending Scheme Withdrawals" : "Pending Withdrawals",
+      value: currency(totalPendingWithdrawal || totalPendingForInterestWithdrawal),
       badge: `submit for approval`,
       isPositiveBadge: true,
       imageSrc: "/pending.png", // Unique decorative asset
     },
   ];
   //remove last card if pendingSum is not there
-  if (!portfolio?.pendingSum) cardsData.pop();
+  if (!hasPendingWithdrawal) cardsData.pop();
+  if (redeemBalance == 0 && totalReedemedProfit == 0) cardsData.splice(2, 1);
+
   return (
     <>
       {/* Financial Overview Cards */}
       <div
-        className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-${portfolio?.pendingSum ? "4" : "3"} gap-6`}
+        className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-${gridCount} gap-6`}
       >
         {cardsData.map((card) => (
           <div

@@ -22,7 +22,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Data
 @AllArgsConstructor
-@ToString(exclude={"enrolledSchemes", "nominees", "bankDetails", "guardian","passwordHash" })
+@ToString(exclude = { "enrolledSchemes", "nominees", "bankDetails", "guardian", "passwordHash" })
 @JsonIgnoreProperties({ "enrolledSchemes", "nominees", "bankDetails", "guardian" })
 @NoArgsConstructor
 @Entity
@@ -57,20 +57,8 @@ public class User {
     @Column(length = 12)
     private String aadharNo;
 
-    @Column(length = 120)
-    private String street;
-
-    @Column(length = 120)
-    private String village;
-
-    @Column(length = 80)
-    private String city;
-
-    @Column(length = 80)
-    private String state;
-
-    @Column(length = 10)
-    private String pincode;
+    @Column(length = 200)
+    private String address;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY, optional = true)
     @JsonManagedReference(value = "user-bankDetails")

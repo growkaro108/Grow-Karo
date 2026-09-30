@@ -103,6 +103,10 @@ export default function BondDetails({
         if (res) {
           updateUserPortfolio(res);
           onBack();
+        } else {
+          console.log("Error: Invalid response", res);
+          errorMessage("Invalid response from server...");
+          return;
         }
       }
     } catch (error) {
