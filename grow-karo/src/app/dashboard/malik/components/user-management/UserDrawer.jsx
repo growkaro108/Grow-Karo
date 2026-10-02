@@ -577,7 +577,7 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                     </button>
                   </div>
                 )}
-
+                {/* invested Amount and Paid date entry Entries */}
                 <div className="grid grid-cols-2 gap-3">
                   <label className="text-xs text-slate-400">
                     Invested amount

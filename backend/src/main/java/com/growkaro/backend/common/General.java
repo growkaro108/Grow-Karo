@@ -245,7 +245,6 @@ public class General {
                     nominee.put("relation", nRel);
             }
         }
-        
 
         return new UserRegister(
                 name,
@@ -326,7 +325,18 @@ public class General {
 
     public LocalDate calculateMaturityDate(LocalDateTime startDate, int tenure) {
         LocalDate date = startDate.toLocalDate();
-        return date.plusDays(tenure);
+
+        if (tenure == 730 || tenure == 731) {
+            return date.plusYears(2);
+        } else if (tenure == 365 || tenure == 366) {
+            return date.plusYears(1);
+        } else if (tenure >= 180 && tenure <= 183) {
+            return date.plusMonths(6);
+        } else if (tenure == 90) {
+            return date.plusMonths(3);
+        } else
+            return date.plusDays(tenure);
+
     }
 
     public BigDecimal calculateProfit(BigDecimal paidAmount, Double profitpercentage, BigDecimal minimumAmount) {

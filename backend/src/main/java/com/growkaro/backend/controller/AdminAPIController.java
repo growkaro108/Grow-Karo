@@ -230,8 +230,8 @@ public class AdminAPIController {
                     return ResponseEntity
                             .ok(general.response("error", "Only JPG, PNG, WEBP, or PDF files are allowed.", null));
                 }
-                System.out.println("File size: " + image.getSize() + " bytes");
-                System.out.println("Max allowed size: " + MAX_FILE_SIZE_BYTES + " bytes");
+                // System.out.println("File size: " + image.getSize() + " bytes");
+                // System.out.println("Max allowed size: " + MAX_FILE_SIZE_BYTES + " bytes");
 
                 if (image.getSize() > MAX_FILE_SIZE_BYTES) {
                     return ResponseEntity.ok(

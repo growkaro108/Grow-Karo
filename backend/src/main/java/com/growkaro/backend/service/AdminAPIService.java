@@ -113,6 +113,7 @@ public class AdminAPIService {
     private final ReedemLedgerRepository reedemLedgerRepository;
 
     private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final float PDF_PREVIEW_MAX_DIMENSION_PIXELS = 1200f;
 
     private final UserRepository userRepository;
     private final RemitterRepository remitterRepository;
@@ -563,7 +564,7 @@ public class AdminAPIService {
             }
             var pageSize = document.getPage(0).getMediaBox();
             float maxDimensionPoints = Math.max(pageSize.getWidth(), pageSize.getHeight());
-            float scale = Math.min(1.5f, 2400f / maxDimensionPoints);
+            float scale = Math.min(1.0f, PDF_PREVIEW_MAX_DIMENSION_PIXELS / maxDimensionPoints);
             BufferedImage preview = new PDFRenderer(document).renderImage(0, scale, ImageType.RGB);
             try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
                 ImageIO.write(preview, "jpg", output);

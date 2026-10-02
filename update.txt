@@ -1,4 +1,4 @@
-Date: 01-10-2026  update:v4.3.3
+Date: 01-10-2026  update: v4.3.3
 
 Login Authentication & UX Refinement:
   Updated the login form by implementing separate tab navigation for Investors and Remitters to streamline authentication and eliminate user confusion during sign-in.
@@ -13,3 +13,15 @@ Bond Document & PDF Management:
   Implemented a pre-upload preview feature for bond documents (supporting both PDF and JPG formats).
   Added a 2 MB file size limit on bond document uploads, with an error message shown when a file is too large.
   Enabled bond document downloads in PDF format for both users and system administrators.
+
+Date: 02-10-2026  update: v4.3.4
+
+Backend Performance Optimization:
+  Capped thumbnail rendering at a maximum width of 1200 px (smaller pages are not upscaled) to significantly reduce server processing time during uploads. 
+  The original downloadable PDF is not altered.
+ Maturity Logic in backend: 
+  Implemented custom tenure-based maturity date calculation:
+    365 / 366 days: extends the maturity date by 1 year.
+    180 - 182 days: extends the maturity date by 6 months.
+    90 days: extends the maturity date by 3 months.
+    Default / custom tenure: adds t days to the start date.

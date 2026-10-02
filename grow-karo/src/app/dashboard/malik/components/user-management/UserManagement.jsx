@@ -130,7 +130,7 @@ export default function UserManagement() {
     [currentPage, pageSize, query],
   );
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQuery(query), 500); // adjust delay to taste
+    const timer = setTimeout(() => setDebouncedQuery(query), 700); // adjust delay to taste
     return () => clearTimeout(timer);
   }, [query]);
 
