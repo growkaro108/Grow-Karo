@@ -308,15 +308,22 @@ export default function UserDrawer({ user, onClose, onSaved }) {
   };
 
   const updateBond = async (bond) => {
-    setSavingBond(true)
     const details = bondForms[bond.userSchemeId] ?? {};
     if (!details.bondNumber && !details.image) return;
+
+    setSavingBond(true);
     const payload = new FormData();
     if (details.bondNumber) payload.append("bondNumber", details.bondNumber);
     if (details.image) payload.append("image", details.image);
-    const saved = await addBond(user.userId, bond.userSchemeId, payload, true);
-    if (saved) await onSaved?.();
-    setSavingBond(false)
+    try {
+      const saved = await addBond(user.userId, bond.userSchemeId, payload, true);
+      if (saved) await onSaved?.();
+    } catch (error) {
+      errorMessage("Failed to save bond details. Please try again.");
+      console.error("Failed to save bond details:", error);
+    } finally {
+      setSavingBond(false);
+    }
   };
 
 

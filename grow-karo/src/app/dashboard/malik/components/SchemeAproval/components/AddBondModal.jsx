@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, UploadCloud, FileText } from "lucide-react";
+import { X, UploadCloud, FileText, Loader2 } from "lucide-react";
 import { addBonds } from "@/api/adminApi";
 import { allRounderMessage } from "@/components/Message";
 
@@ -44,7 +44,7 @@ export default function AddBondModal({
     if (selected.size > MAX_FILE_SIZE_BYTES) {
       showToast(
         "error",
-        "File size exceeds the 5MB limit. Please choose a smaller image.",
+        "File size exceeds the 5MB limit. Please choose a smaller file.",
       );
       e.target.value = ""; // Clear input so re-selection works
       return;
@@ -73,7 +73,7 @@ export default function AddBondModal({
 
   const handleSubmit = async () => {
     if (!bondNumber.trim() || !file) {
-      showToast("error", "Both bond number and bond image are required.");
+      showToast("error", "Both bond number and bond file are required.");
       return;
     }
 
@@ -88,7 +88,11 @@ export default function AddBondModal({
 
     try {
       setSubmitting(true);
-      const response = await addBonds(selectedRequest.userSchemeId, formData);
+      const response = await addBonds(
+        selectedRequest.userSchemeId,
+        selectedRequest.userSchemeId,
+        formData,
+      );
 
       allRounderMessage(response);
 
@@ -142,7 +146,7 @@ export default function AddBondModal({
           </div>
 
           <div className="sea-field">
-            <label className="sea-field-label">Bond image</label>
+            <label htmlFor="bondImage" className="sea-field-label">Bond file</label>
             {!preview ? (
               <label
                 htmlFor="bondImage"
@@ -150,14 +154,14 @@ export default function AddBondModal({
               >
                 <UploadCloud size={20} />
                 <span>
-                  Click to select an image, or drag it here <br />
-                  Only .jpeg, .png, .jpg, .webp allowed <br />
+                  Click to select a file, or drag it here <br />
+                  JPG, PNG, WEBP, or PDF <br />
                   Max size: 5MB
                 </span>
                 <input
                   id="bondImage"
                   type="file"
-                  accept="image/jpeg,image/png,image/webp,image/jpg"
+                  accept="image/jpeg,image/png,image/webp,image/jpg,application/pdf,.pdf"
                   onChange={handleFileChange}
                   disabled={submitting}
                   hidden
@@ -166,11 +170,19 @@ export default function AddBondModal({
             ) : (
               <div className="sea-file-grid">
                 <div className="sea-file-chip">
-                  <img
-                    src={preview.url}
-                    alt={preview.name}
-                    className="sea-file-thumb"
-                  />
+                  {file?.type === "application/pdf" ? (
+                    <iframe
+                      src={preview.url}
+                      title={`Preview of ${preview.name}`}
+                      className="sea-file-thumb"
+                    />
+                  ) : (
+                    <img
+                      src={preview.url}
+                      alt={preview.name}
+                      className="sea-file-thumb"
+                    />
+                  )}
                   <span className="sea-file-name" title={preview.name}>
                     <FileText size={12} /> {preview.name}
                   </span>
@@ -198,11 +210,27 @@ export default function AddBondModal({
             Cancel
           </button>
           <button
-            className="sea-btn sea-btn-approve"
+            className="sea-btn sea-btn-approve relative overflow-hidden"
             onClick={handleSubmit}
             disabled={submitting}
+            aria-busy={submitting}
           >
-            {submitting ? "Saving…" : "Save bond details"}
+            {submitting ? (
+              <>
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 size={14} className="animate-spin" /> Saving…
+                </span>
+                <span
+                  className="bond-save-progress-track"
+                  role="progressbar"
+                  aria-label="Saving bond details"
+                >
+                  <span className="bond-save-progress-indicator block" />
+                </span>
+              </>
+            ) : (
+              "Save bond details"
+            )}
           </button>
         </div>
       </div>

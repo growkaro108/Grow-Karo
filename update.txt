@@ -1,0 +1,15 @@
+Date: 01-10-2026  update:v4.3.3
+
+Login Authentication & UX Refinement:
+  Updated the login form by implementing separate tab navigation for Investors and Remitters to streamline authentication and eliminate user confusion during sign-in.
+  Updated the heading, subtitle, and login button text to change based on the selected role.
+  Fixed the loader so it shows before the login request, and disabled the login button during submission to prevent duplicate requests.
+  Improved form accessibility and usability with autofill support, label associations, and a show/hide password label.
+
+Bond Document & PDF Management:
+  Added PDF inclusion and upload functionality, allowing administrators to upload bond documents in PDF format.
+  Converted bond PDFs to JPG format and enabled display within user accounts.
+  Integrated a document preview feature for admins inside the user drawer interface.
+  Implemented a pre-upload preview feature for bond documents (supporting both PDF and JPG formats).
+  Added a 2 MB file size limit on bond document uploads, with an error message shown when a file is too large.
+  Enabled bond document downloads in PDF format for both users and system administrators.

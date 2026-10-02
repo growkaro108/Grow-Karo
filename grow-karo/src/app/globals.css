@@ -47,3 +47,30 @@ body {
 * {
   box-sizing: border-box;
 }
+
+.bond-save-progress-track {
+  position: absolute;
+  inset: auto 0 0;
+  height: 3px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 18%);
+}
+
+.bond-save-progress-indicator {
+  width: 36%;
+  height: 100%;
+  background: currentColor;
+  animation: bond-save-progress 1.25s ease-in-out infinite;
+}
+
+@keyframes bond-save-progress {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(290%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bond-save-progress-indicator {
+    width: 100%;
+    animation: none !important;
+  }
+}

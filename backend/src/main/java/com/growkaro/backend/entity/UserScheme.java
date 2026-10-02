@@ -104,6 +104,9 @@ public class UserScheme {
     @Column(name = "bond_image_url")
     private String bondImageURL;
 
+    @Column(name = "bond_pdf_url")
+    private String bondPdfURL;
+
     @Column(name = "bond_number")
     private String bondNumber;
 

@@ -6,7 +6,7 @@ set -e
 # ==========================================
 API_BASE_URL="/api"
 ADMIN_EMAILS=wv9304@gmail.com,vikaskumar01997@gmail.com
-IMAGE_TAG="v4.3.2"
+IMAGE_TAG="v4.3.3"
 COMPOSE_FILE="docker-compose.stag.yml"
 
 # ==========================================
@@ -55,12 +55,12 @@ docker push "growwkaro/backend:$IMAGE_TAG"
 # ==========================================
 # Deploy
 # ==========================================
-echo "=========================================="
-echo "🎉 Starting containers..."
-echo "=========================================="
+# echo "=========================================="
+# echo "🎉 Starting containers..."
+# echo "=========================================="
 
-docker compose -f "$COMPOSE_FILE" down
-docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+# docker compose -f "$COMPOSE_FILE" down
+# docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
 
 echo "=========================================="
 echo "✨ Deployment complete! (frontend & backend: $IMAGE_TAG)"

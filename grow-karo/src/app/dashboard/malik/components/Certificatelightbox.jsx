@@ -93,12 +93,15 @@ export default function CertificateLightbox({
                 watermarkUrl={"https://lh3.googleusercontent.com/d/1eezaPOLSSuTVlPV6sKiCBxpnNXbRo-Ft"}
                 stampUrl={"https://lh3.googleusercontent.com/d/1orLmnX7I8tcEyNaZkVxmgQDBKwEsL7au"} />
 
-              <BondDownloadButton
-                className="absolute right-2 bottom-2"
-                certRef={certRef}
-                filename={`bond-${bond.userSchemeId || "certificate"}`}
-              />
             </>
+          )}
+          {(bond.bondPdfUrl || !showUploadedImage) && (
+            <BondDownloadButton
+              className="absolute right-2 bottom-2"
+              certRef={certRef}
+              pdfUrl={bond.bondPdfUrl}
+              filename={`bond-${bond.userSchemeId || "certificate"}`}
+            />
           )}
         </div>
 

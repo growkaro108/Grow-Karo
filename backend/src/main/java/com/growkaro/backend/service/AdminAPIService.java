@@ -14,6 +14,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import javax.imageio.ImageIO;
+
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.ImageType;
+import org.apache.pdfbox.rendering.PDFRenderer;
 
 import org.hibernate.envers.AuditReader;
 import org.hibernate.envers.AuditReaderFactory;
@@ -512,8 +520,18 @@ public class AdminAPIService {
             }
 
             if (images != null && !images.isEmpty()) {
-                String uploadedUrl = localFileStorageService.store(images, "bonds/" + userSchemeId);
-                userScheme.setBondImageURL(uploadedUrl);
+                String folder = "bonds/" + userSchemeId;
+                if ("application/pdf".equalsIgnoreCase(images.getContentType())) {
+                    byte[] preview = renderPdfFirstPage(images);
+                    String pdfUrl = localFileStorageService.store(images, folder);
+                    String imageUrl = localFileStorageService.storeBytes(preview, ".jpg", folder);
+                    userScheme.setBondPdfURL(pdfUrl);
+                    userScheme.setBondImageURL(imageUrl);
+                } else {
+                    String uploadedUrl = localFileStorageService.store(images, folder);
+                    userScheme.setBondImageURL(uploadedUrl);
+                    userScheme.setBondPdfURL(null);
+                }
             }
             Scheme s = userScheme.getScheme();
             LocalDateTime todayDateTime = general.getCurrentDateTime();
@@ -530,10 +548,27 @@ public class AdminAPIService {
             return general.response("success", "Bond details added successfully...", Map.of(
                     "userSchemeId", userScheme.getUserSchemeId(),
                     "bondNumber", userScheme.getBondNumber() != null ? userScheme.getBondNumber() : "",
-                    "bondImageURL", userScheme.getBondImageURL() != null ? userScheme.getBondImageURL() : ""));
+                    "bondImageURL", userScheme.getBondImageURL() != null ? userScheme.getBondImageURL() : "",
+                    "bondPdfUrl", userScheme.getBondPdfURL() != null ? userScheme.getBondPdfURL() : ""));
         } catch (Exception e) {
             log.error("Error in adding bond details for userSchemeId={}, bondNumber={}", userSchemeId, bondNumber, e);
             return general.response("error", "Error in adding bond details", null);
+        }
+    }
+
+    private byte[] renderPdfFirstPage(MultipartFile pdfFile) throws Exception {
+        try (PDDocument document = Loader.loadPDF(pdfFile.getBytes())) {
+            if (document.getNumberOfPages() == 0) {
+                throw new IllegalArgumentException("PDF contains no pages");
+            }
+            var pageSize = document.getPage(0).getMediaBox();
+            float maxDimensionPoints = Math.max(pageSize.getWidth(), pageSize.getHeight());
+            float scale = Math.min(1.5f, 2400f / maxDimensionPoints);
+            BufferedImage preview = new PDFRenderer(document).renderImage(0, scale, ImageType.RGB);
+            try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+                ImageIO.write(preview, "jpg", output);
+                return output.toByteArray();
+            }
         }
     }
 

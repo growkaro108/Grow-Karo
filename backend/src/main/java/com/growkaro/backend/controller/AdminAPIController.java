@@ -72,6 +72,7 @@ public class AdminAPIController {
     private final SystemSettingsService systemSettingsService;
 
     private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of("image/jpeg", "image/png", "image/webp", "image/jpg");
+    private static final String PDF_CONTENT_TYPE = "application/pdf";
     private static final long MAX_FILE_SIZE_BYTES = 5L * 1024 * 1024;
 
     public AdminAPIController(AdminAPIService adminAPIService, EmailService emailService, General general,
@@ -218,24 +219,31 @@ public class AdminAPIController {
         boolean hasImage = image != null && !image.isEmpty();
 
         if (userSchemeId == null || userSchemeId.isBlank() || (!hasBondNumber && !hasImage)) {
-            return ResponseEntity.badRequest().body(general.response("error", "Invalid request.", null));
+            return ResponseEntity.ok(general.response("error", "Invalid request.", null));
         }
 
-        // Only validate the file if an image was actually provided
-        if (hasImage) {
-            String contentType = image.getContentType();
-            if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
-                return ResponseEntity.badRequest()
-                        .body(general.response("error", "Invalid file type: " + image.getOriginalFilename(), null));
+        try {// Only validate the file if a bond document was actually provided
+            if (hasImage) {
+                String contentType = image.getContentType();
+                if (contentType == null || (!ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())
+                        && !PDF_CONTENT_TYPE.equalsIgnoreCase(contentType))) {
+                    return ResponseEntity
+                            .ok(general.response("error", "Only JPG, PNG, WEBP, or PDF files are allowed.", null));
+                }
+                System.out.println("File size: " + image.getSize() + " bytes");
+                System.out.println("Max allowed size: " + MAX_FILE_SIZE_BYTES + " bytes");
+
+                if (image.getSize() > MAX_FILE_SIZE_BYTES) {
+                    return ResponseEntity.ok(
+                            general.response("error", image.getOriginalFilename() + " exceeds the 5MB limit", null));
+                }
             }
 
-            if (image.getSize() > MAX_FILE_SIZE_BYTES) {
-                return ResponseEntity.badRequest()
-                        .body(general.response("error", image.getOriginalFilename() + " exceeds the 5MB limit", null));
-            }
+            return ResponseEntity.ok(adminAPIService.addBondDetails(userId, userSchemeId, bondNumber, image, isUpdate));
+        } catch (Exception e) {
+            log.error("Error in adding bond details for userSchemeId={}, bondNumber={}", userSchemeId, bondNumber, e);
+            return ResponseEntity.ok(general.response("error", e.getMessage(), null));
         }
-
-        return ResponseEntity.ok(adminAPIService.addBondDetails(userId, userSchemeId, bondNumber, image, isUpdate));
     }
 
     @GetMapping("/activity-types")

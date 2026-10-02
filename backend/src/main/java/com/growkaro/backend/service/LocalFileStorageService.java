@@ -36,6 +36,21 @@ public class LocalFileStorageService {
         }
     }
 
+    public String storeBytes(byte[] contents, String extension, String folder) {
+        try {
+            String fileName = UUID.randomUUID() + extension;
+            Path targetDir = Paths.get(basePath, folder);
+            Files.createDirectories(targetDir);
+
+            Path targetPath = targetDir.resolve(fileName);
+            Files.write(targetPath, contents);
+
+            return baseUrl + "/" + folder + "/" + fileName;
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to store file locally", e);
+        }
+    }
+
     private String getExtension(String originalFilename) {
         if (originalFilename == null || !originalFilename.contains(".")) {
             return "";

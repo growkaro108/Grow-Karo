@@ -1,8 +1,16 @@
-import { useState } from "react";
-import { ChevronDown, Landmark, RotateCcwKeyIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  ChevronDown,
+  FileText,
+  Landmark,
+  Loader2,
+  RotateCcwKeyIcon,
+  X,
+} from "lucide-react";
 import BondStub from "./BondStub";
-import StatusPill from "./StatusPill";
 import { currency, dateFmt } from "./format";
+import { errorMessage } from "@/components/Message";
+import Image from "next/image";
 
 const inputClass =
   "w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-teal-500 [color-scheme:dark]";
@@ -57,17 +65,52 @@ export default function BondCard({
   onViewBond,
   savingBond,
   setSavingBond,
-  viewUser
+  viewUser,
 }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+
   const isApproved = !!bond.enrollmentDate;
   const entryCount =
     (bond.profitLedger?.length ?? 0) + (bond.reedemLedger?.length ?? 0);
   const isTenureCompleteScheme = bond.payoutCycle === "tenure-complete";
+  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
+
+  const [preview, setPreview] = useState(null);
+  const file = bondFormState.image;
+
+  // Build and clean up the preview URL whenever the selected file changes
+  useEffect(() => {
+    if (!(file instanceof File)) {
+      setPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreview({ url, name: file.name, type: file.type });
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  const handleBondFileChange = (e) => {
+    const selected = e.target.files?.[0];
+    if (!selected) return;
+
+    if (selected.size > MAX_FILE_SIZE) {
+      errorMessage("File size must be less than 2 MB.");
+      e.target.value = "";
+      onBondFormChange("image", null);
+      return;
+    }
+
+    onBondFormChange("image", selected);
+  };
+
+  const removeFile = () => onBondFormChange("image", null);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-800 bg-white/2" title={isApproved ? "Approved" : " Not Approve Yet "}>
+    <div
+      className="overflow-hidden rounded-xl border border-slate-800 bg-white/2"
+      title={isApproved ? "Approved" : " Not Approve Yet "}
+    >
       <div
         className={`flex items-center justify-between gap-3 bg-linear-to-br px-4 py-3.5 text-white ${isApproved ? "from-teal-900 to-[#0c3b3d]" : "from-amber-700 to-[#3d2c0c]"}`}
       >
@@ -93,21 +136,29 @@ export default function BondCard({
           </span>
         </p>
       </div>
-      <div className={`grid grid-cols-1 ${isTenureCompleteScheme ? "sm:grid-cols-2" : "sm:grid-cols-4"} gap-3 px-4 py-3.5`}>
-        {!isTenureCompleteScheme && <><Stat label="Profit" value={currency(bond.profit)} tone="emerald" />
-          <Stat
-            label="Redeemed"
-            value={currency(bond.redeemAmount ?? bond.profitRedeemed)}
-            tone="amber"
-          /></>}
+      <div
+        className={`grid grid-cols-1 ${isTenureCompleteScheme ? "sm:grid-cols-2" : "sm:grid-cols-4"} gap-3 px-4 py-3.5`}
+      >
+        {!isTenureCompleteScheme && (
+          <>
+            <Stat label="Profit" value={currency(bond.profit)} tone="emerald" />
+            <Stat
+              label="Redeemed"
+              value={currency(bond.redeemAmount ?? bond.profitRedeemed)}
+              tone="amber"
+            />
+          </>
+        )}
         <Stat
           label="Paid on"
           value={bond.paidDate ? dateFmt(bond.paidDate) : "—"}
         />
-        {!isTenureCompleteScheme && <Stat
-          label="Redeem date"
-          value={bond.redeemDate ? dateFmt(bond.redeemDate) : "—"}
-        />}
+        {!isTenureCompleteScheme && (
+          <Stat
+            label="Redeem date"
+            value={bond.redeemDate ? dateFmt(bond.redeemDate) : "—"}
+          />
+        )}
       </div>
       {/* hide if scheme is not approved */}
       {isApproved && (
@@ -231,23 +282,74 @@ export default function BondCard({
             onChange={(e) => onBondFormChange("bondNumber", e.target.value)}
             className={inputClass}
           />
-          <input
-            aria-label="Bond image"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={(e) => onBondFormChange("image", e.target.files?.[0])}
-            className="w-full text-xs text-slate-400 file:mr-3 file:rounded-md file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-xs file:text-slate-200 hover:file:bg-slate-700"
-          />
+          {preview ? (
+            <div className="sea-file-grid">
+              <div className="sea-file-chip">
+                {preview.type === "application/pdf" ? (
+                  <iframe
+                    src={preview.url}
+                    title={`Preview of ${preview.name}`}
+                    className="sea-file-thumb mx-auto"
+                  />
+                ) : (
+                  <Image
+                    src={preview.url}
+                    alt={preview.name}
+                    width={100}
+                    height={100}
+                    className="sea-file-thumb w-full h-auto object-contain"
+                    />
+                )}
+                <span className="sea-file-name" title={preview.name}>
+                  <FileText size={12} /> {preview.name}
+                </span>
+                <button
+                  type="button"
+                  className="sea-file-remove"
+                  onClick={removeFile}
+                  disabled={savingBond}
+                  aria-label={`Remove ${preview.name}`}
+                >
+                  <X size={14} color="white " className="hover:text-red-500 transition-all duration-150 hover:scale-105 hover:rotate-180 cursor-pointer" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <input
+              aria-label="Bond file"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/jpg,application/pdf,.pdf"
+              onChange={handleBondFileChange}
+              className="w-full text-xs text-slate-400 file:mr-3 file:rounded-md file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-xs file:text-slate-200 hover:file:bg-slate-700"
+            />
+          )}
           <button
             type="button"
             disabled={savingBond}
             onClick={onSaveBond}
-            className={`w-full rounded-md px-3 py-2 text-xs font-semibold transition ${savingBond
-              ? "cursor-not-allowed border-slate-600 bg-slate-950/30 text-slate-600"
-              : "border border-teal-700 text-teal-300 hover:bg-teal-950/50 focus:cursor-none focus:opacity-50"
-              }`}
+            aria-busy={savingBond}
+            className={`relative w-full overflow-hidden rounded-md px-3 py-2 text-xs font-semibold transition ${
+              savingBond
+                ? "cursor-not-allowed border-slate-600 bg-slate-950/30 text-slate-600"
+                : "border border-teal-700 text-teal-300 hover:bg-teal-950/50 focus:cursor-none focus:opacity-50"
+            }`}
           >
-            {savingBond ? "Saving..." : "Save bond details"}
+            {savingBond ? (
+              <>
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 size={14} className="animate-spin" /> Saving…
+                </span>
+                <span
+                  className="bond-save-progress-track"
+                  role="progressbar"
+                  aria-label="Saving bond details"
+                >
+                  <span className="bond-save-progress-indicator block" />
+                </span>
+              </>
+            ) : (
+              "Save bond details"
+            )}
           </button>
         </div>
       )}

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Download, Loader2 } from "lucide-react";
 import { downloadSvgAsPng } from "../utils";
+import { resolveMediaUrl } from "../../../../api/apiClient";
 
 // BondCertificate sets data-images-ready="true" once logo/photo/stamp/watermark
 // have been embedded as data: URIs. Rasterising before that drops the images.
@@ -23,12 +24,31 @@ function waitForImages(svgEl, timeoutMs = 8000) {
 
 export default function BondDownloadButton({
   certRef,
+  pdfUrl,
   filename = "investment-bond",
   className = "",
 }) {
   const [status, setStatus] = useState("idle"); // idle | working | error
 
   const handleDownload = async () => {
+    if (pdfUrl) {
+      setStatus("working");
+      try {
+        const response = await fetch(resolveMediaUrl(pdfUrl));
+        if (!response.ok) throw new Error("Failed to download bond PDF");
+        const url = URL.createObjectURL(await response.blob());
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${filename}.pdf`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        setStatus("idle");
+      } catch (err) {
+        console.error(err);
+        setStatus("error");
+      }
+      return;
+    }
     if (!certRef?.current) return;
     setStatus("working");
     try {

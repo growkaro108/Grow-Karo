@@ -3,7 +3,6 @@ package com.growkaro.backend.service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +13,6 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -52,7 +50,6 @@ import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionTyp
 import com.growkaro.backend.entity.Reply;
 import com.growkaro.backend.entity.SupportIssue.Status;
 import com.growkaro.backend.entity.Transaction.TransactionType;
-import com.growkaro.backend.entity.User.Role;
 import com.growkaro.backend.entity.UserSchemeReedemLedger.RedeemType;
 import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
 import com.growkaro.backend.enums.ActivityType;
@@ -296,6 +293,7 @@ public class UserAPIService {
     @Transactional
     public Map<String, Object> login(String email, String password) {
         try {
+            Thread.sleep(2000); // Introduce a 2-second delay to mitigate brute-force attacks
             if (!isUserExists(email)) {
                 return general.response("error", "User not found", Map.of());
             }
