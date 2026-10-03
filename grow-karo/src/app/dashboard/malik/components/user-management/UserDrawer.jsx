@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { X, Mail, Phone, Calendar, HandCoins, ChevronDown, CalendarClock, Percent, ArrowUpToLine, ArrowDownToLine, User } from "lucide-react";
+import { X, Mail, Phone, Calendar, HandCoins, ChevronDown, CalendarClock, Percent, ArrowUpToLine, ArrowDownToLine, User, Plus } from "lucide-react";
 import StatusPill from "./StatusPill";
-import { currency, initials } from "./format";
+import { currency, daysToMonths, initials } from "./format";
 import dynamic from "next/dynamic";
 import TabLoader from "@/loader/TabLoader";
 import { getAllPlans } from "@/api/generalApi";
@@ -415,8 +415,8 @@ export default function UserDrawer({ user, onClose, onSaved }) {
               onClick={() => setAddFormOpen((v) => !v)}
               className="flex w-full items-center justify-between px-4 py-3.5 text-left"
             >
-              <span className="font-[Space_Grotesk] text-sm font-semibold text-teal-300">
-                Add scheme manually
+              <span className="flex items-center font-[Space_Grotesk] text-sm font-semibold text-teal-300">
+                <Plus className="h-5 w-5 mr-0.5" /> Add scheme manually
               </span>
               <span className="flex items-center gap-2 text-[10px] text-slate-500">
                 Admin only
@@ -488,7 +488,7 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                       <CalendarClock className="h-4 w-4 text-slate-500" />
                       <span className="text-[13px] text-slate-500">Tenure</span>
                       <span className="text-[14px] font-medium text-slate-100">
-                        {selectedScheme.tenure ?? "0"} days
+                        {daysToMonths(selectedScheme.tenure) ?? "0 days"} 
                       </span>
                     </div>
                   </div>

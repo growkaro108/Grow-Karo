@@ -25,3 +25,22 @@ Backend Performance Optimization:
     180 - 182 days: extends the maturity date by 6 months.
     90 days: extends the maturity date by 3 months.
     Default / custom tenure: adds t days to the start date.
+
+Date: 03-10-2026  update: v4.3.5
+
+Backend Performance Optimization (Bond PDF Upload):
+  Reduced CPU usage during bond uploads by limiting PDF thumbnail rendering to one file at a time, so simultaneous uploads no longer overload the server.
+  Reduced the maximum thumbnail size to 700 px and enabled image subsampling, which makes rendering of scanned PDFs much faster and uses less memory.
+  Thumbnail rendering now respects the page crop area and rotated pages, and the preview JPG is saved at an optimized quality to reduce file size.
+  Lowered the bond document upload limit to 3 MB, enforced on both the server configuration and the upload code.
+  Bond details are now saved in a short database operation after file processing, so database connections are not held during heavy PDF rendering.
+  The original downloadable PDF is not altered.
+
+Server & Configuration Improvements:
+  Corrected the Tomcat thread settings (max 30 threads, 5 spare) and reduced the connection and queue limits to suit the current server size.
+  Configured the database connection pool (maximum 10, minimum idle 2, 20 second timeout) to use fewer idle connections.
+  Enabled graceful shutdown so running requests complete during restarts.
+  Restored WARN-level logging for database and connection pool errors so real issues are visible in production.
+  Set Hibernate schema mode to validate to prevent accidental schema changes and slow startups.
+  Removed default database credentials and the localhost frontend URL from the configuration; these must now be provided through environment variables.
+  Added Java memory limits (heap and metaspace) and Docker log rotation to keep the container stable within its 1 GB memory limit.

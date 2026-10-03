@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,13 +14,23 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
 
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
 
@@ -37,6 +48,7 @@ import org.springframework.data.history.Revisions;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
@@ -113,7 +125,13 @@ public class AdminAPIService {
     private final ReedemLedgerRepository reedemLedgerRepository;
 
     private static final int DEFAULT_PAGE_SIZE = 20;
-    private static final float PDF_PREVIEW_MAX_DIMENSION_PIXELS = 1200f;
+    private static final float PDF_PREVIEW_MAX_DIMENSION_PIXELS = 700f;
+    private static final long MAX_PDF_SIZE_BYTES = 3L * 1024 * 1024; // 5 MB
+    private static final float JPEG_QUALITY = 0.70f;
+    private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
+
+    // one time only ek hi thread ko pdf render karne do, baki wait karein
+    private final Semaphore pdfRenderPermits = new Semaphore(1);
 
     private final UserRepository userRepository;
     private final RemitterRepository remitterRepository;
@@ -265,6 +283,7 @@ public class AdminAPIService {
             if (user == null || scheme == null) {
                 return general.response("error", "User or scheme not found", null);
             }
+
             var nominee = user.getNominees().stream()
                     .filter(item -> request.nomineeId().equals(item.getNomineeId()))
                     .findFirst().orElse(null);
@@ -272,9 +291,11 @@ public class AdminAPIService {
                 return general.response("error", "Nominee does not belong to this user", null);
             }
 
+            LocalDateTime enrollmentDate = LocalDateTime.of(request.paidDate(), LocalTime.now(IST));
+            LocalDate today = general.getCurrentDate();
+
             UserScheme userScheme = new UserScheme();
-            userScheme.setRequestDate(
-                    LocalDateTime.of(request.paidDate(), LocalDateTime.now(ZoneId.of("Asia/Kolkata")).toLocalTime()));
+            userScheme.setRequestDate(enrollmentDate);
             userScheme.setUser(user);
             userScheme.setScheme(scheme);
             userScheme.setNominee(nominee);
@@ -282,19 +303,16 @@ public class AdminAPIService {
             userScheme.setIsApproved(true);
             userScheme.setAmountFrom("general");
             userScheme.setSubmitTo("general");
-            userScheme.setEnrollmentDate(
-                    LocalDateTime.of(request.paidDate(), LocalDateTime.now(ZoneId.of("Asia/Kolkata")).toLocalTime()));
+            userScheme.setEnrollmentDate(enrollmentDate);
             userScheme.setPaidDate(request.paidDate());
             replaceLedgers(userScheme, request.profitLedger(), request.reedemLedger());
 
-            userScheme.setNextPayoutDate(
-                    general.calculateNextPayoutDate(userScheme.getEnrollmentDate(), scheme.getPayoutFrequency(),
-                            scheme.getTenure()));
-            LocalDate today = general.getCurrentDate();
-            LocalDate maturityDate = general.calculateMaturityDate(userScheme.getEnrollmentDate(), scheme.getTenure());
-            userScheme
-                    .setMaturityDate(maturityDate);
-            // check is maturity date pass then change
+            userScheme.setNextPayoutDate(general.calculateNextPayoutDate(
+                    enrollmentDate, scheme.getPayoutFrequency(), scheme.getTenure()));
+
+            LocalDate maturityDate = general.calculateMaturityDate(enrollmentDate, scheme.getTenure());
+            userScheme.setMaturityDate(maturityDate);
+
             if (maturityDate.isEqual(today)) {
                 userScheme.setStatus(UserSchemeStatus.MATURED);
             } else if (maturityDate.isBefore(today)) {
@@ -302,16 +320,15 @@ public class AdminAPIService {
             } else {
                 userScheme.setStatus(UserSchemeStatus.ACTIVE);
             }
-            user.enrollInScheme(userScheme);
-            scheme.enrollUserInScheme(userScheme);
 
+            // owning side is already set above; no need to touch the inverse collections
             userSchemeRepository.save(userScheme);
-            userRepository.save(user);
-            schemeRepository.save(scheme);
+
             return general.response("success", "Scheme added to user successfully",
                     UserSchemeResponse.toUserSchemeResponse(userScheme));
         } catch (Exception e) {
-            log.error("Error adding manual scheme for user {}", request.userId(), e.getCause());
+            log.error("Error adding manual scheme for user {}", request.userId(), e);
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return general.response("error", "Could not add scheme to user", null);
         }
     }
@@ -506,11 +523,27 @@ public class AdminAPIService {
     }
 
     @CacheEvict(value = "userPortfolio", key = "#p0")
-    @Transactional
     public Map<String, Object> addBondDetails(String userId, String userSchemeId, String bondNumber,
             MultipartFile images,
             boolean isUpdate) {
         try {
+            // 1. Pehle heavy kaam (DB connection ke bina)
+            String pdfUrl = null;
+            String imageUrl = null;
+            boolean hasFile = images != null && !images.isEmpty();
+
+            if (hasFile) {
+                String folder = "bonds/" + userSchemeId;
+                if ("application/pdf".equalsIgnoreCase(images.getContentType())) {
+                    byte[] preview = renderPdfFirstPage(images); // pehle preview
+                    pdfUrl = localFileStorageService.store(images, folder);
+                    imageUrl = localFileStorageService.storeBytes(preview, ".jpg", folder);
+                } else {
+                    imageUrl = localFileStorageService.store(images, folder);
+                }
+            }
+
+            // 2. Ab DB ka chhota kaam
             UserScheme userScheme = userSchemeRepository.findByUserSchemeId(userSchemeId).orElse(null);
             if (userScheme == null) {
                 return general.response("error", "User scheme not found", null);
@@ -520,20 +553,11 @@ public class AdminAPIService {
                 userScheme.setBondNumber(bondNumber.trim());
             }
 
-            if (images != null && !images.isEmpty()) {
-                String folder = "bonds/" + userSchemeId;
-                if ("application/pdf".equalsIgnoreCase(images.getContentType())) {
-                    byte[] preview = renderPdfFirstPage(images);
-                    String pdfUrl = localFileStorageService.store(images, folder);
-                    String imageUrl = localFileStorageService.storeBytes(preview, ".jpg", folder);
-                    userScheme.setBondPdfURL(pdfUrl);
-                    userScheme.setBondImageURL(imageUrl);
-                } else {
-                    String uploadedUrl = localFileStorageService.store(images, folder);
-                    userScheme.setBondImageURL(uploadedUrl);
-                    userScheme.setBondPdfURL(null);
-                }
+            if (hasFile) {
+                userScheme.setBondImageURL(imageUrl);
+                userScheme.setBondPdfURL(pdfUrl); // image upload par null ho jayega
             }
+
             Scheme s = userScheme.getScheme();
             LocalDateTime todayDateTime = general.getCurrentDateTime();
 
@@ -551,25 +575,70 @@ public class AdminAPIService {
                     "bondNumber", userScheme.getBondNumber() != null ? userScheme.getBondNumber() : "",
                     "bondImageURL", userScheme.getBondImageURL() != null ? userScheme.getBondImageURL() : "",
                     "bondPdfUrl", userScheme.getBondPdfURL() != null ? userScheme.getBondPdfURL() : ""));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("Bond upload rejected for userSchemeId={}: {}", userSchemeId, e.getMessage());
+            return general.response("error", e.getMessage(), null);
         } catch (Exception e) {
             log.error("Error in adding bond details for userSchemeId={}, bondNumber={}", userSchemeId, bondNumber, e);
-            return general.response("error", "Error in adding bond details", null);
+            return general.response("error", "Error in adding bond details", Map.of(
+                    "error", e.getMessage()));
         }
     }
 
     private byte[] renderPdfFirstPage(MultipartFile pdfFile) throws Exception {
+        if (pdfFile.getSize() > MAX_PDF_SIZE_BYTES) {
+            throw new IllegalArgumentException("PDF 3 MB se badi nahi honi chahiye");
+        }
+
+        if (!pdfRenderPermits.tryAcquire(15, TimeUnit.SECONDS)) {
+            throw new IllegalStateException("Server busy hai, thodi der baad try karein");
+        }
+
         try (PDDocument document = Loader.loadPDF(pdfFile.getBytes())) {
             if (document.getNumberOfPages() == 0) {
                 throw new IllegalArgumentException("PDF contains no pages");
             }
-            var pageSize = document.getPage(0).getMediaBox();
-            float maxDimensionPoints = Math.max(pageSize.getWidth(), pageSize.getHeight());
-            float scale = Math.min(1.0f, PDF_PREVIEW_MAX_DIMENSION_PIXELS / maxDimensionPoints);
-            BufferedImage preview = new PDFRenderer(document).renderImage(0, scale, ImageType.RGB);
-            try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-                ImageIO.write(preview, "jpg", output);
-                return output.toByteArray();
+
+            PDPage page = document.getPage(0);
+            PDRectangle box = page.getCropBox(); // jo page actual me dikhta hai
+            float w = box.getWidth();
+            float h = box.getHeight();
+            if (page.getRotation() % 180 != 0) { // rotated page me width/height badal do
+                float t = w;
+                w = h;
+                h = t;
             }
+
+            float maxDim = Math.max(w, h);
+            float scale = Math.min(1.0f, PDF_PREVIEW_MAX_DIMENSION_PIXELS / maxDim);
+
+            PDFRenderer renderer = new PDFRenderer(document);
+            renderer.setSubsamplingAllowed(true); // scan wali PDF me bahut tez
+
+            BufferedImage preview = renderer.renderImage(0, scale, ImageType.RGB);
+            try {
+                return toJpeg(preview, JPEG_QUALITY);
+            } finally {
+                preview.flush();
+            }
+        } finally {
+            pdfRenderPermits.release();
+        }
+    }
+
+    private byte[] toJpeg(BufferedImage image, float quality) throws IOException {
+        ImageWriter writer = ImageIO.getImageWritersByFormatName("jpg").next();
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream();
+                ImageOutputStream ios = ImageIO.createImageOutputStream(out)) {
+            ImageWriteParam param = writer.getDefaultWriteParam();
+            param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+            param.setCompressionQuality(quality);
+            writer.setOutput(ios);
+            writer.write(null, new IIOImage(image, null, null), param);
+            ios.flush();
+            return out.toByteArray();
+        } finally {
+            writer.dispose();
         }
     }
 

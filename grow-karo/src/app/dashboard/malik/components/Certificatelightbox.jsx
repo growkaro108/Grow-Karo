@@ -79,6 +79,8 @@ export default function CertificateLightbox({
               src={resolveMediaUrl(bond.bondUrl)}
               alt={`Bond certificate for ${userName}`}
               className="h-auto max-h-[80vh] w-full object-contain bg-slate-950"
+              loading="lazy"
+              decoding="async"
             />
           ) : (
             <>

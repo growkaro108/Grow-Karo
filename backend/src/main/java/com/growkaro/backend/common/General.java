@@ -20,6 +20,7 @@ import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
@@ -39,6 +40,7 @@ import com.growkaro.backend.entity.UserSchemeReedemLedger;
 import com.growkaro.backend.entity.UserSchemeReedemLedger.RedeemType;
 import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
 import com.growkaro.backend.repository.ReedemLedgerRepository;
+import com.growkaro.backend.repository.SchemeRepository;
 import com.growkaro.backend.repository.UserRepository;
 import com.growkaro.backend.security.JwtService;
 import com.growkaro.backend.service.RedisService;
@@ -62,6 +64,9 @@ public class General {
     private RedisService redisService;
     @Autowired
     private ReedemLedgerRepository reedemLedgerRepository;
+
+    @Autowired
+    private SchemeRepository schemeRepository;
 
     public boolean isValidId(String id) {
         Pattern idPattern = Pattern.compile("^GKUSID\\d{14}$");
@@ -101,6 +106,22 @@ public class General {
 
     }
 
+    @Cacheable(value = "schemes", key = "#p0")
+     public Scheme getSchemeById(String schemeId) {
+        if (schemeId == null || schemeId.isBlank()||!isValidSchemeId(schemeId)) {
+            return null;
+        }
+        return schemeRepository.findById(schemeId).orElse(null);
+    }
+   
+    @Cacheable(value = "users", key = "#p0")
+    public User getUserById(String userId) {
+        if (userId == null || userId.isBlank()||!isValidId(userId)) {
+            return null;
+        }
+        return userRepository.findById(userId).orElse(null);
+    }
+   
     // generate exactly 6 digit otp
     public String generate6DigitOTP() {
         Random rand = new Random();
@@ -404,15 +425,7 @@ public class General {
         return baseUrl + "/reset/" + remitterId + "_rem";
     }
 
-    public User getUserById(String userId) {
-        if (userId == null || userId.isBlank()) {
-            return null;
-        }
-        if (!isValidId(userId)) {
-            throw new IllegalArgumentException("Invalid user ID");
-        }
-        return userRepository.findById(userId).orElse(null);
-    }
+   
 
     public Payee toPayee(Transaction request) {
         BankDetails bd = request.getBankDetails();
@@ -588,4 +601,7 @@ public class General {
     public int dayDiff(LocalDate start, LocalDate end) {
         return (int) ChronoUnit.DAYS.between(start, end);
     }
+
+   
+
 }

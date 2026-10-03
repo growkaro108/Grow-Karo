@@ -347,6 +347,8 @@ export default function MaturingSchemesAdminDark() {
                   src={scheme.bondImage}
                   alt={scheme.schemeName}
                   className="w-16 h-12 object-cover rounded-md border border-slate-700"
+                  loading="lazy"
+                  decoding="async"
                 />
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-slate-100 truncate">

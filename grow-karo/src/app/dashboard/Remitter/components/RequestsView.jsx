@@ -227,6 +227,7 @@ export default function RequestsView({ requests = [] }) {
                       onClick={() => setPreviewImage(req.proofImage)}
                       className="w-12 h-12 rounded-lg object-cover border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
                       loading="lazy"
+                      decoding="async"
                     />
                   )}
                   <div>
@@ -273,6 +274,8 @@ export default function RequestsView({ requests = [] }) {
                   src={resolveMediaUrl(previewImage)}
                   alt="Payment proof full view"
                   className="max-w-full max-h-full rounded-xl shadow-2xl"
+                  loading="lazy"
+                  decoding="async"
                 />
               </div>
             )}

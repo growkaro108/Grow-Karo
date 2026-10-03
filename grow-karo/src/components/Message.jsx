@@ -68,8 +68,31 @@ export const allRounderMessage = (response) => {
 
   Swal.fire({
     title: response?.status || "Notification",
-    text: response?.message || "",
+    text: response?.message || "Something happened.",
     icon: alertIcon, // Safely falls back to a valid icon
   });
+
+};
+export const allRounderMessagetopend = (response) => {
+  // Translate common API status variants to SweetAlert2 icon names
+  const iconMap = {
+    ok: "success",
+    success: "success",
+    error: "error",
+    failed: "error",
+    warning: "warning",
+    info: "info",
+  };
+
+  const alertIcon = iconMap[response?.status] || "info";
+
+  Swal.fire({
+  position: "top-end",
+  icon: alertIcon, // Safely falls back to a valid icon
+  // title: response?.status || "Notification",
+  text: response?.message || "Something happened.",
+  showConfirmButton: false,
+  timer: 1500
+});
 
 };

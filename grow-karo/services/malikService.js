@@ -35,7 +35,7 @@ import {
   getUserProfileApi,
 } from "@/api/adminApi";
 import { userRegister } from "@/api/userApi";
-import { allRounderMessage } from "@/components/Message";
+import { allRounderMessage, allRounderMessagetopend } from "@/components/Message";
 
 export async function createPlan(payload) {
   return await createScheme(payload);
@@ -65,7 +65,7 @@ export async function rejectUserScheme(userSchemeId) {
 }
 export async function addManualUserScheme(payload) {
   const response = await addManualUserSchemeApi(payload);
-  allRounderMessage(response);
+  allRounderMessagetopend(response);
   return response.status === "success";
 }
 export async function createManualUser(payload) {

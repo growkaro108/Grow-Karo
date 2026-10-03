@@ -293,7 +293,7 @@ public class UserAPIService {
     @Transactional
     public Map<String, Object> login(String email, String password) {
         try {
-            Thread.sleep(2000); // Introduce a 2-second delay to mitigate brute-force attacks
+            Thread.sleep(500); // Introduce a 2-second delay to mitigate brute-force attacks
             if (!isUserExists(email)) {
                 return general.response("error", "User not found", Map.of());
             }

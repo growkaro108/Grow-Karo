@@ -20,11 +20,11 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: "Grow-Karo",
   description: "created by Anand",
-  icons: [
-    {
-      url: "/logo.jpg",
-    }
-  ],
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({ children }) {

@@ -278,7 +278,7 @@ export default function BondCard({
           <input
             aria-label="Bond number"
             placeholder={bond.bondNumber || "Bond number"}
-            value={bondFormState.bondNumber ?? ""}
+            value={bondFormState.bondNumber ?? bond.bondNumber??"GKFD"}
             onChange={(e) => onBondFormChange("bondNumber", e.target.value)}
             className={inputClass}
           />

@@ -181,6 +181,8 @@ export default function AddBondModal({
                       src={preview.url}
                       alt={preview.name}
                       className="sea-file-thumb"
+                      loading="lazy"
+                      decoding="async"
                     />
                   )}
                   <span className="sea-file-name" title={preview.name}>

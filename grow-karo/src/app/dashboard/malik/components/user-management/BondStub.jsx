@@ -34,7 +34,7 @@ export default function BondStub({ bond, userName, scheme, onView, viewUser }) {
       {/* counterfoil */}
       <header className="flex items-center justify-between gap-3 bg-white/5 px-4 py-2.5">
         <span className="truncate font-mono text-xs text-slate-400">
-          {bond.userSchemeId}
+          {bond.bondNumber? `Bond: ${bond.bondNumber}` : `ID: ${bondLabel}`}
         </span>
         <StatusPill
           status={bond.status === "matured" ? "Matured" : bond.status}

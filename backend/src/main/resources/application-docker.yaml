@@ -1,65 +1,82 @@
 server:
   port: ${SERVER_PORT:4000}
+  shutdown: graceful
 
-  # HTTP Compression
+  tomcat:
+    threads:
+      max: 30
+      min-spare: 5
+    max-connections: 500
+    accept-count: 50
+    connection-timeout: 20000
+
   compression:
     enabled: true
     mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml
     min-response-size: 2048
+
 spring:
+  main:
+    banner-mode: "off"
+
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+  servlet:
+    multipart:
+      max-file-size: 3MB
+      max-request-size: 3MB
+
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/growkaro_db}
-    username: ${SPRING_DATASOURCE_USERNAME:growkaro}
-    password: ${SPRING_DATASOURCE_PASSWORD:growkaro123}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1500000
+
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: update  # if changes are made in entity classes, set this to update. For production, consider using 'validate' or 'none'.
     show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
+
   data:
     redis:
       host: ${SPRING_REDIS_HOST:redis}
       port: ${SPRING_REDIS_PORT:6379}
       timeout: 2000ms
-  # 3. Cache Configuration
+
   cache:
     type: redis
     redis:
-      time-to-live: 10m # Set explicit duration (10 minutes)
+      time-to-live: 10m
       cache-null-values: false
-  # Logging Configuration
-  main:
-    # Disable the Spring Boot banner
-    banner-mode: "off"
-    # Start beans only when needed
-  #  lazy-initialization: true
 
-# Suppress most logs, show WARN and ERROR
 logging:
   level:
     root: WARN
-    org:
-      springframework: WARN
-      hibernate: OFF
-      hibernate.SQL: OFF
-      apache: OFF
-    com:
-      zaxxer:
-        hikari: OFF
-    io:
-      netty: OFF
-    reactor: OFF
+    org.springframework: WARN
+    org.hibernate: WARN
+    org.hibernate.SQL: "OFF"
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: WARN
+    com.zaxxer.hikari: WARN
 
 app:
   storage:
     type: local
     local:
-      base-path: ${STORAGE_BASE_PATH:/app/uploads} # mount a Docker volume here
-      base-url: /uploads # relative — frontend prepends API host
+      base-path: ${STORAGE_BASE_PATH:/app/uploads}
+      base-url: /uploads
+
 frontend:
-  url: ${FRONTEND_URL:http://localhost:3000} # Define the frontend URL for CORS configuration
+  url: ${FRONTEND_URL}
+
 admin:
   email: ${ADMIN_EMAIL}

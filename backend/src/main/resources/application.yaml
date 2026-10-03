@@ -1,5 +1,13 @@
 server:
   port: 9090
+  # Tomcat Configuration
+  tomcat:
+    threads:
+      max: 30
+      min-spare: 5
+    max-connections: 500
+    accept-count: 50
+    connection-timeout: 20000
   # HTTP Compression
   compression:
     enabled: true

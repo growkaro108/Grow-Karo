@@ -92,6 +92,8 @@ export default function TransactionsView() {
                           alt="Payment proof"
                           fill
                           className="object-fit"
+                          loading="lazy"
+                          decoding="async"
                         />
                       </button>
                     ) : (
@@ -168,6 +170,8 @@ export default function TransactionsView() {
               src={resolveMediaUrl(previewImage)}
               alt="Payment proof full view"
               className="max-h-[80vh] w-auto object-contain rounded-xl shadow-2xl"
+              loading="lazy"
+              decoding="async"
             />
           </div>
         </div>

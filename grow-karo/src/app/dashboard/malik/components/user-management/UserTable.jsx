@@ -1,10 +1,10 @@
-import React, { use } from "react";
+import React from "react";
 import { ChevronRight } from "lucide-react";
 import StatusPill from "./StatusPill";
 import { initials } from "./format";
 import TablePagination from "@/components/TablePagination";
 import { currency } from "../../utils";
-import { adminContext } from "@/context/AdminContext";
+import { TableRowLoader } from "@/loader/TableRowLoader";
 
 export default function UserTable({
   users,
@@ -14,8 +14,8 @@ export default function UserTable({
   totalItems,
   onPageChange,
   onPageSizeChange,
+  loading,
 }) {
-  const { adminEmails } = use(adminContext);
   return (
     <div className="hidden overflow-hidden rounded-2xl border border-slate-800 bg-[#111827] shadow-lg shadow-black/20 sm:block">
       <table className="w-full text-left">
@@ -31,7 +31,8 @@ export default function UserTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800">
-          {users.map((u) => (
+          {loading && <TableRowLoader colspan={7} loading={"users"} />}
+          {!loading && users.map((u) => (
             <tr
               key={u.userId}
               onClick={() => onSelect(u)}
@@ -77,7 +78,7 @@ export default function UserTable({
         </tbody>
       </table>
 
-      {users.length === 0 && (
+      {!loading &&users.length === 0 && (
         <div className="px-5 py-14 text-center text-sm text-slate-500">
           No users match these filters. Try adjusting your search.
         </div>

@@ -65,6 +65,7 @@ export default function UserManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [loading, setLoading] = useState(false);
   // debounce only the `query` value itself — everything downstream reacts to
   // the debounced value instead of the raw keystroke-by-keystroke one
   const [debouncedQuery, setDebouncedQuery] = useState(query);
@@ -75,7 +76,6 @@ export default function UserManagement() {
       process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",")
         .map((e) => e.trim().toLowerCase())
         .filter(Boolean) ?? [];
-
     const lowerQuery = query ? query.toLowerCase() : "";
 
     let list = users.filter((u) => {
@@ -96,7 +96,6 @@ export default function UserManagement() {
       // 3. Check dropdown filters
       const matchesStatus = statusFilter === "all" || u.status === statusFilter;
       const matchesScheme = schemeFilter === "all" || u.scheme === schemeFilter;
-
       return matchesQuery && matchesStatus && matchesScheme;
     });
 
@@ -106,10 +105,11 @@ export default function UserManagement() {
       const dateB = new Date(b.joined).getTime();
       return sortDesc ? dateB - dateA : dateA - dateB;
     });
-  }, [users, query, statusFilter, schemeFilter, sortDesc]);
+  }, [query, users, statusFilter, schemeFilter, sortDesc]);
 
   const fetchAllUser = useCallback(
     async (signal) => {
+      setLoading(true);
       try {
         const res = await fetchAllUsers(query, currentPage, pageSize, {
           signal,
@@ -125,12 +125,16 @@ export default function UserManagement() {
         if (e.name === "AbortError" || e.name === "CanceledError") return;
         console.log(e);
         errorMessage("something went wrong, try later..");
+      }finally {
+        setLoading(false);
       }
     },
     [currentPage, pageSize, query],
   );
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQuery(query), 700); // adjust delay to taste
+    
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);}, 700); // adjust delay to taste
     return () => clearTimeout(timer);
   }, [query]);
 
@@ -235,6 +239,7 @@ export default function UserManagement() {
           users={filtered}
           onSelect={setSelected}
           currentPage={currentPage}
+          loading={loading}
           pageSize={pageSize}
           totalItems={totalUsers}
           onPageChange={setCurrentPage}
