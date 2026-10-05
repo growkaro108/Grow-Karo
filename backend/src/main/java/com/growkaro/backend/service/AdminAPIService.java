@@ -758,7 +758,11 @@ public class AdminAPIService {
 
     private Transaction getPendingOrThrow(String txnId) {
         Optional<Transaction> txn = transactionRepository.findByTxnId(txnId);
-        if (!txn.isPresent() || txn.get().getStatus() != TransactionStatus.PENDING) {
+        if (txn.isEmpty()) {
+            throw new IllegalTransactionStateException(
+                    "Transaction " + txnId + " not found");
+        }
+        if (txn.get().getStatus() != TransactionStatus.PENDING) {
             throw new IllegalTransactionStateException(
                     "Transaction " + txnId + " is not pending (current: " + txn.get().getStatus() + ")");
         }
@@ -813,12 +817,12 @@ public class AdminAPIService {
                 if (existing.getPanNumber().equals(addRemitter.getPanNumber())) {
                     panConflict++;
                 }
-                throw new IllegalArgumentException("A remitter with this " + (emailConflict > 0 ? "email, " : "")
-                        + (phoneConflict > 0 ? "phone number, " : "") + (aadharConflict > 0 ? "aadhar number, " : "")
-                        + (panConflict > 0 ? "pan number " : "") + (codeConflict > 0 ? "remitter code " : "")
-                        + "already exists");
             }
-
+            // Throw AFTER the full loop so the message reflects ALL conflicting fields
+            throw new IllegalArgumentException("A remitter with this " + (emailConflict > 0 ? "email, " : "")
+                    + (phoneConflict > 0 ? "phone number, " : "") + (aadharConflict > 0 ? "aadhar number, " : "")
+                    + (panConflict > 0 ? "pan number " : "") + (codeConflict > 0 ? "remitter code " : "")
+                    + "already exists");
         }
 
         String rawPassword = generateRandomPassword();
@@ -969,11 +973,9 @@ public class AdminAPIService {
             return false;
         }
         try {
-            Thread.sleep(2000);
-            boolean isDeleted = remitterRepository.existsById(id);
-
-            if (!isDeleted)
+            if (!remitterRepository.existsById(id)) {
                 return false;
+            }
             remitterRepository.deleteById(id);
             // write log
             activityLogService.log("adminId", "AdminName", "admin", ActivityType.REMITTER_DELETED,
@@ -1534,8 +1536,9 @@ public class AdminAPIService {
         int failureCount = 0;
         List<Map<String, Object>> errors = new ArrayList<>();
         List<Map<String, Object>> createdUsers = new ArrayList<>();
+        int size = usersPayload.size();
 
-        for (int i = 0; i < usersPayload.size(); i++) {
+        for (int i = 0; i < size; i++) {
             int rowNum = i + 1;
             Map<String, Object> row = usersPayload.get(i);
             try {
@@ -1578,12 +1581,12 @@ public class AdminAPIService {
                     continue;
                 }
 
-                if (userRepository.existsByPhone(phone)) {
-                    failureCount++;
-                    errors.add(Map.of("row", rowNum, "email", email, "reason",
-                            "User with phone '" + phone + "' already exists"));
-                    continue;
-                }
+                // if (userRepository.existsByPhone(phone)) {
+                // failureCount++;
+                // errors.add(Map.of("row", rowNum, "email", email, "reason",
+                // "User with phone '" + phone + "' already exists"));
+                // continue;
+                // }
 
                 String aadharNo = general.stringValue(user.aadharNo());
                 if (aadharNo != null && !aadharNo.matches("^\\d{12}$")) {

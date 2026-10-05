@@ -39,7 +39,12 @@ USER appuser
 EXPOSE 4000
 
 # JVM Memory Tuning for Docker (512MB max heap)
-ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxMetaspaceSize=128m -XX:+ExitOnOutOfMemoryError"
+# -XX:+HeapDumpOnOutOfMemoryError: writes heap dump on OOM so you can diagnose leaks post-mortem
+# -XX:+ExitOnOutOfMemoryError: immediately kills the container so orchestrator can restart it cleanly
+ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxMetaspaceSize=128m \
+    -XX:+ExitOnOutOfMemoryError \
+    -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/app/heapdump.hprof \
+    -Xlog:gc*:file=/app/gc.log:time,level,tags:filecount=3,filesize=10m"
 
-# Run Java directly
-CMD ["java", "-Xms256m", "-Xmx512m", "-XX:+UseG1GC", "-XX:MaxMetaspaceSize=128m", "-XX:+ExitOnOutOfMemoryError", "-jar", "app.jar"]
+# Use shell form so $JAVA_OPTS is expanded at runtime
+CMD ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

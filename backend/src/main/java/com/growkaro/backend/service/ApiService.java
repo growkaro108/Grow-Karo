@@ -53,7 +53,10 @@ public class ApiService {
 
     // caching user scheme
     public UserScheme getUserSchemeById(String userSchemeId) {
-        return userSchemeRepository.findById(userSchemeId).get();
+        if (userSchemeId == null || userSchemeId.isBlank()) {
+            return null;
+        }
+        return userSchemeRepository.findById(userSchemeId).orElse(null);
     }
 
     // check user scheme exists

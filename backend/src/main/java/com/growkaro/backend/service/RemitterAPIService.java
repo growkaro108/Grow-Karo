@@ -179,7 +179,7 @@ public class RemitterAPIService {
 
         try {
             Transaction transaction = transactionRepository.findByTxnId(paymentSettlement.txnId()).orElse(null);
-            UserScheme us = transaction.getUserScheme();
+            // Null / validity check MUST come before any access on 'transaction'
             if (transaction == null
                     || transaction.getRemitter() == null
                     || !transaction.getRemitter().getRemitterId().equals(paymentSettlement.remitterId())
@@ -189,6 +189,7 @@ public class RemitterAPIService {
                         paymentSettlement.txnId(), paymentSettlement.remitterId());
                 return null;
             }
+            UserScheme us = transaction.getUserScheme();
 
             if (paymentSettlement.file() == null || paymentSettlement.file().isEmpty()
                     || !ALLOWED_DOCUMENT_TYPES.contains(paymentSettlement.file().getContentType())

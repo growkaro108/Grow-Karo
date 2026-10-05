@@ -209,19 +209,24 @@ export default function UserDrawer({ user, onClose, onSaved }) {
       profitLedger: normalizeLedgerEntries(form.profitLedger, "profit"),
       reedemLedger: normalizeLedgerEntries(form.reedemLedger, "redeem"),
     };
+    try {
+      const saved = await addManualUserScheme(payload);
+      if (saved) {
+        setForm((current) => ({
+          ...current,
+          paidAmount: "",
+          paidDate: "",
+          profitLedger: [{ profitAmount: "", profitDate: "" }],
+          reedemLedger: [{ redeemAmount: "0", redeemDate: "" }],
+        }));
+        setAddFormOpen(false);
+        await onSaved?.();
 
-    const saved = await addManualUserScheme(payload);
-    setSaving(false);
-    if (saved) {
-      setForm((current) => ({
-        ...current,
-        paidAmount: "",
-        paidDate: "",
-        profitLedger: [{ profitAmount: "", profitDate: "" }],
-        reedemLedger: [{ redeemAmount: "0", redeemDate: "" }],
-      }));
-      setAddFormOpen(false);
-      await onSaved?.();
+      }
+    } catch (error) {
+      errorMessage(error?.message || "Failed to add scheme to user");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -488,7 +493,7 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                       <CalendarClock className="h-4 w-4 text-slate-500" />
                       <span className="text-[13px] text-slate-500">Tenure</span>
                       <span className="text-[14px] font-medium text-slate-100">
-                        {daysToMonths(selectedScheme.tenure) ?? "0 days"} 
+                        {daysToMonths(selectedScheme.tenure) ?? "0 days"}
                       </span>
                     </div>
                   </div>

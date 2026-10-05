@@ -4,7 +4,6 @@ import StatusPill from "./StatusPill";
 import { initials } from "./format";
 import TablePagination from "@/components/TablePagination";
 import { currency } from "../../utils";
-import { TableRowLoader } from "@/loader/TableRowLoader";
 
 export default function UserTable({
   users,
@@ -31,7 +30,6 @@ export default function UserTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800">
-          {loading && <TableRowLoader colspan={7} loading={"users"} />}
           {!loading && users.map((u) => (
             <tr
               key={u.userId}
@@ -78,9 +76,17 @@ export default function UserTable({
         </tbody>
       </table>
 
-      {!loading &&users.length === 0 && (
+
+      {(loading || users.length === 0) && (
         <div className="px-5 py-14 text-center text-sm text-slate-500">
-          No users match these filters. Try adjusting your search.
+          {loading ? (
+            <div className="flex items-center justify-center gap-2">
+              <span className="inline-block animate-spin border-t-2 border-r-2 border-slate-300 h-4 w-4 rounded-full"></span>
+              <span>Loading users...</span>
+            </div>
+          ) : (
+            "No users match these filters. Try adjusting your search."
+          )}
         </div>
       )}
 

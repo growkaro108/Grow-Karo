@@ -108,20 +108,17 @@ public class NotificationBroadcaster {
     }
 
     private String buildChannelKey(ReceiverType receiverType, String receiverId) {
+        if (receiverType == null) {
+            return "UNKNOWN:" + (receiverId != null ? receiverId : "GLOBAL");
+        }
+        // Admin global broadcast channel
         if (receiverType == ReceiverType.Admin
                 && (receiverId == null || receiverId.isBlank() || "GLOBAL".equalsIgnoreCase(receiverId))) {
             return "ADMIN:GLOBAL";
         }
-        if (receiverType == ReceiverType.Remitter
-                && (receiverId == null || receiverId.isBlank() || "GLOBAL".equalsIgnoreCase(receiverId))) {
-            return "REMITTER:" + receiverId;
-        }
-        if (receiverType == ReceiverType.User
-                && (receiverId == null || receiverId.isBlank() || "GLOBAL".equalsIgnoreCase(receiverId))) {
-            return "USER:" + receiverId;
-        }
-        return (receiverType != null ? receiverType.name().toUpperCase() : "UNKNOWN") + ":"
-                + (receiverId != null ? receiverId : "GLOBAL");
+        // All other cases: prefix + receiverId (never append null)
+        String safeId = (receiverId != null && !receiverId.isBlank()) ? receiverId : "GLOBAL";
+        return receiverType.name().toUpperCase() + ":" + safeId;
     }
 
     /**
@@ -129,7 +126,10 @@ public class NotificationBroadcaster {
      */
     @Scheduled(fixedRate = 25_000)
     public void heartbeat() {
-        channels.forEach((channelKey, emitters) -> {
+        // Iterate over a snapshot of keys to allow safe removal of empty entries
+        for (String channelKey : channels.keySet()) {
+            List<SseEmitter> emitters = channels.get(channelKey);
+            if (emitters == null) continue;
             List<SseEmitter> dead = new java.util.ArrayList<>();
             for (SseEmitter emitter : emitters) {
                 try {
@@ -139,7 +139,11 @@ public class NotificationBroadcaster {
                 }
             }
             emitters.removeAll(dead);
-        });
+            // Clean up empty channel entries to prevent unbounded map growth (memory leak)
+            if (emitters.isEmpty()) {
+                channels.remove(channelKey, emitters);
+            }
+        }
     }
 
     public int activeChannelsCount() {
