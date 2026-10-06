@@ -6,6 +6,7 @@ import {
   getAllUsersRequests,
   rejectUserSchemes,
   addManualUserScheme as addManualUserSchemeApi,
+  updateUserSchemeDetails as updateUserSchemeDetailsApi,
   updateUserSchemeLedger as updateUserSchemeLedgerApi,
   getAdminUserNominees,
   addAdminUserNominee,
@@ -66,6 +67,11 @@ export async function rejectUserScheme(userSchemeId) {
 export async function addManualUserScheme(payload) {
   const response = await addManualUserSchemeApi(payload);
   allRounderMessagetopend(response);
+  return response.status === "success";
+}
+export async function updateUserSchemeDetails(userSchemeId, payload) {
+  const response = await updateUserSchemeDetailsApi(userSchemeId, payload);
+  allRounderMessage(response);
   return response.status === "success";
 }
 export async function createManualUser(payload) {

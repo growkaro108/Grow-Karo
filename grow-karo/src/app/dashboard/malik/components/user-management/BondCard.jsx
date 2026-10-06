@@ -4,6 +4,7 @@ import {
   FileText,
   Landmark,
   Loader2,
+  Pen,
   RotateCcwKeyIcon,
   X,
 } from "lucide-react";
@@ -66,6 +67,14 @@ export default function BondCard({
   savingBond,
   setSavingBond,
   viewUser,
+  editingScheme,
+  schemeEditForm,
+  nominees,
+  onStartEditingScheme,
+  onCancelEditingScheme,
+  onSchemeEditFieldChange,
+  onSaveSchemeDetails,
+  savingSchemeDetails,
 }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -162,7 +171,7 @@ export default function BondCard({
       </div>
       {/* hide if scheme is not approved */}
       {isApproved && (
-        <div className="flex gap-2 border-t border-slate-800/70 px-4 py-2.5">
+        <div className="flex flex-wrap gap-2 border-t border-slate-800/70 px-4 py-2.5">
           <PanelToggle
             open={historyOpen}
             onClick={() => setHistoryOpen((v) => !v)}
@@ -175,6 +184,97 @@ export default function BondCard({
           >
             {!bond.bondUrl ? "Add Bond" : "Update Bond"}
           </PanelToggle>
+          <PanelToggle
+            open={editingScheme}
+            onClick={() => {
+              if (!editingScheme) onStartEditingScheme();
+              else onCancelEditingScheme();
+            }}
+          >
+            Edit <Pen className="h-3.5 w-3.5" />
+          </PanelToggle>
+        </div>
+      )}
+      {editingScheme && (
+        <div className="space-y-3 border-t border-slate-800/70 bg-slate-950/40 px-4 py-3.5">
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs text-slate-400">
+              Invested amount
+              <input
+                aria-label="Invested amount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={schemeEditForm.paidAmount ?? ""}
+                onChange={(event) =>
+                  onSchemeEditFieldChange("paidAmount", event.target.value)
+                }
+                className={inputClass}
+              />
+            </label>
+            <label className="text-xs text-slate-400">
+              Enrollment / paid date
+              <input
+                aria-label="Enrollment / paid date"
+                type="date"
+                value={schemeEditForm.paidDate ?? ""}
+                onChange={(event) =>
+                  onSchemeEditFieldChange("paidDate", event.target.value)
+                }
+                className={inputClass}
+              />
+            </label>
+          </div>
+          <label className="block text-xs text-slate-400">
+            Maturity date
+            <input
+              aria-label="Maturity date"
+              type="date"
+              value={schemeEditForm.maturityDate ?? ""}
+              onChange={(event) =>
+                onSchemeEditFieldChange("maturityDate", event.target.value)
+              }
+              min={schemeEditForm.paidDate || undefined}
+              className={inputClass}
+            />
+          </label>
+          <label className="block text-xs text-slate-400">
+            Nominee
+            <select
+              aria-label="Nominee"
+              value={schemeEditForm.nomineeId ?? ""}
+              onChange={(event) =>
+                onSchemeEditFieldChange("nomineeId", event.target.value)
+              }
+              className={inputClass}
+              required
+            >
+              <option value="">Select a nominee</option>
+              {nominees.map((nominee) => (
+                <option key={nominee.nomineeId} value={nominee.nomineeId}>
+                  {nominee.name} ({nominee.relation})
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onCancelEditingScheme}
+              disabled={savingSchemeDetails}
+              className="flex-1 rounded-md border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-900 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onSaveSchemeDetails}
+              disabled={savingSchemeDetails}
+              className="flex-1 rounded-md bg-teal-400 px-3 py-2 text-xs font-semibold text-slate-950 disabled:opacity-50"
+            >
+              {savingSchemeDetails ? "Saving..." : "Save scheme"}
+            </button>
+          </div>
         </div>
       )}
       {historyOpen && (

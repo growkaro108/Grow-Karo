@@ -26,6 +26,7 @@ import com.growkaro.backend.DRO.AddRemitter;
 import com.growkaro.backend.DRO.ApproveUserScheme;
 import com.growkaro.backend.DRO.ManualUserScheme;
 import com.growkaro.backend.DRO.NewNominee;
+import com.growkaro.backend.DRO.UserSchemeDetailsUpdateRequest;
 import com.growkaro.backend.DRO.UserSchemeLedgerUpdateRequest;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DRO.RemitterCredentials;
@@ -187,6 +188,13 @@ public class AdminAPIController {
             @PathVariable String userSchemeId,
             @RequestBody UserSchemeLedgerUpdateRequest request) {
         return ResponseEntity.ok(adminAPIService.updateUserSchemeLedger(userSchemeId, request));
+    }
+
+    @PutMapping("/user-scheme/{userSchemeId}/details")
+    public ResponseEntity<Map<String, Object>> updateUserSchemeDetails(
+            @PathVariable String userSchemeId,
+            @RequestBody UserSchemeDetailsUpdateRequest request) {
+        return ResponseEntity.ok(adminAPIService.updateUserSchemeDetails(userSchemeId, request));
     }
 
     @PutMapping("/user-scheme/approve")

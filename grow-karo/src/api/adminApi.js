@@ -58,6 +58,12 @@ export async function addManualUserScheme(payload) {
     body: payload,
   });
 }
+export async function updateUserSchemeDetails(userSchemeId, payload) {
+  return await apiRequest(`${END_POINT}user-scheme/${userSchemeId}/details`, {
+    method: "PUT",
+    body: payload,
+  });
+}
 export async function updateUserSchemeLedger(userSchemeId, payload) {
   return await apiRequest(`${END_POINT}user-scheme/${userSchemeId}/ledger`, {
     method: "PUT",

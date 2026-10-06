@@ -12,6 +12,56 @@ export const dateFmt = (d) =>
     year: "numeric",
   });
 
+export const toDateInputValue = (value) => {
+  if (!value) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+  const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(value);
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : "";
+};
+
+export const calculateMaturityDate = (startDate, tenure) => {
+  if (!startDate || !Number.isFinite(Number(tenure)) || Number(tenure) <= 0) {
+    return "";
+  }
+
+  const [year, month, day] = startDate.split("-").map(Number);
+  if (!year || !month || !day) return "";
+
+  const addMonths = (months) => {
+    const firstOfMonth = new Date(Date.UTC(year, month - 1 + months, 1));
+    const lastDay = new Date(
+      Date.UTC(
+        firstOfMonth.getUTCFullYear(),
+        firstOfMonth.getUTCMonth() + 1,
+        0,
+      ),
+    ).getUTCDate();
+    firstOfMonth.setUTCDate(Math.min(day, lastDay));
+    return firstOfMonth;
+  };
+
+  let maturity;
+  const days = Number(tenure);
+  if (days === 730 || days === 731) {
+    maturity = addMonths(24);
+  } else if (days === 365 || days === 366) {
+    maturity = addMonths(12);
+  } else if (days >= 180 && days <= 183) {
+    maturity = addMonths(6);
+  } else if (days === 90) {
+    maturity = addMonths(3);
+  } else {
+    maturity = new Date(Date.UTC(year, month - 1, day + days));
+  }
+
+  return [
+    maturity.getUTCFullYear(),
+    String(maturity.getUTCMonth() + 1).padStart(2, "0"),
+    String(maturity.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+};
+
 export const initials = (name) =>
   name
     .split(" ")

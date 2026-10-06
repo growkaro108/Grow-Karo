@@ -62,6 +62,7 @@ import com.growkaro.backend.DRO.AddRemitter;
 import com.growkaro.backend.DRO.ManualUserScheme;
 import com.growkaro.backend.DRO.NewNominee;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
+import com.growkaro.backend.DRO.UserSchemeDetailsUpdateRequest;
 import com.growkaro.backend.DRO.UserSchemeLedgerUpdateRequest;
 import com.growkaro.backend.DRO.UserSchemeProfitLedgerRequest;
 import com.growkaro.backend.DRO.UserSchemeReedemLedgerRequest;
@@ -273,7 +274,8 @@ public class AdminAPIService {
                 || request.schemeId() == null || request.schemeId().isBlank()
                 || request.nomineeId() == null || request.nomineeId().isBlank()
                 || request.paidAmount() == null || request.paidAmount().signum() <= 0
-                || request.paidDate() == null || request.profitLedger() == null || request.reedemLedger() == null) {
+                || request.paidDate() == null || request.profitLedger() == null || request.reedemLedger() == null
+                || (request.maturityDate() != null && request.maturityDate().isBefore(request.paidDate()))) {
             return general.response("error", "Invalid scheme details", null);
         }
 
@@ -310,7 +312,9 @@ public class AdminAPIService {
             userScheme.setNextPayoutDate(general.calculateNextPayoutDate(
                     enrollmentDate, scheme.getPayoutFrequency(), scheme.getTenure()));
 
-            LocalDate maturityDate = general.calculateMaturityDate(enrollmentDate, scheme.getTenure());
+            LocalDate maturityDate = request.maturityDate() == null
+                    ? general.calculateMaturityDate(enrollmentDate, scheme.getTenure())
+                    : request.maturityDate();
             userScheme.setMaturityDate(maturityDate);
 
             if (maturityDate.isEqual(today)) {
@@ -381,6 +385,69 @@ public class AdminAPIService {
         } catch (IllegalArgumentException e) {
             return general.response("error", e.getMessage(), null);
         }
+    }
+
+    @CacheEvict(value = "userPortfolio", key = "#userSchemeId")
+    @Transactional
+    public Map<String, Object> updateUserSchemeDetails(
+            String userSchemeId,
+            UserSchemeDetailsUpdateRequest request) {
+
+        if (userSchemeId == null || userSchemeId.isBlank() || request == null
+                || request.paidAmount() == null || request.paidAmount().signum() <= 0
+                || request.paidDate() == null || request.maturityDate() == null
+                || request.maturityDate().isBefore(request.paidDate())
+                || request.nomineeId() == null || request.nomineeId().isBlank()|| request.schemeId() == null || request.schemeId().isBlank()|| !general.isValidSchemeId(request.schemeId())) {
+            return general.response("error", "Invalid scheme details", null);
+        }
+
+        UserScheme userScheme = userSchemeRepository.findByUserSchemeId(userSchemeId).orElse(null);
+        if (userScheme == null) {
+            return general.response("error", "User scheme not found", null);
+        }
+
+        var nominee = userScheme.getUser().getNominees().stream()
+                .filter(item -> request.nomineeId().equals(item.getNomineeId()))
+                .findFirst().orElse(null);
+        if (nominee == null) {
+            return general.response("error", "Nominee does not belong to this user", null);
+        }
+
+        LocalDateTime enrollmentDate = LocalDateTime.of(
+                request.paidDate(),
+                userScheme.getEnrollmentDate() == null
+                        ? LocalTime.now(IST)
+                        : userScheme.getEnrollmentDate().toLocalTime());
+       
+        LocalDate maturityDate = request.maturityDate();
+        LocalDate today = general.getCurrentDate();
+        String existingSchemeId = userScheme.getScheme().getSchemeId();
+        if(!existingSchemeId.equals(request.schemeId())){
+            Scheme newScheme = schemeRepository.findById(request.schemeId()).orElse(null);
+            if(newScheme == null){
+                return general.response("error", "New scheme not found", null);
+            }
+            userScheme.setScheme(newScheme);
+        }
+
+        userScheme.setPaidAmount(request.paidAmount());
+        userScheme.setPaidDate(request.paidDate());
+        userScheme.setEnrollmentDate(enrollmentDate);
+        userScheme.setNominee(nominee);
+        userScheme.setMaturityDate(maturityDate);
+        userScheme.setNextPayoutDate(general.calculateNextPayoutDate(
+                enrollmentDate, userScheme.getScheme().getPayoutFrequency(), userScheme.getScheme().getTenure()));
+
+        if (maturityDate.isEqual(today)) {
+            userScheme.setStatus(UserSchemeStatus.MATURED);
+        } else if (maturityDate.isBefore(today)) {
+            userScheme.setStatus(UserSchemeStatus.WITHDRAWN);
+        } else {
+            userScheme.setStatus(UserSchemeStatus.ACTIVE);
+        }
+
+        userSchemeRepository.save(userScheme);
+        return general.response("success", "Scheme details updated", null);
     }
 
     private void replaceLedgers(UserScheme userScheme,

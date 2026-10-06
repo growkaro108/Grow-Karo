@@ -1,7 +1,26 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { X, Mail, Phone, Calendar, HandCoins, ChevronDown, CalendarClock, Percent, ArrowUpToLine, ArrowDownToLine, User, Plus } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  X,
+  Mail,
+  Phone,
+  Calendar,
+  HandCoins,
+  ChevronDown,
+  CalendarClock,
+  Percent,
+  ArrowUpToLine,
+  ArrowDownToLine,
+  User,
+  Plus,
+} from "lucide-react";
 import StatusPill from "./StatusPill";
-import { currency, daysToMonths, initials } from "./format";
+import {
+  calculateMaturityDate,
+  currency,
+  daysToMonths,
+  initials,
+  toDateInputValue,
+} from "./format";
 import dynamic from "next/dynamic";
 import TabLoader from "@/loader/TabLoader";
 import { getAllPlans } from "@/api/generalApi";
@@ -12,6 +31,7 @@ import {
   createAdminUserNominee,
   fetchAdminUserNominees,
   getUserProfile,
+  updateUserSchemeDetails,
   updateUserSchemeLedger,
 } from "../../../../../../services/malikService";
 
@@ -27,66 +47,242 @@ const BondCard = dynamic(() => import("./BondCard"), {
 const inputClass =
   "w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-teal-500 [color-scheme:dark]";
 
+/* ------------------------------------------------------------------ */
+/* Ledger config: one description for both profit and redeem ledgers   */
+/* ------------------------------------------------------------------ */
+const LEDGER = {
+  profit: {
+    key: "profitLedger",
+    amount: "profitAmount",
+    date: "profitDate",
+    blank: () => ({ profitAmount: "", profitDate: "" }),
+    blankExisting: () => ({ profitAmount: "0", profitDate: "" }),
+  },
+  redeem: {
+    key: "reedemLedger",
+    amount: "redeemAmount",
+    date: "redeemDate",
+    blank: () => ({ redeemAmount: "0", redeemDate: "" }),
+    blankExisting: () => ({ redeemAmount: "0", redeemDate: "" }),
+  },
+};
+
+const emptyForm = (schemeId = "") => ({
+  schemeId,
+  nomineeId: "",
+  paidAmount: "",
+  paidDate: "",
+  maturityDate: "",
+  profitLedger: [LEDGER.profit.blank()],
+  reedemLedger: [LEDGER.redeem.blank()],
+});
+
+const emptyNominee = { name: "", relation: "", aadhaarNo: "", phone: "" };
+
+// Convert ledger rows from the form into the API shape. Rows with no date and
+// no amount are dropped; ids are kept so existing rows are updated, not duplicated.
+const normalizeLedgerEntries = (entries, type) => {
+  const { amount, date } = LEDGER[type];
+  return (entries ?? []).reduce((acc, entry) => {
+    if (!entry) return acc;
+    const rawAmount = entry[amount];
+    const rawDate = entry[date];
+    const value =
+      rawAmount === "" || rawAmount == null ? 0 : Number(rawAmount);
+    const hasAmount = Number.isFinite(value) && value > 0;
+    if (!rawDate && !hasAmount) return acc;
+    acc.push({
+      ...(entry.id ? { id: entry.id } : {}),
+      [amount]: Number.isFinite(value) ? value : 0,
+      [date]: rawDate || null,
+    });
+    return acc;
+  }, []);
+};
+
+// Ledger rows -> editable form rows
+const toFormLedger = (entries, type) => {
+  const { amount, date, blank } = LEDGER[type];
+  if (!entries?.length) return [blank()];
+  return entries.map((entry) => ({
+    id: entry.id,
+    [amount]: entry[amount] ?? "0",
+    [date]: toDateInputValue(entry[date]),
+  }));
+};
+
+/* ------------------------------------------------------------------ */
+/* Small presentational pieces                                         */
+/* ------------------------------------------------------------------ */
+function SchemeSummary({ scheme }) {
+  return (
+    <div className="grid grid-cols-2 items-center gap-x-6 gap-y-3 rounded-xl border border-slate-800 bg-slate-900/60 px-5 py-3.5">
+      <div className="flex items-center gap-2">
+        <ArrowDownToLine className="h-4 w-4 text-slate-500" />
+        <span className="text-[13px] text-slate-500">Min</span>
+        <span className="text-[15px] font-medium text-slate-100">
+          {currency(scheme.minimumAmount) ?? "0"}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <ArrowUpToLine className="h-4 w-4 text-slate-500" />
+        <span className="text-[13px] text-slate-500">Max</span>
+        <span className="text-[15px] font-medium text-slate-100">
+          {currency(scheme.maximumAmount) ?? "0"}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Percent className="h-4 w-4 text-emerald-500" />
+        <span className="text-[13px] text-slate-500">Interest</span>
+        <span className="text-[15px] font-semibold text-emerald-400">
+          {scheme.profitPercentage ?? "0"}%
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <CalendarClock className="h-4 w-4 text-slate-500" />
+        <span className="text-[13px] text-slate-500">Tenure</span>
+        <span className="text-[14px] font-medium text-slate-100">
+          {daysToMonths(scheme.tenure) ?? "0 days"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function LedgerRows({ type, rows, onChange, onAdd }) {
+  const { amount, date } = LEDGER[type];
+  const isProfit = type === "profit";
+  return (
+    <>
+      {rows.map((entry, index) => (
+        <div
+          key={entry.id ?? index}
+          className="grid grid-cols-2 gap-2 rounded-md border border-slate-800 p-2"
+        >
+          <input
+            aria-label={isProfit ? "Profit amount" : "Redeem amount"}
+            type="number"
+            min={isProfit ? "100" : "0"}
+            step={isProfit ? "100" : "0.01"}
+            placeholder={isProfit ? "Profit amount" : "Redeem amount"}
+            value={entry[amount]}
+            onChange={(e) => onChange(index, amount, e.target.value)}
+            className={inputClass}
+          />
+          <input
+            aria-label={isProfit ? "Profit date" : "Redeem date"}
+            type="date"
+            value={entry[date]}
+            onChange={(e) => onChange(index, date, e.target.value)}
+            className={inputClass}
+          />
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={onAdd}
+        className="text-xs font-medium text-teal-300 hover:text-teal-200"
+      >
+        + Add {isProfit ? "profit" : "redeem"} row
+      </button>
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Main component                                                      */
+/* ------------------------------------------------------------------ */
 export default function UserDrawer({ user, onClose, onSaved }) {
   const [viewingBond, setViewingBond] = useState(null);
   const [viewUserDetails, setViewUserDetails] = useState(null);
   const [schemes, setSchemes] = useState([]);
-  const [saving, setSaving] = useState(false);
-  const [addFormOpen, setAddFormOpen] = useState(false);
-  const [form, setForm] = useState({
-    schemeId: "",
-    nomineeId: "",
-    paidAmount: "",
-    paidDate: "",
-    profitLedger: [{ profitAmount: "", profitDate: "" }],
-    reedemLedger: [{ redeemAmount: "0", redeemDate: "" }],
-  });
-  const [bondForms, setBondForms] = useState({});
-  const [ledgerEdits, setLedgerEdits] = useState({});
   const [nominees, setNominees] = useState([]);
+
+  // Shared add / edit form. editingBond === null  -> add mode
+  const [form, setForm] = useState(emptyForm);
+  const [addFormOpen, setAddFormOpen] = useState(false);
+  const [editingBond, setEditingBond] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const [nomineeForm, setNomineeForm] = useState(emptyNominee);
   const [nomineeFormOpen, setNomineeFormOpen] = useState(false);
   const [nomineeSaving, setNomineeSaving] = useState(false);
-  const [nomineeForm, setNomineeForm] = useState({
-    name: "",
-    relation: "",
-    aadhaarNo: "",
-    phone: "",
-  });
-  const [savingBond, setSavingBond] = useState(false)
+
+  // Per-bond state used by BondCard (quick ledger edit + certificate upload)
+  const [ledgerEdits, setLedgerEdits] = useState({});
+  const [bondForms, setBondForms] = useState({});
+  const [savingBond, setSavingBond] = useState(false);
+
+  const formTopRef = useRef(null);
+
+  const currentUserId = user?.userId || user?.id;
+  const isEditing = Boolean(editingBond);
+
+  /* ---------------------------- data loading ---------------------------- */
   useEffect(() => {
+    let cancelled = false;
     getAllPlans()
-      .then((response) => setSchemes(response?.data ?? []))
-      .catch(() => setSchemes([]));
+      .then((response) => {
+        if (cancelled) return;
+        const available = response?.data ?? [];
+        setSchemes(available);
+        setForm((current) => {
+          const first = available[0];
+          if (current.schemeId || !first?.schemeId) return current;
+          return {
+            ...current,
+            schemeId: first.schemeId,
+            maturityDate: calculateMaturityDate(current.paidDate, first.tenure),
+          };
+        });
+      })
+      .catch(() => !cancelled && setSchemes([]));
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    if (!form.schemeId && schemes[0]?.schemeId) {
-      setForm((current) => ({ ...current, schemeId: schemes[0].schemeId }));
-    }
-  }, [form.schemeId, schemes]);
-
-  useEffect(() => {
     if (!user?.userId) return;
+    let cancelled = false;
     fetchAdminUserNominees(user.userId)
-      .then(setNominees)
-      .catch(() => setNominees([]));
+      .then((list) => !cancelled && setNominees(list))
+      .catch(() => !cancelled && setNominees([]));
+    return () => {
+      cancelled = true;
+    };
   }, [user?.userId]);
 
+  const getUserFullDetails = useCallback(async (id) => {
+    if (!id) return;
+    try {
+      const details = await getUserProfile(id);
+      if (details) setViewUserDetails(details);
+    } catch (e) {
+      console.error("Error fetching user details", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    getUserFullDetails(currentUserId);
+  }, [currentUserId, getUserFullDetails]);
+
+  // Rebuild per-bond ledger edits whenever fresh user data arrives
   useEffect(() => {
     setLedgerEdits(
       Object.fromEntries(
         (user?.enrolledSchemes ?? []).map((bond) => [
           bond.userSchemeId,
           {
-            profitLedger: (bond.profitLedger ?? []).map((entry) => ({
-              id: entry.id,
-              profitAmount: entry.profitAmount ?? "0",
-              profitDate: entry.profitDate ?? "",
+            profitLedger: (bond.profitLedger ?? []).map((e) => ({
+              id: e.id,
+              profitAmount: e.profitAmount ?? "0",
+              profitDate: e.profitDate ?? "",
             })),
-            reedemLedger: (bond.reedemLedger ?? []).map((entry) => ({
-              id: entry.id,
-              redeemAmount: entry.redeemAmount ?? "0",
-              redeemDate: entry.redeemDate ?? "",
+            reedemLedger: (bond.reedemLedger ?? []).map((e) => ({
+              id: e.id,
+              redeemAmount: e.redeemAmount ?? "0",
+              redeemDate: e.redeemDate ?? "",
             })),
           },
         ]),
@@ -94,20 +290,18 @@ export default function UserDrawer({ user, onClose, onSaved }) {
     );
   }, [user]);
 
-  const currentUserId = user?.userId || user?.id;
-
-  useEffect(() => {
-    if (!currentUserId) return;
-    getUserFullDetails(currentUserId);
-  }, [currentUserId]);
-  // Bonds without a certificate image first, then newest first.
-  const sortedBonds = useMemo(() => {
-    return [...(user?.enrolledSchemes ?? [])].sort((a, b) => {
-      if (a.bondUrl === null && b.bondUrl !== null) return -1;
-      if (a.bondUrl !== null && b.bondUrl === null) return 1;
-      return b.id - a.id;
-    });
-  }, [user]);
+  /* ------------------------------ derived ------------------------------ */
+  // Bonds without a certificate first, then newest first.
+  const sortedBonds = useMemo(
+    () =>
+      [...(user?.enrolledSchemes ?? [])].sort((a, b) => {
+        const aNone = a.bondUrl == null;
+        const bNone = b.bondUrl == null;
+        if (aNone !== bNone) return aNone ? -1 : 1;
+        return b.id - a.id;
+      }),
+    [user],
+  );
 
   const totalPrincipal = useMemo(
     () =>
@@ -118,134 +312,191 @@ export default function UserDrawer({ user, onClose, onSaved }) {
     [user],
   );
 
+  const selectedScheme = useMemo(
+    () => schemes.find((s) => s.schemeId === form.schemeId),
+    [schemes, form.schemeId],
+  );
+
   if (!user) return null;
 
-  const selectedScheme = schemes.find(
-    (scheme) => scheme.schemeId === form.schemeId,
-  );
+  /* ------------------------- add / edit form logic ------------------------- */
+  const resetForm = () => {
+    setForm(emptyForm(schemes[0]?.schemeId ?? ""));
+    setEditingBond(null);
+    setAddFormOpen(false);
+  };
+
+  const updateForm = (event) => {
+    const { name, value } = event.target;
+    setForm((current) => {
+      const updated = { ...current, [name]: value };
+      if (name === "paidDate" || name === "schemeId") {
+        const scheme = schemes.find((s) => s.schemeId === updated.schemeId);
+        updated.maturityDate = calculateMaturityDate(
+          updated.paidDate,
+          scheme?.tenure,
+        );
+      }
+      return updated;
+    });
+  };
+
+  const updateFormLedger = (type) => (index, field, value) =>
+    setForm((current) => ({
+      ...current,
+      [LEDGER[type].key]: current[LEDGER[type].key].map((entry, i) =>
+        i === index ? { ...entry, [field]: value } : entry,
+      ),
+    }));
+
+  const addFormLedgerRow = (type) => () =>
+    setForm((current) => ({
+      ...current,
+      [LEDGER[type].key]: [
+        ...current[LEDGER[type].key],
+        LEDGER[type].blank(),
+      ],
+    }));
+
+  // Edit button on a bond: load it into the shared form
+  const startEditingScheme = (bond) => {
+    const matched =
+      schemes.find((s) => s.schemeId === bond.schemeId) ??
+      schemes.find((s) => s.schemeName === bond.schemeName);
+
+    setEditingBond(bond);
+    setForm({
+      schemeId: matched?.schemeId ?? "",
+      nomineeId: bond.nominee?.nomineeId ?? "",
+      paidAmount: String(bond.paidAmount ?? ""),
+      paidDate: toDateInputValue(bond.paidDate),
+      maturityDate: toDateInputValue(bond.maturityDate),
+      profitLedger: toFormLedger(bond.profitLedger, "profit"),
+      reedemLedger: toFormLedger(bond.reedemLedger, "redeem"),
+    });
+    setAddFormOpen(true);
+    setTimeout(
+      () =>
+        formTopRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        }),
+      50,
+    );
+  };
+
+  const validateForm = () => {
+    if (!form.schemeId) return "Please select a scheme first.";
+    if (!form.nomineeId)
+      return "Please add or select a nominee before saving the scheme.";
+    if (!form.paidAmount || Number(form.paidAmount) <= 0)
+      return "Paid amount must be greater than zero.";
+    if (!form.paidDate) return "Please choose a valid paid date.";
+    if (!form.maturityDate) return "Please choose a valid maturity date.";
+    return null;
+  };
+
+  const saveScheme = async (event) => {
+    event.preventDefault();
+    const problem = validateForm();
+    if (problem) {
+      errorMessage(problem);
+      return;
+    }
+
+    setSaving(true);
+    const base = {
+      schemeId: form.schemeId,
+      nomineeId: form.nomineeId,
+      paidAmount: Number(form.paidAmount),
+      paidDate: form.paidDate,
+      maturityDate: form.maturityDate,
+    };
+    const ledgers = {
+      profitLedger: normalizeLedgerEntries(form.profitLedger, "profit"),
+      reedemLedger: normalizeLedgerEntries(form.reedemLedger, "redeem"),
+    };
+
+    try {
+      let saved;
+      if (isEditing) {
+        const id = editingBond.userSchemeId;
+        saved = await updateUserSchemeDetails(id, base);
+        if (saved) saved = await updateUserSchemeLedger(id, ledgers);
+      } else {
+        saved = await addManualUserScheme({
+          userId: user.userId,
+          ...base,
+          ...ledgers,
+        });
+      }
+      if (saved) {
+        resetForm();
+        await onSaved?.();
+      }
+    } catch (error) {
+      errorMessage(error?.message || "Failed to save scheme");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /* ------------------------------- nominee ------------------------------- */
   const updateNomineeForm = (event) =>
     setNomineeForm((current) => ({
       ...current,
       [event.target.name]: event.target.value,
     }));
 
-  const saveNominee = async (event) => {
-    event.preventDefault();
+  const saveNominee = async () => {
+    const { name, relation, aadhaarNo, phone } = nomineeForm;
+    if (!name.trim() || !relation.trim() || !aadhaarNo || !phone) {
+      errorMessage("Please fill all nominee details.");
+      return;
+    }
     setNomineeSaving(true);
-    const nominee = await createAdminUserNominee(user.userId, nomineeForm);
-    setNomineeSaving(false);
-    if (nominee) {
-      setNominees((current) => [...current, nominee]);
-      setForm((current) => ({ ...current, nomineeId: nominee.nomineeId }));
-      setNomineeForm({ name: "", relation: "", aadhaarNo: "", phone: "" });
-      setNomineeFormOpen(false);
-    }
-  };
-
-  const updateForm = (event) =>
-    setForm((current) => ({
-      ...current,
-      [event.target.name]: event.target.value,
-    }));
-
-  const normalizeLedgerEntries = (entries = [], type = "profit") => {
-    return (entries ?? []).reduce((acc, entry) => {
-      if (!entry) return acc;
-      const rawAmount =
-        type === "profit" ? entry.profitAmount : entry.redeemAmount;
-      const rawDate = type === "profit" ? entry.profitDate : entry.redeemDate;
-      const cleanedValue =
-        rawAmount === "" || rawAmount === null || rawAmount === undefined
-          ? 0
-          : Number(rawAmount);
-
-      if (
-        (rawDate && !Number.isNaN(cleanedValue) && cleanedValue >= 0) ||
-        (rawAmount !== "" && rawAmount !== null && rawAmount !== undefined)
-      ) {
-        acc.push(
-          type === "profit"
-            ? {
-              profitAmount: Number.isFinite(cleanedValue) ? cleanedValue : 0,
-              profitDate: rawDate || null,
-            }
-            : {
-              redeemAmount: Number.isFinite(cleanedValue) ? cleanedValue : 0,
-              redeemDate: rawDate || null,
-            },
-        );
-      }
-      return acc;
-    }, []);
-  };
-
-  const saveScheme = async (event) => {
-    event.preventDefault();
-
-    if (!form.schemeId) {
-      errorMessage("Please select a scheme first.");
-      return;
-    }
-    if (!form.nomineeId) {
-      errorMessage("Please add or select a nominee before adding a scheme.");
-      return;
-    }
-    if (!form.paidAmount || Number(form.paidAmount) <= 0) {
-      errorMessage("Paid amount must be greater than zero.");
-      return;
-    }
-    if (!form.paidDate) {
-      errorMessage("Please choose a valid paid date.");
-      return;
-    }
-
-    setSaving(true);
-    const payload = {
-      userId: user.userId,
-      schemeId: form.schemeId,
-      nomineeId: form.nomineeId,
-      paidAmount: Number(form.paidAmount),
-      paidDate: form.paidDate,
-      profitLedger: normalizeLedgerEntries(form.profitLedger, "profit"),
-      reedemLedger: normalizeLedgerEntries(form.reedemLedger, "redeem"),
-    };
     try {
-      const saved = await addManualUserScheme(payload);
-      if (saved) {
-        setForm((current) => ({
-          ...current,
-          paidAmount: "",
-          paidDate: "",
-          profitLedger: [{ profitAmount: "", profitDate: "" }],
-          reedemLedger: [{ redeemAmount: "0", redeemDate: "" }],
-        }));
-        setAddFormOpen(false);
-        await onSaved?.();
-
+      const nominee = await createAdminUserNominee(user.userId, nomineeForm);
+      if (nominee) {
+        setNominees((current) => [...current, nominee]);
+        setForm((current) => ({ ...current, nomineeId: nominee.nomineeId }));
+        setNomineeForm(emptyNominee);
+        setNomineeFormOpen(false);
       }
-    } catch (error) {
-      errorMessage(error?.message || "Failed to add scheme to user");
     } finally {
-      setSaving(false);
+      setNomineeSaving(false);
     }
   };
 
-  const updateProfitEntry = (index, field, value) => {
-    setForm((current) => ({
-      ...current,
-      profitLedger: current.profitLedger.map((entry, entryIndex) =>
-        entryIndex === index ? { ...entry, [field]: value } : entry,
-      ),
-    }));
-  };
-  const updateReedemEntry = (index, field, value) => {
-    setForm((current) => ({
-      ...current,
-      reedemLedger: current.reedemLedger.map((entry, entryIndex) =>
-        entryIndex === index ? { ...entry, [field]: value } : entry,
-      ),
-    }));
-  };
+  /* ---------------- quick ledger edit on existing BondCards ---------------- */
+  const updateExistingLedger = (userSchemeId, type, index, field, value) =>
+    setLedgerEdits((current) => {
+      const key = LEDGER[type].key;
+      return {
+        ...current,
+        [userSchemeId]: {
+          ...current[userSchemeId],
+          [key]: (current[userSchemeId]?.[key] ?? []).map((entry, i) =>
+            i === index ? { ...entry, [field]: value } : entry,
+          ),
+        },
+      };
+    });
+
+  const addExistingLedgerRow = (userSchemeId, type) =>
+    setLedgerEdits((current) => {
+      const key = LEDGER[type].key;
+      return {
+        ...current,
+        [userSchemeId]: {
+          ...current[userSchemeId],
+          [key]: [
+            ...(current[userSchemeId]?.[key] ?? []),
+            LEDGER[type].blankExisting(),
+          ],
+        },
+      };
+    });
 
   const saveLedger = async (userSchemeId) => {
     const saved = await updateUserSchemeLedger(
@@ -255,62 +506,12 @@ export default function UserDrawer({ user, onClose, onSaved }) {
     if (saved) await onSaved?.();
   };
 
-  const addExistingProfitRow = (userSchemeId) => {
-    setLedgerEdits((current) => ({
-      ...current,
-      [userSchemeId]: {
-        ...current[userSchemeId],
-        profitLedger: [
-          ...(current[userSchemeId]?.profitLedger ?? []),
-          { profitAmount: "0", profitDate: "" },
-        ],
-      },
-    }));
-  };
-  const addExistingReedemRow = (userSchemeId) => {
-    setLedgerEdits((current) => ({
-      ...current,
-      [userSchemeId]: {
-        ...current[userSchemeId],
-        reedemLedger: [
-          ...(current[userSchemeId]?.reedemLedger ?? []),
-          { redeemAmount: "0", redeemDate: "" },
-        ],
-      },
-    }));
-  };
-
-  const updateExistingProfit = (userSchemeId, index, field, value) => {
-    setLedgerEdits((current) => ({
-      ...current,
-      [userSchemeId]: {
-        ...current[userSchemeId],
-        profitLedger: (current[userSchemeId]?.profitLedger ?? []).map(
-          (entry, entryIndex) =>
-            entryIndex === index ? { ...entry, [field]: value } : entry,
-        ),
-      },
-    }));
-  };
-  const updateExistingReedem = (userSchemeId, index, field, value) => {
-    setLedgerEdits((current) => ({
-      ...current,
-      [userSchemeId]: {
-        ...current[userSchemeId],
-        reedemLedger: (current[userSchemeId]?.reedemLedger ?? []).map(
-          (entry, entryIndex) =>
-            entryIndex === index ? { ...entry, [field]: value } : entry,
-        ),
-      },
-    }));
-  };
-
-  const updateBondForm = (userSchemeId, field, value) => {
+  /* ------------------------------ bond upload ------------------------------ */
+  const updateBondForm = (userSchemeId, field, value) =>
     setBondForms((current) => ({
       ...current,
       [userSchemeId]: { ...current[userSchemeId], [field]: value },
     }));
-  };
 
   const updateBond = async (bond) => {
     const details = bondForms[bond.userSchemeId] ?? {};
@@ -331,27 +532,13 @@ export default function UserDrawer({ user, onClose, onSaved }) {
     }
   };
 
-
-  const getUserFullDetails = async (id) => {
-    if (!id) return;
-    try {
-      const userDetails = await getUserProfile(id);
-      if (userDetails) {
-        setViewUserDetails(userDetails);
-      }
-    } catch (e) {
-      console.error("Error fetching user details", e);
-    }
-  };
-
   const onViewBond = async (bond) => {
     setViewingBond(bond);
-    if (!viewUserDetails && currentUserId) {
-      await getUserFullDetails(currentUserId);
-    }
+    if (!viewUserDetails) await getUserFullDetails(currentUserId);
   };
 
-
+  /* --------------------------------- render --------------------------------- */
+  const showLedgers = selectedScheme?.payoutFrequency !== "tenure-complete";
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -413,21 +600,38 @@ export default function UserDrawer({ user, onClose, onSaved }) {
             </div>
           </div>
 
-          {/* Add scheme manually — collapsed by default to keep the drawer scannable */}
-          <div className="mb-7 overflow-hidden rounded-xl border border-teal-900/70 bg-teal-950/20">
+          {/* Add / Edit scheme — one shared form */}
+          <div
+            ref={formTopRef}
+            className={`mb-7 overflow-hidden rounded-xl border ${
+              isEditing
+                ? "border-amber-700/70 bg-amber-950/10"
+                : "border-teal-900/70 bg-teal-950/20"
+            }`}
+          >
             <button
               type="button"
               onClick={() => setAddFormOpen((v) => !v)}
               className="flex w-full items-center justify-between px-4 py-3.5 text-left"
             >
-              <span className="flex items-center font-[Space_Grotesk] text-sm font-semibold text-teal-300">
-                <Plus className="h-5 w-5 mr-0.5" /> Add scheme manually
+              <span
+                className={`flex items-center font-[Space_Grotesk] text-sm font-semibold ${
+                  isEditing ? "text-amber-300" : "text-teal-300"
+                }`}
+              >
+                <Plus className="mr-0.5 h-5 w-5" />
+                {isEditing
+                  ? `Edit scheme${
+                      editingBond.schemeName ? `: ${editingBond.schemeName}` : ""
+                    }`
+                  : "Add scheme manually"}
               </span>
               <span className="flex items-center gap-2 text-[10px] text-slate-500">
                 Admin only
                 <ChevronDown
-                  className={`h-3.5 w-3.5 text-teal-300 transition-transform ${addFormOpen ? "rotate-180" : ""
-                    }`}
+                  className={`h-3.5 w-3.5 text-teal-300 transition-transform ${
+                    addFormOpen ? "rotate-180" : ""
+                  }`}
                 />
               </span>
             </button>
@@ -455,49 +659,7 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                   </select>
                 </label>
 
-                {selectedScheme && (
-                  // <p className="rounded-md bg-slate-900/70 p-2 text-xs leading-5 text-slate-400">
-                  //   {selectedScheme.schemeDetails}
-                  // </p> 
-                  //show four thing 1)scheme min amount 2)scheme max amount 3) scheme interest rate 4) tenure
-
-                  <div className="grid grid-cols-2 items-center gap-x-6 gap-y-3 rounded-xl border border-slate-800 bg-slate-900/60 px-5 py-3.5">
-                    <div className="flex items-center gap-2">
-                      <ArrowDownToLine className="h-4 w-4 text-slate-500" />
-                      <span className="text-[13px] text-slate-500">Min</span>
-                      <span className="text-[15px] font-medium text-slate-100">
-                        {currency(selectedScheme.minimumAmount) ?? "0"}
-                      </span>
-                    </div>
-
-
-                    <div className="flex items-center gap-2">
-                      <ArrowUpToLine className="h-4 w-4 text-slate-500" />
-                      <span className="text-[13px] text-slate-500">Max</span>
-                      <span className="text-[15px] font-medium text-slate-100">
-                        {currency(selectedScheme.maximumAmount) ?? "0"}
-                      </span>
-                    </div>
-
-
-                    <div className="flex items-center gap-2">
-                      <Percent className="h-4 w-4 text-emerald-500" />
-                      <span className="text-[13px] text-slate-500">Interest</span>
-                      <span className="text-[15px] font-semibold text-emerald-400">
-                        {selectedScheme.profitPercentage ?? "0"}%
-                      </span>
-                    </div>
-
-
-                    <div className="flex items-center gap-2">
-                      <CalendarClock className="h-4 w-4 text-slate-500" />
-                      <span className="text-[13px] text-slate-500">Tenure</span>
-                      <span className="text-[14px] font-medium text-slate-100">
-                        {daysToMonths(selectedScheme.tenure) ?? "0 days"}
-                      </span>
-                    </div>
-                  </div>
-                )}
+                {selectedScheme && <SchemeSummary scheme={selectedScheme} />}
 
                 <label className="block text-xs text-slate-400">
                   Nominee for this scheme
@@ -521,15 +683,17 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                     ))}
                   </select>
                 </label>
+
                 <button
                   type="button"
-                  onClick={() => setNomineeFormOpen((current) => !current)}
+                  onClick={() => setNomineeFormOpen((v) => !v)}
                   className="text-xs font-medium text-teal-300 hover:text-teal-200"
                 >
                   {nomineeFormOpen
                     ? "Cancel new nominee"
                     : "+ Add nominee to user account"}
                 </button>
+
                 {nomineeFormOpen && (
                   <div className="space-y-2 rounded-md border border-slate-800 bg-slate-950/40 p-3">
                     <input
@@ -537,7 +701,6 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                       value={nomineeForm.name}
                       onChange={updateNomineeForm}
                       placeholder="Nominee name"
-                      required
                       className={inputClass}
                     />
                     <input
@@ -545,7 +708,6 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                       value={nomineeForm.relation}
                       onChange={updateNomineeForm}
                       placeholder="Relation"
-                      required
                       className={inputClass}
                     />
                     <input
@@ -554,10 +716,9 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                       onChange={updateNomineeForm}
                       placeholder="Aadhaar number"
                       type="text"
-                      maxlength="12"
-                      inputmode="numeric"
+                      maxLength="12"
+                      inputMode="numeric"
                       pattern="[0-9]*"
-                      required
                       className={inputClass}
                     />
                     <input
@@ -565,11 +726,10 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                       value={nomineeForm.phone}
                       onChange={updateNomineeForm}
                       type="text"
-                      maxlength="10"
-                      inputmode="numeric"
+                      maxLength="10"
+                      inputMode="numeric"
                       pattern="[0-9]*"
                       placeholder="Phone Number"
-                      required
                       className={inputClass}
                     />
                     <button
@@ -582,7 +742,8 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                     </button>
                   </div>
                 )}
-                {/* invested Amount and Paid date entry Entries */}
+
+                {/* Invested amount, paid date, maturity date */}
                 <div className="grid grid-cols-2 gap-3">
                   <label className="text-xs text-slate-400">
                     Invested amount
@@ -598,7 +759,7 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                     />
                   </label>
                   <label className="text-xs text-slate-400">
-                    Paid date
+                    Enrollment / paid date
                     <input
                       name="paidDate"
                       type="date"
@@ -608,119 +769,43 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                       className={`mt-1 ${inputClass}`}
                     />
                   </label>
+                  <label className="col-span-2 text-xs text-slate-400">
+                    Maturity date
+                    <input
+                      name="maturityDate"
+                      type="date"
+                      value={form.maturityDate}
+                      onChange={updateForm}
+                      min={form.paidDate || undefined}
+                      required
+                      className={`mt-1 ${inputClass}`}
+                    />
+                    <span className="mt-1 block text-[10px] text-slate-500">
+                      Calculated from enrollment date and tenure; editable.
+                    </span>
+                  </label>
                 </div>
 
-                {selectedScheme?.payoutFrequency !== "tenure-complete" && (
+                {showLedgers && (
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs text-slate-400">
-                      <span>Profit and redemption entries</span>
-                    </div>
-                    {form.profitLedger.map((entry, index) => (
-                      <div
-                        key={index}
-                        className="grid grid-cols-2 gap-2 rounded-md border border-slate-800 p-2"
-                      >
-                        <input
-                          aria-label="Profit amount"
-                          type="number"
-                          min="100"
-                          step="100"
-                          placeholder="Profit amount"
-                          value={entry.profitAmount}
-                          onChange={(e) =>
-                            updateProfitEntry(
-                              index,
-                              "profitAmount",
-                              e.target.value,
-                            )
-                          }
-                          className={inputClass}
-                        />
-                        <input
-                          aria-label="Profit date"
-                          type="date"
-                          value={entry.profitDate}
-                          onChange={(e) =>
-                            updateProfitEntry(
-                              index,
-                              "profitDate",
-                              e.target.value,
-                            )
-                          }
-                          className={inputClass}
-                        />
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setForm((current) => ({
-                          ...current,
-                          profitLedger: [
-                            ...current.profitLedger,
-                            { profitAmount: "", profitDate: "" },
-                          ],
-                        }))
-                      }
-                      className="font-medium text-teal-300 hover:text-teal-200"
-                    >
-                      + Add profit row
-                    </button>
+                    <p className="text-xs text-slate-400">
+                      Profit and redemption entries
+                    </p>
+                    <LedgerRows
+                      type="profit"
+                      rows={form.profitLedger}
+                      onChange={updateFormLedger("profit")}
+                      onAdd={addFormLedgerRow("profit")}
+                    />
                     <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
                       Redeem history
                     </p>
-                    {form.reedemLedger.map((entry, index) => (
-                      <div
-                        key={index}
-                        className="grid grid-cols-2 gap-2 rounded-md border border-slate-800 p-2"
-                      >
-                        <input
-                          aria-label="Redeem amount"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="Redeem amount"
-                          value={entry.redeemAmount}
-                          onChange={(e) =>
-                            updateReedemEntry(
-                              index,
-                              "redeemAmount",
-                              e.target.value,
-                            )
-                          }
-                          required
-                          className={inputClass}
-                        />
-                        <input
-                          aria-label="Redeem date"
-                          type="date"
-                          value={entry.redeemDate}
-                          onChange={(e) =>
-                            updateReedemEntry(
-                              index,
-                              "redeemDate",
-                              e.target.value,
-                            )
-                          }
-                          className={inputClass}
-                        />
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setForm((current) => ({
-                          ...current,
-                          reedemLedger: [
-                            ...current.reedemLedger,
-                            { redeemAmount: "0", redeemDate: "" },
-                          ],
-                        }))
-                      }
-                      className="font-medium text-teal-300 hover:text-teal-200"
-                    >
-                      + Add redeem row
-                    </button>
+                    <LedgerRows
+                      type="redeem"
+                      rows={form.reedemLedger}
+                      onChange={updateFormLedger("redeem")}
+                      onAdd={addFormLedgerRow("redeem")}
+                    />
                   </div>
                 )}
 
@@ -729,8 +814,22 @@ export default function UserDrawer({ user, onClose, onSaved }) {
                   disabled={saving || !schemes.length}
                   className="w-full rounded-lg bg-teal-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-teal-300 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {saving ? "Saving..." : "Add scheme to account"}
+                  {saving
+                    ? "Saving..."
+                    : isEditing
+                      ? "Update scheme"
+                      : "Add scheme to account"}
                 </button>
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    disabled={saving}
+                    className="w-full rounded-lg border border-slate-700 px-4 py-2.5 text-sm text-slate-300 transition hover:bg-white/5 disabled:opacity-50"
+                  >
+                    Cancel edit
+                  </button>
+                )}
               </form>
             )}
           </div>
@@ -753,43 +852,44 @@ export default function UserDrawer({ user, onClose, onSaved }) {
             </div>
           ) : (
             <div className="space-y-4">
-              {sortedBonds.map((bond) => (
-                <BondCard
-                  key={bond.userSchemeId}
-                  bond={bond}
-                  user={user}
-                  profitRows={
-                    ledgerEdits[bond.userSchemeId]?.profitLedger ?? []
-                  }
-                  reedemRows={
-                    ledgerEdits[bond.userSchemeId]?.reedemLedger ?? []
-                  }
-                  bondFormState={bondForms[bond.userSchemeId] ?? {}}
-                  onProfitFieldChange={(index, field, value) =>
-                    updateExistingProfit(bond.userSchemeId, index, field, value)
-                  }
-                  onReedemFieldChange={(index, field, value) =>
-                    updateExistingReedem(bond.userSchemeId, index, field, value)
-                  }
-                  onAddProfitRow={() => addExistingProfitRow(bond.userSchemeId)}
-                  onAddReedemRow={() => addExistingReedemRow(bond.userSchemeId)}
-                  onSaveLedgers={() => saveLedger(bond.userSchemeId)}
-                  onBondFormChange={(field, value) =>
-                    updateBondForm(bond.userSchemeId, field, value)
-                  }
-                  onSaveBond={() => updateBond(bond)}
-                  onViewBond={onViewBond}
-                  savingBond={savingBond}
-                  setSavingBond={setSavingBond}
-                  viewUser={viewUserDetails}
-                />
-              ))}
+              {sortedBonds.map((bond) => {
+                const id = bond.userSchemeId;
+                return (
+                  <BondCard
+                    key={id}
+                    bond={bond}
+                    user={user}
+                    profitRows={ledgerEdits[id]?.profitLedger ?? []}
+                    reedemRows={ledgerEdits[id]?.reedemLedger ?? []}
+                    bondFormState={bondForms[id] ?? {}}
+                    onProfitFieldChange={(index, field, value) =>
+                      updateExistingLedger(id, "profit", index, field, value)
+                    }
+                    onReedemFieldChange={(index, field, value) =>
+                      updateExistingLedger(id, "redeem", index, field, value)
+                    }
+                    onAddProfitRow={() => addExistingLedgerRow(id, "profit")}
+                    onAddReedemRow={() => addExistingLedgerRow(id, "redeem")}
+                    onSaveLedgers={() => saveLedger(id)}
+                    nominees={nominees}
+                    onStartEditingScheme={() => startEditingScheme(bond)}
+                    onBondFormChange={(field, value) =>
+                      updateBondForm(id, field, value)
+                    }
+                    onSaveBond={() => updateBond(bond)}
+                    onViewBond={onViewBond}
+                    savingBond={savingBond}
+                    setSavingBond={setSavingBond}
+                    viewUser={viewUserDetails}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
 
         <div className="border-t border-slate-800 px-6 py-4">
-          <button className="flex items-center justify-center gap-2 w-full rounded-lg bg-teal-500 px-4 py-2.5 text-sm font-medium text-slate-950 transition hover:bg-teal-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111827]">
+          <button className="flex w-full items-center justify-center gap-2 rounded-lg bg-teal-500 px-4 py-2.5 text-sm font-medium text-slate-950 transition hover:bg-teal-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111827]">
             <User className="h-4 w-4" /> Manage Users here
           </button>
         </div>

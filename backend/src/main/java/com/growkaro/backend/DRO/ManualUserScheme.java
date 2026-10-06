@@ -11,5 +11,6 @@ public record ManualUserScheme(
         BigDecimal paidAmount,
         LocalDate paidDate,
         List<UserSchemeProfitLedgerRequest> profitLedger,
-        List<UserSchemeReedemLedgerRequest> reedemLedger) {
+        List<UserSchemeReedemLedgerRequest> reedemLedger,
+        LocalDate maturityDate) {
 }
