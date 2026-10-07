@@ -227,9 +227,10 @@ export default function BondCard({
               <input
                 aria-label="Invested amount"
                 type="number"
-                min="0.01"
-                step="0.01"
-                value={schemeEditForm.paidAmount ?? ""}
+                min="1"
+                step="1"
+                value={schemeEditForm.paidAmount ?? 100000}
+                placeholder="Invested amount"
                 onChange={(event) =>
                   onSchemeEditFieldChange("paidAmount", event.target.value)
                 }

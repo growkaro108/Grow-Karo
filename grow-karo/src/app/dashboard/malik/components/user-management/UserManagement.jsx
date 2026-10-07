@@ -190,7 +190,7 @@ export default function UserManagement() {
       //   accountNumber: newUserForm.accountNumber,
       //   ifscCode: newUserForm.ifscCode,
       // };
-      console.log(newUserForm);
+      // console.log(newUserForm);
       // console.log(payload);
       const response = await createManualUser(newUserForm);
       if (!response) {

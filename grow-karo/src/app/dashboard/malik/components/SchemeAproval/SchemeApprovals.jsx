@@ -68,7 +68,7 @@ export default function SchemeApproval() {
       // console.log(response.data);
       if (response.status !== "success") {
         allRounderMessage(response);
-        console.log(response);
+        // console.log(response);
       } else {
         setRequests(response.data);
       }
@@ -160,7 +160,7 @@ export default function SchemeApproval() {
     paidDate <= getToday();
 
   const handleConfirmApproval = useCallback(async (submitTo, amountFrom) => {
-    console.log(submitTo, amountFrom);
+    // console.log(submitTo, amountFrom);
     if (!selectedRequest || !isValidAmount) {
       // console.log(paidAmount);
       showToast("error", "Enter a valid paid amount first.");
@@ -261,7 +261,7 @@ export default function SchemeApproval() {
     try {
       response = await rejectUserScheme(rejectTarget.userSchemeId);
       if (response?.status !== "success") {
-        console.log(response);
+        // console.log(response);
         showToast("error", response?.message || "Rejection failed.");
         return;
       }

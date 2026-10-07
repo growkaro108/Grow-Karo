@@ -6,7 +6,7 @@ set -e
 # ==========================================
 API_BASE_URL="/api"
 ADMIN_EMAILS=wv9304@gmail.com,vikaskumar01997@gmail.com
-IMAGE_TAG="v4.3.8"
+IMAGE_TAG="v4.3.9"
 COMPOSE_FILE="docker-compose.stag.yml"
 
 # ==========================================
@@ -37,30 +37,30 @@ docker build \
   -t "growwkaro/frontend:$IMAGE_TAG" ./grow-karo
 
 echo "✅ Frontend image built successfully!"
-# docker push "growwkaro/frontend:$IMAGE_TAG"
+docker push "growwkaro/frontend:$IMAGE_TAG"
 echo "✅ Frontend image pushed successfully!"
 
 # ==========================================
 # Build & push backend
 # ==========================================
-echo "=========================================="
-echo "🚀 Building Backend (tag: $IMAGE_TAG)"
-echo "=========================================="
+# echo "=========================================="
+# echo "🚀 Building Backend (tag: $IMAGE_TAG)"
+# echo "=========================================="
 
-docker build -t "growwkaro/backend:$IMAGE_TAG" ./backend
+# docker build -t "growwkaro/backend:$IMAGE_TAG" ./backend
 
-echo "✅ Backend image built successfully!"
+# echo "✅ Backend image built successfully!"
 # docker push "growwkaro/backend:$IMAGE_TAG"
 
 # ==========================================
 # Deploy
 # ==========================================
-echo "=========================================="
-echo "🎉 Starting containers..."
-echo "=========================================="
+# echo "=========================================="
+# echo "🎉 Starting containers..."
+# echo "=========================================="
 
-docker compose -f "$COMPOSE_FILE" down
-docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+# docker compose -f "$COMPOSE_FILE" down
+# docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
 
 echo "=========================================="
 echo "✨ Deployment complete! (frontend & backend: $IMAGE_TAG)"

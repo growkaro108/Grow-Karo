@@ -55,7 +55,7 @@ export default function BondDetails({
         errorMessage("User not found")
         return;
       }
-      console.log(userId, schemeId, amount, nomineeId, bond.userSchemeId);
+      // console.log(userId, schemeId, amount, nomineeId, bond.userSchemeId);
       if (bond.minimumAmount && amount < bond.minimumAmount) {
         errorMessage(`Amount must be greater than or equal to ${currency(bond.minInvestment)}`)
         return;
@@ -64,10 +64,10 @@ export default function BondDetails({
         errorMessage(`Amount must be less than or equal to ${currency(bond.maxInvestment)}`)
         return;
       }
-      console.log("Reinvesting... with ", schemeId, amount, nomineeId, bond?.userSchemeId);
+      // console.log("Reinvesting... with ", schemeId, amount, nomineeId, bond?.userSchemeId);
       const res = await onReInvest(userId, schemeId, amount, nomineeId, bond?.userSchemeId);
       if (res) {
-        console.log("Reinvest Successfully...")
+        // console.log("Reinvest Successfully...")
         setIsShowReInvestForm(false);
         if (res) {
           updateUserPortfolio(res);

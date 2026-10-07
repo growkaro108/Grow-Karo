@@ -338,7 +338,10 @@ export default function AddUser({
                                         <option value="">Select</option>
                                         <option value="Father">Father</option>
                                         <option value="Mother">Mother</option>
-                                        <option value="Spouse">Spouse</option>
+                                        <option value="Spouse">Husband</option>
+                                        <option value="Spouse">Wife</option>
+                                        <option value="Spouse">Brother</option>
+                                        <option value="Spouse">Sister</option>
                                         <option value="Other">Other</option>
                                     </select>
                                 </label>

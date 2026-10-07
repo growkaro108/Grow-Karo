@@ -178,7 +178,7 @@ export default function RequestsView({ requests = [] }) {
     //   // remitterMessage: sanitizedMessage,
     // };
 
-    console.log("settlementPayload", formData); //pending⏱️
+    // console.log("settlementPayload", formData); //pending⏱️
     const res = await submitSettlement(formData);
     if (res) {
       //add image url to table row

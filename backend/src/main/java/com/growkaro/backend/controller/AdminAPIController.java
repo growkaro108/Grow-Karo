@@ -547,8 +547,20 @@ public class AdminAPIController {
         }
     }
 
+     @GetMapping("/settings")
+    public ResponseEntity<Map<String, Object>> getSettings() {
+        try {
+            SystemSettings settings = systemSettingsService.getSettings();
+            return ResponseEntity.ok(general.response("success", "Settings fetched successfully", settings));
+        } catch (Exception e) {
+            log.error("Failed to fetch settings: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(general.response("error", e.getMessage(), null));
+        }
+    }
+
     @PutMapping("/settings")
     public ResponseEntity<Map<String, Object>> updateSettings(@RequestBody SystemSettings settings) {
+        System.out.println("Received settings update request: " + settings);
         try {
             SystemSettings updatedSettings = systemSettingsService.updateSettings(settings);
             return ResponseEntity.ok(general.response("success", "Settings updated successfully", updatedSettings));

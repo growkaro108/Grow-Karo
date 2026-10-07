@@ -102,7 +102,7 @@ export const UserProvider = ({ children }) => {
     const userId = authUser?.id;
     if (!userId) return;
     try {
-      console.log("called")
+      // console.log("called")
 
       const storedTransactions = storage.getWithTTL("transactions", null, "local");
       if (storedTransactions) {
@@ -130,7 +130,7 @@ export const UserProvider = ({ children }) => {
 
   const getAllSchemes = useCallback(async () => {
     try {
-      console.log("scheme fetched from context");
+      // console.log("scheme fetched from context");
       const storedSchemes = storage.getWithTTL("schemes", null, "session");
       if (storedSchemes) {
         setSchemes(storedSchemes);
@@ -138,7 +138,7 @@ export const UserProvider = ({ children }) => {
       }
       showLoader("Getting best scheme for you...");
       const response = await getAllPlans();
-      console.log("Api called")
+      // console.log("Api called")
       if (response.status === "success") {
         storage.setWithTTL("schemes", response.data, "session", 60);
         setSchemes(response.data ?? []);

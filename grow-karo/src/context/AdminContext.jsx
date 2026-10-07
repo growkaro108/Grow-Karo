@@ -27,7 +27,7 @@ export const AdminContextProvider = ({ children }) => {
         setCodes(data.content);
       }
     } catch (error) {
-      console.log("error while loading remitters", error);
+      console.warn("error while loading remitters", error);
     } finally {
       setIsloading(false);
     }

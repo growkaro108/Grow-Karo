@@ -105,10 +105,10 @@ public class UserAPIController {
             if (userAPIService.isUserExists(user.email()) || remitterAPIService.isRemitterExists(user.email())) {
                 return ResponseEntity.ok(general.response("info", "Email already registered..", null));
             }
-            if(userAPIService.findAllUserPhone().contains(user.phone())){
-                return ResponseEntity.ok(general.response("info", "Phone already registered..", null));
+            // if(userAPIService.findAllUserPhone().contains(user.phone())){
+            //     return ResponseEntity.ok(general.response("info", "Phone already registered..", null));
 
-            }
+            // }
             if (user.name() == null || user.email() == null || !general.validateEmail(user.email())
                     || user.phone() == null
                     || user.passwordHash() == null || !general.validatePassword(user.passwordHash())) {

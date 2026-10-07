@@ -43,7 +43,7 @@ export async function getRemittersPendingRequests(remId) {
 
 export async function submitSettlement(payload) {
   const res = await submitSettlementApi(payload);
-  console.log(payload);
+  // console.log(payload);
   allRounderMessage(res);
   if (res.status !== "success") return null;
   else return res.data;
