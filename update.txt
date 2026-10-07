@@ -44,3 +44,18 @@ Server & Configuration Improvements:
   Set Hibernate schema mode to validate to prevent accidental schema changes and slow startups.
   Removed default database credentials and the localhost frontend URL from the configuration; these must now be provided through environment variables.
   Added Java memory limits (heap and metaspace) and Docker log rotation to keep the container stable within its 1 GB memory limit.
+
+ Date: 06-10-2026  update: v4.3.7
+
+Admin User Drawer – Scheme Editing:
+  Added the ability to edit an existing scheme from the user drawer. The Edit button on a bond now loads its details into the "Add scheme manually" form, so the same form is used for both adding and editing.
+  Admins can now change the scheme, nominee, invested amount, paid date, maturity date, and the profit and redeem entries of an existing bond.
+  The form header changes to "Edit scheme", the submit button changes to "Update scheme", and a "Cancel edit" button resets the form.
+  Existing profit and redeem rows keep their IDs when saved, so they are updated instead of duplicated.
+  Empty profit and redeem rows are no longer sent to the server.
+  Removed the separate inline edit form from the bond card to avoid two different edit flows.
+
+Code Optimization:
+  Merged the duplicated profit and redeem ledger handlers into one shared set of functions and a reusable ledger rows component.
+  Moved the scheme details grid into its own component and memoized the selected scheme.
+  Added cancellation of pending requests when the drawer closes, and added a validation message for incomplete nominee details.

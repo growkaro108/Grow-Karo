@@ -6,7 +6,7 @@ import com.growkaro.backend.entity.User;
 
 public record UserFullDetails(String name,
         String maritalStatus, String address,
-        String phone, String gaurdianName,
+        String phone, String gaurdianName, String guardianRelation,
         String dob, String email,
         String aadhaarNo,
         // String nomineeName,
@@ -33,6 +33,7 @@ public record UserFullDetails(String name,
         }
 
         String guardianName = (g != null && g.getName() != null) ? g.getName() : "";
+        String guardianRelation = (g != null && g.getRelation() != null) ? g.getRelation() : "";
         String accountNo = (bkd != null && bkd.getAccountNumber() != null) ? bkd.getAccountNumber() : "";
         String ifsc = (bkd != null && bkd.getIfscCode() != null) ? bkd.getIfscCode() : "";
         String bankName = (bkd != null && bkd.getBankName() != null) ? bkd.getBankName() : "";
@@ -44,6 +45,7 @@ public record UserFullDetails(String name,
                 fullAddress,
                 u.getPhone() != null ? u.getPhone() : "",
                 guardianName,
+                guardianRelation,
                 dob,
                 u.getEmail() != null ? u.getEmail() : "",
                 u.getAadharNo() != null ? u.getAadharNo() : "",

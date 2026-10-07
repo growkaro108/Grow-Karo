@@ -38,10 +38,10 @@ COPY --from=build --chown=appuser:appgroup /workspace/target/app-exec.jar /app/a
 USER appuser
 EXPOSE 4000
 
-# JVM Memory Tuning for Docker (512MB max heap)
+# Keep heap and Metaspace within typical container budgets.
 # -XX:+HeapDumpOnOutOfMemoryError: writes heap dump on OOM so you can diagnose leaks post-mortem
 # -XX:+ExitOnOutOfMemoryError: immediately kills the container so orchestrator can restart it cleanly
-ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxMetaspaceSize=128m \
+ENV JAVA_OPTS="-Xms128m -Xmx512m -XX:+UseG1GC -XX:MaxMetaspaceSize=256m \
     -XX:+ExitOnOutOfMemoryError \
     -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/app/heapdump.hprof \
     -Xlog:gc*:file=/app/gc.log:time,level,tags:filecount=3,filesize=10m"

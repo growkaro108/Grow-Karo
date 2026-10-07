@@ -79,6 +79,17 @@ export async function addAdminUserNominee(userId, payload) {
     body: payload,
   });
 }
+export async function updateAdminUserNomineeApi(userId, nomineeId, payload) {
+  return await apiRequest(`${END_POINT}user/${userId}/nominees/${nomineeId}`, {
+    method: "PUT",
+    body: payload,
+  });
+}
+export async function deleteAdminUserNomineeApi(userId, nomineeId) {
+  return await apiRequest(`${END_POINT}user/${userId}/nominees/${nomineeId}`, {
+    method: "DELETE",
+  });
+}
 export async function addBonds(userId, userSchemeId, payload) {
   return await apiRequest(
     `${END_POINT}user_scheme/add-bond/${userId}/${userSchemeId}`,
@@ -216,6 +227,13 @@ export async function getAllMaturityUserSchemeApi(payload) {
 export async function getUserProfileApi(userId) {
   return await apiRequest(`${END_POINT}userProfile/${userId}`, {
     method: "GET"
+  });
+}
+
+export async function updateAdminUserProfileApi(userId, payload) {
+  return await apiRequest(`${END_POINT}user/${userId}/profile`, {
+    method: "PUT",
+    body: payload,
   });
 }
 //pending----------------------------------------------------------------------

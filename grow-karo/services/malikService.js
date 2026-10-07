@@ -10,6 +10,8 @@ import {
   updateUserSchemeLedger as updateUserSchemeLedgerApi,
   getAdminUserNominees,
   addAdminUserNominee,
+  updateAdminUserNomineeApi,
+  deleteAdminUserNomineeApi,
   updateScheme,
   activateScheme,
   deactivateScheme,
@@ -34,6 +36,7 @@ import {
   addBulkUsersCsvApi,
   getAllMaturityUserSchemeApi,
   getUserProfileApi,
+  updateAdminUserProfileApi,
 } from "@/api/adminApi";
 import { userRegister } from "@/api/userApi";
 import { allRounderMessage, allRounderMessagetopend } from "@/components/Message";
@@ -94,6 +97,24 @@ export async function createAdminUserNominee(userId, payload) {
   const response = await addAdminUserNominee(userId, { ...payload, userId });
   allRounderMessage(response);
   return response.status === "success" ? response.data : null;
+}
+export async function updateAdminUserNominee(userId, nomineeId, payload) {
+  const response = await updateAdminUserNomineeApi(userId, nomineeId, payload);
+  if (response.status !== "success") {
+    allRounderMessage(response);
+    return false;
+  }
+  allRounderMessage(response);
+  return response.data;
+}
+export async function deleteAdminUserNominee(userId, nomineeId) {
+  const response = await deleteAdminUserNomineeApi(userId, nomineeId);
+  if (response.status !== "success") {
+    allRounderMessage(response);
+    return false;
+  }
+  allRounderMessage(response);
+  return true;
 }
 export async function addBond(userId, userSchemeId, payload, isUpdate = false) {
   payload.isUpdate = isUpdate;
@@ -270,6 +291,15 @@ export async function getUserProfile(id) {
   const res = await getUserProfileApi(id);
   if (res.status !== "success") {
     allRounderMessage(res);
+    return false;
+  }
+  return res.data;
+}
+
+export async function updateAdminUserProfile(id, payload) {
+  const res = await updateAdminUserProfileApi(id, payload);
+  allRounderMessagetopend(res);
+  if (res.status !== "success") {
     return false;
   }
   return res.data;

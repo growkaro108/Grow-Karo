@@ -59,6 +59,7 @@ import com.growkaro.backend.DRO.UserRegister;
 import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.Guardian;
 import com.growkaro.backend.DRO.AddRemitter;
+import com.growkaro.backend.DRO.AdminUserProfileUpdateRequest;
 import com.growkaro.backend.DRO.ManualUserScheme;
 import com.growkaro.backend.DRO.NewNominee;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
@@ -106,6 +107,7 @@ import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.enums.UserSchemeStatus;
 import com.growkaro.backend.enums.WithdrawalStatus;
 import com.growkaro.backend.repository.ActivityLogRepository;
+import com.growkaro.backend.repository.NomineeRepository;
 import com.growkaro.backend.repository.NotificationRepository;
 import com.growkaro.backend.repository.RemitterRepository;
 import com.growkaro.backend.repository.SchemeRepository;
@@ -127,7 +129,7 @@ public class AdminAPIService {
 
     private static final int DEFAULT_PAGE_SIZE = 20;
     private static final float PDF_PREVIEW_MAX_DIMENSION_PIXELS = 700f;
-    private static final long MAX_PDF_SIZE_BYTES = 3L * 1024 * 1024; // 5 MB
+    private static final long MAX_PDF_SIZE_BYTES = 2L * 1024 * 1024;
     private static final float JPEG_QUALITY = 0.70f;
     private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
 
@@ -149,6 +151,7 @@ public class AdminAPIService {
     private final CrucialNotificationService crucialNotificationService;
     private final EmailService emailService;
     private final TransactionService transactionService;
+    private final NomineeRepository nomineeRepository;
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -173,7 +176,7 @@ public class AdminAPIService {
 
     public List<SchemeResponse> getAllSchemes(boolean admin) {
         return schemeRepository.findAll().stream()
-                // .filter(scheme -> admin || Boolean.TRUE.equals(scheme.getStatus()))
+                .filter(scheme -> admin || Boolean.TRUE.equals(scheme.getStatus()))
                 // Sort by startDate in DEScending order (nulls placed last to avoid
                 // NullPointerException)
 
@@ -277,59 +280,70 @@ public class AdminAPIService {
                 || request.paidDate() == null || request.profitLedger() == null || request.reedemLedger() == null
                 || (request.maturityDate() != null && request.maturityDate().isBefore(request.paidDate()))) {
             return general.response("error", "Invalid scheme details", null);
+
         }
 
         try {
-            User user = userRepository.findById(request.userId()).orElse(null);
-            Scheme scheme = schemeRepository.findById(request.schemeId()).orElse(null);
-            if (user == null || scheme == null) {
-                return general.response("error", "User or scheme not found", null);
+            // 1. Lightweight exists check to avoid fetching entire entity graphs into
+            // memory
+            boolean nomineeExists = nomineeRepository.existsByNomineeIdAndUser_Id(
+                    request.nomineeId(), request.userId());
+
+            if (!nomineeExists) {
+                return general.response("error", "User, scheme, or nominee invalid", null);
             }
 
-            var nominee = user.getNominees().stream()
-                    .filter(item -> request.nomineeId().equals(item.getNomineeId()))
-                    .findFirst().orElse(null);
-            if (nominee == null) {
-                return general.response("error", "Nominee does not belong to this user", null);
+            // 2. Fetch Scheme (or get reference if scheme entity is small)
+            Scheme scheme = schemeRepository.findById(request.schemeId()).orElse(null);
+            if (scheme == null) {
+                return general.response("error", "Scheme not found", null);
             }
+
+            // 3. Use getReferenceById to attach foreign keys without loading full
+            // User/Nominee into heap
+            User userRef = userRepository.getReferenceById(request.userId());
+            Nominee nomineeRef = nomineeRepository.getReferenceById(request.nomineeId());
 
             LocalDateTime enrollmentDate = LocalDateTime.of(request.paidDate(), LocalTime.now(IST));
             LocalDate today = general.getCurrentDate();
 
+            LocalDate maturityDate = (request.maturityDate() == null)
+                    ? general.calculateMaturityDate(enrollmentDate, scheme.getTenure())
+                    : request.maturityDate();
+
+            UserSchemeStatus status;
+            if (maturityDate.isEqual(today)) {
+                status = UserSchemeStatus.MATURED;
+            } else if (maturityDate.isBefore(today)) {
+                status = UserSchemeStatus.WITHDRAWN;
+            } else {
+                status = UserSchemeStatus.ACTIVE;
+            }
+
             UserScheme userScheme = new UserScheme();
             userScheme.setRequestDate(enrollmentDate);
-            userScheme.setUser(user);
+            userScheme.setUser(userRef); // Proxy instance: sets user_id foreign key directly
             userScheme.setScheme(scheme);
-            userScheme.setNominee(nominee);
+            userScheme.setNominee(nomineeRef); // Proxy instance: sets nominee_id foreign key directly
             userScheme.setPaidAmount(request.paidAmount());
             userScheme.setIsApproved(true);
             userScheme.setAmountFrom("general");
             userScheme.setSubmitTo("general");
             userScheme.setEnrollmentDate(enrollmentDate);
             userScheme.setPaidDate(request.paidDate());
+
             replaceLedgers(userScheme, request.profitLedger(), request.reedemLedger());
 
             userScheme.setNextPayoutDate(general.calculateNextPayoutDate(
                     enrollmentDate, scheme.getPayoutFrequency(), scheme.getTenure()));
-
-            LocalDate maturityDate = request.maturityDate() == null
-                    ? general.calculateMaturityDate(enrollmentDate, scheme.getTenure())
-                    : request.maturityDate();
             userScheme.setMaturityDate(maturityDate);
+            userScheme.setStatus(status);
 
-            if (maturityDate.isEqual(today)) {
-                userScheme.setStatus(UserSchemeStatus.MATURED);
-            } else if (maturityDate.isBefore(today)) {
-                userScheme.setStatus(UserSchemeStatus.WITHDRAWN);
-            } else {
-                userScheme.setStatus(UserSchemeStatus.ACTIVE);
-            }
-
-            // owning side is already set above; no need to touch the inverse collections
             userSchemeRepository.save(userScheme);
 
             return general.response("success", "Scheme added to user successfully",
                     UserSchemeResponse.toUserSchemeResponse(userScheme));
+
         } catch (Exception e) {
             log.error("Error adding manual scheme for user {}", request.userId(), e);
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
@@ -343,6 +357,7 @@ public class AdminAPIService {
         return user == null ? List.of() : user.getNominees().stream().map(NomineeResponse::fromEntity).toList();
     }
 
+    @CacheEvict(value = "userNominees", key = "#userId")
     @Transactional
     public Map<String, Object> addUserNominee(String userId, NewNominee request) {
         if (userId == null || userId.isBlank() || request == null
@@ -365,6 +380,55 @@ public class AdminAPIService {
         user.getNominees().add(nominee);
         userRepository.save(user);
         return general.response("success", "Nominee added successfully", NomineeResponse.fromEntity(nominee));
+    }
+
+    @CacheEvict(value = "userNominees", key = "#userId")
+    @Transactional
+    public Map<String, Object> updateUserNominee(String userId, String nomineeId, NewNominee request) {
+        if (userId == null || userId.isBlank() || nomineeId == null || nomineeId.isBlank()
+                || request == null || request.name() == null || request.name().isBlank()
+                || request.relation() == null || request.relation().isBlank()
+                || request.aadhaarNo() == null || !request.aadhaarNo().matches("^\\d{12}$")
+                || request.phone() == null || !request.phone().matches("^\\d{10}$")) {
+            return general.response("error", "Invalid nominee details", null);
+        }
+
+        Nominee nominee = nomineeRepository.findById(nomineeId)
+                .filter(existing -> existing.getUser().getId().equals(userId))
+                .orElse(null);
+        if (nominee == null) {
+            return general.response("error", "Nominee not found for this user", null);
+        }
+
+        nominee.setName(request.name().trim());
+        nominee.setRelation(request.relation().trim());
+        nominee.setAadharNo(request.aadhaarNo().trim());
+        nominee.setMobileNo(request.phone().trim());
+        nomineeRepository.save(nominee);
+        return general.response("success", "Nominee updated successfully", NomineeResponse.fromEntity(nominee));
+    }
+
+    @CacheEvict(value = "userNominees", key = "#userId")
+    @Transactional
+    public Map<String, Object> deleteUserNominee(String userId, String nomineeId) {
+        if (userId == null || userId.isBlank() || nomineeId == null || nomineeId.isBlank()) {
+            return general.response("error", "Invalid nominee request", null);
+        }
+
+        Nominee nominee = nomineeRepository.findById(nomineeId)
+                .filter(existing -> existing.getUser().getId().equals(userId))
+                .orElse(null);
+        if (nominee == null) {
+            return general.response("error", "Nominee not found for this user", null);
+        }
+        if (userSchemeRepository.existsByNomineeNomineeId(nomineeId)) {
+            return general.response("error", "This nominee is linked to an investment and cannot be deleted", null);
+        }
+
+        User user = nominee.getUser();
+        user.getNominees().remove(nominee);
+        userRepository.save(user);
+        return general.response("success", "Nominee deleted successfully", null);
     }
 
     @CacheEvict(value = "userPortfolio", key = "#userSchemeId")
@@ -397,7 +461,8 @@ public class AdminAPIService {
                 || request.paidAmount() == null || request.paidAmount().signum() <= 0
                 || request.paidDate() == null || request.maturityDate() == null
                 || request.maturityDate().isBefore(request.paidDate())
-                || request.nomineeId() == null || request.nomineeId().isBlank()|| request.schemeId() == null || request.schemeId().isBlank()|| !general.isValidSchemeId(request.schemeId())) {
+                || request.nomineeId() == null || request.nomineeId().isBlank() || request.schemeId() == null
+                || request.schemeId().isBlank() || !general.isValidSchemeId(request.schemeId())) {
             return general.response("error", "Invalid scheme details", null);
         }
 
@@ -418,13 +483,13 @@ public class AdminAPIService {
                 userScheme.getEnrollmentDate() == null
                         ? LocalTime.now(IST)
                         : userScheme.getEnrollmentDate().toLocalTime());
-       
+
         LocalDate maturityDate = request.maturityDate();
         LocalDate today = general.getCurrentDate();
         String existingSchemeId = userScheme.getScheme().getSchemeId();
-        if(!existingSchemeId.equals(request.schemeId())){
+        if (!existingSchemeId.equals(request.schemeId())) {
             Scheme newScheme = schemeRepository.findById(request.schemeId()).orElse(null);
-            if(newScheme == null){
+            if (newScheme == null) {
                 return general.response("error", "New scheme not found", null);
             }
             userScheme.setScheme(newScheme);
@@ -588,29 +653,39 @@ public class AdminAPIService {
             return general.response("error", "Error in rejecting user scheme", null);
         }
     }
+    // Assumes localFileStorageService has: String store(MultipartFile, String
+    // folder),
+    // String storeBytes(byte[], String ext, String folder), and void delete(String
+    // url).
+    // If delete(...) doesn't exist yet, add it (best-effort removal of a stored
+    // file).
+
+    private static final float MAX_PREVIEW_UPSCALE = 3.0f; // avoid blowing up tiny pages
 
     @CacheEvict(value = "userPortfolio", key = "#p0")
     public Map<String, Object> addBondDetails(String userId, String userSchemeId, String bondNumber,
             MultipartFile images,
             boolean isUpdate) {
+        String newPdfUrl = null;
+        String newImageUrl = null;
+        boolean saved = false;
+
         try {
-            // 1. Pehle heavy kaam (DB connection ke bina)
-            String pdfUrl = null;
-            String imageUrl = null;
+            // 1. Heavy work first (no DB connection held)
             boolean hasFile = images != null && !images.isEmpty();
 
             if (hasFile) {
                 String folder = "bonds/" + userSchemeId;
                 if ("application/pdf".equalsIgnoreCase(images.getContentType())) {
-                    byte[] preview = renderPdfFirstPage(images); // pehle preview
-                    pdfUrl = localFileStorageService.store(images, folder);
-                    imageUrl = localFileStorageService.storeBytes(preview, ".jpg", folder);
+                    byte[] preview = renderPdfFirstPage(images); // validates size + renders
+                    newImageUrl = localFileStorageService.storeBytes(preview, ".jpg", folder);
+                    newPdfUrl = localFileStorageService.store(images, folder);
                 } else {
-                    imageUrl = localFileStorageService.store(images, folder);
+                    newImageUrl = localFileStorageService.store(images, folder);
                 }
             }
 
-            // 2. Ab DB ka chhota kaam
+            // 2. Short DB work
             UserScheme userScheme = userSchemeRepository.findByUserSchemeId(userSchemeId).orElse(null);
             if (userScheme == null) {
                 return general.response("error", "User scheme not found", null);
@@ -620,9 +695,12 @@ public class AdminAPIService {
                 userScheme.setBondNumber(bondNumber.trim());
             }
 
+            String oldImageUrl = userScheme.getBondImageURL();
+            String oldPdfUrl = userScheme.getBondPdfURL();
+
             if (hasFile) {
-                userScheme.setBondImageURL(imageUrl);
-                userScheme.setBondPdfURL(pdfUrl); // image upload par null ho jayega
+                userScheme.setBondImageURL(newImageUrl);
+                userScheme.setBondPdfURL(newPdfUrl); // becomes null on plain image upload
             }
 
             Scheme s = userScheme.getScheme();
@@ -636,6 +714,13 @@ public class AdminAPIService {
                 userScheme.setMaturityDate(general.calculateMaturityDate(todayDateTime, s.getTenure()));
             }
             userSchemeRepository.save(userScheme);
+            saved = true;
+
+            // 3. DB save succeeded: remove the replaced files (best effort)
+            if (hasFile) {
+                deleteQuietly(oldImageUrl);
+                deleteQuietly(oldPdfUrl);
+            }
 
             return general.response("success", "Bond details added successfully...", Map.of(
                     "userSchemeId", userScheme.getUserSchemeId(),
@@ -648,13 +733,30 @@ public class AdminAPIService {
         } catch (Exception e) {
             log.error("Error in adding bond details for userSchemeId={}, bondNumber={}", userSchemeId, bondNumber, e);
             return general.response("error", "Error in adding bond details", Map.of(
-                    "error", e.getMessage()));
+                    "error", e.getMessage() != null ? e.getMessage() : "Unknown error"));
+        } finally {
+            // Anything we stored but never committed to the DB is an orphan: remove it
+            if (!saved) {
+                deleteQuietly(newImageUrl);
+                deleteQuietly(newPdfUrl);
+            }
+        }
+    }
+
+    private void deleteQuietly(String url) {
+        if (url == null || url.isBlank()) {
+            return;
+        }
+        try {
+            localFileStorageService.delete(url);
+        } catch (Exception e) {
+            log.warn("Could not delete file {}: {}", url, e.getMessage());
         }
     }
 
     private byte[] renderPdfFirstPage(MultipartFile pdfFile) throws Exception {
         if (pdfFile.getSize() > MAX_PDF_SIZE_BYTES) {
-            throw new IllegalArgumentException("PDF 3 MB se badi nahi honi chahiye");
+            throw new IllegalArgumentException("PDF must not exceed 2 MB.");
         }
 
         if (!pdfRenderPermits.tryAcquire(15, TimeUnit.SECONDS)) {
@@ -666,21 +768,15 @@ public class AdminAPIService {
                 throw new IllegalArgumentException("PDF contains no pages");
             }
 
-            PDPage page = document.getPage(0);
-            PDRectangle box = page.getCropBox(); // jo page actual me dikhta hai
-            float w = box.getWidth();
-            float h = box.getHeight();
-            if (page.getRotation() % 180 != 0) { // rotated page me width/height badal do
-                float t = w;
-                w = h;
-                h = t;
-            }
+            PDRectangle box = document.getPage(0).getCropBox(); // the visible page area
+            float maxDim = Math.max(box.getWidth(), box.getHeight()); // rotation doesn't change the max side
 
-            float maxDim = Math.max(w, h);
-            float scale = Math.min(1.0f, PDF_PREVIEW_MAX_DIMENSION_PIXELS / maxDim);
+            // Scale so the longest side is about PDF_PREVIEW_MAX_DIMENSION_PIXELS (up or
+            // down)
+            float scale = Math.min(MAX_PREVIEW_UPSCALE, PDF_PREVIEW_MAX_DIMENSION_PIXELS / maxDim);
 
             PDFRenderer renderer = new PDFRenderer(document);
-            renderer.setSubsamplingAllowed(true); // scan wali PDF me bahut tez
+            renderer.setSubsamplingAllowed(true); // much faster for scanned PDFs
 
             BufferedImage preview = renderer.renderImage(0, scale, ImageType.RGB);
             try {
@@ -711,12 +807,9 @@ public class AdminAPIService {
 
     @Cacheable(value = "activityTypes", key = "'all'")
     public List<String> getAllStoredActivityTypes() {
-        List<ActivityType> types = activityLogRepository.findDistinctTypes();
-        List<String> typeNames = new ArrayList<>();
-        for (ActivityType type : types) {
-            typeNames.add(type.name());
-        }
-        return typeNames;
+        return activityLogRepository.findDistinctTypes().stream()
+                .map(ActivityType::name)
+                .toList(); // Immutable list, minimal memory footprint
     }
 
     public PagedResponse<AdminTransactionResponse> getTransactions(
@@ -1294,6 +1387,84 @@ public class AdminAPIService {
             return null;
         }
         return UserFullDetails.fromEntity(u);
+    }
+
+    @Transactional
+    public Map<String, Object> updateUserProfile(String userId, AdminUserProfileUpdateRequest request) {
+        User user = userRepository.findUserFullDetails(userId);
+        if (user == null) {
+            return general.response("error", "User not found", Map.of("userId", userId));
+        }
+
+        String name = request.name() == null ? "" : request.name().trim();
+        String phone = request.phone() == null ? "" : request.phone().trim();
+        String aadhaarNo = request.aadharNo() == null ? "" : request.aadharNo().trim();
+        String guardianName = request.guardianName() == null ? "" : request.guardianName().trim();
+        String guardianRelation = request.guardianRelation() == null ? "" : request.guardianRelation().trim();
+        String bankName = request.bankName() == null ? "" : request.bankName().trim();
+        String accountNumber = request.accountNumber() == null ? "" : request.accountNumber().trim();
+        String ifscCode = request.ifscCode() == null ? "" : request.ifscCode().trim().toUpperCase();
+        String accountHolderName = request.accountHolderName() == null ? "" : request.accountHolderName().trim();
+
+        if (name.isEmpty() || !phone.matches("^\\d{10}$")) {
+            return general.response("error", "Name and a valid 10-digit phone number are required", null);
+        }
+        if (!aadhaarNo.isEmpty() && !aadhaarNo.matches("^\\d{12}$")) {
+            return general.response("error", "Aadhaar number must contain 12 digits", null);
+        }
+        if ((guardianName.isEmpty()) != (guardianRelation.isEmpty())) {
+            return general.response("error", "Guardian name and relation must both be provided", null);
+        }
+        boolean anyBankDetail = !bankName.isEmpty() || !accountNumber.isEmpty()
+                || !ifscCode.isEmpty() || !accountHolderName.isEmpty();
+        boolean allBankDetails = !bankName.isEmpty() && accountNumber.matches("^\\d{9,18}$")
+                && ifscCode.matches("^[A-Z]{4}0[A-Z0-9]{6}$")
+                && accountHolderName.matches("^[A-Za-z][A-Za-z\\s.'-]{1,49}$");
+        if (anyBankDetail && !allBankDetails) {
+            return general.response("error", "Enter all bank details using valid formats, or clear all bank fields",
+                    null);
+        }
+
+        user.setName(name);
+        user.setPhone(phone);
+        user.setDob(request.dob());
+        user.setMaritalStatus(request.maritalStatus() == null ? "" : request.maritalStatus().trim());
+        user.setAadharNo(aadhaarNo);
+        user.setAddress(request.address() == null ? "" : request.address().trim());
+        if (request.active() != null) {
+            user.setActive(request.active());
+        }
+
+        if (guardianName.isEmpty()) {
+            user.setGuardian(null);
+        } else {
+            Guardian guardian = user.getGuardian();
+            if (guardian == null) {
+                guardian = new Guardian();
+                guardian.setUser(user);
+                user.setGuardian(guardian);
+            }
+            guardian.setName(guardianName);
+            guardian.setRelation(guardianRelation);
+        }
+
+        if (!anyBankDetail) {
+            user.setBankDetails(null);
+        } else {
+            BankDetails bankDetails = user.getBankDetails();
+            if (bankDetails == null) {
+                bankDetails = new BankDetails();
+                bankDetails.setUser(user);
+                user.setBankDetails(bankDetails);
+            }
+            bankDetails.setBankName(bankName);
+            bankDetails.setAccountNumber(accountNumber);
+            bankDetails.setIfscCode(ifscCode);
+            bankDetails.setAccountHolderName(accountHolderName);
+        }
+
+        userRepository.save(user);
+        return general.response("success", "User profile updated", UserFullDetails.fromEntity(user));
     }
 
     // @Cacheable(value = "remitters", key = "#page ?: 'default'")

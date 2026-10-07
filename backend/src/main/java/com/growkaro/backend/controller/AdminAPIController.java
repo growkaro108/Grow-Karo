@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.growkaro.backend.DRO.AddRemitter;
+import com.growkaro.backend.DRO.AdminUserProfileUpdateRequest;
 import com.growkaro.backend.DRO.ApproveUserScheme;
 import com.growkaro.backend.DRO.ManualUserScheme;
 import com.growkaro.backend.DRO.NewNominee;
@@ -74,7 +75,7 @@ public class AdminAPIController {
 
     private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of("image/jpeg", "image/png", "image/webp", "image/jpg");
     private static final String PDF_CONTENT_TYPE = "application/pdf";
-    private static final long MAX_FILE_SIZE_BYTES = 5L * 1024 * 1024;
+    private static final long MAX_FILE_SIZE_BYTES = 2L * 1024 * 1024;
 
     public AdminAPIController(AdminAPIService adminAPIService, EmailService emailService, General general,
             NotificationBroadcaster notificationBroadcaster, CrucialNotificationService crucialNotificationService,
@@ -183,6 +184,24 @@ public class AdminAPIController {
         return ResponseEntity.ok(adminAPIService.addUserNominee(userId, request));
     }
 
+    @PutMapping("/user/{userId}/nominees/{nomineeId}")
+    public ResponseEntity<Map<String, Object>> updateUserNominee(
+            @PathVariable String userId,
+            @PathVariable String nomineeId,
+            @RequestBody NewNominee request) {
+        return ResponseEntity.ok(adminAPIService.updateUserNominee(userId, nomineeId, request));
+    }
+
+    @DeleteMapping("/user/{userId}/nominees/{nomineeId}")
+    public ResponseEntity<Map<String, Object>> deleteUserNominee(
+            @PathVariable String userId,
+            @PathVariable String nomineeId) {
+        Map<String, Object> response = adminAPIService.deleteUserNominee(userId, nomineeId);
+        return "success".equals(response.get("status"))
+                ? ResponseEntity.ok(response)
+                : ResponseEntity.badRequest().body(response);
+    }
+
     @PutMapping("/user-scheme/{userSchemeId}/ledger")
     public ResponseEntity<Map<String, Object>> updateUserSchemeLedger(
             @PathVariable String userSchemeId,
@@ -230,24 +249,24 @@ public class AdminAPIController {
             return ResponseEntity.ok(general.response("error", "Invalid request.", null));
         }
 
-        try {// Only validate the file if a bond document was actually provided
+        try {
             if (hasImage) {
+                if (image.getSize() > MAX_FILE_SIZE_BYTES) {
+                    return ResponseEntity.status(413).body(
+                            general.response("error", "File must not exceed 2 MB.", null));
+                }
+
                 String contentType = image.getContentType();
                 if (contentType == null || (!ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())
                         && !PDF_CONTENT_TYPE.equalsIgnoreCase(contentType))) {
                     return ResponseEntity
                             .ok(general.response("error", "Only JPG, PNG, WEBP, or PDF files are allowed.", null));
                 }
-                // System.out.println("File size: " + image.getSize() + " bytes");
-                // System.out.println("Max allowed size: " + MAX_FILE_SIZE_BYTES + " bytes");
-
-                if (image.getSize() > MAX_FILE_SIZE_BYTES) {
-                    return ResponseEntity.ok(
-                            general.response("error", image.getOriginalFilename() + " exceeds the 5MB limit", null));
-                }
             }
 
             return ResponseEntity.ok(adminAPIService.addBondDetails(userId, userSchemeId, bondNumber, image, isUpdate));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(general.response("error", e.getMessage(), null));
         } catch (Exception e) {
             log.error("Error in adding bond details for userSchemeId={}, bondNumber={}", userSchemeId, bondNumber, e);
             return ResponseEntity.ok(general.response("error", e.getMessage(), null));
@@ -608,6 +627,19 @@ public class AdminAPIController {
             log.error("Error while fetching userprofile userId : {}", userId, e);
             return ResponseEntity.internalServerError().build(); // Added missing return
         }
+    }
+
+    @PutMapping("/user/{userId}/profile")
+    public ResponseEntity<Map<String, Object>> updateUserProfile(
+            @PathVariable String userId,
+            @RequestBody AdminUserProfileUpdateRequest request) {
+        if (!general.isValidId(userId) || request == null) {
+            return ResponseEntity.badRequest().body(general.response("error", "Invalid request", null));
+        }
+        Map<String, Object> response = adminAPIService.updateUserProfile(userId, request);
+        return "success".equals(response.get("status"))
+                ? ResponseEntity.ok(response)
+                : ResponseEntity.badRequest().body(response);
     }
 
     // pendings

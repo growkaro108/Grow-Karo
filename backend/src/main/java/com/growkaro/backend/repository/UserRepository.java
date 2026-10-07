@@ -25,6 +25,10 @@ public interface UserRepository extends JpaRepository<User, String> {
         @Query("SELECT u.email FROM User u WHERE u.schemeAlerts = true")
         List<String> findEmailOfUsersWantSchemeAlerts();
 
+        //find by id with nominee and guardian
+        @Query("SELECT u FROM User u LEFT JOIN FETCH u.nominees un LEFT JOIN FETCH u.guardian ug WHERE u.id = :userId")
+        Optional<User> findByIdWithNomineeAndGuardian(@Param("userId") String userId);
+
         // get all user phone no.
         @Query("SELECT u.phone FROM User u")
         List<String> findAllPhoneNo();
@@ -66,6 +70,8 @@ public interface UserRepository extends JpaRepository<User, String> {
         boolean existsByEmail(String email);
 
         boolean existsByPhone(String phone);
+
+        boolean existsByPhoneAndIdNot(String phone, String id);
 
         // ── Role-based queries ───────────────────────────────────────────────────
 

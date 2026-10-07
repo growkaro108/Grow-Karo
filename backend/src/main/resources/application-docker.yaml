@@ -16,8 +16,12 @@ server:
     min-response-size: 2048
 
 spring:
+  # config:
+  #   activate:
+  #     on-profile: prod
   main:
     banner-mode: "off"
+    lazy-initialization: true
 
   lifecycle:
     timeout-per-shutdown-phase: 20s
@@ -41,7 +45,8 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update  # if changes are made in entity classes, set this to update. For production, consider using 'validate' or 'none'.
+      ddl-auto: validate  #  For production, consider using 'validate' or 'none'.
+      # ddl-auto: update  #  For development, consider using 'update' or 'create'.
     show-sql: false
     properties:
       hibernate:

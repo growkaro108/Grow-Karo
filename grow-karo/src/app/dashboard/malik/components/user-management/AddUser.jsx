@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import { errorMessage } from "@/components/Message";
 
 export default function AddUser({
     handleCreateManualUser,
@@ -6,23 +7,79 @@ export default function AddUser({
     updateNewUserForm,
     setShowAddUserModal,
     creatingUser,
+    isEditing = false,
+    nominees = [],
+    onSaveNominee,
+    onDeleteNominee,
+    active,
 }) {
+    const [nomineeForms, setNomineeForms] = useState(() =>
+        Object.fromEntries(nominees.map((nominee) => [
+            nominee.nomineeId,
+            {
+                name: nominee.name ?? "",
+                relation: nominee.relation ?? "",
+                aadhaarNo: nominee.aadharNo ?? nominee.aadhaarNo ?? "",
+                phone: nominee.mobileNo ?? nominee.phone ?? "",
+            },
+        ])),
+    );
+    const [savingNomineeId, setSavingNomineeId] = useState(null);
+    const [deletingNomineeId, setDeletingNomineeId] = useState(null);
+
+    const updateNomineeField = (nomineeId, event) => {
+        const { name, value } = event.target;
+        setNomineeForms((current) => ({
+            ...current,
+            [nomineeId]: { ...current[nomineeId], [name]: value },
+        }));
+    };
+
+    const saveNominee = async (nomineeId) => {
+        const nominee = nomineeForms[nomineeId];
+        if (
+            !nominee?.name.trim() ||
+            !nominee.relation.trim() ||
+            !/^\d{12}$/.test(nominee.aadhaarNo) ||
+            !/^\d{10}$/.test(nominee.phone)
+        ) {
+            errorMessage("Enter nominee name, relation, 12-digit Aadhaar, and 10-digit phone.");
+            return;
+        }
+        setSavingNomineeId(nomineeId);
+        try {
+            await onSaveNominee(nomineeId, nominee);
+        } finally {
+            setSavingNomineeId(null);
+        }
+    };
+
+    const deleteNominee = async (nomineeId) => {
+        if (!window.confirm("Delete this nominee? This cannot be undone.")) return;
+        setDeletingNomineeId(nomineeId);
+        try {
+            await onDeleteNominee(nomineeId);
+        } finally {
+            setDeletingNomineeId(null);
+        }
+    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 backdrop-blur-sm">
-            <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-800 bg-[#111827] p-6 shadow-2xl shadow-black/40">
+            <div className={`w-full ${isEditing ? "max-w-2xl" : "max-w-lg"} max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-800 bg-[#111827] p-6 shadow-2xl shadow-black/40`}>
                 <div className="mb-5 flex items-center justify-between">
                     <div>
                         <p className="text-xs uppercase tracking-[0.2em] text-teal-300">
-                            Admin action
+                            {isEditing ? "User details" : "Admin action"}
                         </p>
                         <h3 className="mt-1 font-[Space_Grotesk] text-xl font-semibold text-slate-100">
-                            Add manual user
+                            {isEditing ? "Edit user details" : "Add manual user"}
                         </h3>
                     </div>
                     <button
                         type="button"
                         onClick={() => setShowAddUserModal(false)}
+                        disabled={creatingUser}
                         className="rounded-full px-2 py-1 text-sm text-slate-400 transition hover:bg-white/5 hover:text-slate-100"
                     >
                         ✕
@@ -36,7 +93,7 @@ export default function AddUser({
                             Full name
                             <input
                                 name="name"
-                                value={newUserForm.name}
+                                value={newUserForm.name ?? ""}
                                 onChange={updateNewUserForm}
                                 required
                                 className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:outline-none"
@@ -47,7 +104,7 @@ export default function AddUser({
                             Phone
                             <input
                                 name="phone"
-                                value={newUserForm.phone}
+                                value={newUserForm.phone ?? ""}
                                 onChange={updateNewUserForm}
                                 required
                                 className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:outline-none"
@@ -62,25 +119,28 @@ export default function AddUser({
                             <input
                                 name="email"
                                 type="email"
-                                value={newUserForm.email}
+                                value={newUserForm.email ?? ""}
+                                readOnly={isEditing}
+                                className={`mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:outline-none ${isEditing ? "cursor-not-allowed opacity-60" : ""}`}
                                 onChange={updateNewUserForm}
-                                required
-                                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:outline-none"
+                                required={!isEditing}
                                 placeholder="user@example.com"
                             />
                         </label>
-                        <label className="text-xs text-slate-400">
-                            Password
-                            <input
-                                name="passwordHash"
-                                type="text"
-                                value={newUserForm.passwordHash}
-                                onChange={updateNewUserForm}
-                                required
-                                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:outline-none"
-                                placeholder="StrongPass@123"
-                            />
-                        </label>
+                        {!isEditing && (
+                            <label className="text-xs text-slate-400">
+                                Password
+                                <input
+                                    name="passwordHash"
+                                    type="password"
+                                    value={newUserForm.passwordHash ?? ""}
+                                    onChange={updateNewUserForm}
+                                    required
+                                    className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:outline-none"
+                                    placeholder="StrongPass@123"
+                                />
+                            </label>
+                        )}
                     </div>
 
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -89,7 +149,7 @@ export default function AddUser({
                             <input
                                 name="dob"
                                 type="date"
-                                value={newUserForm.dob}
+                                value={newUserForm.dob ?? ""}
                                 onChange={updateNewUserForm}
                                 className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 focus:border-teal-500 focus:outline-none"
                             />
@@ -98,7 +158,7 @@ export default function AddUser({
                             Marital status
                             <select
                                 name="maritalStatus"
-                                value={newUserForm.maritalStatus}
+                                value={newUserForm.maritalStatus ?? ""}
                                 onChange={updateNewUserForm}
                                 className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 focus:border-teal-500 focus:outline-none"
                             >
@@ -114,7 +174,7 @@ export default function AddUser({
                         Aadhaar number
                         <input
                             name="aadharNo"
-                            value={newUserForm.aadharNo}
+                            value={newUserForm.aadharNo ?? ""}
                             onChange={updateNewUserForm}
                             placeholder="123456789012"
                             className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:outline-none"
@@ -123,7 +183,7 @@ export default function AddUser({
 
                     {/* ---- Bank details (all optional) ---- */}
                     <div className="border-t border-slate-800 pt-4">
-                        <details>
+                        <details open={isEditing}>
                             <summary className="cursor-pointer mb-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
                                 Add  Bank details
                             </summary>
@@ -132,7 +192,7 @@ export default function AddUser({
                                     Account holder name
                                     <input
                                         name="accountHolderName"
-                                        value={newUserForm.accountHolderName}
+                                        value={newUserForm.accountHolderName ?? ""}
                                         onChange={updateNewUserForm}
                                         placeholder="As per bank records"
                                         className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:outline-none"
@@ -142,7 +202,7 @@ export default function AddUser({
                                     Bank name
                                     <input
                                         name="bankName"
-                                        value={newUserForm.bankName}
+                                        value={newUserForm.bankName ?? ""}
                                         onChange={updateNewUserForm}
                                         placeholder="Bank of Baroda"
                                         className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:outline-none"
@@ -154,7 +214,7 @@ export default function AddUser({
                                     Account number
                                     <input
                                         name="accountNumber"
-                                        value={newUserForm.accountNumber}
+                                        value={newUserForm.accountNumber ?? ""}
                                         onChange={updateNewUserForm}
                                         placeholder="809990119998510"
                                         className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:outline-none"
@@ -164,7 +224,7 @@ export default function AddUser({
                                     IFSC code
                                     <input
                                         name="ifscCode"
-                                        value={newUserForm.ifscCode}
+                                        value={newUserForm.ifscCode ?? ""}
                                         onChange={updateNewUserForm}
                                         placeholder="BKID0005811"
                                         className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:outline-none"
@@ -175,7 +235,7 @@ export default function AddUser({
 
                     {/* ---- Address (all optional) ---- */}
                     <div className="border-t border-slate-800 pt-4">
-                        <details>
+                        <details open={isEditing}>
                             <summary className="cursor-pointer mb-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
                                 Add  Address
                             </summary>
@@ -237,7 +297,7 @@ export default function AddUser({
                                 Address
                                 <textarea
                                     name="address"
-                                    value={newUserForm.address}
+                                    value={newUserForm.address ?? ""}
                                     onChange={updateNewUserForm}
                                     placeholder="Amanda home"
                                     className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:outline-none"
@@ -252,7 +312,7 @@ export default function AddUser({
 
                     {/* ---- Guardian (all optional) ---- */}
                     <div className="border-t border-slate-800 pt-4">
-                        <details>
+                        <details open={isEditing}>
                             <summary className="cursor-pointer mb-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
                                 Add  Guardian
                             </summary>
@@ -261,7 +321,7 @@ export default function AddUser({
                                     Guardian name
                                     <input
                                         name="guardian.name"
-                                        value={newUserForm["guardian.name"]}
+                                        value={newUserForm["guardian.name"] ?? ""}
                                         onChange={updateNewUserForm}
                                         placeholder="Hasrajan sah"
                                         className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:outline-none"
@@ -271,7 +331,7 @@ export default function AddUser({
                                     Relation
                                     <select
                                         name="guardian.relation"
-                                        value={newUserForm["guardian.relation"]}
+                                        value={newUserForm["guardian.relation"] ?? ""}
                                         onChange={updateNewUserForm}
                                         className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 focus:border-teal-500 focus:outline-none"
                                     >
@@ -286,8 +346,7 @@ export default function AddUser({
                         </details>
                     </div>
 
-                    {/* ---- Nominee (all optional) ---- */}
-                    <div className="border-t border-slate-800 pt-4">
+                    {!isEditing && <div className="border-t border-slate-800 pt-4">
                         <details>
                             <summary className="cursor-pointer mb-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
                                 Add  Nominee
@@ -300,7 +359,7 @@ export default function AddUser({
                                     Nominee name
                                     <input
                                         name="nominee.name"
-                                        value={newUserForm["nominee.name"]}
+                                        value={newUserForm["nominee.name"] ?? ""}
                                         onChange={updateNewUserForm}
                                         placeholder="Anandi"
                                         className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:outline-none"
@@ -310,7 +369,7 @@ export default function AddUser({
                                     Relation
                                     <select
                                         name="nominee.relation"
-                                        value={newUserForm["nominee.relation"]}
+                                        value={newUserForm["nominee.relation"] ?? ""}
                                         onChange={updateNewUserForm}
                                         className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 focus:border-teal-500 focus:outline-none"
                                     >
@@ -328,7 +387,7 @@ export default function AddUser({
                                     Nominee Aadhaar number
                                     <input
                                         name="nominee.aadharNo"
-                                        value={newUserForm["nominee.aadharNo"]}
+                                        value={newUserForm["nominee.aadharNo"] ?? ""}
                                         onChange={updateNewUserForm}
                                         placeholder="763274623266"
                                         className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:outline-none"
@@ -338,7 +397,7 @@ export default function AddUser({
                                     Nominee mobile number
                                     <input
                                         name="nominee.mobileNo"
-                                        value={newUserForm["nominee.mobileNo"]}
+                                        value={newUserForm["nominee.mobileNo"] ?? ""}
                                         onChange={updateNewUserForm}
                                         placeholder="7654321985"
                                         className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:outline-none"
@@ -346,12 +405,80 @@ export default function AddUser({
                                 </label>
                             </div>
                         </details>
-                    </div>
+                    </div>}
+
+                    {isEditing && (
+                                <>
+                                    <label className="flex items-center gap-2 text-sm text-slate-300">
+                                        <input
+                                            name="active"
+                                            type="checkbox"
+                                            checked={Boolean(active)}
+                                            onChange={updateNewUserForm}
+                                            className="h-4 w-4 accent-teal-400"
+                                        />
+                                        Account active
+                                    </label>
+
+                                    <section className="space-y-3 border-t border-slate-800 pt-4">
+                                        <h4 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
+                                            Nominees
+                                        </h4>
+                                        {!nominees.length && (
+                                            <p className="text-xs text-slate-500">No nominees registered.</p>
+                                        )}
+                                        {nominees.map((nominee) => (
+                                            <div
+                                                key={nominee.nomineeId}
+                                                className="grid gap-3 rounded-lg border border-slate-800 p-3 sm:grid-cols-2"
+                                            >
+                                                {[
+                                                    ["name", "Name"],
+                                                    ["relation", "Relation"],
+                                                    ["aadhaarNo", "Aadhaar number"],
+                                                    ["phone", "Phone"],
+                                                ].map(([field, label]) => (
+                                                    <label key={field} className="text-xs text-slate-400">
+                                                        {label}
+                                                        <input
+                                                            name={field}
+                                                            value={nomineeForms[nominee.nomineeId]?.[field] ?? ""}
+                                                            onChange={(event) => updateNomineeField(nominee.nomineeId, event)}
+                                                            inputMode={field === "aadhaarNo" || field === "phone" ? "numeric" : undefined}
+                                                            maxLength={field === "aadhaarNo" ? 12 : field === "phone" ? 10 : undefined}
+                                                            className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 focus:border-teal-500 focus:outline-none"
+                                                        />
+                                                    </label>
+                                                ))}
+                                                <div className="flex gap-2 sm:col-span-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => saveNominee(nominee.nomineeId)}
+                                                        disabled={savingNomineeId === nominee.nomineeId}
+                                                        className="flex-1 rounded-lg border border-teal-700/70 px-3 py-2 text-xs font-medium text-teal-300 hover:bg-teal-500/10 disabled:opacity-50"
+                                                    >
+                                                        {savingNomineeId === nominee.nomineeId ? "Saving..." : "Save nominee"}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => deleteNominee(nominee.nomineeId)}
+                                                        disabled={deletingNomineeId === nominee.nomineeId}
+                                                        className="rounded-lg border border-red-800 px-3 py-2 text-xs font-medium text-red-300 hover:bg-red-500/10 disabled:opacity-50"
+                                                    >
+                                                        {deletingNomineeId === nominee.nomineeId ? "Deleting..." : "Delete"}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </section>
+                                </>
+                    )}
 
                     <div className="flex justify-end gap-3 pt-2">
                         <button
                             type="button"
                             onClick={() => setShowAddUserModal(false)}
+                            disabled={creatingUser}
                             className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/5"
                         >
                             Cancel
@@ -361,7 +488,9 @@ export default function AddUser({
                             disabled={creatingUser}
                             className="rounded-lg bg-teal-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-teal-300 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                            {creatingUser ? "Creating..." : "Create user"}
+                            {creatingUser
+                                ? isEditing ? "Saving..." : "Creating..."
+                                : isEditing ? "Save user" : "Create user"}
                         </button>
                     </div>
                 </form>

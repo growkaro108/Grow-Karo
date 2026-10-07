@@ -5,19 +5,16 @@ import {
   Phone,
   Calendar,
   HandCoins,
-  ChevronDown,
-  CalendarClock,
-  Percent,
-  ArrowUpToLine,
-  ArrowDownToLine,
   User,
-  Plus,
+  Pencil,
 } from "lucide-react";
 import StatusPill from "./StatusPill";
+import SchemeManagementPanel from "./SchemeManagementPanel";
+// import EnrolledSchemes from "./EnrolledSchemes";
+import AddUser from "./AddUser";
 import {
   calculateMaturityDate,
   currency,
-  daysToMonths,
   initials,
   toDateInputValue,
 } from "./format";
@@ -29,24 +26,23 @@ import {
   addBond,
   addManualUserScheme,
   createAdminUserNominee,
+  deleteAdminUserNominee,
   fetchAdminUserNominees,
   getUserProfile,
+  updateAdminUserNominee,
   updateUserSchemeDetails,
   updateUserSchemeLedger,
+  updateAdminUserProfile,
 } from "../../../../../../services/malikService";
 
 const CertificateLightbox = dynamic(() => import("../Certificatelightbox"), {
   loading: () => <TabLoader message="Loading certificate..." />,
   ssr: false,
 });
-const BondCard = dynamic(() => import("./BondCard"), {
-  loading: () => <TabLoader message="Loading bond card..." />,
+const EnrolledSchemes = dynamic(() => import("./EnrolledSchemes"), {
+  loading: () => <TabLoader message="Loading enrolled schemes..." />,
   ssr: false,
 });
-
-const inputClass =
-  "w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-teal-500 [color-scheme:dark]";
-
 /* ------------------------------------------------------------------ */
 /* Ledger config: one description for both profit and redeem ledgers   */
 /* ------------------------------------------------------------------ */
@@ -78,6 +74,95 @@ const emptyForm = (schemeId = "") => ({
 });
 
 const emptyNominee = { name: "", relation: "", aadhaarNo: "", phone: "" };
+const MAX_BOND_FILE_SIZE_BYTES = 2 * 1024 * 1024;
+const TARGET_BOND_IMAGE_SIZE_BYTES = 1.5 * 1024 * 1024;
+const MAX_SOURCE_IMAGE_SIZE_BYTES = 20 * 1024 * 1024;
+
+async function prepareBondUpload(file) {
+  if (
+    file.type === "application/pdf" ||
+    /\.pdf$/i.test(file.name) ||
+    file.size <= TARGET_BOND_IMAGE_SIZE_BYTES
+  ) {
+    return file;
+  }
+
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Only JPG, PNG, WEBP, or PDF files are allowed.");
+  }
+
+  let bitmap;
+  let imageUrl;
+  try {
+    if (typeof createImageBitmap === "function") {
+      bitmap = await createImageBitmap(file);
+    } else {
+      imageUrl = URL.createObjectURL(file);
+      bitmap = await new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () =>
+          reject(new Error("Could not read the selected image."));
+        image.src = imageUrl;
+      });
+    }
+
+    const maxDimension = 2200;
+    let width = bitmap.width;
+    let height = bitmap.height;
+    const initialScale = Math.min(1, maxDimension / Math.max(width, height));
+    width = Math.round(width * initialScale);
+    height = Math.round(height * initialScale);
+
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Could not prepare the selected image.");
+
+    const qualityLevels = [0.86, 0.78, 0.7, 0.62, 0.54];
+    while (true) {
+      canvas.width = width;
+      canvas.height = height;
+      context.drawImage(bitmap, 0, 0, width, height);
+
+      for (const quality of qualityLevels) {
+        const compressed = await new Promise((resolve, reject) => {
+          canvas.toBlob(
+            (blob) =>
+              blob
+                ? resolve(blob)
+                : reject(new Error("Could not compress the selected image.")),
+            "image/jpeg",
+            quality,
+          );
+        });
+        if (
+          compressed.size <= TARGET_BOND_IMAGE_SIZE_BYTES &&
+          compressed.size < file.size
+        ) {
+          const name = file.name.replace(/\.[^.]+$/, "") || "bond";
+          return new File([compressed], `${name}.jpg`, {
+            type: "image/jpeg",
+            lastModified: file.lastModified,
+          });
+        }
+      }
+
+      const longestSide = Math.max(width, height);
+      if (longestSide <= 1100) {
+        if (file.size <= MAX_BOND_FILE_SIZE_BYTES) return file;
+        throw new Error(
+          "This image cannot be reduced to 2 MB while keeping it readable. Please choose a smaller image.",
+        );
+      }
+      const scale = Math.max(1100 / longestSide, 0.85);
+      width = Math.max(1, Math.round(width * scale));
+      height = Math.max(1, Math.round(height * scale));
+    }
+  } finally {
+    bitmap?.close?.();
+    if (imageUrl) URL.revokeObjectURL(imageUrl);
+  }
+}
 
 // Convert ledger rows from the form into the API shape. Rows with no date and
 // no amount are dropped; ids are kept so existing rows are updated, not duplicated.
@@ -112,84 +197,6 @@ const toFormLedger = (entries, type) => {
 };
 
 /* ------------------------------------------------------------------ */
-/* Small presentational pieces                                         */
-/* ------------------------------------------------------------------ */
-function SchemeSummary({ scheme }) {
-  return (
-    <div className="grid grid-cols-2 items-center gap-x-6 gap-y-3 rounded-xl border border-slate-800 bg-slate-900/60 px-5 py-3.5">
-      <div className="flex items-center gap-2">
-        <ArrowDownToLine className="h-4 w-4 text-slate-500" />
-        <span className="text-[13px] text-slate-500">Min</span>
-        <span className="text-[15px] font-medium text-slate-100">
-          {currency(scheme.minimumAmount) ?? "0"}
-        </span>
-      </div>
-      <div className="flex items-center gap-2">
-        <ArrowUpToLine className="h-4 w-4 text-slate-500" />
-        <span className="text-[13px] text-slate-500">Max</span>
-        <span className="text-[15px] font-medium text-slate-100">
-          {currency(scheme.maximumAmount) ?? "0"}
-        </span>
-      </div>
-      <div className="flex items-center gap-2">
-        <Percent className="h-4 w-4 text-emerald-500" />
-        <span className="text-[13px] text-slate-500">Interest</span>
-        <span className="text-[15px] font-semibold text-emerald-400">
-          {scheme.profitPercentage ?? "0"}%
-        </span>
-      </div>
-      <div className="flex items-center gap-2">
-        <CalendarClock className="h-4 w-4 text-slate-500" />
-        <span className="text-[13px] text-slate-500">Tenure</span>
-        <span className="text-[14px] font-medium text-slate-100">
-          {daysToMonths(scheme.tenure) ?? "0 days"}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function LedgerRows({ type, rows, onChange, onAdd }) {
-  const { amount, date } = LEDGER[type];
-  const isProfit = type === "profit";
-  return (
-    <>
-      {rows.map((entry, index) => (
-        <div
-          key={entry.id ?? index}
-          className="grid grid-cols-2 gap-2 rounded-md border border-slate-800 p-2"
-        >
-          <input
-            aria-label={isProfit ? "Profit amount" : "Redeem amount"}
-            type="number"
-            min={isProfit ? "100" : "0"}
-            step={isProfit ? "100" : "0.01"}
-            placeholder={isProfit ? "Profit amount" : "Redeem amount"}
-            value={entry[amount]}
-            onChange={(e) => onChange(index, amount, e.target.value)}
-            className={inputClass}
-          />
-          <input
-            aria-label={isProfit ? "Profit date" : "Redeem date"}
-            type="date"
-            value={entry[date]}
-            onChange={(e) => onChange(index, date, e.target.value)}
-            className={inputClass}
-          />
-        </div>
-      ))}
-      <button
-        type="button"
-        onClick={onAdd}
-        className="text-xs font-medium text-teal-300 hover:text-teal-200"
-      >
-        + Add {isProfit ? "profit" : "redeem"} row
-      </button>
-    </>
-  );
-}
-
-/* ------------------------------------------------------------------ */
 /* Main component                                                      */
 /* ------------------------------------------------------------------ */
 export default function UserDrawer({ user, onClose, onSaved }) {
@@ -197,6 +204,9 @@ export default function UserDrawer({ user, onClose, onSaved }) {
   const [viewUserDetails, setViewUserDetails] = useState(null);
   const [schemes, setSchemes] = useState([]);
   const [nominees, setNominees] = useState([]);
+  const [profileEditOpen, setProfileEditOpen] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileForm, setProfileForm] = useState({});
 
   // Shared add / edit form. editingBond === null  -> add mode
   const [form, setForm] = useState(emptyForm);
@@ -258,6 +268,7 @@ export default function UserDrawer({ user, onClose, onSaved }) {
     try {
       const details = await getUserProfile(id);
       if (details) setViewUserDetails(details);
+      return details;
     } catch (e) {
       console.error("Error fetching user details", e);
     }
@@ -520,12 +531,14 @@ export default function UserDrawer({ user, onClose, onSaved }) {
     setSavingBond(true);
     const payload = new FormData();
     if (details.bondNumber) payload.append("bondNumber", details.bondNumber);
-    if (details.image) payload.append("image", details.image);
     try {
+      if (details.image) {
+        payload.append("image", await prepareBondUpload(details.image));
+      }
       const saved = await addBond(user.userId, bond.userSchemeId, payload, true);
       if (saved) await onSaved?.();
     } catch (error) {
-      errorMessage("Failed to save bond details. Please try again.");
+      errorMessage(error?.message || "Failed to save bond details. Please try again.");
       console.error("Failed to save bond details:", error);
     } finally {
       setSavingBond(false);
@@ -535,6 +548,111 @@ export default function UserDrawer({ user, onClose, onSaved }) {
   const onViewBond = async (bond) => {
     setViewingBond(bond);
     if (!viewUserDetails) await getUserFullDetails(currentUserId);
+  };
+
+  const updateProfileForm = (event) => {
+    const { name, value, type, checked } = event.target;
+    setProfileForm((current) => ({
+      ...current,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const saveUserProfile = async (event) => {
+    event.preventDefault();
+    setProfileSaving(true);
+    try {
+      const updated = await updateAdminUserProfile(currentUserId, {
+        name: profileForm.name.trim(),
+        phone: profileForm.phone.trim(),
+        dob: profileForm.dob || null,
+        maritalStatus: profileForm.maritalStatus || "",
+        aadharNo: profileForm.aadharNo.trim(),
+        address: profileForm.address.trim(),
+        guardianName: profileForm["guardian.name"].trim(),
+        guardianRelation: profileForm["guardian.relation"].trim(),
+        bankName: profileForm.bankName.trim(),
+        accountNumber: profileForm.accountNumber.trim(),
+        ifscCode: profileForm.ifscCode.trim().toUpperCase(),
+        accountHolderName: profileForm.accountHolderName.trim(),
+        active: profileForm.active,
+      });
+      if (!updated) return;
+      setViewUserDetails(updated);
+      setProfileEditOpen(false);
+      await onSaved?.();
+    } catch (error) {
+      errorMessage(error?.message || "Failed to update user details.");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const openProfileEditor = async () => {
+    try {
+      const [details, userNominees] = await Promise.all([
+        viewUserDetails ?? getUserFullDetails(currentUserId),
+        fetchAdminUserNominees(currentUserId),
+      ]);
+      if (details) setViewUserDetails(details);
+      setNominees(Array.isArray(userNominees) ? userNominees : []);
+      setProfileForm({
+        name: details?.name ?? user?.name ?? "",
+        email: details?.email ?? user?.email ?? "",
+        phone: details?.phone ?? user?.phone ?? "",
+        dob: toDateInputValue(details?.dob),
+        maritalStatus: details?.maritalStatus ?? "",
+        aadharNo: details?.aadhaarNo ?? details?.aadharNo ?? "",
+        address: details?.address ?? "",
+        "guardian.name": details?.gaurdianName ?? details?.guardianName ?? "",
+        "guardian.relation": details?.guardianRelation ?? "",
+        bankName: details?.bankName ?? "",
+        accountNumber: details?.accountNo ?? details?.accountNumber ?? "",
+        ifscCode: details?.ifsc ?? details?.ifscCode ?? "",
+        accountHolderName: details?.accountHolderName ?? "",
+        active: user?.isActive ?? user?.active ?? user?.status !== "Inactive",
+      });
+      setProfileEditOpen(true);
+    } catch (error) {
+      errorMessage(error?.message || "Failed to load user details.");
+    }
+  };
+
+  const saveUserNominee = async (nomineeId, nominee) => {
+    try {
+      const updated = await updateAdminUserNominee(currentUserId, nomineeId, {
+        name: nominee.name.trim(),
+        relation: nominee.relation.trim(),
+        aadhaarNo: nominee.aadhaarNo.trim(),
+        phone: nominee.phone.trim(),
+      });
+      if (!updated) return;
+      setNominees((current) =>
+        current.map((item) =>
+          item.nomineeId === nomineeId ? { ...item, ...updated } : item,
+        ),
+      );
+    } catch (error) {
+      errorMessage(error?.message || "Failed to update nominee.");
+    }
+  };
+
+  const removeUserNominee = async (nomineeId) => {
+    try {
+      const deleted = await deleteAdminUserNominee(currentUserId, nomineeId);
+      if (deleted) {
+        setNominees((current) =>
+          current.filter((item) => item.nomineeId !== nomineeId),
+        );
+        setForm((current) =>
+          current.nomineeId === nomineeId
+            ? { ...current, nomineeId: "" }
+            : current,
+        );
+      }
+    } catch (error) {
+      errorMessage(error?.message || "Failed to delete nominee.");
+    }
   };
 
   /* --------------------------------- render --------------------------------- */
@@ -598,294 +716,64 @@ export default function UserDrawer({ user, onClose, onSaved }) {
               <span className="font-semibold text-slate-100">+91</span>{" "}
               {user.phone}
             </div>
-          </div>
-
-          {/* Add / Edit scheme — one shared form */}
-          <div
-            ref={formTopRef}
-            className={`mb-7 overflow-hidden rounded-xl border ${
-              isEditing
-                ? "border-amber-700/70 bg-amber-950/10"
-                : "border-teal-900/70 bg-teal-950/20"
-            }`}
-          >
             <button
               type="button"
-              onClick={() => setAddFormOpen((v) => !v)}
-              className="flex w-full items-center justify-between px-4 py-3.5 text-left"
+              onClick={openProfileEditor}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-teal-700/70 px-3 py-2 text-sm font-medium text-teal-300 transition hover:bg-teal-500/10"
             >
-              <span
-                className={`flex items-center font-[Space_Grotesk] text-sm font-semibold ${
-                  isEditing ? "text-amber-300" : "text-teal-300"
-                }`}
-              >
-                <Plus className="mr-0.5 h-5 w-5" />
-                {isEditing
-                  ? `Edit scheme${
-                      editingBond.schemeName ? `: ${editingBond.schemeName}` : ""
-                    }`
-                  : "Add scheme manually"}
-              </span>
-              <span className="flex items-center gap-2 text-[10px] text-slate-500">
-                Admin only
-                <ChevronDown
-                  className={`h-3.5 w-3.5 text-teal-300 transition-transform ${
-                    addFormOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </span>
+              <Pencil className="h-4 w-4" />
+              Edit user details
             </button>
-
-            {addFormOpen && (
-              <form
-                onSubmit={saveScheme}
-                className="space-y-3 border-t border-teal-900/70 px-4 py-4"
-              >
-                <label className="block text-xs text-slate-400">
-                  Scheme
-                  <select
-                    name="schemeId"
-                    value={form.schemeId}
-                    onChange={updateForm}
-                    required
-                    className={`mt-1 ${inputClass}`}
-                  >
-                    <option value="">Select a scheme</option>
-                    {schemes.map((scheme) => (
-                      <option key={scheme.schemeId} value={scheme.schemeId}>
-                        {scheme.schemeName}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                {selectedScheme && <SchemeSummary scheme={selectedScheme} />}
-
-                <label className="block text-xs text-slate-400">
-                  Nominee for this scheme
-                  <select
-                    name="nomineeId"
-                    value={form.nomineeId}
-                    onChange={updateForm}
-                    required
-                    disabled={!nominees.length}
-                    className={`mt-1 ${inputClass}`}
-                  >
-                    <option value="">
-                      {nominees.length
-                        ? "Select a nominee"
-                        : "No nominees found for this user"}
-                    </option>
-                    {nominees.map((nominee) => (
-                      <option key={nominee.nomineeId} value={nominee.nomineeId}>
-                        {nominee.name} ({nominee.relation})
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <button
-                  type="button"
-                  onClick={() => setNomineeFormOpen((v) => !v)}
-                  className="text-xs font-medium text-teal-300 hover:text-teal-200"
-                >
-                  {nomineeFormOpen
-                    ? "Cancel new nominee"
-                    : "+ Add nominee to user account"}
-                </button>
-
-                {nomineeFormOpen && (
-                  <div className="space-y-2 rounded-md border border-slate-800 bg-slate-950/40 p-3">
-                    <input
-                      name="name"
-                      value={nomineeForm.name}
-                      onChange={updateNomineeForm}
-                      placeholder="Nominee name"
-                      className={inputClass}
-                    />
-                    <input
-                      name="relation"
-                      value={nomineeForm.relation}
-                      onChange={updateNomineeForm}
-                      placeholder="Relation"
-                      className={inputClass}
-                    />
-                    <input
-                      name="aadhaarNo"
-                      value={nomineeForm.aadhaarNo}
-                      onChange={updateNomineeForm}
-                      placeholder="Aadhaar number"
-                      type="text"
-                      maxLength="12"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      className={inputClass}
-                    />
-                    <input
-                      name="phone"
-                      value={nomineeForm.phone}
-                      onChange={updateNomineeForm}
-                      type="text"
-                      maxLength="10"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      placeholder="Phone Number"
-                      className={inputClass}
-                    />
-                    <button
-                      type="button"
-                      onClick={saveNominee}
-                      disabled={nomineeSaving}
-                      className="w-full rounded-md bg-teal-400 px-3 py-2 text-xs font-semibold text-slate-950 disabled:opacity-50"
-                    >
-                      {nomineeSaving ? "Saving nominee..." : "Save nominee"}
-                    </button>
-                  </div>
-                )}
-
-                {/* Invested amount, paid date, maturity date */}
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="text-xs text-slate-400">
-                    Invested amount
-                    <input
-                      name="paidAmount"
-                      type="number"
-                      min="1000"
-                      step="1000"
-                      value={form.paidAmount}
-                      onChange={updateForm}
-                      required
-                      className={`mt-1 ${inputClass}`}
-                    />
-                  </label>
-                  <label className="text-xs text-slate-400">
-                    Enrollment / paid date
-                    <input
-                      name="paidDate"
-                      type="date"
-                      value={form.paidDate}
-                      onChange={updateForm}
-                      required
-                      className={`mt-1 ${inputClass}`}
-                    />
-                  </label>
-                  <label className="col-span-2 text-xs text-slate-400">
-                    Maturity date
-                    <input
-                      name="maturityDate"
-                      type="date"
-                      value={form.maturityDate}
-                      onChange={updateForm}
-                      min={form.paidDate || undefined}
-                      required
-                      className={`mt-1 ${inputClass}`}
-                    />
-                    <span className="mt-1 block text-[10px] text-slate-500">
-                      Calculated from enrollment date and tenure; editable.
-                    </span>
-                  </label>
-                </div>
-
-                {showLedgers && (
-                  <div className="space-y-2">
-                    <p className="text-xs text-slate-400">
-                      Profit and redemption entries
-                    </p>
-                    <LedgerRows
-                      type="profit"
-                      rows={form.profitLedger}
-                      onChange={updateFormLedger("profit")}
-                      onAdd={addFormLedgerRow("profit")}
-                    />
-                    <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
-                      Redeem history
-                    </p>
-                    <LedgerRows
-                      type="redeem"
-                      rows={form.reedemLedger}
-                      onChange={updateFormLedger("redeem")}
-                      onAdd={addFormLedgerRow("redeem")}
-                    />
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={saving || !schemes.length}
-                  className="w-full rounded-lg bg-teal-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-teal-300 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {saving
-                    ? "Saving..."
-                    : isEditing
-                      ? "Update scheme"
-                      : "Add scheme to account"}
-                </button>
-                {isEditing && (
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    disabled={saving}
-                    className="w-full rounded-lg border border-slate-700 px-4 py-2.5 text-sm text-slate-300 transition hover:bg-white/5 disabled:opacity-50"
-                  >
-                    Cancel edit
-                  </button>
-                )}
-              </form>
-            )}
           </div>
 
-          {/* Enrolled schemes */}
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="font-[Space_Grotesk] text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Joined schemes
-            </h3>
-            {sortedBonds.length > 0 && (
-              <span className="text-xs text-slate-500">
-                {sortedBonds.length} total
-              </span>
-            )}
-          </div>
+          <SchemeManagementPanel
+            formTopRef={formTopRef}
+            isEditing={isEditing}
+            editingBond={editingBond}
+            form={form}
+            addFormOpen={addFormOpen}
+            setAddFormOpen={setAddFormOpen}
+            updateForm={updateForm}
+            schemes={schemes}
+            selectedScheme={selectedScheme}
+            nominees={nominees}
+            nomineeFormOpen={nomineeFormOpen}
+            setNomineeFormOpen={setNomineeFormOpen}
+            nomineeForm={nomineeForm}
+            updateNomineeForm={updateNomineeForm}
+            saveNominee={saveNominee}
+            nomineeSaving={nomineeSaving}
+            updateFormLedger={updateFormLedger}
+            addFormLedgerRow={addFormLedgerRow}
+            showLedgers={showLedgers}
+            saveScheme={saveScheme}
+            saving={saving}
+            resetForm={resetForm}
+          />
 
-          {sortedBonds.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-700 px-4 py-8 text-center text-sm text-slate-500">
-              No bonds issued yet.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {sortedBonds.map((bond) => {
-                const id = bond.userSchemeId;
-                return (
-                  <BondCard
-                    key={id}
-                    bond={bond}
-                    user={user}
-                    profitRows={ledgerEdits[id]?.profitLedger ?? []}
-                    reedemRows={ledgerEdits[id]?.reedemLedger ?? []}
-                    bondFormState={bondForms[id] ?? {}}
-                    onProfitFieldChange={(index, field, value) =>
-                      updateExistingLedger(id, "profit", index, field, value)
-                    }
-                    onReedemFieldChange={(index, field, value) =>
-                      updateExistingLedger(id, "redeem", index, field, value)
-                    }
-                    onAddProfitRow={() => addExistingLedgerRow(id, "profit")}
-                    onAddReedemRow={() => addExistingLedgerRow(id, "redeem")}
-                    onSaveLedgers={() => saveLedger(id)}
-                    nominees={nominees}
-                    onStartEditingScheme={() => startEditingScheme(bond)}
-                    onBondFormChange={(field, value) =>
-                      updateBondForm(id, field, value)
-                    }
-                    onSaveBond={() => updateBond(bond)}
-                    onViewBond={onViewBond}
-                    savingBond={savingBond}
-                    setSavingBond={setSavingBond}
-                    viewUser={viewUserDetails}
-                  />
-                );
-              })}
-            </div>
-          )}
+          <EnrolledSchemes
+            bonds={sortedBonds}
+            user={user}
+            ledgerEdits={ledgerEdits}
+            bondForms={bondForms}
+            nominees={nominees}
+            onProfitFieldChange={(id, index, field, value) =>
+              updateExistingLedger(id, "profit", index, field, value)
+            }
+            onRedeemFieldChange={(id, index, field, value) =>
+              updateExistingLedger(id, "redeem", index, field, value)
+            }
+            onAddProfitRow={(id) => addExistingLedgerRow(id, "profit")}
+            onAddRedeemRow={(id) => addExistingLedgerRow(id, "redeem")}
+            onSaveLedgers={saveLedger}
+            onStartEditingScheme={startEditingScheme}
+            onBondFormChange={updateBondForm}
+            onSaveBond={updateBond}
+            onViewBond={onViewBond}
+            savingBond={savingBond}
+            setSavingBond={setSavingBond}
+            viewUser={viewUserDetails}
+          />
         </div>
 
         <div className="border-t border-slate-800 px-6 py-4">
@@ -902,6 +790,20 @@ export default function UserDrawer({ user, onClose, onSaved }) {
         scheme={viewingBond?.schemeName || viewingBond?.scheme || user?.scheme}
         onClose={() => setViewingBond(null)}
       />
+      {profileEditOpen && (
+        <AddUser
+          isEditing
+          newUserForm={profileForm}
+          updateNewUserForm={updateProfileForm}
+          setShowAddUserModal={setProfileEditOpen}
+          handleCreateManualUser={saveUserProfile}
+          creatingUser={profileSaving}
+          nominees={nominees}
+          onSaveNominee={saveUserNominee}
+          onDeleteNominee={removeUserNominee}
+          active={profileForm.active}
+        />
+      )}
     </div>
   );
 }

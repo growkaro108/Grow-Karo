@@ -51,6 +51,43 @@ public class LocalFileStorageService {
         }
     }
 
+    /**
+     * Deletes a file previously stored by store()/storeBytes(), given the URL they
+     * returned.
+     * Safe to call with null/blank or an already-deleted file.
+     */
+    public void delete(String fileUrl) {
+        if (fileUrl == null || fileUrl.isBlank()) {
+            return;
+        }
+
+        try {
+            // 1. URL -> path relative to basePath
+            String relative = fileUrl.trim();
+            if (!baseUrl.isEmpty() && relative.startsWith(baseUrl)) {
+                relative = relative.substring(baseUrl.length());
+            }
+            while (relative.startsWith("/")) {
+                relative = relative.substring(1);
+            }
+            if (relative.isEmpty()) {
+                return;
+            }
+
+            // 2. Never allow a path outside the storage root (blocks ../ tricks)
+            Path root = Paths.get(basePath).toAbsolutePath().normalize();
+            Path target = root.resolve(relative).normalize();
+            if (!target.startsWith(root) || target.equals(root)) {
+                throw new IllegalArgumentException("Invalid file path: " + fileUrl);
+            }
+
+            // 3. Delete; no error if already gone
+            Files.deleteIfExists(target);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to delete file locally: " + fileUrl, e);
+        }
+    }
+
     private String getExtension(String originalFilename) {
         if (originalFilename == null || !originalFilename.contains(".")) {
             return "";

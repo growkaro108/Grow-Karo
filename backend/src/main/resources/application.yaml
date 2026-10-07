@@ -47,7 +47,8 @@ spring:
   # 4. JPA / Hibernate Configuration
   jpa:
     hibernate:
-      ddl-auto: update # Change to 'validate' or 'none' for production
+      # ddl-auto: update # Change to 'validate' or 'none' for production
+      ddl-auto: validate # Change to 'validate' or 'none' for production
     show-sql: false # Set to true during local development only
     properties:
       hibernate:
@@ -56,6 +57,8 @@ spring:
 
   # 5. Logging Configuration
   main:
+# lazy-initialization: true
+    lazy-initialization: true
     # Disable the Spring Boot banner
     banner-mode: "off"
     # Start beans only when needed

@@ -21,9 +21,9 @@ export const metadata = {
   title: "Grow-Karo",
   description: "created by Anand",
   icons: {
-    icon: "/logo.png",
-    shortcut: "/logo.png",
-    apple: "/logo.png",
+    icon: "/tiltlelogo.png",
+    shortcut: "/tiltlelogo.png",
+    apple: "/tiltlelogo.png",
   },
 };
 
