@@ -11,12 +11,14 @@ import com.growkaro.backend.entity.UserScheme;
 
 public record AdminUser(
                 String userId,
+                String customerId,
                 String name,
                 String email,
                 String phone,
                 boolean isActive,
                 String joined,
                 Long totalRedeem,
+                BankDetailsResponse bankDetails,
                 List<UserSchemeResponse> enrolledSchemes) {
 
         private static final DateTimeFormatter JOINED_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -40,12 +42,14 @@ public record AdminUser(
 
                 return new AdminUser(
                                 user.getId(),
+                                GENERAL.getCustomerId(user.getId()),
                                 user.getName(),
                                 user.getEmail(),
                                 user.getPhone(),
                                 user.isActive(),
                                 user.getCreatedAt() == null ? "" : user.getCreatedAt().format(JOINED_FORMAT),
                                 totalRedeemed.longValue(),
+                                BankDetailsResponse.fromEntity(user.getBankDetails()),
                                 schemes.stream().map(UserSchemeResponse::toUserSchemeResponse).toList());
         }
 }

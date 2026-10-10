@@ -67,8 +67,7 @@ public class UserAPIController {
         log.debug("OTP requested for email: {}", email);
 
         if (!general.validateEmail(email)) {
-            return ResponseEntity.badRequest()
-                    .body(general.response("invalid", "Enter a valid email address.", null));
+            return ResponseEntity.ok(general.response("info", "Enter a valid email address.", null));
         }
         // check if user or remitter with same email exists
         if (userAPIService.isUserExists(email) || remitterAPIService.isRemitterExists(email)) {
@@ -105,21 +104,17 @@ public class UserAPIController {
             if (userAPIService.isUserExists(user.email()) || remitterAPIService.isRemitterExists(user.email())) {
                 return ResponseEntity.ok(general.response("info", "Email already registered..", null));
             }
-            // if(userAPIService.findAllUserPhone().contains(user.phone())){
-            //     return ResponseEntity.ok(general.response("info", "Phone already registered..", null));
-
-            // }
-            if (user.name() == null || user.email() == null || !general.validateEmail(user.email())
+            if (user.name() == null
+                    || user.email() == null || !general.validateEmail(user.email())
                     || user.phone() == null
                     || user.passwordHash() == null || !general.validatePassword(user.passwordHash())) {
-                return ResponseEntity.badRequest().body(general.response("error", "Invalid data...", null));
-            }
 
-            boolean result = userAPIService.userSignup(user);
-            return result
-                    ? ResponseEntity.ok(general.response("ok", "Account created successfully", null))
-                    : ResponseEntity.internalServerError()
-                            .body(general.response("error", "Internal Server error", null));
+                return ResponseEntity.ok(general.response("error",
+                                "Validation failed: Please ensure name, email, phone, and password are correctly formatted.",
+                                null));
+            }
+            return ResponseEntity.ok(userAPIService.userSignup(user));
+            
         } catch (Exception e) {
             log.error("Error during signup because: {}", e.getMessage());
             return ResponseEntity.internalServerError().body(general.response("error", "Internal Server error", null));

@@ -43,24 +43,24 @@ echo "✅ Frontend image pushed successfully!"
 # ==========================================
 # Build & push backend
 # ==========================================
-# echo "=========================================="
-# echo "🚀 Building Backend (tag: $IMAGE_TAG)"
-# echo "=========================================="
+echo "=========================================="
+echo "🚀 Building Backend (tag: $IMAGE_TAG)"
+echo "=========================================="
 
-# docker build -t "growwkaro/backend:$IMAGE_TAG" ./backend
+docker build -t "growwkaro/backend:$IMAGE_TAG" ./backend
 
-# echo "✅ Backend image built successfully!"
-# docker push "growwkaro/backend:$IMAGE_TAG"
+echo "✅ Backend image built successfully!"
+docker push "growwkaro/backend:$IMAGE_TAG"
 
 # ==========================================
 # Deploy
 # ==========================================
-# echo "=========================================="
-# echo "🎉 Starting containers..."
-# echo "=========================================="
+echo "=========================================="
+echo "🎉 Starting containers..."
+echo "=========================================="
 
-# docker compose -f "$COMPOSE_FILE" down
-# docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+docker compose -f "$COMPOSE_FILE" down
+docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
 
 echo "=========================================="
 echo "✨ Deployment complete! (frontend & backend: $IMAGE_TAG)"

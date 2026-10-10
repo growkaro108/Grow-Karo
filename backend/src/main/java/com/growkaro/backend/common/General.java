@@ -107,21 +107,21 @@ public class General {
     }
 
     @Cacheable(value = "schemes", key = "#p0")
-     public Scheme getSchemeById(String schemeId) {
-        if (schemeId == null || schemeId.isBlank()||!isValidSchemeId(schemeId)) {
+    public Scheme getSchemeById(String schemeId) {
+        if (schemeId == null || schemeId.isBlank() || !isValidSchemeId(schemeId)) {
             return null;
         }
         return schemeRepository.findById(schemeId).orElse(null);
     }
-   
+
     @Cacheable(value = "users", key = "#p0")
     public User getUserById(String userId) {
-        if (userId == null || userId.isBlank()||!isValidId(userId)) {
+        if (userId == null || userId.isBlank() || !isValidId(userId)) {
             return null;
         }
         return userRepository.findById(userId).orElse(null);
     }
-   
+
     // generate exactly 6 digit otp
     public String generate6DigitOTP() {
         Random rand = new Random();
@@ -425,8 +425,6 @@ public class General {
         return baseUrl + "/reset/" + remitterId + "_rem";
     }
 
-   
-
     public Payee toPayee(Transaction request) {
         BankDetails bd = request.getBankDetails();
         return new Payee(
@@ -578,16 +576,35 @@ public class General {
     }
 
     public BigDecimal calculateMaturityAmount(UserScheme bond) {
+        BigDecimal paidAmount = bond.getPaidAmount() != null ? bond.getPaidAmount() : BigDecimal.ZERO;
+        double profitPercentage = bond.getScheme().getProfitPercentage();
+
+        // Convert profit percentage to BigDecimal safely avoiding double precision
+        // errors
+        BigDecimal profitMultiplier = BigDecimal.valueOf(profitPercentage)
+                .divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+
+        BigDecimal totalMaturity;
+
         if ("tenure-complete".equals(bond.getScheme().getPayoutFrequency())) {
-            return bond.getPaidAmount()
-                    .multiply(BigDecimal.valueOf(1 + bond.getScheme().getProfitPercentage() / 100.0));
+            // Principal + (Principal * Profit%)
+            BigDecimal interest = paidAmount.multiply(profitMultiplier);
+            totalMaturity = paidAmount.add(interest);
         } else {
             int periodDays = resolvePeriodDays(bond.getScheme().getPayoutFrequency(), bond.getScheme().getTenure());
-            int times = bond.getScheme().getTenure() / periodDays; // Integer division automatically floors in Java
-            BigDecimal interest = bond.getPaidAmount()
-                    .multiply(BigDecimal.valueOf(bond.getScheme().getProfitPercentage() / 100.0));
-            return bond.getPaidAmount().add(interest.multiply(BigDecimal.valueOf(times)));
+            int times = bond.getScheme().getTenure() / periodDays; // Integer division floors automatically
+
+            // If you want to track or factor in redemptions:
+            BigDecimal totalRedeem = countReedem(bond.getReedemLedger());
+
+            BigDecimal interestPerPeriod = paidAmount.multiply(profitMultiplier);
+            totalMaturity = paidAmount.add(interestPerPeriod.multiply(BigDecimal.valueOf(times)));
+
+            // Subtract already redeemed amounts if applicable to your business logic:
+            totalMaturity = totalMaturity.subtract(totalRedeem);
         }
+
+        return totalMaturity;
     }
 
     public String getCustomerId(String Id) {
@@ -601,7 +618,5 @@ public class General {
     public int dayDiff(LocalDate start, LocalDate end) {
         return (int) ChronoUnit.DAYS.between(start, end);
     }
-
-   
 
 }

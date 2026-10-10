@@ -16,9 +16,9 @@ public record UserSchemeResponse(
                 Double profitPercentage,
                 String status,
                 BigDecimal paidAmount,
+                BigDecimal maturityAmount,
                 BigDecimal profit,
                 BigDecimal profitRedeemed,
-
                 String paidDate,
                 String requestDate,
                 String enrollmentDate,
@@ -30,6 +30,7 @@ public record UserSchemeResponse(
                 List<UserSchemeProfitLedgerResponse> profitLedger,
                 List<UserSchemeReedemLedgerResponse> reedemLedger,
                 NomineeResponse nominee) {
+        private static final General GENERAL = new General();
 
         public static UserSchemeResponse toUserSchemeResponse(UserScheme us) {
                 boolean isJoined = us.getEnrollmentDate() != null;
@@ -51,6 +52,7 @@ public record UserSchemeResponse(
                                 .map(UserSchemeReedemLedgerResponse::redeemAmount)
                                 .reduce(BigDecimal.ZERO, BigDecimal::add);
                 Scheme s = us.getScheme();
+                BigDecimal maturityAmount = GENERAL.calculateMaturityAmount(us);
                 return new UserSchemeResponse(
                                 us.getUserSchemeId(),
                                 s.getSchemeName(),
@@ -59,6 +61,7 @@ public record UserSchemeResponse(
                                 s.getProfitPercentage(),
                                 us.getStatus().toString().toLowerCase(),
                                 us.getPaidAmount(),
+                                maturityAmount,
                                 profit,
                                 profitRedeemed,
                                 us.getPaidDate() == null ? null : us.getPaidDate().toString(),

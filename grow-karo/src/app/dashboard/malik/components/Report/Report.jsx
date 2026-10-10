@@ -37,6 +37,7 @@ import {
 } from "./reportUtils";
 import dynamic from "next/dynamic";
 import UserRow from "./UserRow";
+import { allRounderMessage } from "@/components/Message";
 // import ReportControls from "./ReportControls";
 // import ReportSummary from "./ReportSummary";
 
@@ -113,9 +114,7 @@ export default function Reports() {
     }
     const records = pageResults.flatMap((page) => {
       if (page?.status !== "success" || !Array.isArray(page.data?.content)) {
-        throw new Error(
-          page?.message || "A page of report data could not be loaded.",
-        );
+        allRounderMessage(page);
       }
       return page.data.content;
     });
@@ -331,33 +330,61 @@ export default function Reports() {
         const s = schemeEntryFor(u);
         return {
           "Investor ID": u.id,
+          "Customer ID": u.customerId,
+          "Bond Number": s.bondNumber,
           Name: u.name,
           Email: u.email,
           Phone: u.phone,
           "Account Status": u.status,
           Scheme: s.name,
+          Tenure: s.tenure,
+          "Profit %": formatPercent(s.profitPercentage),
           "Invested Amount": s.investedAmount,
           "Current Value": s.currentValue,
-          "Returns (%)": Number(s.returns.toFixed(2)),
           "Enrolled On": s.enrolledOn,
+          "Mature On": s.maturityDate,
           "Scheme Status": displayStatus(s.status),
+          "Nominee Name": s.nomineeName,
+          "Nominee Relation": s.nomineeRelation,
+          "Nominee Phone": s.nomineePhone,
+          "Nominee Aadhar": s.nomineeAadhar,
+          "Bank Name": s.bankName,
+          "Bank Account": s.bankAccount,
+          "Bank IFSC": s.bankIfsc,
+          "Account Holder Name": s.bankAccountHolder,
+          "Update By": "Anand",
+          "Verified By": "",
         };
       });
     }
     return exportUsers.flatMap((u) =>
       u.schemes.map((s) => ({
         "Investor ID": u.id,
+        "Customer ID": u.customerId,
+        "Bond Number": s.bondNumber,
         Name: u.name,
         Email: u.email,
         Phone: u.phone,
         "Account Status": u.status,
-        "Joined On": u.joinedDate,
         Scheme: s.name,
+        Tenure: s.tenure,
+        "Profit %": formatPercent(s.profitPercentage),
         "Invested Amount": s.investedAmount,
         "Current Value": s.currentValue,
-        "Returns (%)": Number(s.returns.toFixed(2)),
+        "Maturity Amount": s.maturityAmount,
         "Enrolled On": s.enrolledOn,
+        "Mature On": s.maturityDate,
         "Scheme Status": displayStatus(s.status),
+        "Nominee Name": s.nomineeName,
+        "Nominee Relation": s.nomineeRelation,
+        "Nominee Phone": s.nomineePhone,
+        "Nominee Aadhar": s.nomineeAadhar,
+        "Bank Name": u.bankName,
+        "Bank Account": u.bankAccount,
+        "Bank IFSC": u.bankIfsc,
+        "Account Holder Name": u.bankAccountHolder,
+        "Updated By": "Anand",
+        "Verified By": "",
       })),
     );
   };
@@ -625,11 +652,11 @@ export default function Reports() {
                         </tr>
                       </thead>
                       <tbody>
-                        {shownUsers.map((u) => {
+                        {shownUsers.map((u, index) => {
                           const isOpen = expandedId === u.id;
                           return (
                             <UserRow
-                              key={u.id}
+                              key={u.id || index + 1}
                               user={u}
                               isOpen={isOpen}
                               onToggle={() =>
@@ -657,14 +684,14 @@ export default function Reports() {
 
                 {/* mobile cards */}
                 <div className="mt-5 flex flex-col gap-3 sm:hidden">
-                  {shownUsers.map((u) => {
+                  {shownUsers.map((u, index) => {
                     const isOpen = expandedId === u.id;
                     const g = u.currentValue - u.totalInvested;
                     const pct =
                       u.totalInvested > 0 ? (g / u.totalInvested) * 100 : 0;
                     return (
                       <div
-                        key={u.id}
+                        key={u.id || index + 1}
                         className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-white/[0.01] p-4"
                       >
                         <div className="flex items-start gap-3">
@@ -1039,8 +1066,6 @@ function LoadingSkeleton() {
     </div>
   );
 }
-
-
 
 function SchemeCardMobile({ scheme: s }) {
   return (

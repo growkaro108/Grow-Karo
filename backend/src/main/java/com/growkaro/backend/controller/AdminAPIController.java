@@ -441,7 +441,7 @@ public class AdminAPIController {
     @GetMapping("/user/all")
     public ResponseEntity<Map<String, Object>> getAllUser(@RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "") int size, @RequestParam(defaultValue = "") String query) {
-        if (page < 0 || size <= 0 || size > 20 || page > 100) {
+        if (page < 0 || size <= 0 || size > 20 || page > 500) {
             page = 0;
             size = 10;
         }
@@ -454,8 +454,7 @@ public class AdminAPIController {
             return ResponseEntity.ok(general.response("success", "Users fetched successfully", users));
         } catch (Exception e) {
             log.error("Error while fetching users: " + e.getMessage());
-            return ResponseEntity.ok(general.response("error",
-                    e.getMessage(), null));
+            return ResponseEntity.ok(general.response("error", e.getMessage(), null));
         }
     }
 

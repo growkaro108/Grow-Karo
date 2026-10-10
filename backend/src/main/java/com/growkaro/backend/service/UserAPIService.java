@@ -186,11 +186,11 @@ public class UserAPIService {
     }
 
     @Caching(evict = {
-            @CacheEvict(value = "AllUsersEmail",allEntries = true),
-            @CacheEvict(value = "AllUsersPhone",allEntries = true)
+            @CacheEvict(value = "AllUsersEmail", allEntries = true),
+            @CacheEvict(value = "AllUsersPhone", allEntries = true)
     })
     @Transactional
-    public boolean userSignup(UserRegister user) {
+    public Map<String, Object> userSignup(UserRegister user) {
         String email = stringValue(user.email());
         String phone = stringValue(user.phone());
         String name = stringValue(user.name());
@@ -201,11 +201,11 @@ public class UserAPIService {
         String fullAddress = stringValue(user.fullAddress());
 
         if (name == null || email == null || phone == null || passwordHash == null) {
-            return false;
+            return general.response("error", "Missing required fields (name, email, phone, or password).", null);
         }
 
         if (isUserExists(email)) {
-            return false;
+            return general.response("error", "An account with this email already exists.", null);
         }
 
         LocalDate parsedDob = null;
@@ -214,7 +214,7 @@ public class UserAPIService {
                 parsedDob = general.parseDob(dob);
             } catch (Exception e) {
                 log.warn("Invalid DOB provided during signup for email={}", email, e);
-                return false;
+                return general.response("error", "Invalid date of birth format provided.", null);
             }
         }
 
@@ -283,10 +283,11 @@ public class UserAPIService {
                     newUser.getName() + " created an account",
                     "USER", newUser.getId(),
                     Map.of("email", newUser.getEmail()));
-            return true;
+
+            return general.response("success", "Account created successfully", null);
         } catch (Exception e) {
-            log.warn("Error while sign up beacuse {} email={}", e.getMessage(), email, e);
-            return false;
+            log.warn("Error while sign up because {} email={}", e.getMessage(), email, e);
+            return general.response("error", "Internal Server error while saving user account.", null);
         }
     }
 

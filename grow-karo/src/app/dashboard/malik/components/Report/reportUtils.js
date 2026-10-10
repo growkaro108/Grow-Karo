@@ -42,31 +42,41 @@ function amount(value) {
 }
 
 export function normalizeUser(user) {
-  const schemes = (user.enrolledSchemes ?? []).map((scheme) => {
+  const schemes = (user?.enrolledSchemes ?? []).map((scheme) => {
     const investedAmount = amount(scheme.paidAmount);
     const currentValue =
       investedAmount + amount(scheme.profit) - amount(scheme.profitRedeemed);
     return {
       id: scheme.userSchemeId,
-      name: scheme.schemeName || "Unnamed scheme",
+      bondNumber: scheme.bondNumber || "-",
       investedAmount,
       currentValue,
-      returns:
-        investedAmount > 0
-          ? ((currentValue - investedAmount) / investedAmount) * 100
-          : 0,
+      maturityAmount: scheme.maturityAmount || 0,
+      name: scheme.schemeName || "Unnamed scheme",
+      tenure: scheme.tenure || "-",
+      profitPercentage: scheme.profitPercentage || 0,
       enrolledOn: scheme.enrollmentDate || scheme.requestDate || "",
+      maturityDate: scheme.maturityDate || "-",
       status: String(scheme.status || "pending").toLowerCase(),
+      nomineeName: scheme.nominee.name || null,
+      nomineeRelation: scheme.nominee.relation || null,
+      nomineePhone: scheme.nominee.mobileNo || null,
+      nomineeAadhar: scheme.nominee.aadharNo || null,
     };
   });
 
   return {
-    id: String(user.userId ?? ""),
-    name: user.name || "Unnamed investor",
-    email: user.email || "",
-    phone: user.phone || "",
-    joinedDate: user.joined || "",
-    status: user.isActive ? "Active" : "Inactive",
+    id: String(user?.userId ?? ""),
+    customerId: String(user?.customerId ?? ""),
+    name: user?.name || "Unnamed investor",
+    email: user?.email || "",
+    phone: user?.phone || "",
+    joinedDate: user?.joined || "",
+    bankName: user?.bankDetails?.bankName || null,
+    bankAccount: user?.bankDetails?.accountNumber || null,
+    bankIfsc: user?.bankDetails?.ifscCode || null,
+    bankAccountHolder: user?.bankDetails?.accountHolderName || null,
+    status: user?.isActive ? "Active" : "Inactive",
     totalInvested: schemes.reduce(
       (total, scheme) => total + scheme.investedAmount,
       0,

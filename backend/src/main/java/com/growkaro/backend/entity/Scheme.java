@@ -123,7 +123,20 @@ public class Scheme {
 
     @Column(name = "created_by")
     private String createdBy;
-    // --- Lifecycle Callbacks ---
+
+// public enum SchemeType { LUMPSUM, SIP }
+
+// @Enumerated(EnumType.STRING)
+// @Column(name = "scheme_type", nullable = false)
+// private SchemeType schemeType;          // LUMPSUM or SIP
+
+// @Column(name = "sip_day_of_month")
+// private Integer sipDayOfMonth;          // e.g. 30 (only for SIP)
+
+// @Column(name = "grace_period_days")
+// private Integer gracePeriodDays;        // optional: days before an installment counts as overdue
+
+
 
     @PrePersist
     protected void onCreate() {
