@@ -607,12 +607,12 @@ public class General {
         return totalMaturity;
     }
 
-    public String getCustomerId(String Id) {
-        return isValidId(Id) ? CustomerIdCodec.toCustomerId(Id) : null;
+    public String getCustomerId(String id) {
+        return isValidId(id) ? CustomerIdCodec.toCustomerId(id) : null;
     }
 
     public String getUserId(String customerId) {
-        return isValidId(customerId) ? CustomerIdCodec.toUserId(customerId) : null;
+        return customerId != null && customerId.length() == 6 ? CustomerIdCodec.toUserId(customerId) : null;
     }
 
     public int dayDiff(LocalDate start, LocalDate end) {

@@ -6,6 +6,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 public final class CustomerIdCodec {
+    private CustomerIdCodec() {
+        /* This utility class should not be instantiated */
+    }
+
 
     private static final String PREFIX = "GKUID";
     private static final LocalDateTime EPOCH = LocalDateTime.of(2020, 1, 1, 0, 0, 0);

@@ -42,15 +42,16 @@ function amount(value) {
 }
 
 export function normalizeUser(user) {
+  if (!user?.name) return null;
   const schemes = (user?.enrolledSchemes ?? []).map((scheme) => {
     const investedAmount = amount(scheme.paidAmount);
     const currentValue =
       investedAmount + amount(scheme.profit) - amount(scheme.profitRedeemed);
     return {
-      id: scheme.userSchemeId,
+      id: scheme.userSchemeId || "",
       bondNumber: scheme.bondNumber || "-",
-      investedAmount,
-      currentValue,
+      investedAmount: investedAmount || 0,
+      currentValue: currentValue || 0,
       maturityAmount: scheme.maturityAmount || 0,
       name: scheme.schemeName || "Unnamed scheme",
       tenure: scheme.tenure || "-",
@@ -58,24 +59,28 @@ export function normalizeUser(user) {
       enrolledOn: scheme.enrollmentDate || scheme.requestDate || "",
       maturityDate: scheme.maturityDate || "-",
       status: String(scheme.status || "pending").toLowerCase(),
-      nomineeName: scheme.nominee.name || null,
-      nomineeRelation: scheme.nominee.relation || null,
-      nomineePhone: scheme.nominee.mobileNo || null,
-      nomineeAadhar: scheme.nominee.aadharNo || null,
+      nomineeName: scheme.nominee.name || "",
+      nomineeRelation: scheme.nominee.relation || "",
+      nomineePhone: scheme.nominee.mobileNo || "",
+      nomineeAadhar: scheme.nominee.aadharNo || "",
+      bankName: user?.bankDetails?.bankName || "",
+      bankAccount: user?.bankDetails?.accountNumber || "",
+      bankIfsc: user?.bankDetails?.ifscCode || "",
+      bankAccountHolder: user?.bankDetails?.accountHolderName || "",
     };
   });
 
   return {
     id: String(user?.userId ?? ""),
     customerId: String(user?.customerId ?? ""),
-    name: user?.name || "Unnamed investor",
+    name: user?.name || "",
     email: user?.email || "",
     phone: user?.phone || "",
     joinedDate: user?.joined || "",
-    bankName: user?.bankDetails?.bankName || null,
-    bankAccount: user?.bankDetails?.accountNumber || null,
-    bankIfsc: user?.bankDetails?.ifscCode || null,
-    bankAccountHolder: user?.bankDetails?.accountHolderName || null,
+    bankName: user?.bankDetails?.bankName || "",
+    bankAccount: user?.bankDetails?.accountNumber || "",
+    bankIfsc: user?.bankDetails?.ifscCode || "",
+    bankAccountHolder: user?.bankDetails?.accountHolderName || "",
     status: user?.isActive ? "Active" : "Inactive",
     totalInvested: schemes.reduce(
       (total, scheme) => total + scheme.investedAmount,

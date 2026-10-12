@@ -114,7 +114,9 @@ export default function Reports() {
     }
     const records = pageResults.flatMap((page) => {
       if (page?.status !== "success" || !Array.isArray(page.data?.content)) {
-        allRounderMessage(page);
+         console.warn(
+          page?.message || "A page of report data could not be loaded.",
+        );
       }
       return page.data.content;
     });
@@ -214,7 +216,7 @@ export default function Reports() {
 
   const schemeOptions = useMemo(() => {
     const names = new Set();
-    users.forEach((u) => u.schemes.forEach((s) => names.add(s.name)));
+    users.forEach((u) => u?.schemes.forEach((s) => names.add(s.name)));
     return Array.from(names, (name) => ({ name })).sort((a, b) =>
       a.name.localeCompare(b.name),
     );
@@ -224,11 +226,12 @@ export default function Reports() {
     const q = query.trim().toLowerCase();
 
     return users
+    
       .filter((u) =>
         view === "scheme"
-          ? u.schemes.some((s) => s.name === selectedScheme)
+          ? u?.schemes.some((s) => s.name === selectedScheme)
           : true,
-      )
+      ).filter((u) => u?.name)
       .filter((u) => {
         const matchesQuery =
           !q ||
@@ -240,7 +243,7 @@ export default function Reports() {
         const matchesAccount =
           accountFilter === "All" || u.status === accountFilter;
         return matchesQuery && matchesAccount;
-      });
+      }); // filter out users with missing names
   }, [users, query, accountFilter, view, selectedScheme]);
 
   const schemeEntryFor = useCallback(
@@ -278,7 +281,7 @@ export default function Reports() {
 
   const gain = totals.totalCurrent - totals.totalInvested;
   const gainPct =
-    totals.totalInvested > 0 ? (gain / totals.totalInvested) * 100 : 0;
+ totals.totalInvested > 0 ? (gain / totals.totalInvested) * 100 : 0;
   const isGain = gain >= 0;
 
   // Capital by scheme (all-users view)
@@ -357,36 +360,37 @@ export default function Reports() {
         };
       });
     }
-    return exportUsers.flatMap((u) =>
-      u.schemes.map((s) => ({
+    return exportUsers.flatMap((u) => {
+      const schemes = u.schemes.length > 0 ? u.schemes : [null];
+      return schemes.map((s) => ({
         "Investor ID": u.id,
         "Customer ID": u.customerId,
-        "Bond Number": s.bondNumber,
+        // "Bond Number": s.bondNumber,
         Name: u.name,
         Email: u.email,
         Phone: u.phone,
-        "Account Status": u.status,
-        Scheme: s.name,
-        Tenure: s.tenure,
-        "Profit %": formatPercent(s.profitPercentage),
-        "Invested Amount": s.investedAmount,
-        "Current Value": s.currentValue,
-        "Maturity Amount": s.maturityAmount,
-        "Enrolled On": s.enrolledOn,
-        "Mature On": s.maturityDate,
-        "Scheme Status": displayStatus(s.status),
-        "Nominee Name": s.nomineeName,
-        "Nominee Relation": s.nomineeRelation,
-        "Nominee Phone": s.nomineePhone,
-        "Nominee Aadhar": s.nomineeAadhar,
+        // "Account Status": u.status,
+        // Scheme: s.name,
+        // Tenure: s.tenure,
+        // "Profit %": formatPercent(s.profitPercentage),
+        // "Invested Amount": s.investedAmount,
+        // "Current Value": s.currentValue,
+        // "Maturity Amount": s.maturityAmount,
+        // "Enrolled On": s.enrolledOn,
+        // "Mature On": s.maturityDate,
+        // "Scheme Status": displayStatus(s.status),
+        "Nominee Name": s?.nomineeName || "",
+        "Nominee Relation": s?.nomineeRelation || "",
+        "Nominee Phone": s?.nomineePhone || "",
+        "Nominee Aadhar": s?.nomineeAadhar || "",
         "Bank Name": u.bankName,
         "Bank Account": u.bankAccount,
         "Bank IFSC": u.bankIfsc,
         "Account Holder Name": u.bankAccountHolder,
         "Updated By": "Anand",
         "Verified By": "",
-      })),
-    );
+      }));
+    });
   };
 
   async function handleExportPDF() {
