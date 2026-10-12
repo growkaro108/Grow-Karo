@@ -42,19 +42,11 @@ import UserRow from "./UserRow";
 
 //lazy load with progressive loading
 const ReportControls = dynamic(() => import("./ReportControls"), {
-  loading: () => (
-    <div className="mt-8 flex items-center justify-center text-sm text-slate-400 ">
-      Loading controls...
-    </div>
-  ),
+  loading: () =><ReportControlSkeleton />,
   ssr: false,
 });
 const ReportSummary = dynamic(() => import("./ReportSummary"), {
-  loading: () => (
-    <div className="mt-8 flex items-center justify-center text-sm text-slate-400 ">
-      Loading summary...
-    </div>
-  ),
+  loading: () => <ReportSummarySkeleton />,
   ssr: false,
 });
 
@@ -901,7 +893,7 @@ export default function Reports() {
                           return (
                             <tr
                               key={u.id}
-                              className="border-b border-white/5 transition hover:bg-white/[0.04]"
+                              className="border-b border-white/5 transition hover:bg-white/4"
                             >
                               <td className="px-5 py-3.5">
                                 <div className="flex items-center gap-3">
@@ -1142,30 +1134,51 @@ function LoadingSkeleton() {
         {Array.from({ length: 4 }, (_, i) => (
           <div
             key={i}
-            className="h-32 rounded-2xl border border-white/10 bg-white/[0.04]"
+            className="h-32 rounded-2xl border border-white/10 bg-white/4"
           />
         ))}
       </div>
-      <div className="mt-4 h-52 rounded-2xl border border-white/10 bg-white/[0.04]" />
-      <div className="mt-6 h-11 rounded-xl bg-white/[0.04]" />
+      <div className="mt-4 h-52 rounded-2xl border border-white/10 bg-white/4" />
+      <div className="mt-6 h-11 rounded-xl bg-white/4" />
       <div className="mt-5 overflow-hidden rounded-2xl border border-white/10">
         {Array.from({ length: 6 }, (_, i) => (
           <div
             key={i}
             className="flex items-center gap-4 border-b border-white/5 px-5 py-4"
           >
-            <div className="h-9 w-9 rounded-xl bg-white/[0.06]" />
+            <div className="h-9 w-9 rounded-xl bg-white/6" />
             <div className="flex-1 space-y-2">
-              <div className="h-3 w-40 rounded bg-white/[0.07]" />
-              <div className="h-2.5 w-56 rounded bg-white/[0.04]" />
+              <div className="h-3 w-40 rounded bg-white/7" />
+              <div className="h-2.5 w-56 rounded bg-white/4" />
             </div>
-            <div className="h-3 w-20 rounded bg-white/[0.06]" />
+            <div className="h-3 w-20 rounded bg-white/6" />
           </div>
         ))}
       </div>
       <p className="mt-5 text-center text-xs text-slate-500">
         Fetching users and scheme activity…
       </p>
+    </div>
+  );
+}
+function ReportControlSkeleton() {
+  return (
+    <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="h-10 w-full rounded-xl bg-white/4" />
+      <div className="h-10 w-full rounded-xl bg-white/4" />
+      <div className="h-10 w-full rounded-xl bg-white/4" />
+    </div>
+  );
+}
+function ReportSummarySkeleton() {
+  return (
+    <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {Array.from({ length: 4 }, (_, i) => (
+        <div
+          key={i}
+          className="h-32 rounded-2xl border border-white/10 bg-white/4"
+        />
+      ))}
     </div>
   );
 }

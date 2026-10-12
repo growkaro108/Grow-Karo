@@ -21,8 +21,8 @@ const ACCENTS = {
 function StatCard({ icon: Icon, label, value, accent = "amber", delta, deltaUp }) {
     const tone = ACCENTS[accent];
     return (
-        <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.01] p-4 backdrop-blur transition hover:border-white/20 sm:p-5">
-            <div className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${tone.glow} to-transparent blur-2xl transition group-hover:scale-125`} />
+        <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-white/6 to-white/1 p-4 backdrop-blur transition hover:border-white/20 sm:p-5">
+            <div className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-linear-to-br ${tone.glow} to-transparent blur-2xl transition group-hover:scale-125`} />
             <div className="relative flex items-center justify-between">
                 <span className={`grid h-9 w-9 place-items-center rounded-xl ring-1 ${tone.icon}`}><Icon size={17} /></span>
                 {delta && (
@@ -59,7 +59,7 @@ export default function ReportSummary({ totals, gain, gainPct, isGain, view, sch
             </section>
 
             <section className={`mt-4 grid gap-4 ${showBreakdown ? "lg:grid-cols-5" : ""}`}>
-                <div className={`relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.01] p-5 backdrop-blur ${showBreakdown ? "lg:col-span-3" : ""}`}>
+                <div className={`relative overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-white/6 to-white/1 p-5 backdrop-blur ${showBreakdown ? "lg:col-span-3" : ""}`}>
                     <div className={`pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full blur-3xl ${isGain ? "bg-emerald-400/15" : "bg-rose-400/15"}`} />
                     <div className="flex items-start justify-between gap-4">
                         <div>
@@ -78,7 +78,7 @@ export default function ReportSummary({ totals, gain, gainPct, isGain, view, sch
                             <span className="tabular-nums text-slate-200">{currency(totals.totalInvested)}</span>
                         </div>
                         <div className="h-2.5 overflow-hidden rounded-full bg-slate-800/80">
-                            <div className="h-full w-full rounded-full bg-gradient-to-r from-violet-400/80 to-violet-300/60" />
+                            <div className="h-full w-full rounded-full bg-linear-to-r from-violet-400/80 to-violet-300/60" />
                         </div>
                         <div className="mb-2 mt-4 flex justify-between text-xs">
                             <span className="text-slate-400">Current value</span>
@@ -86,7 +86,7 @@ export default function ReportSummary({ totals, gain, gainPct, isGain, view, sch
                         </div>
                         <div className="h-2.5 overflow-hidden rounded-full bg-slate-800/80">
                             <div
-                                className={`h-full rounded-full bg-gradient-to-r ${isGain ? "from-emerald-400 to-teal-300" : "from-rose-400 to-orange-300"}`}
+                                className={`h-full rounded-full bg-linear-to-r ${isGain ? "from-emerald-400 to-teal-300" : "from-rose-400 to-orange-300"}`}
                                 style={{ width: `${Math.min(100, totals.totalInvested > 0 ? (totals.totalCurrent / totals.totalInvested) * 100 : 0)}%` }}
                             />
                         </div>
@@ -94,7 +94,7 @@ export default function ReportSummary({ totals, gain, gainPct, isGain, view, sch
                 </div>
 
                 {showBreakdown && (
-                    <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-white/[0.01] p-5 backdrop-blur lg:col-span-2">
+                    <div className="rounded-2xl border border-white/10 bg-linear-to-br from-white/5 to-white/1 p-5 backdrop-blur lg:col-span-2">
                         <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Top schemes by capital</p>
                         <ul className="mt-4 space-y-3.5">
                             {schemeBreakdown.map((row, index) => (
@@ -106,7 +106,7 @@ export default function ReportSummary({ totals, gain, gainPct, isGain, view, sch
                                         <span className="shrink-0 tabular-nums text-slate-400">{currency(row.invested)}</span>
                                     </div>
                                     <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-800/80">
-                                        <div className="h-full rounded-full bg-gradient-to-r from-[#C9A66B] to-[#F0DDB0]" style={{ width: `${row.width}%` }} />
+                                        <div className="h-full rounded-full bg-linear-to-r from-[#C9A66B] to-[#F0DDB0]" style={{ width: `${row.width}%` }} />
                                     </div>
                                     <p className="mt-1 text-[11px] text-slate-600">{row.investors} enrollment{row.investors !== 1 ? "s" : ""}</p>
                                 </li>

@@ -116,8 +116,8 @@ public class UserAPIController {
             return ResponseEntity.ok(userAPIService.userSignup(user));
             
         } catch (Exception e) {
-            log.error("Error during signup because: {}", e.getMessage());
-            return ResponseEntity.internalServerError().body(general.response("error", "Internal Server error", null));
+            log.error("Error during signup because: {}", e.getMessage(),e);
+            return ResponseEntity.internalServerError().body(general.response("error", e.getMessage(), null));
         }
     }
 

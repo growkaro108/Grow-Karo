@@ -73,14 +73,14 @@ export default function ReportControls({
                         {exporting === "xlsx" ? <LoaderCircle size={16} className="animate-spin" /> : <FileSpreadsheet size={16} />}
                         {exporting === "xlsx" ? "Exporting…" : "Excel"}
                     </button>
-                    <button
+                    {/* <button
                         onClick={() => onExport("pdf")}
                         disabled={exportDisabled}
                         className="inline-flex items-center gap-2 rounded-xl bg-linear-to-b from-[#E0C58F] to-[#C9A66B] px-4 py-2.5 text-sm font-semibold text-[#1C1506] shadow-[0_8px_24px_-8px_rgba(201,166,107,0.6)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
                     >
                         {exporting === "pdf" ? <LoaderCircle size={16} className="animate-spin" /> : <FileText size={16} />}
                         {exporting === "pdf" ? "Exporting…" : "PDF"}
-                    </button>
+                    </button> */}
                 </div>
             </header>
 

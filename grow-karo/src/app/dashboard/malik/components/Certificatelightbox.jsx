@@ -91,9 +91,11 @@ export default function CertificateLightbox({
                 userName={userName}
                 scheme={scheme}
                 className="h-auto w-full"
-                logoUrl={"https://lh3.googleusercontent.com/d/1eezaPOLSSuTVlPV6sKiCBxpnNXbRo-Ft"}
-                watermarkUrl={"https://lh3.googleusercontent.com/d/1eezaPOLSSuTVlPV6sKiCBxpnNXbRo-Ft"}
-                stampUrl={"https://lh3.googleusercontent.com/d/1orLmnX7I8tcEyNaZkVxmgQDBKwEsL7au"} />
+                logoUrl="/logo.png"
+                watermarkUrl="/logo.png"
+                stampUrl="/stamp.png"
+
+              />
 
             </>
           )}

@@ -3,25 +3,6 @@ import { Download, Loader2 } from "lucide-react";
 import { downloadSvgAsPng } from "../utils";
 import { resolveMediaUrl } from "../../../../api/apiClient";
 
-// BondCertificate sets data-images-ready="true" once logo/photo/stamp/watermark
-// have been embedded as data: URIs. Rasterising before that drops the images.
-function waitForImages(svgEl, timeoutMs = 8000) {
-  return new Promise((resolve) => {
-    const start = Date.now();
-    const tick = () => {
-      if (
-        svgEl.dataset.imagesReady === "true" ||
-        Date.now() - start > timeoutMs
-      ) {
-        resolve();
-      } else {
-        setTimeout(tick, 100);
-      }
-    };
-    tick();
-  });
-}
-
 export default function BondDownloadButton({
   certRef,
   pdfUrl,
@@ -52,7 +33,6 @@ export default function BondDownloadButton({
     if (!certRef?.current) return;
     setStatus("working");
     try {
-      await waitForImages(certRef.current);
       if (document.fonts?.ready) await document.fonts.ready;
       await downloadSvgAsPng(certRef.current, filename, { scale: 3 });
       setStatus("idle");

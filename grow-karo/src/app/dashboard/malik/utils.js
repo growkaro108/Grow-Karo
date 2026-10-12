@@ -77,10 +77,7 @@ export async function svgToPngBlob(
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
   clone.setAttribute("width", vbWidth);
   clone.setAttribute("height", vbHeight);
-
-  clone.querySelectorAll("image").forEach((img) => {
-    img.setAttribute("crossorigin", "anonymous");
-  });
+  await embedSvgImages(clone);
 
   const svgString = new XMLSerializer().serializeToString(clone);
   const svgBlob = new Blob([svgString], {
@@ -123,13 +120,62 @@ function loadImage(src) {
   });
 }
 
+async function embedSvgImages(svgEl) {
+  const imageCache = new Map();
+  const images = Array.from(svgEl.querySelectorAll("image"));
+
+  await Promise.all(
+    images.map(async (image) => {
+      const href =
+        image.getAttribute("href") ||
+        image.getAttributeNS("http://www.w3.org/1999/xlink", "href");
+      if (!href || href.startsWith("data:")) return;
+
+      if (!imageCache.has(href)) {
+        imageCache.set(
+          href,
+          fetch(href, { mode: "cors", credentials: "omit" }).then(
+            async (response) => {
+              if (!response.ok) {
+                throw new Error(
+                  `Failed to fetch certificate image (${response.status}): ${href}`,
+                );
+              }
+              const blob = await response.blob();
+              if (!blob.type.startsWith("image/")) {
+                throw new Error(`Certificate asset is not an image: ${href}`);
+              }
+              return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () =>
+                  typeof reader.result === "string"
+                    ? resolve(reader.result)
+                    : reject(new Error(`Could not read certificate image: ${href}`));
+                reader.onerror = () =>
+                  reject(new Error(`Could not read certificate image: ${href}`));
+                reader.readAsDataURL(blob);
+              });
+            },
+          ),
+        );
+      }
+
+      const dataUrl = await imageCache.get(href);
+      image.setAttribute("href", dataUrl);
+      image.setAttributeNS(
+        "http://www.w3.org/1999/xlink",
+        "xlink:href",
+        dataUrl,
+      );
+    }),
+  );
+}
+
 /**
  * Rasterise an <svg> element to a PNG and download it.
  * Same signature the button uses: downloadSvgAsPng(svgEl, filename, { scale }).
  *
- * External <image href="https://..."> tags are blocked when an SVG is drawn via
- * <img>, so BondCertificate embeds them as data: URIs first (see its
- * data-images-ready attribute). This util only needs to serialise and draw.
+ * External images are embedded as data URIs before the SVG is rasterized.
  */
 export async function downloadSvgAsPng(
   svgEl,
@@ -145,6 +191,7 @@ export async function downloadSvgAsPng(
   clone.setAttribute("height", height);
   clone.style.width = `${width}px`;
   clone.style.height = `${height}px`;
+  await embedSvgImages(clone);
 
   const xml = new XMLSerializer().serializeToString(clone);
   const url = URL.createObjectURL(

@@ -308,12 +308,12 @@ const BondCertificate = forwardRef(function BondCertificate(
           fill="#333333"
           style={{ fontFamily: FONT_SERIF }}
         >
-          {String(scheme || bond.schemeName).toUpperCase()}
+          {String("GKFD"||scheme || bond.schemeName).toUpperCase()}
         </text>
       ) : null}
 
       {/* applicant photo */}
-      {profilePhoto ? (
+      {/* {profilePhoto ? (
         <image
           href={profilePhoto}
           x={372}
@@ -343,7 +343,7 @@ const BondCertificate = forwardRef(function BondCertificate(
             {(name || "?").trim().charAt(0).toUpperCase()}
           </text>
         </>
-      )}
+      )} */}
 
       {/* date / mobile boxes */}
       <rect x={224} y={116} width={94} height={20} fill="none" stroke={TAN} strokeWidth={0.7} />
@@ -528,9 +528,9 @@ const BondCertificate = forwardRef(function BondCertificate(
         stroke={INK}
         strokeWidth={0.8}
       />
-      {compRow(rCompAccNo, "Account No.", bond.companyAccountNo || "531110110003289")}
-      {compRow(rCompIfsc, "IFSC", bond.companyIfsc || "SBIN0007834")}
-      {compRow(rCompAccHolder, "A/C Holder Name", bond.companyAccountHolderName || "GROWWKARO")}
+      {compRow(rCompAccNo, "Account No.", bond.companyAccountNo || "01930210005200")}
+      {compRow(rCompIfsc, "IFSC", bond.companyIfsc || "UCBA0000193")}
+      {compRow(rCompAccHolder, "A/C Holder Name", bond.companyAccountHolderName || "Groww Karo")}
 
       {stampUrl && (
         <image
