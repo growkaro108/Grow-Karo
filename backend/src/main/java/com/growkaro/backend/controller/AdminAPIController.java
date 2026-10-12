@@ -439,13 +439,12 @@ public class AdminAPIController {
     }
 
     @GetMapping("/user/all")
-    public ResponseEntity<Map<String, Object>> getAllUser(@RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "") int size, @RequestParam(defaultValue = "") String query) {
-        if (page < 0 || size <= 0 || size > 20 || page > 500) {
-            page = 0;
-            size = 10;
-        }
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+    public ResponseEntity<Map<String, Object>> getAllUser(@RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size, @RequestParam(defaultValue = "") String query) {
+        int safePage = Math.min(Math.max(page, 1), 500);
+        int safeSize = Math.min(Math.max(size, 1), 1000);
+        Pageable pageable = PageRequest.of(safePage - 1, safeSize,
+                Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id")));
         try {
             PagedResponse<AdminUser> users = adminAPIService.getAllUsers(query, pageable);
             if (users == null) {
@@ -454,7 +453,7 @@ public class AdminAPIController {
             return ResponseEntity.ok(general.response("success", "Users fetched successfully", users));
         } catch (Exception e) {
             log.error("Error while fetching users: " + e.getMessage());
-            return ResponseEntity.ok(general.response("error", e.getMessage(), null));
+            return ResponseEntity.badRequest().body(general.response("error", e.getMessage(), null));
         }
     }
 

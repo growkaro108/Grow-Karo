@@ -2,6 +2,8 @@ package com.growkaro.backend.common;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.DateTimeException;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -133,10 +135,12 @@ public class General {
             0);
 
     public synchronized String generateUserId() {
-        long now = Long.parseLong(LocalDateTime.now(ZoneId.of("Asia/Kolkata"))
-                .format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")));
-        long idNum = lastIdTimestamp.updateAndGet(prev -> Math.max(now, prev + 1));
-        return "GKUID" + idNum;
+        ZoneId zone = ZoneId.of("Asia/Kolkata");
+        LocalDateTime currentTime = LocalDateTime.now(zone);
+        long now = currentTime.toEpochSecond(zone.getRules().getOffset(currentTime));
+        long idTimestamp = lastIdTimestamp.updateAndGet(previous -> Math.max(now, previous + 1));
+        LocalDateTime idTime = LocalDateTime.ofInstant(Instant.ofEpochSecond(idTimestamp), zone);
+        return "GKUID" + idTime.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
     }
 
     public LocalDate parseDob(String dobStr) {
@@ -608,7 +612,15 @@ public class General {
     }
 
     public String getCustomerId(String id) {
-        return isValidId(id) ? CustomerIdCodec.toCustomerId(id) : null;
+        if (!isValidId(id)) {
+            return null;
+        }
+        try {
+            return CustomerIdCodec.toCustomerId(id);
+        } catch (DateTimeException e) {
+            log.warn("Cannot derive customer ID from malformed timestamp-based user ID {}", id);
+            return null;
+        }
     }
 
     public String getUserId(String customerId) {

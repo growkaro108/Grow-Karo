@@ -41,10 +41,10 @@ public interface UserRepository extends JpaRepository<User, String> {
         Page<User> searchUsers(@Param("query") String query, Pageable pageable);
 
         @Query("SELECT u FROM User u WHERE " +
+                        "u.role = :role AND (" +
                         "LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
                         "LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-                        "LOWER(u.id) LIKE LOWER(CONCAT('%', :query, '%')) AND " +
-                        "u.role = :role")
+                        "LOWER(u.id) LIKE LOWER(CONCAT('%', :query, '%')))")
         Page<User> findByQueryAndRole(@Param("query") String query, @Param("role") Role role, Pageable pageable);
 
         // fetch who have at least one userscheme

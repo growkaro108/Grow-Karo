@@ -1,7 +1,7 @@
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 
 export const PAGE_SIZE = 20;
-export const MAX_REPORT_PAGES = 100;
+export const MAX_REPORT_USERS = 2000;
 export const ACCOUNT_FILTERS = ["All", "Active", "Inactive"];
 export const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
 export const EXPORT_OPTIONS = [
@@ -42,27 +42,30 @@ function amount(value) {
 }
 
 export function normalizeUser(user) {
-  if (!user?.name) return null;
   const schemes = (user?.enrolledSchemes ?? []).map((scheme) => {
-    const investedAmount = amount(scheme.paidAmount);
+    const enrollment = scheme ?? {};
+    const investedAmount = amount(enrollment.paidAmount);
     const currentValue =
-      investedAmount + amount(scheme.profit) - amount(scheme.profitRedeemed);
+      investedAmount +
+      amount(enrollment.profit) -
+      amount(enrollment.profitRedeemed);
+    const nominee = enrollment.nominee ?? {};
     return {
-      id: scheme.userSchemeId || "",
-      bondNumber: scheme.bondNumber || "-",
+      id: enrollment.userSchemeId || "",
+      bondNumber: enrollment.bondNumber || "-",
       investedAmount: investedAmount || 0,
       currentValue: currentValue || 0,
-      maturityAmount: scheme.maturityAmount || 0,
-      name: scheme.schemeName || "Unnamed scheme",
-      tenure: scheme.tenure || "-",
-      profitPercentage: scheme.profitPercentage || 0,
-      enrolledOn: scheme.enrollmentDate || scheme.requestDate || "",
-      maturityDate: scheme.maturityDate || "-",
-      status: String(scheme.status || "pending").toLowerCase(),
-      nomineeName: scheme.nominee.name || "",
-      nomineeRelation: scheme.nominee.relation || "",
-      nomineePhone: scheme.nominee.mobileNo || "",
-      nomineeAadhar: scheme.nominee.aadharNo || "",
+      maturityAmount: enrollment.maturityAmount || 0,
+      name: enrollment.schemeName || "Unnamed scheme",
+      tenure: enrollment.tenure || "-",
+      profitPercentage: enrollment.profitPercentage || 0,
+      enrolledOn: enrollment.enrollmentDate || enrollment.requestDate || "",
+      maturityDate: enrollment.maturityDate || "-",
+      status: String(enrollment.status || "pending").toLowerCase(),
+      nomineeName: nominee.name || "",
+      nomineeRelation: nominee.relation || "",
+      nomineePhone: nominee.mobileNo || "",
+      nomineeAadhar: nominee.aadharNo || "",
       bankName: user?.bankDetails?.bankName || "",
       bankAccount: user?.bankDetails?.accountNumber || "",
       bankIfsc: user?.bankDetails?.ifscCode || "",

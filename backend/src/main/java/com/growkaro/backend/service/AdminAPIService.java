@@ -1151,13 +1151,15 @@ public class AdminAPIService {
 
     public PagedResponse<AdminUser> getAllUsers(String query, Pageable pageable) {
         try {
-            var users = userRepository.findByQueryAndRole(query, Role.GRAHAK, pageable);
-            // remove admin users from the list admin users are not needed in the list
+            var normalizedQuery = query == null ? "" : query.trim();
+            var users = normalizedQuery.isEmpty()
+                    ? userRepository.findByRole(Role.GRAHAK, pageable)
+                    : userRepository.findByQueryAndRole(normalizedQuery, Role.GRAHAK, pageable);
             var mapped = users.map(AdminUser::toAdminUser);
             return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
         } catch (Exception e) {
-            log.error("Error while fetching all users: " + e.getMessage());
-            return null;
+            log.error("Error while fetching all users", e);
+            throw new IllegalStateException("Failed to fetch users", e);
         }
     }
 

@@ -25,7 +25,7 @@ import {
   Avatar,
   EXPORT_OPTIONS,
   EmptyState,
-  MAX_REPORT_PAGES,
+  MAX_REPORT_USERS,
   PAGE_SIZE,
   ROWS_PER_PAGE_OPTIONS,
   ReturnBadge,
@@ -37,7 +37,6 @@ import {
 } from "./reportUtils";
 import dynamic from "next/dynamic";
 import UserRow from "./UserRow";
-import { allRounderMessage } from "@/components/Message";
 // import ReportControls from "./ReportControls";
 // import ReportSummary from "./ReportSummary";
 
@@ -58,6 +57,41 @@ const ReportSummary = dynamic(() => import("./ReportSummary"), {
   ),
   ssr: false,
 });
+
+const REPORT_PAGE_BATCH_SIZE = 4;
+
+function validateReportPage(
+  response,
+  pageNumber,
+  expectedTotal,
+  expectedPages,
+) {
+  if (
+    response?.status !== "success" ||
+    !Array.isArray(response.data?.content)
+  ) {
+    throw new Error(
+      response?.message || `Could not load report page ${pageNumber}.`,
+    );
+  }
+
+  const pageTotal = Number(response.data.totalElements);
+  if (!Number.isSafeInteger(pageTotal) || pageTotal < 0) {
+    throw new Error(`Report page ${pageNumber} returned an invalid user count.`);
+  }
+  if (pageTotal !== expectedTotal) {
+    throw new Error(
+      `The user count changed while loading the report (${expectedTotal} to ${pageTotal}). Refresh and try again.`,
+    );
+  }
+  const pageCount = Number(response.data.totalPages);
+  if (Number.isSafeInteger(pageCount) && pageCount !== expectedPages) {
+    throw new Error(
+      `Report page ${pageNumber} returned inconsistent pagination metadata. Refresh and try again.`,
+    );
+  }
+  return response.data.content;
+}
 
 /* ------------------------------------------------------------------ */
 /* Page                                                                */
@@ -81,47 +115,116 @@ export default function Reports() {
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [exportScope, setExportScope] = useState("all");
   const requestSequence = useRef(0);
+  const fetchPromiseRef = useRef(null);
   const hasLoadedRef = useRef(false);
 
   const fetchUsers = useCallback(async () => {
-    console.log("Api hit");
-    const firstPage = await fetchAllUsersApi("", 1, PAGE_SIZE);
-    if (
-      firstPage?.status !== "success" ||
-      !Array.isArray(firstPage.data?.content)
-    ) {
-      throw new Error(
-        firstPage?.message || "The report data could not be loaded.",
-      );
-    }
+    if (fetchPromiseRef.current) return fetchPromiseRef.current;
 
-    const totalPages = Number(firstPage.data.totalPages) || 0;
-    if (totalPages > MAX_REPORT_PAGES) {
-      throw new Error(
-        "The report exceeds the API's 2,000-user page limit. Please narrow the report scope.",
-      );
-    }
-
-    const pageResults = [firstPage];
-    for (let pageStart = 2; pageStart <= totalPages; pageStart += 10) {
-      const pageEnd = Math.min(pageStart + 9, totalPages);
-      const pageBatch = await Promise.all(
-        Array.from({ length: pageEnd - pageStart + 1 }, (_, index) =>
-          fetchAllUsersApi("", pageStart + index, PAGE_SIZE),
-        ),
-      );
-      pageResults.push(...pageBatch);
-    }
-    const records = pageResults.flatMap((page) => {
-      if (page?.status !== "success" || !Array.isArray(page.data?.content)) {
-         console.warn(
-          page?.message || "A page of report data could not be loaded.",
+    const fetchPromise = (async () => {
+      const firstPage = await fetchAllUsersApi("", 1, PAGE_SIZE);
+      if (
+        firstPage?.status !== "success" ||
+        !Array.isArray(firstPage.data?.content)
+      ) {
+        throw new Error(
+          firstPage?.message || "The report data could not be loaded.",
         );
       }
-      return page.data.content;
-    });
+      const totalElements = Number(firstPage?.data?.totalElements);
+      if (!Number.isSafeInteger(totalElements) || totalElements < 0) {
+        throw new Error("The report API returned an invalid user count.");
+      }
+      if (totalElements > MAX_REPORT_USERS) {
+        throw new Error(
+          `The report contains ${totalElements} users, exceeding the ${MAX_REPORT_USERS}-user limit.`,
+        );
+      }
 
-    return records.map(normalizeUser);
+      const totalPages = Math.ceil(totalElements / PAGE_SIZE);
+      const records = validateReportPage(
+        firstPage,
+        1,
+        totalElements,
+        totalPages,
+      );
+      const expectedFirstPageRecords = Math.min(PAGE_SIZE, totalElements);
+      if (records.length !== expectedFirstPageRecords) {
+        throw new Error(
+          `Report page 1 returned ${records.length} records; expected ${expectedFirstPageRecords}. Check the API page-size configuration and try again.`,
+        );
+      }
+
+      const allRecords = [...records];
+      for (
+        let firstPageInBatch = 2;
+        firstPageInBatch <= totalPages;
+        firstPageInBatch += REPORT_PAGE_BATCH_SIZE
+      ) {
+        const lastPageInBatch = Math.min(
+          firstPageInBatch + REPORT_PAGE_BATCH_SIZE - 1,
+          totalPages,
+        );
+        const responses = await Promise.all(
+          Array.from(
+            { length: lastPageInBatch - firstPageInBatch + 1 },
+            (_, index) => {
+              const pageNumber = firstPageInBatch + index;
+              return fetchAllUsersApi("", pageNumber, PAGE_SIZE).then(
+                (response) => ({
+                  pageNumber,
+                  records: validateReportPage(
+                    response,
+                    pageNumber,
+                    totalElements,
+                    totalPages,
+                  ),
+                }),
+              );
+            },
+          ),
+        );
+        responses.forEach(({ records: pageRecords, pageNumber }) => {
+          const expectedPageRecords = Math.min(
+            PAGE_SIZE,
+            totalElements - (pageNumber - 1) * PAGE_SIZE,
+          );
+          if (pageRecords.length !== expectedPageRecords) {
+            throw new Error(
+              `Report page ${pageNumber} returned ${pageRecords.length} records; expected ${expectedPageRecords}. Refresh and try again.`,
+            );
+          }
+          allRecords.push(...pageRecords);
+        });
+      }
+
+      if (allRecords.length !== totalElements) {
+        throw new Error(
+          `The report API reports ${totalElements} users, but returned ${allRecords.length}. Refresh and try again.`,
+        );
+      }
+
+      const userIds = new Set();
+      for (const record of allRecords) {
+        const userId = String(record?.userId ?? "").trim();
+        if (!userId || userIds.has(userId)) {
+          throw new Error(
+            "The report API returned a missing or duplicate user ID. Refresh and try again.",
+          );
+        }
+        userIds.add(userId);
+      }
+
+      return allRecords.map(normalizeUser);
+    })();
+    fetchPromiseRef.current = fetchPromise;
+    try {
+      return await fetchPromise;
+    } finally {
+      if (fetchPromiseRef.current === fetchPromise) {
+        fetchPromiseRef.current = null;
+      }
+    }
   }, []);
 
   const loadUsers = useCallback(async () => {
@@ -137,15 +240,15 @@ export default function Reports() {
       hasLoadedRef.current = true;
       setHasLoaded(true);
     } catch (error) {
-      console.error("Failed to load investor report:", error);
-      if (requestId === requestSequence.current) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Unable to load report data. Please try again.";
-        if (hasLoadedRef.current) setRefreshError(message);
-        else setLoadError(message);
-      }
+      console.warn("Failed to load investor report:", error);
+      // if (requestId === requestSequence.current) {
+      //   const message =
+      //     error instanceof Error
+      //       ? error.message
+      //       : "Unable to load report data. Please try again.";
+      //   if (hasLoadedRef.current) setRefreshError(message);
+      //   else setLoadError(message);
+      // }
     } finally {
       if (requestId === requestSequence.current) {
         setLoading(false);
@@ -186,7 +289,6 @@ export default function Reports() {
     setView(nextView);
     setExpandedId(null);
     setPage(1);
-    loadUsers();
   };
 
   const changeScheme = (nextScheme) => {
@@ -194,7 +296,6 @@ export default function Reports() {
     setSelectedScheme(nextScheme);
     setExpandedId(null);
     setPage(1);
-    loadUsers();
   };
 
   const changeQuery = (nextQuery) => {
@@ -226,12 +327,11 @@ export default function Reports() {
     const q = query.trim().toLowerCase();
 
     return users
-    
       .filter((u) =>
         view === "scheme"
           ? u?.schemes.some((s) => s.name === selectedScheme)
           : true,
-      ).filter((u) => u?.name)
+      )
       .filter((u) => {
         const matchesQuery =
           !q ||
@@ -243,7 +343,7 @@ export default function Reports() {
         const matchesAccount =
           accountFilter === "All" || u.status === accountFilter;
         return matchesQuery && matchesAccount;
-      }); // filter out users with missing names
+      });
   }, [users, query, accountFilter, view, selectedScheme]);
 
   const schemeEntryFor = useCallback(
@@ -280,8 +380,7 @@ export default function Reports() {
   }, [view, selectedScheme, filteredUsers, schemeEntryFor]);
 
   const gain = totals.totalCurrent - totals.totalInvested;
-  const gainPct =
- totals.totalInvested > 0 ? (gain / totals.totalInvested) * 100 : 0;
+  const gainPct = totals.totalInvested > 0 ? (gain / totals.totalInvested) * 100 : 0;
   const isGain = gain >= 0;
 
   // Capital by scheme (all-users view)
