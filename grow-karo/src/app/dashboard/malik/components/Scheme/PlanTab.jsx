@@ -49,6 +49,7 @@ const emptyPlan = {
   payoutFrequency: "Monthly",
   riskLevel: 1,
   tenure: "",
+  tenureMonths: "",   // SIP: tenure in months
   startDate: "",
   endDate: "",
   minimumAmount: "",
@@ -56,6 +57,9 @@ const emptyPlan = {
   status: true,
   profitPercentage: "",
   maxInvestorsAllowed: "",
+  planType: "FD",     // "FD" | "SIP"
+  sipAmount: "",      // SIP: monthly installment amount
+  sipDay: "20",       // SIP: day of month (1–28)
 };
 
 export default function PlansPage() {

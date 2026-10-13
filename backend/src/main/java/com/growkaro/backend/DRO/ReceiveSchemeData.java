@@ -19,11 +19,16 @@ public record ReceiveSchemeData(
         Boolean status,
         Double profitPercentage,
         Integer maxInvestorsAllowed,
-        List<String> terms) {
+        List<String> terms,
+        String planType,
+        Integer tenureMonths,
+        BigDecimal sipAmount,
+        Integer sipDay) {
 
     // Old clients that don't send "terms" get an empty list, not null.
     // Also trims each term and drops blanks.
     public ReceiveSchemeData {
+        planType = planType == null || planType.isBlank() ? "FD" : planType.trim().toUpperCase();
         terms = terms == null
                 ? List.of()
                 : terms.stream()

@@ -338,6 +338,8 @@ public class General {
         scheme.setProfitPercentage(schemeData.profitPercentage());
         scheme.setMaxInvestorsAllowed(schemeData.maxInvestorsAllowed());
         scheme.setTerms(new ArrayList<>(schemeData.terms()));
+        scheme.setPlanType(schemeData.planType());
+        scheme.setTenureMonths(schemeData.tenureMonths());
         scheme.setCreatedBy(adminName());
         return scheme;
     }

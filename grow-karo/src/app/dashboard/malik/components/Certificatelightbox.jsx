@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { X, FileText, Image as ImageIcon } from "lucide-react";
+import Image from "next/image";
 import BondCertificate from "./BondCertificate.jsx";
 import BondDownloadButton from "./BondDownloadButton.jsx";
 import { resolveMediaUrl } from "../../../../api/apiClient";
+import SIPBondCertificate from "./SIPBondCertificate.jsx";
 
 export default function CertificateLightbox({
   bond,
@@ -12,7 +14,9 @@ export default function CertificateLightbox({
   onClose,
 }) {
   const certRef = useRef(null);
-  const [showUploadedImage, setShowUploadedImage] = useState(false);
+  const [showUploadedImage, setShowUploadedImage] = useState(
+    Boolean(bond?.bondUrl),
+  );
 
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
@@ -21,9 +25,7 @@ export default function CertificateLightbox({
   }, [onClose]);
 
   const hasUploadedImage = Boolean(bond?.bondUrl);
-  useEffect(() => {
-    setShowUploadedImage(hasUploadedImage)
-  }, [bond])
+  const isSip = bond?.planType === "SIP" || bond?.schemeType === "SIP";
   if (!bond) return null;
 
   return (
@@ -75,31 +77,43 @@ export default function CertificateLightbox({
           style={{ width: 400, margin: "0 auto" }}
         >
           {showUploadedImage && hasUploadedImage ? (
-            <img
+            <Image
               src={resolveMediaUrl(bond.bondUrl)}
               alt={`Bond certificate for ${userName}`}
+              width={800}
+              height={1000}
+              unoptimized
               className="h-auto max-h-[80vh] w-full object-contain bg-slate-950"
-              loading="lazy"
-              decoding="async"
             />
           ) : (
             <>
-              <BondCertificate
-                ref={certRef}
-                bond={bond}
-                userData={userData}
-                userName={userName}
-                scheme={scheme}
-                className="h-auto w-full"
-                logoUrl="/logo.png"
-                watermarkUrl="/logo.png"
-                stampUrl="/stamp.png"
-
-              />
+              {isSip ? (
+                <SIPBondCertificate
+                  ref={certRef}
+                  bond={bond}
+                  userData={userData}
+                  className="h-auto w-full"
+                  logoUrl="/logo.png"
+                  watermarkUrl="/logo.png"
+                  stampUrl="/stamp.png"
+                />
+              ) : (
+                <BondCertificate
+                  ref={certRef}
+                  bond={bond}
+                  userData={userData}
+                  userName={userName}
+                  scheme={scheme}
+                  className="h-auto w-full"
+                  logoUrl="/logo.png"
+                  watermarkUrl="/logo.png"
+                  stampUrl="/stamp.png"
+                />
+              )}
 
             </>
           )}
-          {(bond.bondPdfUrl || !showUploadedImage) && (
+          {!isSip && (bond.bondPdfUrl || !showUploadedImage) && (
             <BondDownloadButton
               className="absolute right-2 bottom-2"
               certRef={certRef}

@@ -5,6 +5,18 @@ export const currency = (n) =>
     maximumFractionDigits: 0,
   }).format(n);
 
+export const getSipPremium = (bond) => {
+  const dueAmounts = (Array.isArray(bond?.sipLedger) ? bond.sipLedger : [])
+    .map((installment) => Number(installment?.dueAmount))
+    .filter(Number.isFinite);
+  if (dueAmounts.length) {
+    const uniqueAmounts = new Set(dueAmounts);
+    return uniqueAmounts.size === 1 ? dueAmounts[0] : null;
+  }
+
+  return Number(bond?.sipAmount ?? bond?.paidAmount ?? 0);
+};
+
 export const dateFmt = (d) =>
   new Date(d).toLocaleDateString("en-IN", {
     day: "2-digit",

@@ -12,6 +12,7 @@ const inputClass =
   "w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-teal-500 [color-scheme:dark]";
 
 function SchemeSummary({ scheme }) {
+  const isSip = scheme.planType === "SIP";
   return (
     <div className="grid grid-cols-2 items-center gap-x-6 gap-y-3 rounded-xl border border-slate-800 bg-slate-900/60 px-5 py-3.5">
       <div className="flex items-center gap-2">
@@ -30,18 +31,29 @@ function SchemeSummary({ scheme }) {
       </div>
       <div className="flex items-center gap-2">
         <Percent className="h-4 w-4 text-emerald-500" />
-        <span className="text-[13px] text-slate-500">Interest</span>
+        {/* <span className="text-[13px] text-slate-500">Interest</span> */}
         <span className="text-[15px] font-semibold text-emerald-400">
-          {scheme.profitPercentage ?? "0"}%
+          {scheme.profitPercentage ?? "0"}%{isSip ? "/mo" : ""}
         </span>
       </div>
       <div className="flex items-center gap-2">
         <CalendarClock className="h-4 w-4 text-slate-500" />
-        <span className="text-[13px] text-slate-500">Tenure</span>
         <span className="text-[14px] font-medium text-slate-100">
-          {daysToMonths(scheme.tenure) ?? "0 days"}
+          {isSip
+            ? `${scheme.tenureMonths ?? "?"} months`
+            : (daysToMonths(scheme.tenure) ?? "0 days")}
         </span>
       </div>
+      {isSip && (
+        <div className="flex items-center gap-2 col-span-2">
+          {/* <span className="text-[13px] text-indigo-400 font-semibold">
+            SIP Plan
+          </span> */}
+          <span className="text-[13px] text-slate-300">
+           Due on every {scheme.sipDay || 20}th
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -87,6 +99,94 @@ function LedgerRows({ type, rows, onChange, onAdd }) {
   );
 }
 
+function SipInstallmentRows({ rows, onChange, onAdd, onRemove }) {
+  return (
+    <div className="space-y-2 rounded-xl border border-indigo-900/60 bg-indigo-950/15 p-3 scrollbar-none">
+      <div className="scrollbar-none">
+        <p className="text-xs font-semibold text-indigo-300">
+          User SIP schedule
+        </p>
+        <p className="mt-1 text-[11px] text-slate-500">
+          Adjust each installment date and amount for this user. The paid amount
+          can differ from the amount due.
+        </p>
+      </div>
+      <div className="grid grid-cols-12 gap-1 px-1 text-[10px] text-slate-500">
+        <span className="col-span-1">No.</span>
+        {/* <span className="col-span-3">Installment date</span>
+        <span className="col-span-2">Due (₹)</span> */}
+        <span className="col-span-3">Paid date</span>
+        <span className="col-span-2">Paid (₹)</span>
+        <span className="col-span-1" />
+      </div>
+      <div className="max-h-72 space-y-1 overflow-y-auto scroll-auto scrollbar-none">
+        {rows.map((row, index) => (
+          <div key={index} className="grid grid-cols-12 items-center gap-1">
+            <span className="col-span-1 text-xs text-slate-500">
+              {index + 1}
+            </span>
+            {/* <input
+              aria-label={`Installment ${index + 1} date`}
+              type="date"
+              value={row.installmentDate ?? ""}
+              onChange={(event) =>
+                onChange(index, "installmentDate", event.target.value)
+              }
+              className={`col-span-3 ${inputClass}`}
+            />
+            <input
+              aria-label={`Installment ${index + 1} due amount`}
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={row.dueAmount ?? ""}
+              onChange={(event) =>
+                onChange(index, "dueAmount", event.target.value)
+              }
+              className={`col-span-2 ${inputClass}`}
+            /> */}
+            <input
+              aria-label={`Installment ${index + 1} paid date`}
+              type="date"
+              value={row.paidDate ?? ""}
+              onChange={(event) =>
+                onChange(index, "paidDate", event.target.value)
+              }
+              className={`col-span-5 ${inputClass}`}
+            />
+            <input
+              aria-label={`Installment ${index + 1} paid amount`}
+              type="number"
+              min="0"
+              step="0.01"
+              value={row.paidAmount ?? "0"}
+              onChange={(event) =>
+                onChange(index, "paidAmount", event.target.value)
+              }
+              className={`col-span-5 ${inputClass}`}
+            />
+            <button
+              type="button"
+              aria-label={`Remove installment ${index + 1}`}
+              onClick={() => onRemove(index)}
+              className="col-span-1 text-sm text-rose-400 hover:text-rose-300"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={onAdd}
+        className="text-xs font-medium text-indigo-300 hover:text-indigo-200"
+      >
+        + Add installment
+      </button>
+    </div>
+  );
+}
+
 export default function SchemeManagementPanel({
   formTopRef,
   isEditing,
@@ -110,6 +210,10 @@ export default function SchemeManagementPanel({
   saveScheme,
   saving,
   resetForm,
+  sipLedger = [],
+  onSipInstallmentChange,
+  onAddSipInstallment,
+  onRemoveSipInstallment,
 }) {
   return (
     <div
@@ -252,45 +356,87 @@ export default function SchemeManagementPanel({
           )}
 
           <div className="grid grid-cols-2 gap-3">
-            <label className="text-xs text-slate-400">
-              Invested amount
-              <input
-                name="paidAmount"
-                type="number"
-                min="1000"
-                step="1000"
-                value={form.paidAmount}
-                onChange={updateForm}
-                required
-                className={`mt-1 ${inputClass}`}
-              />
-            </label>
-            <label className="text-xs text-slate-400">
-              Enrollment / paid date
-              <input
-                name="paidDate"
-                type="date"
-                value={form.paidDate}
-                onChange={updateForm}
-                required
-                className={`mt-1 ${inputClass}`}
-              />
-            </label>
-            <label className="col-span-2 text-xs text-slate-400">
-              Maturity date
-              <input
-                name="maturityDate"
-                type="date"
-                value={form.maturityDate}
-                onChange={updateForm}
-                min={form.paidDate || undefined}
-                required
-                className={`mt-1 ${inputClass}`}
-              />
-              <span className="mt-1 block text-[10px] text-slate-500">
-                Calculated from enrollment date and tenure; editable.
-              </span>
-            </label>
+            {selectedScheme?.planType === "SIP" ? (
+              <>
+                <label className="text-xs text-slate-400">
+                  Enrollment / First installment date
+                  <input
+                    name="paidDate"
+                    type="date"
+                    value={form.paidDate}
+                    onChange={updateForm}
+                    required
+                    className={`mt-1 ${inputClass}`}
+                  />
+                </label>
+                <label className="col-span-2 text-xs text-slate-400">
+                  Maturity date
+                  <input
+                    name="maturityDate"
+                    type="date"
+                    value={form.maturityDate}
+                    onChange={updateForm}
+                    min={form.paidDate || undefined}
+                    required
+                    className={`mt-1 ${inputClass}`}
+                  />
+                  <span className="mt-1 block text-[10px] text-slate-500">
+                    Auto-calculated from start date +{" "}
+                    {selectedScheme.tenureMonths || "?"} months.
+                  </span>
+                </label>
+                <div className="col-span-2">
+                  <SipInstallmentRows
+                    rows={sipLedger}
+                    onChange={onSipInstallmentChange}
+                    onAdd={onAddSipInstallment}
+                    onRemove={onRemoveSipInstallment}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <label className="text-xs text-slate-400">
+                  Invested amount
+                  <input
+                    name="paidAmount"
+                    type="number"
+                    min="1000"
+                    step="1000"
+                    value={form.paidAmount}
+                    onChange={updateForm}
+                    required
+                    className={`mt-1 ${inputClass}`}
+                  />
+                </label>
+                <label className="text-xs text-slate-400">
+                  Enrollment / paid date
+                  <input
+                    name="paidDate"
+                    type="date"
+                    value={form.paidDate}
+                    onChange={updateForm}
+                    required
+                    className={`mt-1 ${inputClass}`}
+                  />
+                </label>
+                <label className="col-span-2 text-xs text-slate-400">
+                  Maturity date
+                  <input
+                    name="maturityDate"
+                    type="date"
+                    value={form.maturityDate}
+                    onChange={updateForm}
+                    min={form.paidDate || undefined}
+                    required
+                    className={`mt-1 ${inputClass}`}
+                  />
+                  <span className="mt-1 block text-[10px] text-slate-500">
+                    Calculated from enrollment date and tenure; editable.
+                  </span>
+                </label>
+              </>
+            )}
           </div>
 
           {showLedgers && (

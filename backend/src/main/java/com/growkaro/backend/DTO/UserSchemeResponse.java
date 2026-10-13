@@ -2,7 +2,9 @@ package com.growkaro.backend.DTO;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.IntStream;
 
+import com.growkaro.backend.DTO.SipInstallmentResponse;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.UserScheme;
@@ -29,7 +31,12 @@ public record UserSchemeResponse(
                 String payoutCycle,
                 List<UserSchemeProfitLedgerResponse> profitLedger,
                 List<UserSchemeReedemLedgerResponse> reedemLedger,
-                NomineeResponse nominee) {
+                NomineeResponse nominee,
+                String planType,
+                Integer tenureMonths,
+                List<SipInstallmentResponse> sipLedger,
+                BigDecimal minimumAmount,
+                BigDecimal maximumAmount) {
         private static final General GENERAL = new General();
 
         public static UserSchemeResponse toUserSchemeResponse(UserScheme us) {
@@ -74,7 +81,16 @@ public record UserSchemeResponse(
                                 isJoined ? us.getScheme().getPayoutFrequency() : null,
                                 profitLedger,
                                 reedemLedger,
-                                us.getNominee() == null ? null : NomineeResponse.fromEntity(us.getNominee()));
+                                us.getNominee() == null ? null : NomineeResponse.fromEntity(us.getNominee()),
+                                s.getPlanType(),
+                                s.getTenureMonths(),
+                                
+                                IntStream.range(0, us.getSipLedger().size())
+                                                .mapToObj(index -> SipInstallmentResponse.fromEntity(
+                                                                us.getSipLedger().get(index), index))
+                                                .toList(),
+                                s.getMinimumAmount(),
+                                s.getMaximumAmount());
         }
 
 }

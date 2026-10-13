@@ -1,17 +1,29 @@
-import dynamic from "next/dynamic";
+﻿import dynamic from "next/dynamic";
 
-// import BondCard from "./BondCard";
 const BondCard = dynamic(() => import("./BondCard"), {
-  loading: () => (<div className="rounded-xl border border-dashed border-slate-700 px-4 py-8 text-center text-sm text-slate-500">
+  loading: () => (
+    <div className="rounded-xl border border-dashed border-slate-700 px-4 py-8 text-center text-sm text-slate-500">
       Loading...
     </div>
   ),
-  ssr: false });
+  ssr: false,
+});
+
+const SIPCard = dynamic(() => import("./SIPCard"), {
+  loading: () => (
+    <div className="rounded-xl border border-dashed border-slate-700 px-4 py-8 text-center text-sm text-slate-500">
+      Loading...
+    </div>
+  ),
+  ssr: false,
+});
 
 export default function EnrolledSchemes({
   bonds,
   user,
   ledgerEdits,
+  sipLedgerEdits = {},
+  savingSipLedgerId,
   bondForms,
   nominees,
   onProfitFieldChange,
@@ -26,6 +38,12 @@ export default function EnrolledSchemes({
   savingBond,
   setSavingBond,
   viewUser,
+  // SIP-specific
+  onSipInstallmentChange,
+  onAddSipInstallment,
+  onSaveSipLedger,
+  logoUrl,
+  stampUrl,
 }) {
   return (
     <section>
@@ -45,6 +63,43 @@ export default function EnrolledSchemes({
         <div className="space-y-4">
           {bonds.map((bond) => {
             const id = bond.userSchemeId;
+            const isSip = bond.planType === "SIP" || bond.schemeType === "SIP";
+
+            if (isSip) {
+              return (
+                <SIPCard
+                  key={id}
+                  bond={bond}
+                  user={user}
+                  viewUser={viewUser}
+                  sipLedger={sipLedgerEdits[id] || bond.sipLedger || []}
+                  onInstallmentChange={(index, field, value) =>
+                    onSipInstallmentChange?.(id, index, field, value)
+                  }
+                  onAddInstallment={() => onAddSipInstallment?.(id)}
+                  onSaveLedger={() => onSaveSipLedger?.(id)}
+                  onViewBond={onViewBond}
+                  savingLedger={savingSipLedgerId === id}
+                  bondFormState={bondForms[id] ?? {}}
+                  onBondFormChange={(field, value) =>
+                    onBondFormChange(id, field, value)
+                  }
+                  onSaveBond={() => onSaveBond(bond)}
+                  savingBond={savingBond}
+                  onStartEditingScheme={() => onStartEditingScheme(bond)}
+                  editingScheme={false}
+                  schemeEditForm={{}}
+                  onCancelEditingScheme={() => {}}
+                  onSchemeEditFieldChange={() => {}}
+                  onSaveSchemeDetails={() => {}}
+                  savingSchemeDetails={false}
+                  logoUrl={logoUrl}
+                  stampUrl={stampUrl}
+                />
+              );
+            }
+
+            // Regular FD bond
             return (
               <BondCard
                 key={id}

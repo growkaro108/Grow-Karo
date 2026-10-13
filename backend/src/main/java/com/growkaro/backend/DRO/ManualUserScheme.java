@@ -12,5 +12,6 @@ public record ManualUserScheme(
         LocalDate paidDate,
         List<UserSchemeProfitLedgerRequest> profitLedger,
         List<UserSchemeReedemLedgerRequest> reedemLedger,
-        LocalDate maturityDate) {
+        LocalDate maturityDate,
+        List<SipInstallmentRequest> sipLedger) {
 }

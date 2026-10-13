@@ -63,6 +63,7 @@ import com.growkaro.backend.DRO.AdminUserProfileUpdateRequest;
 import com.growkaro.backend.DRO.ManualUserScheme;
 import com.growkaro.backend.DRO.NewNominee;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
+import com.growkaro.backend.DRO.SipInstallmentRequest;
 import com.growkaro.backend.DRO.UserSchemeDetailsUpdateRequest;
 import com.growkaro.backend.DRO.UserSchemeLedgerUpdateRequest;
 import com.growkaro.backend.DRO.UserSchemeProfitLedgerRequest;
@@ -88,6 +89,7 @@ import com.growkaro.backend.entity.Notification;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Reply;
 import com.growkaro.backend.entity.Scheme;
+import com.growkaro.backend.entity.SipInstallment;
 import com.growkaro.backend.entity.SupportIssue;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
@@ -161,6 +163,9 @@ public class AdminAPIService {
             @CacheEvict(value = "schemeAudit", allEntries = true),
     })
     public boolean createScheme(ReceiveSchemeData schemeData) {
+        if (!isValidSchemeData(schemeData)) {
+            return false;
+        }
         Scheme scheme = general.toScheme(schemeData);
         try {
             schemeRepository.save(scheme);
@@ -195,12 +200,16 @@ public class AdminAPIService {
         if (id == null || id.isBlank() || receiveData == null) {
             return null;
         }
+        if (!isValidSchemeData(receiveData)) {
+            return null;
+        }
 
         try {
             Scheme existingSchemeData = schemeRepository.findById(id).orElse(null);
             if (existingSchemeData == null) {
                 return null;
             }
+
             general.applyIfChanged(receiveData.schemeName(),
                     existingSchemeData.getSchemeName(),
                     existingSchemeData::setSchemeName);
@@ -229,6 +238,18 @@ public class AdminAPIService {
             general.applyIfChanged(receiveData.maxInvestorsAllowed(),
                     existingSchemeData.getMaxInvestorsAllowed(),
                     existingSchemeData::setMaxInvestorsAllowed);
+            general.applyIfChanged(receiveData.planType(),
+                    existingSchemeData.getPlanType(),
+                    existingSchemeData::setPlanType);
+            general.applyIfChanged(receiveData.tenureMonths(),
+                    existingSchemeData.getTenureMonths(),
+                    existingSchemeData::setTenureMonths);
+            // general.applyIfChanged(receiveData.sipAmount(),
+            //         existingSchemeData.getSipAmount(),
+            //         existingSchemeData::setSipAmount);
+            // general.applyIfChanged(receiveData.sipDay(),
+            //         existingSchemeData.getSipDay(),
+            //         existingSchemeData::setSipDay);
 
             List<String> newTerms = receiveData.terms();
             if (!existingSchemeData.getTerms().equals(newTerms)) {
@@ -243,6 +264,20 @@ public class AdminAPIService {
             log.error("error in updating scheme", e.getMessage());
             return null;
         }
+    }
+
+    private boolean isValidSchemeData(ReceiveSchemeData data) {
+        if (data == null || !List.of("FD", "SIP").contains(data.planType())) {
+            return false;
+        }
+        return !"SIP".equals(data.planType())
+                || (data.tenureMonths() != null && data.tenureMonths() > 0
+                        && data.sipAmount() != null && data.sipAmount().signum() > 0
+                        && data.minimumAmount() != null && data.maximumAmount() != null
+                        && data.minimumAmount().compareTo(data.maximumAmount()) <= 0
+                        && data.sipAmount().compareTo(data.minimumAmount()) >= 0
+                        && data.sipAmount().compareTo(data.maximumAmount()) <= 0
+                        && data.sipDay() != null && data.sipDay() >= 1 && data.sipDay() <= 28);
     }
 
     @CacheEvict(value = "allSchemes", allEntries = true)
@@ -276,7 +311,7 @@ public class AdminAPIService {
         if (request == null || request.userId() == null || request.userId().isBlank()
                 || request.schemeId() == null || request.schemeId().isBlank()
                 || request.nomineeId() == null || request.nomineeId().isBlank()
-                || request.paidAmount() == null || request.paidAmount().signum() <= 0
+                || request.paidAmount() == null || request.paidAmount().signum() < 0
                 || request.paidDate() == null || request.profitLedger() == null || request.reedemLedger() == null
                 || (request.maturityDate() != null && request.maturityDate().isBefore(request.paidDate()))) {
             return general.response("error", "Invalid scheme details", null);
@@ -297,6 +332,11 @@ public class AdminAPIService {
             Scheme scheme = schemeRepository.findById(request.schemeId()).orElse(null);
             if (scheme == null) {
                 return general.response("error", "Scheme not found", null);
+            }
+            boolean isSip = "SIP".equalsIgnoreCase(scheme.getPlanType());
+            if ((!isSip && request.paidAmount().signum() <= 0)
+                    || (isSip && !isValidSipLedger(request.sipLedger(), scheme))) {
+                return general.response("error", "Invalid SIP installment schedule", null);
             }
 
             // 3. Use getReferenceById to attach foreign keys without loading full
@@ -325,7 +365,7 @@ public class AdminAPIService {
             userScheme.setUser(userRef); // Proxy instance: sets user_id foreign key directly
             userScheme.setScheme(scheme);
             userScheme.setNominee(nomineeRef); // Proxy instance: sets nominee_id foreign key directly
-            userScheme.setPaidAmount(request.paidAmount());
+            userScheme.setPaidAmount(isSip ? totalSipPaid(request.sipLedger()) : request.paidAmount());
             userScheme.setIsApproved(true);
             userScheme.setAmountFrom("general");
             userScheme.setSubmitTo("general");
@@ -333,6 +373,9 @@ public class AdminAPIService {
             userScheme.setPaidDate(request.paidDate());
 
             replaceLedgers(userScheme, request.profitLedger(), request.reedemLedger());
+            if (isSip) {
+                replaceSipLedger(userScheme, request.sipLedger());
+            }
 
             userScheme.setNextPayoutDate(general.calculateNextPayoutDate(
                     enrollmentDate, scheme.getPayoutFrequency(), scheme.getTenure()));
@@ -435,7 +478,8 @@ public class AdminAPIService {
     @Transactional
     public Map<String, Object> updateUserSchemeLedger(String userSchemeId, UserSchemeLedgerUpdateRequest request) {
         if (userSchemeId == null || userSchemeId.isBlank() || request == null
-                || request.profitLedger() == null || request.reedemLedger() == null) {
+                || (request.profitLedger() == null) != (request.reedemLedger() == null)
+                || (request.profitLedger() == null && request.sipLedger() == null)) {
             return general.response("error", "Invalid ledger details", null);
         }
         UserScheme userScheme = userSchemeRepository.findById(userSchemeId).orElse(null);
@@ -443,7 +487,21 @@ public class AdminAPIService {
             return general.response("error", "User scheme not found", null);
         }
         try {
-            replaceLedgers(userScheme, request.profitLedger(), request.reedemLedger());
+            if (request.profitLedger() != null) {
+                replaceLedgers(userScheme, request.profitLedger(), request.reedemLedger());
+            }
+            if (request.sipLedger() != null) {
+                boolean isSip = "SIP".equalsIgnoreCase(userScheme.getScheme().getPlanType());
+                if ((isSip && !isValidSipLedger(request.sipLedger(), userScheme.getScheme()))
+                        || (!request.sipLedger().isEmpty()
+                                && !isValidSipLedger(request.sipLedger(), userScheme.getScheme()))) {
+                    return general.response("error", "Invalid SIP installment schedule", null);
+                }
+                replaceSipLedger(userScheme, request.sipLedger());
+                if (isSip) {
+                    userScheme.setPaidAmount(totalSipPaid(request.sipLedger()));
+                }
+            }
             userSchemeRepository.save(userScheme);
             return general.response("success", "Profit and redemption ledger updated", null);
         } catch (IllegalArgumentException e) {
@@ -458,7 +516,7 @@ public class AdminAPIService {
             UserSchemeDetailsUpdateRequest request) {
 
         if (userSchemeId == null || userSchemeId.isBlank() || request == null
-                || request.paidAmount() == null || request.paidAmount().signum() <= 0
+                || request.paidAmount() == null || request.paidAmount().signum() < 0
                 || request.paidDate() == null || request.maturityDate() == null
                 || request.maturityDate().isBefore(request.paidDate())
                 || request.nomineeId() == null || request.nomineeId().isBlank() || request.schemeId() == null
@@ -478,6 +536,17 @@ public class AdminAPIService {
             return general.response("error", "Nominee does not belong to this user", null);
         }
 
+        Scheme targetScheme = userScheme.getScheme();
+        if (!targetScheme.getSchemeId().equals(request.schemeId())) {
+            targetScheme = schemeRepository.findById(request.schemeId()).orElse(null);
+            if (targetScheme == null) {
+                return general.response("error", "New scheme not found", null);
+            }
+        }
+        if (!"SIP".equalsIgnoreCase(targetScheme.getPlanType()) && request.paidAmount().signum() <= 0) {
+            return general.response("error", "Paid amount must be greater than zero", null);
+        }
+
         LocalDateTime enrollmentDate = LocalDateTime.of(
                 request.paidDate(),
                 userScheme.getEnrollmentDate() == null
@@ -486,14 +555,7 @@ public class AdminAPIService {
 
         LocalDate maturityDate = request.maturityDate();
         LocalDate today = general.getCurrentDate();
-        String existingSchemeId = userScheme.getScheme().getSchemeId();
-        if (!existingSchemeId.equals(request.schemeId())) {
-            Scheme newScheme = schemeRepository.findById(request.schemeId()).orElse(null);
-            if (newScheme == null) {
-                return general.response("error", "New scheme not found", null);
-            }
-            userScheme.setScheme(newScheme);
-        }
+        userScheme.setScheme(targetScheme);
 
         userScheme.setPaidAmount(request.paidAmount());
         userScheme.setPaidDate(request.paidDate());
@@ -539,6 +601,35 @@ public class AdminAPIService {
             entry.setRedeemAmount(request.redeemAmount());
             entry.setRedeemDate(request.redeemDate());
             userScheme.getReedemLedger().add(entry);
+        }
+    }
+
+    private boolean isValidSipLedger(List<SipInstallmentRequest> installments, Scheme scheme) {
+        return installments != null && !installments.isEmpty()
+                && installments.stream().allMatch(installment -> installment != null
+                        && installment.installmentDate() != null
+                        && installment.dueAmount() != null
+                        && installment.dueAmount().compareTo(scheme.getMinimumAmount()) >= 0
+                        && installment.dueAmount().compareTo(scheme.getMaximumAmount()) <= 0
+                        && (installment.paidAmount() == null || installment.paidAmount().signum() >= 0));
+    }
+
+    private BigDecimal totalSipPaid(List<SipInstallmentRequest> installments) {
+        return installments.stream()
+                .map(installment -> installment.paidAmount() == null ? BigDecimal.ZERO : installment.paidAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private void replaceSipLedger(UserScheme userScheme, List<SipInstallmentRequest> installments) {
+        userScheme.getSipLedger().clear();
+        for (SipInstallmentRequest request : installments) {
+            SipInstallment installment = new SipInstallment();
+            installment.setInstallmentDate(request.installmentDate());
+            installment.setDueDate(request.dueDate() == null ? request.installmentDate() : request.dueDate());
+            installment.setPaidDate(request.paidDate());
+            installment.setDueAmount(request.dueAmount());
+            installment.setPaidAmount(request.paidAmount() == null ? BigDecimal.ZERO : request.paidAmount());
+            userScheme.getSipLedger().add(installment);
         }
     }
 

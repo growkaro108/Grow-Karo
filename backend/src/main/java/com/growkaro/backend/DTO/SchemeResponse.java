@@ -26,7 +26,12 @@ public record SchemeResponse(
                 LocalDateTime updatedAt,
                 Byte riskLevel,
                 List<String> joinedUsers,
-                List<String> terms) {
+                List<String> terms,
+                String planType,
+                Integer tenureMonths
+                // BigDecimal sipAmount,
+                // Integer sipDay
+                ) {
 
         public static SchemeResponse fromEntity(Scheme scheme) {
                 return new SchemeResponse(
@@ -46,7 +51,12 @@ public record SchemeResponse(
                                 scheme.getUpdatedAt(),
                                 scheme.getRiskLevel(),
                                 scheme.getJoinedUsers().stream().map(UserScheme::getUserSchemeId).toList(),
-                                termsOf(scheme));
+                                termsOf(scheme),
+                                scheme.getPlanType(),
+                                scheme.getTenureMonths()
+                                // scheme.getSipAmount(),
+                                // scheme.getSipDay()
+                                );
         }
 
         public static SchemeResponse fromEntity(Scheme scheme, boolean wantJoinedUser) {
@@ -70,7 +80,12 @@ public record SchemeResponse(
                                                 ? scheme.getJoinedUsers().stream().map(UserScheme::getUserSchemeId)
                                                                 .toList()
                                                 : null,
-                                termsOf(scheme));
+                                termsOf(scheme),
+                                scheme.getPlanType(),
+                                scheme.getTenureMonths()
+                                // scheme.getSipAmount(),
+                                // scheme.getSipDay()
+                                );
         }
 
         // Never null, and an immutable copy so the Hibernate-managed list isn't

@@ -47,8 +47,8 @@ spring:
   # 4. JPA / Hibernate Configuration
   jpa:
     hibernate:
-      # ddl-auto: update # Change to 'validate' or 'none' for production
-      ddl-auto: validate # Change to 'validate' or 'none' for production
+      ddl-auto: update # Change to 'validate' or 'none' for production
+      # ddl-auto: validate # Change to 'validate' or 'none' for production
     show-sql: false # Set to true during local development only
     properties:
       hibernate:

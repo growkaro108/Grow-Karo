@@ -1,6 +1,6 @@
 "use client";
 import { Plus, Sparkles, X, Trash2 } from "lucide-react";
-import React, { useCallback, useState } from "react";
+import React, { memo, useCallback, useMemo, useState } from "react";
 import Field from "./Field";
 import {
   createPlan,
@@ -10,8 +10,25 @@ import { errorMessage, successMessage } from "@/components/Message";
 import { Suggestion } from "./Suggestion";
 import { formatDateTime } from "@/app/plan/utils/planUtils";
 
+/* ------------------------------------------------------------------ */
+/* Module-level constants (created once, not on every render)          */
+/* ------------------------------------------------------------------ */
 const MAX_TERMS = 8;
 const MAX_TERM_LENGTH = 110; // keeps a term on one line of the bond certificate
+const TERM_WARN_AT = MAX_TERM_LENGTH - 20;
+const EMPTY_TERMS = [];
+
+const INPUT_CLS =
+  "w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-950/30 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-100 outline-none transition-all placeholder-slate-600";
+const INPUT_UPPER_CLS = `${INPUT_CLS} uppercase tracking-wide`;
+const INPUT_PROFIT_CLS = `${INPUT_CLS} font-bold text-emerald-400`;
+const INPUT_DATE_CLS = `${INPUT_CLS} scheme-dark`;
+const INPUT_TEXTAREA_CLS = `${INPUT_CLS} resize-none`;
+
+const PLAN_TYPES = [
+  { value: "FD", label: "Fixed Deposit (FD)", description: "One-time lump sum investment with fixed tenure" },
+  { value: "SIP", label: "Systematic Investment Plan (SIP)", description: "Monthly recurring installment plan" },
+];
 
 // Same wording the bond certificate falls back to when a scheme has no terms.
 const DEFAULT_TERMS = [
@@ -20,6 +37,154 @@ const DEFAULT_TERMS = [
   "Payment is not made on Saturday, Sunday and Bank Holidays as the office remains closed*",
 ];
 
+/* ------------------------------------------------------------------ */
+/* Memoized sub-components: typing in one field no longer re-renders   */
+/* the plan-type cards or every term row.                              */
+/* ------------------------------------------------------------------ */
+const PlanTypeSelector = memo(function PlanTypeSelector({ value, onSelect }) {
+  return (
+    <div className="bg-slate-950/40 border border-slate-800/80 rounded-2xl p-4">
+      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
+        Plan Type
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        {PLAN_TYPES.map((pt) => {
+          const active = value === pt.value;
+          return (
+            <button
+              key={pt.value}
+              type="button"
+              onClick={() => onSelect(pt.value)}
+              className={`flex flex-col items-start rounded-xl border px-4 py-3 text-left transition-all ${
+                active
+                  ? "border-cyan-500 bg-cyan-500/10 shadow-[0_0_14px_rgba(34,211,238,0.12)]"
+                  : "border-slate-800 hover:border-slate-700 hover:bg-slate-800/40"
+              }`}
+            >
+              <span
+                className={`text-sm font-bold ${
+                  active ? "text-cyan-300" : "text-slate-300"
+                }`}
+              >
+                {pt.label}
+              </span>
+              <span className="mt-0.5 text-[11px] text-slate-500">
+                {pt.description}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+
+const TermRow = memo(function TermRow({ index, term, onChange, onRemove, onEnter }) {
+  const handleKeyDown = (e) => {
+    // Enter adds another term instead of submitting the form
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onEnter();
+    }
+  };
+
+  return (
+    <li className="flex items-start gap-2.5">
+      <span className="mt-2.5 w-5 shrink-0 text-right text-xs tabular-nums text-slate-500">
+        {index + 1}.
+      </span>
+      <div className="flex-1">
+        <input
+          value={term}
+          maxLength={MAX_TERM_LENGTH}
+          onChange={(e) => onChange(index, e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="e.g. This Bond is valid only till maturity date*"
+          aria-label={`Term ${index + 1}`}
+          className={INPUT_CLS}
+        />
+        {term.length > TERM_WARN_AT && (
+          <p className="mt-1 text-right text-[11px] tabular-nums text-slate-500">
+            {term.length}/{MAX_TERM_LENGTH}
+          </p>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => onRemove(index)}
+        aria-label={`Remove term ${index + 1}`}
+        className="mt-1.5 rounded-lg p-2 text-slate-500 transition-colors hover:bg-rose-500/10 hover:text-rose-400"
+      >
+        <Trash2 size={16} />
+      </button>
+    </li>
+  );
+});
+
+const TermsSection = memo(function TermsSection({
+  terms,
+  onAdd,
+  onChange,
+  onRemove,
+  onUseDefaults,
+}) {
+  return (
+    <div className="bg-slate-950/40 border border-slate-800/80 rounded-2xl p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-100">Terms of Scheme</h3>
+          <p className="mt-0.5 text-xs text-slate-400">
+            Shown as bullet points on the bond certificate. Keep each term to one line.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {terms.length === 0 && (
+            <button
+              type="button"
+              onClick={onUseDefaults}
+              className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-slate-100"
+            >
+              Use default terms
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onAdd}
+            disabled={terms.length >= MAX_TERMS}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-300 transition-colors hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Plus size={14} /> Add term
+          </button>
+        </div>
+      </div>
+
+      {terms.length === 0 ? (
+        <p className="mt-4 rounded-xl border border-dashed border-slate-800 px-4 py-5 text-center text-sm text-slate-500">
+          No terms added yet. The bond will show the standard terms until you add your own.
+        </p>
+      ) : (
+        <ol className="mt-4 space-y-2.5">
+          {terms.map((term, index) => (
+            <TermRow
+              // Terms are plain strings with no id; index is the only stable
+              // identity available, and rows are cheap thanks to memo().
+              key={index}
+              index={index}
+              term={term}
+              onChange={onChange}
+              onRemove={onRemove}
+              onEnter={onAdd}
+            />
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+});
+
+/* ------------------------------------------------------------------ */
+/* Main modal                                                          */
+/* ------------------------------------------------------------------ */
 export default function FormModal({
   editingId,
   form,
@@ -36,32 +201,66 @@ export default function FormModal({
   setShowSuggestions,
 }) {
   const [isSaving, setIsSaving] = useState(false);
-  // Reused Tailwind class strings, so every field doesn't hand-repeat them
-  // and a single style tweak only needs to happen in one place.
-  const INPUT_CLS =
-    "w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-950/30 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-100 outline-none transition-all placeholder-slate-600";
 
-  const terms = Array.isArray(form.terms) ? form.terms : [];
+  const isEditing = editingId != null && editingId !== false && editingId !== "";
+  const terms = Array.isArray(form.terms) ? form.terms : EMPTY_TERMS;
+  const planType = form.planType || "FD";
 
+  /* ---- generic handlers ---- */
   const handleChange = useCallback(
     (e) => {
       const { name, value } = e.target;
-      setForm((prev) => ({ ...prev, [name]: value }));
+      setForm((prev) => ({
+        ...prev,
+        [name]: value,
+        ...(name === "tenureMonths"
+          ? { tenure: value ? String(Number(value) * 30) : "" }
+          : {}),
+      }));
     },
     [setForm],
   );
 
   const handleStatusChange = useCallback(
-    (e) => {
-      setForm((prev) => ({ ...prev, status: e.target.value === "true" }));
-    },
+    (e) => setForm((prev) => ({ ...prev, status: e.target.value === "true" })),
     [setForm],
   );
 
-  // ---- terms of scheme ----
+  const handlePlanTypeSelect = useCallback(
+    (value) =>
+      setForm((prev) => ({
+        ...prev,
+        planType: value,
+        ...(value === "SIP" && !prev.tenureMonths
+          ? {
+              tenureMonths: prev.tenure
+                ? String(Math.max(1, Math.round(Number(prev.tenure) / 30)))
+                : "",
+            }
+          : {}),
+      })),
+    [setForm],
+  );
+
+  const handleSchemeNameSuggestion = useCallback(
+    (value) => setForm((prev) => ({ ...prev, schemeName: value })),
+    [setForm],
+  );
+
+  const handleNameFocus = useCallback(
+    () => setShowSuggestions(true),
+    [setShowSuggestions],
+  );
+  const handleNameBlur = useCallback(
+    // small delay so a click on a suggestion registers before the list closes
+    () => setTimeout(() => setShowSuggestions(false), 150),
+    [setShowSuggestions],
+  );
+
+  /* ---- terms of scheme (stable callbacks so memoized rows don't re-render) ---- */
   const addTerm = useCallback(() => {
     setForm((prev) => {
-      const list = Array.isArray(prev.terms) ? prev.terms : [];
+      const list = Array.isArray(prev.terms) ? prev.terms : EMPTY_TERMS;
       if (list.length >= MAX_TERMS) return prev;
       return { ...prev, terms: [...list, ""] };
     });
@@ -81,17 +280,20 @@ export default function FormModal({
   const removeTerm = useCallback(
     (index) => {
       setForm((prev) => {
-        const list = Array.isArray(prev.terms) ? prev.terms : [];
+        const list = Array.isArray(prev.terms) ? prev.terms : EMPTY_TERMS;
         return { ...prev, terms: list.filter((_, i) => i !== index) };
       });
     },
     [setForm],
   );
 
-  const useDefaultTerms = useCallback(() => {
-    setForm((prev) => ({ ...prev, terms: [...DEFAULT_TERMS] }));
-  }, [setForm]);
+  // Not named `useXxx` on purpose: it's an event handler, not a hook.
+  const applyDefaultTerms = useCallback(
+    () => setForm((prev) => ({ ...prev, terms: [...DEFAULT_TERMS] })),
+    [setForm],
+  );
 
+  /* ---- lifecycle ---- */
   const closeModal = useCallback(() => {
     setOpen(false);
     setEditingId(null);
@@ -102,20 +304,29 @@ export default function FormModal({
   const handleSubmit = useCallback(
     async (e) => {
       e.preventDefault();
+      if (isSaving) return; // guard against double submit (e.g. rapid Enter)
       setIsSaving(true);
       setFormError(null);
       try {
-        const isEditing = editingId ?? false;
         // trim and drop blank terms before sending
         const payload = {
           ...form,
-          terms: (Array.isArray(form.terms) ? form.terms : [])
-            .map((t) => String(t || "").trim())
-            .filter(Boolean),
+          planType,
+          tenure:
+            planType === "SIP"
+              ? Number(form.tenureMonths) * 30
+              : Number(form.tenure),
+          tenureMonths:
+            planType === "SIP" ? Number(form.tenureMonths) : null,
+          sipAmount:
+            planType === "SIP" ? Number(form.sipAmount) : null,
+          sipDay: planType === "SIP" ? Number(form.sipDay) : null,
+          terms: terms.map((t) => String(t || "").trim()).filter(Boolean),
         };
         const response = isEditing
           ? await updatePlan(editingId, payload)
           : await createPlan(payload);
+
         if (response.status !== "success") {
           const message = response.message || "Something went wrong..";
           errorMessage(message, "error");
@@ -125,23 +336,42 @@ export default function FormModal({
 
         successMessage(
           response.message ||
-          (isEditing
-            ? "Plan updated successfully.."
-            : "Scheme Added successfully.."),
+            (isEditing ? "Plan updated successfully.." : "Scheme Added successfully.."),
           "success",
         );
-
         setPlans(response.data);
         closeModal();
       } catch (err) {
-        setFormError(
-          err.message || "Something went wrong while saving this plan.",
-        );
+        const message =
+          err?.message || "Something went wrong while saving this plan.";
+        errorMessage(message, "error");
+        setFormError(message);
       } finally {
         setIsSaving(false);
       }
     },
-    [form, setFormError, editingId, setPlans, closeModal],
+    [form, terms, planType, isEditing, editingId, isSaving, setFormError, setPlans, closeModal],
+  );
+
+  /* ---- derived option lists (only rebuilt when their source changes) ---- */
+  const payoutOptions = useMemo(
+    () =>
+      PAYOUT_FREQUENCIES.map((freq) => (
+        <option key={freq} value={freq} className="capitalize">
+          {freq}
+        </option>
+      )),
+    [PAYOUT_FREQUENCIES],
+  );
+
+  const riskOptions = useMemo(
+    () =>
+      RISK_LEVELS.map((risk, idx) => (
+        <option key={risk} value={idx}>
+          {risk}
+        </option>
+      )),
+    [RISK_LEVELS],
   );
 
   return (
@@ -150,9 +380,10 @@ export default function FormModal({
         onSubmit={handleSubmit}
         className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl shadow-[0_24px_70px_rgba(0,0,0,0.5)] overflow-hidden max-h-[92vh] flex flex-col scale-100 animate-[fadeIn_0.2s_ease-out,scaleUp_0.2s_ease-out]"
       >
+        {/* Header */}
         <div className="flex justify-between items-center border-b border-slate-800/80 px-6 py-4 bg-slate-950/40">
           <div className="flex items-center gap-2">
-            {editingId ? (
+            {isEditing ? (
               <Sparkles
                 size={18}
                 className="text-cyan-400 drop-shadow-[0_0_6px_rgba(34,211,238,0.4)]"
@@ -161,11 +392,9 @@ export default function FormModal({
               <Plus size={18} className="text-cyan-400" />
             )}
             <h2 className="text-base font-bold text-slate-100">
-              {editingId
-                ? "Modify Asset Configuration"
-                : "Deploy New Asset Plan"}
+              {isEditing ? "Modify Asset Configuration" : "Deploy New Asset Plan"}
             </h2>
-            {editingId && (
+            {isEditing && (
               <p className="text-xs">
                 Last Updated : {formatDateTime(form.updatedAt)}
               </p>
@@ -174,18 +403,25 @@ export default function FormModal({
           <button
             type="button"
             onClick={closeModal}
+            aria-label="Close"
             className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded-lg transition-colors"
           >
             <X size={18} />
           </button>
         </div>
 
+        {/* Body */}
         <div className="overflow-y-auto p-6 space-y-6 flex-1 bg-slate-900 text-slate-300">
           {formError && (
-            <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm font-medium rounded-xl px-4 py-3">
+            <div
+              role="alert"
+              className="bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm font-medium rounded-xl px-4 py-3"
+            >
               {formError}
             </div>
           )}
+
+          <PlanTypeSelector value={planType} onSelect={handlePlanTypeSelect} />
 
           {/* Identification */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -199,19 +435,15 @@ export default function FormModal({
                   placeholder="e.g. Growth funds.."
                   autoComplete="off"
                   className={INPUT_CLS}
-                  onFocus={() => setShowSuggestions(true)}
-                  onBlur={() =>
-                    setTimeout(() => setShowSuggestions(false), 150)
-                  }
+                  onFocus={handleNameFocus}
+                  onBlur={handleNameBlur}
                 />
               </Field>
-              {!editingId && (
+              {!isEditing && (
                 <Suggestion
                   schemeNames={schemeNames}
                   target={form.schemeName}
-                  setTo={(value) =>
-                    setForm((prev) => ({ ...prev, schemeName: value }))
-                  }
+                  setTo={handleSchemeNameSuggestion}
                 />
               )}
             </div>
@@ -222,7 +454,7 @@ export default function FormModal({
                 value={form.schemeCategory || ""}
                 onChange={handleChange}
                 placeholder="e.g. investment..."
-                className={`${INPUT_CLS} uppercase tracking-wide`}
+                className={INPUT_UPPER_CLS}
               />
             </Field>
           </div>
@@ -236,7 +468,7 @@ export default function FormModal({
                 name="minimumAmount"
                 value={form.minimumAmount || ""}
                 onChange={handleChange}
-                placeholder="5000"
+                placeholder="500"
                 className={INPUT_CLS}
               />
             </Field>
@@ -247,19 +479,19 @@ export default function FormModal({
                 name="maximumAmount"
                 value={form.maximumAmount || ""}
                 onChange={handleChange}
-                placeholder="100000"
+                placeholder="50000"
                 className={INPUT_CLS}
               />
             </Field>
-
-            <Field label="Asset Tenure (Days)">
+            <Field label={planType === "SIP" ? "Tenure (Months)" : "Asset Tenure (Days)"}>
               <input
                 type="number"
                 required
-                name="tenure"
-                value={form.tenure || ""}
+                min="1"
+                name={planType === "SIP" ? "tenureMonths" : "tenure"}
+                value={planType === "SIP" ? form.tenureMonths || "" : form.tenure || ""}
                 onChange={handleChange}
-                placeholder="365"
+                placeholder={planType === "SIP" ? "12" : "365"}
                 className={INPUT_CLS}
               />
             </Field>
@@ -272,10 +504,41 @@ export default function FormModal({
                 value={form.profitPercentage || ""}
                 onChange={handleChange}
                 placeholder="8.5"
-                className={`${INPUT_CLS} font-bold text-emerald-400`}
+                className={INPUT_PROFIT_CLS}
               />
             </Field>
           </div>
+
+          {planType === "SIP" && (
+            <div className="bg-indigo-950/20 border border-indigo-900/60 rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Default Monthly Installment (₹)">
+                <input
+                  type="number"
+                  min={form.minimumAmount || "0.01"}
+                  max={form.maximumAmount || undefined}
+                  step="0.01"
+                  required
+                  name="sipAmount"
+                  value={form.sipAmount || ""}
+                  onChange={handleChange}
+                  placeholder="1000"
+                  className={INPUT_CLS}
+                />
+              </Field>
+              <Field label="Default Installment Day (1-28)">
+                <input
+                  type="number"
+                  min="1"
+                  max="28"
+                  required
+                  name="sipDay"
+                  value={form.sipDay || "20"}
+                  onChange={handleChange}
+                  className={INPUT_CLS}
+                />
+              </Field>
+            </div>
+          )}
 
           {/* Schedule */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
@@ -286,25 +549,17 @@ export default function FormModal({
                 onChange={handleChange}
                 className={INPUT_CLS}
               >
-                {PAYOUT_FREQUENCIES.map((freq) => (
-                  <option key={freq} value={freq} className="capitalize">
-                    {freq}
-                  </option>
-                ))}
+                {payoutOptions}
               </select>
             </Field>
             <Field label="Risk Level">
               <select
                 name="riskLevel"
-                value={form.riskLevel || "1"}
+                value={form.riskLevel ?? "1"}
                 onChange={handleChange}
                 className={INPUT_CLS}
               >
-                {RISK_LEVELS.map((risk, idx) => (
-                  <option key={risk} value={idx}>
-                    {risk}
-                  </option>
-                ))}
+                {riskOptions}
               </select>
             </Field>
             <Field label="Start Date">
@@ -314,7 +569,7 @@ export default function FormModal({
                 name="startDate"
                 value={form.startDate || ""}
                 onChange={handleChange}
-                className={`${INPUT_CLS} scheme-dark`}
+                className={INPUT_DATE_CLS}
               />
             </Field>
             <Field label="Plan End Date">
@@ -324,7 +579,7 @@ export default function FormModal({
                 name="endDate"
                 value={form.endDate || ""}
                 onChange={handleChange}
-                className={`${INPUT_CLS} scheme-dark`}
+                className={INPUT_DATE_CLS}
               />
             </Field>
           </div>
@@ -358,98 +613,26 @@ export default function FormModal({
           {/* Details */}
           <Field label="Scheme Profile Details">
             <textarea
-              rows="3"
+              rows={3}
               required
               name="schemeDetails"
               value={form.schemeDetails || ""}
               onChange={handleChange}
               placeholder="Provide deep structural compliance indices, background asset backing details, and allocation metrics..."
-              className={`${INPUT_CLS} resize-none`}
+              className={INPUT_TEXTAREA_CLS}
             />
           </Field>
 
-          {/* Terms of scheme */}
-          <div className="bg-slate-950/40 border border-slate-800/80 rounded-2xl p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-100">
-                  Terms of Scheme
-                </h3>
-                <p className="mt-0.5 text-xs text-slate-400">
-                  Shown as bullet points on the bond certificate. Keep each term
-                  to one line.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                {terms.length === 0 && (
-                  <button
-                    type="button"
-                    onClick={useDefaultTerms}
-                    className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-slate-100"
-                  >
-                    Use default terms
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={addTerm}
-                  disabled={terms.length >= MAX_TERMS}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-300 transition-colors hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Plus size={14} /> Add term
-                </button>
-              </div>
-            </div>
-
-            {terms.length === 0 ? (
-              <p className="mt-4 rounded-xl border border-dashed border-slate-800 px-4 py-5 text-center text-sm text-slate-500">
-                No terms added yet. The bond will show the standard terms until
-                you add your own.
-              </p>
-            ) : (
-              <ol className="mt-4 space-y-2.5">
-                {terms.map((term, index) => (
-                  <li key={index} className="flex items-start gap-2.5">
-                    <span className="mt-2.5 w-5 shrink-0 text-right text-xs tabular-nums text-slate-500">
-                      {index + 1}.
-                    </span>
-                    <div className="flex-1">
-                      <input
-                        value={term}
-                        maxLength={MAX_TERM_LENGTH}
-                        onChange={(e) => updateTerm(index, e.target.value)}
-                        onKeyDown={(e) => {
-                          // Enter adds another term instead of submitting the form
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            addTerm();
-                          }
-                        }}
-                        placeholder="e.g. This Bond is valid only till maturity date*"
-                        aria-label={`Term ${index + 1}`}
-                        className={INPUT_CLS}
-                      />
-                      {term.length > MAX_TERM_LENGTH - 20 && (
-                        <p className="mt-1 text-right text-[11px] tabular-nums text-slate-500">
-                          {term.length}/{MAX_TERM_LENGTH}
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeTerm(index)}
-                      aria-label={`Remove term ${index + 1}`}
-                      className="mt-1.5 rounded-lg p-2 text-slate-500 transition-colors hover:bg-rose-500/10 hover:text-rose-400"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </div>
+          <TermsSection
+            terms={terms}
+            onAdd={addTerm}
+            onChange={updateTerm}
+            onRemove={removeTerm}
+            onUseDefaults={applyDefaultTerms}
+          />
         </div>
 
+        {/* Footer */}
         <div className="flex justify-end gap-3 border-t border-slate-800 px-6 py-4 bg-slate-950/40">
           <button
             type="button"
@@ -466,7 +649,7 @@ export default function FormModal({
           >
             {isSaving
               ? "Saving..."
-              : editingId
+              : isEditing
                 ? "Save Configurations"
                 : "Authorize Allocation"}
           </button>

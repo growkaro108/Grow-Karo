@@ -20,6 +20,7 @@ import org.hibernate.envers.NotAudited;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -83,6 +84,12 @@ public class Scheme {
     @Column(name = "tenure", nullable = false)
     private Integer tenure;
 
+    @Column(name = "plan_type", nullable = false)
+    private String planType = "FD";
+
+    @Column(name = "tenure_months")
+    private Integer tenureMonths;
+
     @NotNull(message = "Start date is required")
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
@@ -124,23 +131,14 @@ public class Scheme {
     @Column(name = "created_by")
     private String createdBy;
 
-// public enum SchemeType { LUMPSUM, SIP }
-
-// @Enumerated(EnumType.STRING)
-// @Column(name = "scheme_type", nullable = false)
-// private SchemeType schemeType;          // LUMPSUM or SIP
-
-// @Column(name = "sip_day_of_month")
-// private Integer sipDayOfMonth;          // e.g. 30 (only for SIP)
-
-// @Column(name = "grace_period_days")
-// private Integer gracePeriodDays;        // optional: days before an installment counts as overdue
-
 
 
     @PrePersist
     protected void onCreate() {
-        this.schemeId = "GKSID" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        if (this.planType == null || this.planType.isBlank()) {
+            this.planType = "FD";
+        }
+        this.schemeId = "GKSID" + LocalDateTime.now(ZoneId.of("Asia/Kolkata")).format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
     }
 
     // --- Helper Methods for Defensive Association Management ---

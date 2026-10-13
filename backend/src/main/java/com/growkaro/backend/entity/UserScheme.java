@@ -20,6 +20,7 @@ import java.util.List;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -34,16 +35,18 @@ import jakarta.persistence.PostUpdate;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@ToString(exclude = { "user", "scheme", "profitLedger", "reedemLedger" }) // Avoid infinite loops in toString()
+@ToString(exclude = { "user", "scheme", "profitLedger", "reedemLedger", "sipLedger" })
 @Entity
 @Table(name = "user_schemes", indexes = {
         @Index(name = "idx_user_scheme_id", columnList = "userSchemeId"),
@@ -76,7 +79,6 @@ public class UserScheme {
     private Scheme scheme;
 
     @NotNull(message = "Amount is required")
-    @Positive(message = "Amount must be greater than zero")
     @DecimalMin(value = "0.0000", message = "Paid Amount cannot be negative")
     @Column(name = "paid_amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal paidAmount = BigDecimal.ZERO;
@@ -136,6 +138,15 @@ public class UserScheme {
     @OneToMany(mappedBy = "userScheme", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserSchemeReedemLedger> reedemLedger = new ArrayList<>();
 
+    @NotAudited
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_scheme_installments", joinColumns = @JoinColumn(name = "user_scheme_id"))
+    @OrderColumn(name = "position")
+    private List<SipInstallment> sipLedger = new ArrayList<>();
+
+    
+    
+
     @Column(name = "next_payout_date")
     private LocalDate nextPayoutDate;
 
@@ -183,5 +194,4 @@ public class UserScheme {
         return getClass().hashCode();
     }
 }
-
 
