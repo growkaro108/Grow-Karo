@@ -7,6 +7,7 @@ import {
 } from "../../../../../../services/malikService";
 import { TableRowLoader } from "@/loader/TableRowLoader";
 import dynamic from "next/dynamic";
+import { sanitizePayload, validatePayload } from "./format";
 // import { AddUser } from "./AddUser";
 const AddUser = dynamic(() => import("./AddUser"), {
   loading: () => (
@@ -125,16 +126,16 @@ export default function UserManagement() {
         if (e.name === "AbortError" || e.name === "CanceledError") return;
         console.log(e);
         errorMessage("something went wrong, try later..");
-      }finally {
+      } finally {
         setLoading(false);
       }
     },
     [currentPage, pageSize, query],
   );
   useEffect(() => {
-    
     const timer = setTimeout(() => {
-      setDebouncedQuery(query);}, 700); // adjust delay to taste
+      setDebouncedQuery(query);
+    }, 700); // adjust delay to taste
     return () => clearTimeout(timer);
   }, [query]);
 
@@ -156,7 +157,6 @@ export default function UserManagement() {
     const name = newUserForm.name.trim();
     const email = newUserForm.email.trim();
     const phone = newUserForm.phone.trim();
-    const address = newUserForm.address.trim();
     const passwordHash = newUserForm.passwordHash.trim();
 
     if (!name || !email || !phone || !passwordHash) {
@@ -165,43 +165,26 @@ export default function UserManagement() {
     }
 
     setCreatingUser(true);
+    // console.log(newUserForm);
+    const sanitizedPayload = sanitizePayload(newUserForm);
+    const validationResult = validatePayload(sanitizedPayload);
+
+    if (!validationResult.isValid) {
+      errorMessage(validationResult.errors.join(" "));
+      return;
+    }
+    // console.log("Sanitized Payload:", sanitizedPayload);
+    // console.log(validationResult);
+
     try {
-      // const payload = {
-      //   name,
-      //   email,
-      //   phone,
-      //   passwordHash,
-      //   dob: newUserForm.dob || null,
-      //   maritalStatus: newUserForm.maritalStatus || "Single",
-      //   aadharNo: newUserForm.aadharNo.trim(),
-      //   guardian: {
-      //     name: newUserForm.guardian.name,
-      //     relation: newUserForm.guardian.relation,
-      //   },
-      //   address,
-      //   nominee: {
-      //     name: newUserForm.nominee.name,
-      //     aadharNo: newUserForm.nominee.aadharNo,
-      //     mobileNo: newUserForm.nominee.mobileNo,
-      //     relation: newUserForm.nominee.relation,
-      //   },
-      //   bankName: newUserForm.bankName,
-      //   accountHolderName: newUserForm.accountHolderName,
-      //   accountNumber: newUserForm.accountNumber,
-      //   ifscCode: newUserForm.ifscCode,
-      // };
-      // console.log(newUserForm);
-      // console.log(payload);
       const response = await createManualUser(newUserForm);
       if (!response) {
         return;
-      }else{
-        console.log(response)
-      }
+      } 
 
-      // setShowAddUserModal(false);
-      // setNewUserForm(EMPTY_NEW_USER);
-      // await fetchAllUser();
+      setShowAddUserModal(false);
+      setNewUserForm(EMPTY_NEW_USER);
+      await fetchAllUser();
     } catch (error) {
       console.error("Failed to create manual user:", error);
       errorMessage(error.message || "Unable to add user right now.");

@@ -456,20 +456,20 @@ export default function Reports() {
       return schemes.map((s) => ({
         "Investor ID": u.id,
         "Customer ID": u.customerId,
-        // "Bond Number": s.bondNumber,
+        "Bond Number": s?.bondNumber || "-",
         Name: u.name,
         Email: u.email,
         Phone: u.phone,
-        // "Account Status": u.status,
-        // Scheme: s.name,
-        // Tenure: s.tenure,
-        // "Profit %": formatPercent(s.profitPercentage),
-        // "Invested Amount": s.investedAmount,
-        // "Current Value": s.currentValue,
-        // "Maturity Amount": s.maturityAmount,
-        // "Enrolled On": s.enrolledOn,
-        // "Mature On": s.maturityDate,
-        // "Scheme Status": displayStatus(s.status),
+        "Account Status": u.status,
+        Scheme: s?.name || "",
+        Tenure: s?.tenure || "",
+        "Profit %": s ? formatPercent(s.profitPercentage) : "",
+        "Invested Amount": s?.investedAmount ?? "",
+        "Current Value": s?.currentValue ?? "",
+        "Maturity Amount": s?.maturityAmount ?? "",
+        "Enrolled On": s?.enrolledOn || "",
+        "Mature On": s?.maturityDate || "",
+        "Scheme Status": s ? displayStatus(s.status) : "",
         "Nominee Name": s?.nomineeName || "",
         "Nominee Relation": s?.nomineeRelation || "",
         "Nominee Phone": s?.nomineePhone || "",
@@ -487,14 +487,18 @@ export default function Reports() {
   async function handleExportPDF() {
     setExporting("pdf");
     try {
-      const { default: jsPDF } = await import("jspdf");
-      await import("jspdf-autotable");
+      const { jsPDF } = await import("jspdf");
+      const { autoTable } = await import("jspdf-autotable");
       const rows = flattenRows();
+      if (rows.length === 0) {
+        setExportError("There are no rows to export for the selected filters.");
+        return;
+      }
       const doc = new jsPDF({ orientation: "landscape" });
 
       const title =
         view === "scheme" && selectedScheme
-          ? `Investors Enrolled — ${selectedScheme}`
+          ? `Investors Enrolled - ${selectedScheme}`
           : "Investor & Scheme Enrollment Report";
 
       doc.setFontSize(14);
@@ -502,17 +506,17 @@ export default function Reports() {
       doc.setFontSize(9);
       doc.setTextColor(120);
       doc.text(
-        `Generated on ${new Date().toLocaleString("en-IN")} · ${rows.length} record(s)`,
+        `Generated on ${new Date().toLocaleString("en-IN")} | ${rows.length} record(s)`,
         14,
         20,
       );
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: 26,
         head: [Object.keys(rows[0] ?? { "No data": "" })],
         body: rows.map((r) =>
           Object.values(r).map((v) =>
-            typeof v === "number" ? v.toLocaleString("en-IN") : v,
+            typeof v === "number" ? v.toLocaleString("en-IN") : String(v ?? ""),
           ),
         ),
         styles: { fontSize: 7, cellPadding: 2 },
@@ -534,6 +538,10 @@ export default function Reports() {
     try {
       const XLSX = await import("xlsx");
       const rows = flattenRows();
+      if (rows.length === 0) {
+        setExportError("There are no rows to export for the selected filters.");
+        return;
+      }
       const worksheet = XLSX.utils.json_to_sheet(rows);
       worksheet["!cols"] = Object.keys(rows[0] ?? {}).map(() => ({ wch: 18 }));
       const workbook = XLSX.utils.book_new();

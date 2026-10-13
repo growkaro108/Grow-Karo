@@ -134,7 +134,7 @@ const NAV_ITEMS = [
 ];
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState("reports");
+  const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [toast, setToast] = useState(null);
