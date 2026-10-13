@@ -104,10 +104,12 @@ public class UserAPIService {
             // System.out.println("updated successfully");
             // return true;
             // }
-            Pageable pageable = PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "requestDate"));
-            var rawUsers = userSchemeRepository.findNearMaturityUsers("", 15, pageable);
-            var mapped = rawUsers.map(NearMaturityUserSchemeResponse::fromUserScheme);
-            return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
+            // Pageable pageable = PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "requestDate"));
+            // var rawUsers = userSchemeRepository.findNearMaturityUsers("", 15, pageable);
+            // var mapped = rawUsers.map(NearMaturityUserSchemeResponse::fromUserScheme);
+            // return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
+            User u =userRepository.findByEmail("wv9304@gmail.com").orElse(null);
+            return u != null ? u.hashCode() : "User not found";
 
         } catch (Exception e) {
             log.error("Failed to set user status active", e.getMessage());

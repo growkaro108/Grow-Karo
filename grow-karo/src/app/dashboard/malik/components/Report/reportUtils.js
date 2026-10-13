@@ -77,6 +77,8 @@ export function normalizeUser(user) {
     id: String(user?.userId ?? ""),
     customerId: String(user?.customerId ?? ""),
     name: user?.name || "",
+    aadhaarNo: user?.aadhaarNo || "",
+    address: user?.address || "",
     email: user?.email || "",
     phone: user?.phone || "",
     joinedDate: user?.joined || "",
