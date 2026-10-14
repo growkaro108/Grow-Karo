@@ -44,7 +44,6 @@ import jakarta.validation.constraints.NotNull;
 
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
 @ToString(exclude = { "user", "scheme", "profitLedger", "reedemLedger", "sipLedger" })
 @Entity
@@ -193,5 +192,33 @@ public class UserScheme {
     public int hashCode() {
         return getClass().hashCode();
     }
+
+    public UserScheme(String userSchemeId, LocalDateTime requestDate, User user, Nominee nominee, Scheme scheme, BigDecimal paidAmount, String amountFrom, String submitTo, Boolean isApproved, UserSchemeStatus status, LocalDateTime enrollmentDate, LocalDate paidDate, String bondImageURL, String bondPdfURL, String bondNumber, LocalDate lastProfitUpdateDate, List<UserSchemeProfitLedger> profitLedger, List<UserSchemeReedemLedger> reedemLedger, List<SipInstallment> sipLedger, LocalDate nextPayoutDate, LocalDate maturityDate, Boolean maturityNotificationSent, String reinvestedIntoUserSchemeId, LocalDateTime updatedAt) {
+        this.userSchemeId = userSchemeId;
+        this.requestDate = requestDate;
+        this.user = user;
+        this.nominee = nominee;
+        this.scheme = scheme;
+        this.paidAmount = paidAmount;
+        this.amountFrom = amountFrom;
+        this.submitTo = submitTo;
+        this.isApproved = isApproved;
+        this.status = status;
+        this.enrollmentDate = enrollmentDate;
+        this.paidDate = paidDate;
+        this.bondImageURL = bondImageURL;
+        this.bondPdfURL = bondPdfURL;
+        this.bondNumber = bondNumber;
+        this.lastProfitUpdateDate = lastProfitUpdateDate;
+        this.profitLedger = profitLedger;
+        this.reedemLedger = reedemLedger;
+        this.sipLedger = sipLedger;
+        this.nextPayoutDate = nextPayoutDate;
+        this.maturityDate = maturityDate;
+        this.maturityNotificationSent = maturityNotificationSent;
+        this.reinvestedIntoUserSchemeId = reinvestedIntoUserSchemeId;
+        this.updatedAt = updatedAt;
+    }
+
 }
 

@@ -42,7 +42,7 @@ import {
 } from "../../../../../../services/malikService";
 
 const CertificateLightbox = dynamic(() => import("../Certificatelightbox"), {
-  loading: () => <TabLoader message="Loading certificate..." />,
+  loading: () => <div className="h-4 w-[80%] m-auto border border-dashed rounded-2xl"></div>,
   ssr: false,
 });
 const EnrolledSchemes = dynamic(() => import("./EnrolledSchemes"), {

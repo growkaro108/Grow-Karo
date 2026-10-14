@@ -28,9 +28,6 @@ import java.util.Objects;
 
 @Getter
 @Setter
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder
 @ToString(exclude = "joinedUsers")
 @Entity
 @Table(name = "schemes", indexes = {
@@ -167,4 +164,34 @@ public class Scheme {
     public int hashCode() {
         return getClass().hashCode();
     }
+
+    public Scheme(String schemeId, String schemeName, BigDecimal minimumAmount, BigDecimal maximumAmount, String schemeCategory, String schemeDetails, List<String> terms, String payoutFrequency, Byte riskLevel, Integer tenure, String planType, Integer tenureMonths, LocalDate startDate, LocalDate endDate, Boolean status, LocalDateTime createdAt, LocalDateTime updatedAt, Double profitPercentage, Integer maxInvestorsAllowed, List<UserScheme> joinedUsers, String updatedBy, String createdBy) {
+        this.schemeId = schemeId;
+        this.schemeName = schemeName;
+        this.minimumAmount = minimumAmount;
+        this.maximumAmount = maximumAmount;
+        this.schemeCategory = schemeCategory;
+        this.schemeDetails = schemeDetails;
+        this.terms = terms;
+        this.payoutFrequency = payoutFrequency;
+        this.riskLevel = riskLevel;
+        this.tenure = tenure;
+        this.planType = planType;
+        this.tenureMonths = tenureMonths;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.status = status;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.profitPercentage = profitPercentage;
+        this.maxInvestorsAllowed = maxInvestorsAllowed;
+        this.joinedUsers = joinedUsers;
+        this.updatedBy = updatedBy;
+        this.createdBy = createdBy;
+    }
+
+    public Scheme() {
+    }
+    
+
 }

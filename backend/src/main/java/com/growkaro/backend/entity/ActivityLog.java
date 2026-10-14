@@ -10,7 +10,6 @@ import java.time.Instant;
 import com.growkaro.backend.enums.ActivityType;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
 @Entity
 @Table(name = "activity_log", indexes = {
@@ -46,5 +45,21 @@ public class ActivityLog {
 
         @Column(nullable = false)
         private Instant createdAt = Instant.now();
+
+        public ActivityLog(Long id, String actorId, String actorName, String actorRole, ActivityType type, String description, String targetType, String targetId, String metadata, String ipAddress, Instant createdAt) {
+                this.id = id;
+                this.actorId = actorId;
+                this.actorName = actorName;
+                this.actorRole = actorRole;
+                this.type = type;
+                this.description = description;
+                this.targetType = targetType;
+                this.targetId = targetId;
+                this.metadata = metadata;
+                this.ipAddress = ipAddress;
+                this.createdAt = createdAt;
+        }
+
+
 
 }

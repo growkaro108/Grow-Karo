@@ -31,7 +31,7 @@ const SIPBondCertificate = forwardRef(function SIPBondCertificate(
   const safeDate = (val) => {
     if (!val) return "";
     const str = String(val).trim();
-    if (/^\d{2}[-/]\d{2}[-/]\d{4}$/.test(str)) return str.replace(/-/g,"/");
+    if (/^\d{2}[-/]\d{2}[-/]\d{4}$/.test(str)) return str.replaceAll('-',"/");
     const d = new Date(val);
     if (!Number.isNaN(d.getTime()))
       return d.toLocaleDateString("en-GB",{day:"2-digit",month:"2-digit",year:"numeric"});
@@ -39,7 +39,7 @@ const SIPBondCertificate = forwardRef(function SIPBondCertificate(
   };
   const fmtAmt = (v) => {
     if (v===undefined||v===null||v==="") return "";
-    const n=Number(String(v).replace(/,/g,""));
+    const n=Number(String(v).replaceAll(',',""));
     return Number.isFinite(n)?`${n.toLocaleString("en-IN")}/-`:String(v);
   };
   const wrapText = (text,maxChars) => {
@@ -64,7 +64,7 @@ const SIPBondCertificate = forwardRef(function SIPBondCertificate(
     "Profit will be credited 30 days*",
     `Your premium date is the ${bond.sipDay||"20"}th of every month.*`,
   ];
-  const terms = bond.terms&&bond.terms.length?bond.terms:defaultTerms;
+  const terms = bond.terms?.length?bond.terms:defaultTerms;
 
   const W=480,LX=49,RX=434,CW=RX-LX,PAD=6.5;
   const baseOff=h=>h/2+2.9;
@@ -101,7 +101,7 @@ const SIPBondCertificate = forwardRef(function SIPBondCertificate(
   const investBottom=investTop+investHeadH+investRowH;
 
   const colX3=[LX];
-  [0.333,0.333,0.334].forEach(r=>colX3.push(colX3[colX3.length-1]+r*CW));
+  [0.333,0.333,0.334].forEach(r=>colX3.push(colX3.at(-1)+r*CW));
 
   const companyLabelY=investBottom+18;
   const companyTop=companyLabelY+8;
@@ -146,7 +146,7 @@ const SIPBondCertificate = forwardRef(function SIPBondCertificate(
         ?<image href={logoUrl} x={50} y={18} width={96} height={118} preserveAspectRatio="xMidYMid meet"/>
         :<>
           <text x={98} y={104} textAnchor="middle" fontSize={20} fill="#16A34A">{brandTop}</text>
-          {brandBottom&&<text x={98} y={118} textAnchor="middle" fontSize={10} letterSpacing={3} fill="#4F6EF7">{brandBottom}</text>}
+          {brandBottom&&<text x={98} y={118} textAnchor="middle" fontSize={9} letterSpacing={3} fill="#4F6EF7">{brandBottom}</text>}
           <text x={98} y={128} textAnchor="middle" fontSize={6.2} fill="#16A34A">एक कदम आत्मनिर्भरता की ओर</text>
         </>
       }
@@ -154,12 +154,12 @@ const SIPBondCertificate = forwardRef(function SIPBondCertificate(
       <text x={254} y={70} textAnchor="middle" fontSize={22} fontWeight={700} style={{fontFamily:FONT_SERIF}}>Systematic</text>
       <text x={254} y={92} textAnchor="middle" fontSize={22} fontWeight={700} style={{fontFamily:FONT_SERIF}}>Investment Plan</text>
 
-      <rect x={224} y={100} width={110} height={18} fill="none" stroke={TAN} strokeWidth={0.7}/>
-      <rect x={224} y={120} width={110} height={18} fill="none" stroke={TAN} strokeWidth={0.7}/>
-      <text x={229} y={113} fontSize={8.5}>Investment Date - {safeDate(bond.paidDate||bond.enrollmentDate)}</text>
+      <rect x={224} y={100} width={115} height={18} fill="none" stroke={TAN} strokeWidth={0.7}/>
+      <rect x={224} y={120} width={115} height={18} fill="none" stroke={TAN} strokeWidth={0.7}/>
+      <text x={229} y={113} fontSize={8.5}>Invest Date - {safeDate(bond.paidDate||bond.enrollmentDate)}</text>
       <text x={229} y={133} fontSize={8.5}>Maturity Date - {safeDate(bond.maturityDate)}</text>
 
-      <text x={431} y={147} textAnchor="end" fontSize={7.6}>S. No.- {bond.bondNumber||bond.userSchemeId||"GKSIP0001"}</text>
+      <text x={431} y={147} textAnchor="end" fontSize={7.6}>S. No.- {bond.bondNumber||bond.userSchemeId||"GKSIP00XX"}</text>
 
       <rect x={374} y={28} width={53} height={65} fill="#F3F4F6" stroke={TAN} strokeWidth={0.6}/>
       <text x={400} y={67} textAnchor="middle" fontSize={22} fill="#9CA3AF">{(name||"?").trim().charAt(0).toUpperCase()}</text>
@@ -214,8 +214,8 @@ const SIPBondCertificate = forwardRef(function SIPBondCertificate(
       {compRow(rCompAccHolder,"A/C Holder Name",bond.companyAccountHolderName||"Groww Karo")}
       {stampUrl&&<image href={stampUrl} x={358} y={companyTop-7} width={66} height={66} preserveAspectRatio="xMidYMid meet"/>}
 
-      <rect x={LX} y={footerY-14} width={42} height={42} fill="#F3F4F6" stroke={TAN} strokeWidth={0.5}/>
-      <text x={LX+21} y={footerY+10} textAnchor="middle" fontSize={5} fill="#9CA3AF">Scan &amp; Deposit</text>
+      {/* <rect x={LX} y={footerY-14} width={42} height={42} fill="#F3F4F6" stroke={TAN} strokeWidth={0.5}/> */}
+      {/* <text x={LX+21} y={footerY+10} textAnchor="middle" fontSize={5} fill="#9CA3AF">Scan &amp; Deposit</text> */}
 
       <Phone x={LX+50} y={footerY-9.5} width={10.5} height={10.5} color={TAN} strokeWidth={2}/>
       <text x={LX+64} y={footerY} fontSize={8.3}>{bond.companyPhone||"+919430050782"}</text>

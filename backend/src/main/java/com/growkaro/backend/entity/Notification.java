@@ -19,7 +19,6 @@ import org.hibernate.envers.Audited;
 @Setter
 @ToString
 @NoArgsConstructor
-@AllArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "notifications", indexes = {
@@ -123,6 +122,20 @@ public class Notification {
     @PreUpdate
     private void onUpdate() {
         this.updatedAt = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+    }
+
+    public Notification(String id, ReceiverType receiverType, String receiverId, String title, String message, NotificationType notificationType, ActionType actionType, boolean read, String actionUrl, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this.id = id;
+        this.receiverType = receiverType;
+        this.receiverId = receiverId;
+        this.title = title;
+        this.message = message;
+        this.notificationType = notificationType;
+        this.actionType = actionType;
+        this.read = read;
+        this.actionUrl = actionUrl;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
 
 }

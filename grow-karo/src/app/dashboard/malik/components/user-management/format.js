@@ -6,15 +6,17 @@ export const currency = (n) =>
   }).format(n);
 
 export const getSipPremium = (bond) => {
-  const dueAmounts = (Array.isArray(bond?.sipLedger) ? bond.sipLedger : [])
-    .map((installment) => Number(installment?.dueAmount))
-    .filter(Number.isFinite);
-  if (dueAmounts.length) {
-    const uniqueAmounts = new Set(dueAmounts);
-    return uniqueAmounts.size === 1 ? dueAmounts[0] : null;
-  }
-
-  return Number(bond?.sipAmount ?? bond?.paidAmount ?? 0);
+  // const dueAmounts = (Array.isArray(bond?.sipLedger) ? bond.sipLedger : [])
+  //   .map((installment) => Number(installment?.dueAmount))
+  //   .filter(Number.isFinite);
+  // if (dueAmounts.length) {
+  //   const uniqueAmounts = new Set(dueAmounts);
+  //   console.log(dueAmounts[0])
+  //   return uniqueAmounts.size === 1 ? dueAmounts[0] : null;
+  // }
+  // console.log(bond.paidAmount)
+  // return Number(bond?.sipAmount ?? bond?.paidAmount ?? 0);
+  return bond?.sipLedger[0].paidAmount;
 };
 
 export const dateFmt = (d) =>

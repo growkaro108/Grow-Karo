@@ -21,7 +21,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Data
-@AllArgsConstructor
 @ToString(exclude = { "enrolledSchemes", "nominees", "bankDetails", "guardian", "passwordHash" })
 @JsonIgnoreProperties({ "enrolledSchemes", "nominees", "bankDetails", "guardian" })
 @NoArgsConstructor
@@ -129,5 +128,30 @@ public class User {
     private LocalDateTime getTime() {
         return LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
     }
+
+    public User(String id, String name, String email, String phone, String passwordHash, LocalDate dob, String maritalStatus, String aadharNo, String address, BankDetails bankDetails, Guardian guardian, List<Nominee> nominees, List<UserScheme> enrolledSchemes, Role role, boolean active, boolean emailVerified, boolean phoneVerified, boolean securityAlerts, boolean schemeAlerts, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.phone = phone;
+        this.passwordHash = passwordHash;
+        this.dob = dob;
+        this.maritalStatus = maritalStatus;
+        this.aadharNo = aadharNo;
+        this.address = address;
+        this.bankDetails = bankDetails;
+        this.guardian = guardian;
+        this.nominees = nominees;
+        this.enrolledSchemes = enrolledSchemes;
+        this.role = role;
+        this.active = active;
+        this.emailVerified = emailVerified;
+        this.phoneVerified = phoneVerified;
+        this.securityAlerts = securityAlerts;
+        this.schemeAlerts = schemeAlerts;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
 
 }

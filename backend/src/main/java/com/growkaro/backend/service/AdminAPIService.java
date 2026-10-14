@@ -29,7 +29,6 @@ import javax.imageio.stream.ImageOutputStream;
 
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
@@ -119,12 +118,10 @@ import com.growkaro.backend.repository.UserRepository;
 import com.growkaro.backend.repository.UserSchemeRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AdminAPIService {
 
     private final ReedemLedgerRepository reedemLedgerRepository;
@@ -156,6 +153,29 @@ public class AdminAPIService {
     private final NomineeRepository nomineeRepository;
     @PersistenceContext
     private EntityManager entityManager;
+
+    public AdminAPIService(ReedemLedgerRepository reedemLedgerRepository, UserRepository userRepository, RemitterRepository remitterRepository, TransactionRepository transactionRepository, SupportIssueRepository supportIssueRepository, SchemeRepository schemeRepository, UserSchemeRepository userSchemeRepository, ApiService apiService, ActivityLogService activityLogService, LocalFileStorageService localFileStorageService, ActivityLogRepository activityLogRepository, NotificationRepository notificationRepository, General general, CrucialNotificationService crucialNotificationService, EmailService emailService, TransactionService transactionService, NomineeRepository nomineeRepository, EntityManager entityManager) {
+        this.reedemLedgerRepository = reedemLedgerRepository;
+        this.userRepository = userRepository;
+        this.remitterRepository = remitterRepository;
+        this.transactionRepository = transactionRepository;
+        this.supportIssueRepository = supportIssueRepository;
+        this.schemeRepository = schemeRepository;
+        this.userSchemeRepository = userSchemeRepository;
+        this.apiService = apiService;
+        this.activityLogService = activityLogService;
+        this.localFileStorageService = localFileStorageService;
+        this.activityLogRepository = activityLogRepository;
+        this.notificationRepository = notificationRepository;
+        this.general = general;
+        this.crucialNotificationService = crucialNotificationService;
+        this.emailService = emailService;
+        this.transactionService = transactionService;
+        this.nomineeRepository = nomineeRepository;
+        this.entityManager = entityManager;
+    }
+
+
 
     // create a new scheme
     @Caching(evict = {

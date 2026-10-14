@@ -1,12 +1,22 @@
 ﻿"use client";
 import { useState, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { Download, FileText, Landmark, Loader2 } from "lucide-react";
+import { Download, FileText, Landmark, Loader2, Sheet } from "lucide-react";
 import { createPortal } from "react-dom";
-import { downloadSvgAsPng } from "../../utils";
+import {
+  downloadAsXlsx,
+  downloadLedgerXlsx,
+  downloadSvgAsPdf,
+  downloadSvgAsPng,
+} from "../../utils";
+import { getSipPremium } from "./format";
 
-const SIPBondCertificate = dynamic(() => import("../SIPBondCertificate"), { ssr: false });
-const SIPLedgerSheet     = dynamic(() => import("./SIPLedgerSheet"), { ssr: false });
+const SIPBondCertificate = dynamic(() => import("../SIPBondCertificate"), {
+  ssr: false,
+});
+const SIPLedgerSheet = dynamic(() => import("./SIPLedgerSheet"), {
+  ssr: false,
+});
 
 /**
  * SIPDownloadButton
@@ -19,80 +29,165 @@ const SIPLedgerSheet     = dynamic(() => import("./SIPLedgerSheet"), { ssr: fals
  *   logoUrl    – company logo URL (optional)
  *   stampUrl   – company stamp URL (optional)
  */
-export default function SIPDownloadButton({ bond, userData, logoUrl, stampUrl, className="" }) {
-  const [open, setOpen]     = useState(false);
+export default function SIPDownloadButton({
+  bond,
+  userData,
+  logoUrl,
+  stampUrl,
+  className = "",
+}) {
+  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(null); // "bond"|"ledger"|"both"
 
-  const bondRef   = useRef(null);
+  const bondRef = useRef(null);
   const ledgerRef = useRef(null);
 
-  const slug       = (bond?.bondNumber || bond?.userSchemeId || "sip").replace(/\s+/g,"_");
-  const memberName = (userData?.name || "member").replace(/\s+/g,"_");
+  const slug = (bond?.bondNumber || bond?.userSchemeId || "sip").replace(
+    /\s+/g,
+    "_",
+  );
+  const memberName = (userData?.name || "member").replace(/\s+/g, "_");
 
-  const go = useCallback(async (which) => {
-    setLoading(which);
-    try {
-      if (which === "bond" || which === "both") {
-        if (bondRef.current)
-          await downloadSvgAsPng(bondRef.current, `SIP_Bond_${slug}_${memberName}`, { scale: 3 });
+  const go = useCallback(
+    async (which) => {
+      setLoading(which);
+      try {
+        if (which === "bond") {
+          if (bondRef.current)
+            // await downloadSvgAsPng(bondRef.current, `SIP_Bond_${slug}_${memberName}`, { scale: 3 });
+            await downloadSvgAsPdf(
+              bondRef.current,
+              `SIP_Bond_${slug}_${memberName}`,
+              { scale: 3 },
+            );
+        }
+        //  if (which === "both") await new Promise(r => setTimeout(r, 500));
+        if (which === "ledger") {
+          if (ledgerRef.current)
+            await downloadSvgAsPdf(
+              ledgerRef.current,
+              `SIP_Ledger_${slug}_${memberName}`,
+              { scale: 3 },
+            );
+        }
+        if (which === "ledgerxsls") {
+          const installments=bond?.sipLedger || [];
+          await downloadLedgerXlsx(
+            {
+              member: { name: memberName, phone:userData?.phone, aadhaar:userData?.aadhaarNo },
+              bond: {
+                bondNo:bond?.bondNumber|| bond.userSchemeId,
+                monthlyPremium: getSipPremium(bond), //pending
+                tenureMonths: (bond.tenure?Math.round(Number(bond.tenure)/30):""),
+                investmentDate: bond.enrollmentDate,
+                maturityDate: bond.maturityDate,
+              },
+              installments, // the same array you map over to render the ledger rows
+            },
+            `SIP_Ledger_${slug}_${memberName}`,
+          );
+        }
+      } finally {
+        setLoading(null);
       }
-      if (which === "both") await new Promise(r => setTimeout(r, 500));
-      if (which === "ledger" || which === "both") {
-        if (ledgerRef.current)
-          await downloadSvgAsPng(ledgerRef.current, `SIP_Ledger_${slug}_${memberName}`, { scale: 3 });
-      }
-    } finally {
-      setLoading(null);
-    }
-  }, [slug, memberName]);
+    },
+    [slug, memberName, bond, userData?.phone, userData?.aadhaarNo],
+  );
 
   const isLoading = loading !== null;
 
   return (
     <>
       {/* Hidden render portal — kept outside the DOM flow */}
-      {typeof window !== "undefined" && createPortal(
-        <div aria-hidden="true"
-          style={{ position:"fixed", left:"-9999px", top:0, pointerEvents:"none", width:700, opacity:0 }}>
-          <SIPBondCertificate
-            ref={bondRef} bond={bond} userData={userData}
-            logoUrl={logoUrl} stampUrl={stampUrl}
-          />
-          <SIPLedgerSheet
-            ref={ledgerRef} bond={bond} userData={userData} logoUrl={logoUrl}
-          />
-        </div>,
-        document.body
-      )}
+      {typeof window !== "undefined" &&
+        createPortal(
+          <div
+            aria-hidden="true"
+            style={{
+              position: "fixed",
+              left: "-9999px",
+              top: 0,
+              pointerEvents: "none",
+              width: 700,
+              opacity: 0,
+            }}
+          >
+            <SIPBondCertificate
+              ref={bondRef}
+              bond={bond}
+              userData={userData}
+              logoUrl={logoUrl}
+              stampUrl={stampUrl}
+              watermarkUrl={logoUrl}
+            />
+            <SIPLedgerSheet
+              ref={ledgerRef}
+              bond={bond}
+              userData={userData}
+              logoUrl={logoUrl}
+            />
+          </div>,
+          document.body,
+        )}
 
       <div className={`relative inline-block ${className}`}>
         <button
           id={`sip-dl-btn-${bond?.userSchemeId}`}
           type="button"
-          onClick={() => setOpen(v => !v)}
+          onClick={() => setOpen((v) => !v)}
           disabled={isLoading}
           className="flex items-center gap-1.5 rounded-md border border-teal-700 px-3 py-1.5 text-xs font-medium text-teal-300 transition hover:bg-teal-950/50 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {isLoading ? <Loader2 size={13} className="animate-spin"/> : <Download size={13}/>}
+          {isLoading ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : (
+            <Download size={13} />
+          )}
           {isLoading ? "Downloading…" : "Download"}
         </button>
 
         {open && !isLoading && (
           <>
-            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)}/>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setOpen(false)}
+            />
             <div className="absolute right-0 top-full z-50 mt-1 w-48 overflow-hidden rounded-lg border border-slate-700 bg-slate-900 shadow-xl">
-              <button type="button" onClick={() => { setOpen(false); go("bond"); }}
-                className="flex w-full items-center gap-2 px-3 py-2.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-teal-300">
-                <Landmark size={13} className="text-teal-400"/> SIP Bond Certificate
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  go("bond");
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-teal-300"
+              >
+                <Landmark size={13} className="text-teal-400" /> SIP Bond in PDF
               </button>
-              <button type="button" onClick={() => { setOpen(false); go("ledger"); }}
-                className="flex w-full items-center gap-2 px-3 py-2.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-teal-300">
-                <FileText size={13} className="text-amber-400"/> Installment Ledger
+
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  go("ledger");
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-teal-300"
+              >
+                <FileText size={13} className="text-amber-400" /> Ledger in PDF
               </button>
-              <button type="button" onClick={() => { setOpen(false); go("both"); }}
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  go("ledgerxsls");
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-teal-300"
+              >
+                <Sheet  size={13} className="text-amber-400" /> Ledger in xsls
+              </button>
+              {/* <button type="button" onClick={() => { setOpen(false); go("both"); }}
                 className="flex w-full items-center gap-2 border-t border-slate-700 px-3 py-2.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-teal-300">
                 <Download size={13} className="text-indigo-400"/> Download Both
-              </button>
+              </button> */}
             </div>
           </>
         )}

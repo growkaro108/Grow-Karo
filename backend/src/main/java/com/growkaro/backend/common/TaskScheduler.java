@@ -21,7 +21,6 @@ import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class TaskScheduler {
 
     public final String timeZone = "Asia/Kolkata";
@@ -31,6 +30,17 @@ public class TaskScheduler {
     private final RedisService redisService;
     private final CrucialNotificationService crucialNotificationService;
     private final EmailService emailService;
+
+
+    public TaskScheduler(UserSchemeRepository userSchemeRepository, UserSchemePayoutProcessor payoutProcessor, General general, RedisService redisService, CrucialNotificationService crucialNotificationService, EmailService emailService) {
+        this.userSchemeRepository = userSchemeRepository;
+        this.payoutProcessor = payoutProcessor;
+        this.general = general;
+        this.redisService = redisService;
+        this.crucialNotificationService = crucialNotificationService;
+        this.emailService = emailService;
+    }
+
 
     // CRON EXPLANATION
     // 1. Minute 0
