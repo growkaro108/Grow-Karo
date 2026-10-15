@@ -3,16 +3,20 @@ package com.growkaro.backend.security;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
-import lombok.RequiredArgsConstructor;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
 @Primary
-@RequiredArgsConstructor
 public class JwtAdminTokenValidator {
 
     private final JwtService jwtService;
+
+    public JwtAdminTokenValidator(JwtService jwtService) {
+        this.jwtService = jwtService;
+    }
+
 
     public boolean isValidAdminToken(String token) {
         if (token == null || token.isBlank()) {

@@ -31,7 +31,7 @@ const Overview = () => {
     } else {
       setHasPendingWithdrawal(false);
     }
-  }, [holding, totalPendingForInterestWithdrawal, totalPendingWithdrawal]);
+  }, [holding, setHasPendingWithdrawal, totalPendingForInterestWithdrawal, totalPendingWithdrawal]);
   // console.log(authUser);
   if (!authUser || !holding) {
     return (
@@ -109,11 +109,11 @@ const Overview = () => {
       }
       return total;
     }, 0);
-  const totalNetWorth =
-    totalInvestment +
-    totalProfit - totalProfitReedemed - totalPendingForInterestWithdrawal;
-
-  const investmentSchemeCount = approvedSchemes?.length;
+    
+    const investmentSchemeCount = approvedSchemes?.length;
+    const totalNetWorth =
+      totalInvestment +
+      totalProfit - totalProfitReedemed;
   const redeemBalance = totalProfit - totalProfitReedemed - totalPendingForInterestWithdrawal;
   const totalReedemedProfit = totalProfitReedemed + totalSchemeWithdrawal;
   let gridCount = "4";

@@ -15,6 +15,7 @@ import com.growkaro.backend.entity.UserScheme;
 public record NearMaturityUserSchemeResponse(
                 String id,
                 String userId,
+                String userSchemId,
                 String userName,
                 String userEmail,
                 String schemeId,
@@ -47,6 +48,7 @@ public record NearMaturityUserSchemeResponse(
                 return new NearMaturityUserSchemeResponse(
                                 us.getUserSchemeId(),
                                 u.getId(),
+                                us.getUserSchemeId(),
                                 u.getName(),
                                 u.getEmail(),
                                 s.getSchemeId(),

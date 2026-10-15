@@ -15,7 +15,7 @@ import com.growkaro.backend.enums.UserSchemeStatus;
 import com.growkaro.backend.repository.UserSchemeRepository;
 import com.growkaro.backend.service.CrucialNotificationService;
 import com.growkaro.backend.service.RedisService;
-import lombok.RequiredArgsConstructor;
+
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 
@@ -31,8 +31,9 @@ public class TaskScheduler {
     private final CrucialNotificationService crucialNotificationService;
     private final EmailService emailService;
 
-
-    public TaskScheduler(UserSchemeRepository userSchemeRepository, UserSchemePayoutProcessor payoutProcessor, General general, RedisService redisService, CrucialNotificationService crucialNotificationService, EmailService emailService) {
+    public TaskScheduler(UserSchemeRepository userSchemeRepository, UserSchemePayoutProcessor payoutProcessor,
+            General general, RedisService redisService, CrucialNotificationService crucialNotificationService,
+            EmailService emailService) {
         this.userSchemeRepository = userSchemeRepository;
         this.payoutProcessor = payoutProcessor;
         this.general = general;
@@ -40,7 +41,6 @@ public class TaskScheduler {
         this.crucialNotificationService = crucialNotificationService;
         this.emailService = emailService;
     }
-
 
     // CRON EXPLANATION
     // 1. Minute 0
@@ -150,7 +150,7 @@ public class TaskScheduler {
                                 userScheme.getUser().getId(),
                                 "/dashboard",
                                 null);
-
+                        
                         emailService.sendSchemeMaturityTodayEmailToUser(userScheme);
                     } catch (Exception e) {
                         log.error("Failed to send maturity notification for userScheme id={}: {}",
@@ -173,7 +173,7 @@ public class TaskScheduler {
         List<UserScheme> allApprovedUserSchemes;
         try {
             allApprovedUserSchemes = userSchemeRepository
-                    .findAllByMaturityDatePassedAndNotReInvestedYet(today.plusDays(2));
+                    .findAllByMaturityDatePassedAndNotReInvestedYet(today.plusDays(40));
         } catch (Exception e) {
             log.error("Failed to fetch matured userSchemes: {}", e.getMessage());
             return;

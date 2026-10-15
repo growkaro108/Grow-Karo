@@ -18,12 +18,12 @@ const SettlementForm = dynamic(() => import("./SettlementForm"), {
 });
 
 const MAX_FILE_SIZE = 3 * 1024 * 1024;
-const ALLOWED_FILE_TYPES = [
+const ALLOWED_FILE_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
   "application/pdf",
-];
+]);
 
 function sanitizeText(value, maxLength = 100) {
   return String(value ?? "")
@@ -42,8 +42,7 @@ export default function RequestsView({ requests = [] }) {
   const [copiedField, setCopiedField] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const { authRemitter } = use(remitterContext);
-  const [pendingRemittanceRequests, setPendingRemittanceRequests] =
-    useState(null);
+  const [pendingRemittanceRequests, setPendingRemittanceRequests] = useState(null);
   useEffect(() => {
     const getPendingRemittanceRequests = async () => {
       const response = await getRemittersPendingRequests(authRemitter?.id);
@@ -104,7 +103,7 @@ export default function RequestsView({ requests = [] }) {
       return;
     }
 
-    if (!ALLOWED_FILE_TYPES.includes(selectedFile.type)) {
+    if (!ALLOWED_FILE_TYPES.has(selectedFile.type)) {
       setProofFile(null);
       setFormError("Only JPG, PNG, WEBP, or PDF files are supported.");
       errorMessage("Only JPG, PNG, WEBP, or PDF files are supported.");

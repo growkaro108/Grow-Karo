@@ -509,7 +509,7 @@ export default function FormModal({
             </Field>
           </div>
 
-          {planType === "SIP" && (
+          {/* {planType === "SIP" && (
             <div className="bg-indigo-950/20 border border-indigo-900/60 rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Default Monthly Installment (₹)">
                 <input
@@ -538,7 +538,7 @@ export default function FormModal({
                 />
               </Field>
             </div>
-          )}
+          )} */}
 
           {/* Schedule */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">

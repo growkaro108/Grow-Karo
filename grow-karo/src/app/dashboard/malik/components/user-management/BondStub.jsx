@@ -28,7 +28,7 @@ function Field({ label, children, emphasis = false }) {
 
 export default function BondStub({ bond, userName, scheme, onView, viewUser }) {
   const bondLabel = bond.userSchemeId || bond.id || "";
-
+// console.log(bond.status)
   return (
     <article className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 transition-colors hover:border-slate-700">
       {/* counterfoil */}
@@ -37,7 +37,7 @@ export default function BondStub({ bond, userName, scheme, onView, viewUser }) {
           {bond.bondNumber? `Bond: ${bond.bondNumber}` : `ID: ${bondLabel}`}
         </span>
         <StatusPill
-          status={bond.status === "matured" ? "Matured" : bond.status}
+          status={bond.status||"pending"}
         />
       </header>
 

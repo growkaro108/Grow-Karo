@@ -154,7 +154,14 @@ public class AdminAPIService {
     @PersistenceContext
     private EntityManager entityManager;
 
-    public AdminAPIService(ReedemLedgerRepository reedemLedgerRepository, UserRepository userRepository, RemitterRepository remitterRepository, TransactionRepository transactionRepository, SupportIssueRepository supportIssueRepository, SchemeRepository schemeRepository, UserSchemeRepository userSchemeRepository, ApiService apiService, ActivityLogService activityLogService, LocalFileStorageService localFileStorageService, ActivityLogRepository activityLogRepository, NotificationRepository notificationRepository, General general, CrucialNotificationService crucialNotificationService, EmailService emailService, TransactionService transactionService, NomineeRepository nomineeRepository, EntityManager entityManager) {
+    public AdminAPIService(ReedemLedgerRepository reedemLedgerRepository, UserRepository userRepository,
+            RemitterRepository remitterRepository, TransactionRepository transactionRepository,
+            SupportIssueRepository supportIssueRepository, SchemeRepository schemeRepository,
+            UserSchemeRepository userSchemeRepository, ApiService apiService, ActivityLogService activityLogService,
+            LocalFileStorageService localFileStorageService, ActivityLogRepository activityLogRepository,
+            NotificationRepository notificationRepository, General general,
+            CrucialNotificationService crucialNotificationService, EmailService emailService,
+            TransactionService transactionService, NomineeRepository nomineeRepository, EntityManager entityManager) {
         this.reedemLedgerRepository = reedemLedgerRepository;
         this.userRepository = userRepository;
         this.remitterRepository = remitterRepository;
@@ -174,8 +181,6 @@ public class AdminAPIService {
         this.nomineeRepository = nomineeRepository;
         this.entityManager = entityManager;
     }
-
-
 
     // create a new scheme
     @Caching(evict = {
@@ -265,11 +270,11 @@ public class AdminAPIService {
                     existingSchemeData.getTenureMonths(),
                     existingSchemeData::setTenureMonths);
             // general.applyIfChanged(receiveData.sipAmount(),
-            //         existingSchemeData.getSipAmount(),
-            //         existingSchemeData::setSipAmount);
+            // existingSchemeData.getSipAmount(),
+            // existingSchemeData::setSipAmount);
             // general.applyIfChanged(receiveData.sipDay(),
-            //         existingSchemeData.getSipDay(),
-            //         existingSchemeData::setSipDay);
+            // existingSchemeData.getSipDay(),
+            // existingSchemeData::setSipDay);
 
             List<String> newTerms = receiveData.terms();
             if (!existingSchemeData.getTerms().equals(newTerms)) {
@@ -372,11 +377,15 @@ public class AdminAPIService {
                     : request.maturityDate();
 
             UserSchemeStatus status;
-            if (maturityDate.isEqual(today)) {
+            if (maturityDate.isEqual(today)
+                    || (maturityDate.isAfter(today.minusDays(15)) && maturityDate.isBefore(today))) {
+                // 1. Maturing today OR passed within the last 15 days
                 status = UserSchemeStatus.MATURED;
-            } else if (maturityDate.isBefore(today)) {
+            } else if (maturityDate.isBefore(today.minusDays(15))) {
+                // 2. Maturity date passed MORE than 15 days ago -> Withdrawn
                 status = UserSchemeStatus.WITHDRAWN;
             } else {
+                // 3. Still in the future -> Active
                 status = UserSchemeStatus.ACTIVE;
             }
 
@@ -964,6 +973,8 @@ public class AdminAPIService {
                     break;
                 }
             }
+        }else{
+            return null;
         }
 
         Remitter rr = remitterRepository.findByRemitterId(remId)
@@ -1489,7 +1500,8 @@ public class AdminAPIService {
         if (query == null || query.trim().isEmpty()) {
             query = "";
         }
-        var rawUsers = userSchemeRepository.findNearMaturityUsers(query, days, pageable);
+        var rawUsers = userSchemeRepository.findNearMaturityOrOverdueUsers(query, days, UserSchemeStatus.MATURED,
+                pageable);
         var mapped = rawUsers.map(NearMaturityUserSchemeResponse::fromUserScheme);
         return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
     }

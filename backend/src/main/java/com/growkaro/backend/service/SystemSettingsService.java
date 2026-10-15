@@ -2,17 +2,21 @@ package com.growkaro.backend.service;
 
 import com.growkaro.backend.entity.SystemSettings;
 import com.growkaro.backend.repository.SystemSettingsRepository;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class SystemSettingsService {
 
     private final SystemSettingsRepository repository;
+
+    public SystemSettingsService(SystemSettingsRepository repository) {
+        this.repository = repository;
+    }
+    
 
     public SystemSettings getSettings() {
         List<SystemSettings> settings = repository.findAll();

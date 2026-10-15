@@ -21,23 +21,29 @@ import com.growkaro.backend.repository.UserSchemeRepository;
 import com.growkaro.backend.service.CrucialNotificationService;
 import com.growkaro.backend.service.EmailService;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class UserSchemePayoutProcessor {
 
     private final UserSchemeRepository userSchemeRepository;
     private final ProfitLedgerRepository profitLedgerRepository;
     private final EmailService emailService;
-    private final CrucialNotificationService notificationService;
     private final General general;
     private final CrucialNotificationService crucialNotificationService;
+    private final String adminEmail;
 
-    @Value("${admin.email}")
-    private String adminEmail;
+    public UserSchemePayoutProcessor(UserSchemeRepository userSchemeRepository,
+            ProfitLedgerRepository profitLedgerRepository, EmailService emailService, General general,
+            CrucialNotificationService crucialNotificationService,@Value("${admin.email}") String adminEmail) {
+        this.userSchemeRepository = userSchemeRepository;
+        this.profitLedgerRepository = profitLedgerRepository;
+        this.emailService = emailService;
+        this.general = general;
+        this.crucialNotificationService = crucialNotificationService;
+        this.adminEmail = adminEmail;
+    }
 
     public enum BatchOutcome {
         PROCESSED, SKIPPED
@@ -124,7 +130,7 @@ public class UserSchemePayoutProcessor {
 
         emailService.sendSchemeMaturityEmailtoUser(userScheme);
         emailService.sendSchemeMaturityEmailtoAdmin(userScheme, adminEmail);
-        notificationService.sendSchemeMaturityNotification(userScheme);
+        crucialNotificationService.sendSchemeMaturityNotification(userScheme);
 
         userScheme.setMaturityNotificationSent(true);
         userSchemeRepository.save(userScheme);

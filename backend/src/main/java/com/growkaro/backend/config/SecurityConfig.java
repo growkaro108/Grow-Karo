@@ -13,15 +13,21 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import com.growkaro.backend.security.JwtAuthenticationEntryPoint;
 import com.growkaro.backend.security.JwtAuthenticationFilter;
 
-import lombok.RequiredArgsConstructor;
+
 
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+
+
+        public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
+                this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+                this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
+        }
+
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {

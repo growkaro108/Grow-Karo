@@ -57,6 +57,8 @@ public class UserSchemeReedemLedger {
     @Column(name = "redeem_type")
     private RedeemType redeemType;
 
+    // private ExtraReedeemDetails extraReedemDetails;
+
     public enum ReedeemStatus {
         REQUESTED,
         IN_PROGRESS,

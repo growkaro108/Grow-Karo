@@ -117,9 +117,10 @@ public class Transaction {
 
     @PrePersist
     private void setId() {
-        this.id = "TXN-" + LocalDateTime.now(ZoneId.of("Asia/Kolkata"))
+        ZoneId zid=ZoneId.of("Asia/Kolkata");
+        this.id = "TXN-" + LocalDateTime.now(zid)
                 .format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
-        this.createdAt = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
-        this.updatedAt = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+        this.createdAt = LocalDateTime.now(zid);
+        this.updatedAt = LocalDateTime.now(zid);
     }
 }

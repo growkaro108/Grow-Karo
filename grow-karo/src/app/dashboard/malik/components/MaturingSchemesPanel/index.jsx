@@ -7,6 +7,7 @@ import {
   Eye,
   AlertTriangle,
   FileSpreadsheet,
+  HandCoins,
 } from "lucide-react";
 import * as XLSX from "xlsx"; // Import sheetjs for XLSX export
 import Image from "next/image";
@@ -44,6 +45,7 @@ export default function MaturingSchemesAdminDark() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [totalElement, setTotalElements] = useState(0);
+  const [openForm, setOpenForm] = useState(false);
   // Filter schemes based on threshold and search term
   const filteredSchemes = useMemo(() => {
     return schemes.filter((scheme) => {
@@ -73,6 +75,12 @@ export default function MaturingSchemesAdminDark() {
       dataToExport = dataToExport.slice(0, limit);
     }
 
+    const formatDaysRemaining = (days) => {
+      if (days < 0) return `${Math.abs(days)}d overdue`;
+      if (days === 0) return "Due today";
+      if (days === 1) return "1d left";
+      return `${days}d left`;
+    };
     const formattedData = dataToExport.map((item) => ({
       "Customer ID": item.cust_id,
       "User Name": item.userName,
@@ -83,13 +91,12 @@ export default function MaturingSchemesAdminDark() {
       "Investment Amount (INR)": item.investmentAmount,
       "Maturity Amount (INR)": item.maturityAmount,
       "Maturity Date": item.maturityDate,
-      "Days Remaining": item.daysRemaining,
+      "Days Remaining": formatDaysRemaining(item.daysRemaining),
       "Enroll Date": item.enrollmentDate,
       "Account Number": item.accountNumber,
       "IFSC Code": item.ifsc,
       "Account Holder Name": item.accountHolderName,
       "Bank Name": item.bankName,
-
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(formattedData);
@@ -172,6 +179,11 @@ export default function MaturingSchemesAdminDark() {
     fetchData();
     return () => controller.abort();
   }, [currentPage, daysThreshold, itemsPerPage, debouncedSearch]);
+
+  const formAction = (userSchemeId) => {
+    setOpenForm(true)
+  };
+// console.log(schemes)
   return (
     <div className="w-full max-w-7xl -m-7 mx-auto p-4 sm:p-6 lg:p-8 bg-slate-950 min-h-screen text-slate-100">
       {/* Control Bar: Search & Export Controls */}
@@ -251,7 +263,7 @@ export default function MaturingSchemesAdminDark() {
               <th className="py-3.5 px-4">Maturity Amount</th>
               <th className="py-3.5 px-4">Maturity Date</th>
               <th className="py-3.5 px-4">Days Left</th>
-              {/* <th className="py-3.5 px-4 text-right">Action</th> */}
+              <th className="py-3.5 px-4 text-right">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60 text-sm">
@@ -263,9 +275,9 @@ export default function MaturingSchemesAdminDark() {
                 >
                   <td className="py-3 px-4">
                     <Image
-                      src={resolveMediaUrl(scheme.bondImage)}
+                      src={resolveMediaUrl(scheme.bondImage) || "/logo.png"}
                       alt={scheme.schemeName}
-                      className="w-14 h-10 object-cover rounded border border-slate-700 shadow-sm"
+                      className="w-14 h-10 object-cover rounded border border-slate-700 shadow-sm transition-all duration-700 hover:h-full hover:w-full hover:z-50"
                       width={50}
                       height={50}
                       unoptimized
@@ -300,21 +312,31 @@ export default function MaturingSchemesAdminDark() {
                   </td>
                   <td className="py-3 px-4">
                     <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${scheme.daysRemaining <= 3
-                        ? "bg-rose-950/80 text-rose-300 border border-rose-800/50"
-                        : "bg-amber-950/80 text-amber-300 border border-amber-800/50"
-                        }`}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
+                        scheme.daysRemaining <= 3
+                          ? "bg-rose-950/80 text-rose-300 border border-rose-800/50"
+                          : "bg-amber-950/80 text-amber-300 border border-amber-800/50"
+                      }`}
                     >
                       <AlertTriangle className="w-3 h-3" />
-                      {scheme.daysRemaining}{" "}
-                      {scheme.daysRemaining === 1 ? "Day" : "Days"}
+                      {scheme.daysRemaining < 0
+                        ? `${Math.abs(scheme.daysRemaining)}d overdue`
+                        : scheme.daysRemaining === 0
+                          ? "Due today"
+                          : scheme.daysRemaining === 1
+                            ? "Tommrow"
+                            : `${scheme.daysRemaining}d left`}
                     </span>
                   </td>
-                  {/* <td className="py-3 px-4 text-right">
-                    <button className="p-2 text-slate-400 hover:text-indigo-400 rounded-lg hover:bg-slate-800 transition">
-                      <Eye className="w-4 h-4" />
+                  <td className="py-3 px-4 text-right">
+                    <button
+                      className="p-2 text-cyan-400 hover:text-emerald-400 rounded-lg hover:bg-slate-800 transition-all duration-150 flex items-center gap-1 hover:scale-95"
+                      title="Mark as paid"
+                      onClick={() => formAction(scheme.userSchemId)}
+                    >
+                      <HandCoins className="w-4 h-4" /> Settle
                     </button>
-                  </td> */}
+                  </td>
                 </tr>
               ))
             ) : loading ? (
@@ -343,12 +365,15 @@ export default function MaturingSchemesAdminDark() {
             >
               {/* Card Header */}
               <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
-                <img
-                  src={scheme.bondImage}
+                <Image
+                  src={resolveMediaUrl(scheme.bondImage) || "/logo.png"}
                   alt={scheme.schemeName}
+                  width={100}
+                  height={100}
                   className="w-16 h-12 object-cover rounded-md border border-slate-700"
                   loading="lazy"
                   decoding="async"
+                  unoptimized
                 />
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-slate-100 truncate">
@@ -359,12 +384,19 @@ export default function MaturingSchemesAdminDark() {
                   </p>
                 </div>
                 <span
-                  className={`px-2 py-1 rounded-full text-xs font-bold ${scheme.daysRemaining <= 3
-                    ? "bg-rose-950 text-rose-300 border border-rose-800/40"
-                    : "bg-amber-950 text-amber-300 border border-amber-800/40"
-                    }`}
+                  className={`px-2 py-1 rounded-full text-xs font-bold ${
+                    scheme.daysRemaining <= 3
+                      ? "bg-rose-950 text-rose-300 border border-rose-800/40"
+                      : "bg-amber-950 text-amber-300 border border-amber-800/40"
+                  }`}
                 >
-                  {scheme.daysRemaining}d left
+                  {scheme.daysRemaining < 0
+                    ? `${Math.abs(scheme.daysRemaining)}d overdue`
+                    : scheme.daysRemaining === 0
+                      ? "Due today"
+                      : scheme.daysRemaining === 1
+                        ? "Tommrow"
+                        : `${scheme.daysRemaining}d left`}
                 </span>
               </div>
 
@@ -419,42 +451,6 @@ export default function MaturingSchemesAdminDark() {
         onPageSizeChange={setItemsPerPage}
         darkMode={true}
       />
-      {/* --- PAGINATION FOOTER --- */}
-      {/* <div className="mt-6 bg-slate-900/60 p-4 rounded-xl border border-slate-800 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4 backdrop-blur-sm"> */}
-
-      {/* Info */}
-      {/* <div className="text-xs text-slate-400 text-center sm:text-left">
-          Showing <span className="font-semibold text-slate-200">
-            {filteredSchemes.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}
-          </span> to <span className="font-semibold text-slate-200">
-            {Math.min(currentPage * itemsPerPage, filteredSchemes.length)}
-          </span> of <span className="font-semibold text-slate-200">{filteredSchemes.length}</span> entries
-        </div> */}
-
-      {/* Page Nav */}
-      {/* <div className="flex items-center gap-2">
-          <button
-            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-            className="p-2 border border-slate-800 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed bg-slate-800/40 hover:bg-slate-800 text-slate-300"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-
-          <span className="text-xs font-semibold px-3 py-1.5 bg-slate-800 rounded-md text-slate-300 border border-slate-700/50">
-            Page {currentPage} of {totalPages || 1}
-          </span>
-
-          <button
-            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-            disabled={currentPage === totalPages || totalPages === 0}
-            className="p-2 border border-slate-800 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed bg-slate-800/40 hover:bg-slate-800 text-slate-300"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div> */}
-
-      {/* </div> */}
     </div>
   );
 }

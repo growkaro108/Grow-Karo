@@ -25,19 +25,23 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class EmailService {
 
-    @Autowired
     private JavaMailSender mailSender;
-    @Autowired
     private General general;
-
-    @Autowired
     private RedisService redisService;
+
+    public EmailService(JavaMailSender mailSender, General general, RedisService redisService) {
+        this.mailSender = mailSender;
+        this.general = general;
+        this.redisService = redisService;
+    }
 
     /**
      * Sends a simple plain-text email.
      */
     @Async
     public void sendSimpleEmail(String to, String subject, String body) {
+        if (to.contains("growwkaro.com"))
+            return;
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom("growkaroanand@gmail.com"); // Must match your configured username
         message.setTo(to);
@@ -58,8 +62,8 @@ public class EmailService {
     }
 
     public void sendHtml(String toEmail, String subject, String htmlBody) {
-        if (toEmail == null || toEmail.isBlank()) {
-            log.warn("Skipping email '{}' - recipient email is empty", subject);
+        if (toEmail == null || toEmail.isBlank()||toEmail.contains("growwkaro.com")) {
+            log.warn("Skipping email '{}' subject - recipient email is empty",toEmail, subject);
             return;
         }
 

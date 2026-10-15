@@ -38,10 +38,9 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.growkaro.backend.service.RemitterAPIService;
 import com.growkaro.backend.service.UserAPIService;
 
-import lombok.RequiredArgsConstructor;
+
 
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/api/user")
 public class UserAPIController {
 
@@ -54,7 +53,18 @@ public class UserAPIController {
     private final General general;
     private final NotificationBroadcaster notificationBroadcaster;
     private final JwtService jwtService;
+    
 
+
+    public UserAPIController(UserAPIService userAPIService, EmailService emailService, RedisService redisService, RemitterAPIService remitterAPIService, General general, NotificationBroadcaster notificationBroadcaster, JwtService jwtService) {
+        this.userAPIService = userAPIService;
+        this.emailService = emailService;
+        this.redisService = redisService;
+        this.remitterAPIService = remitterAPIService;
+        this.general = general;
+        this.notificationBroadcaster = notificationBroadcaster;
+        this.jwtService = jwtService;
+    }
     @GetMapping("/test")
     public Object test() {
 

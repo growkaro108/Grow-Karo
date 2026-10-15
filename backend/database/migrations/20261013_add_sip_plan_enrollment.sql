@@ -1,13 +1,13 @@
 -- Apply before deploying the SIP plan metadata and installment ledger changes.
 ALTER TABLE schemes
     ADD COLUMN IF NOT EXISTS plan_type varchar(255) NOT NULL DEFAULT 'FD',
-    ADD COLUMN IF NOT EXISTS tenure_months integer,
+    ADD COLUMN IF NOT EXISTS tenure_months integer;
     -- ADD COLUMN IF NOT EXISTS sip_amount numeric(19, 2),
     -- ADD COLUMN IF NOT EXISTS sip_day integer;
 
 ALTER TABLE schemes_aud
     ADD COLUMN IF NOT EXISTS plan_type varchar(255),
-    ADD COLUMN IF NOT EXISTS tenure_months integer,
+    ADD COLUMN IF NOT EXISTS tenure_months integer;
     -- ADD COLUMN IF NOT EXISTS sip_amount numeric(19, 2),
     -- ADD COLUMN IF NOT EXISTS sip_day integer;
 

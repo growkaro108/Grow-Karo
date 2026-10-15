@@ -22,12 +22,11 @@ import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.repository.NotificationRepository;
 
-import lombok.RequiredArgsConstructor;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class CrucialNotificationService {
 
     private final NotificationRepository notificationRepository;
@@ -36,9 +35,19 @@ public class CrucialNotificationService {
     private final NotificationBroadcaster notificationBroadcaster;
     private final ActivityLogService activityLogService;
     private final General general;
+    private final String frontendUrl;
 
-    @Value("${frontend.url}")
-    private String frontendUrl;
+     
+    public CrucialNotificationService(NotificationRepository notificationRepository, EmailService emailService, NotificationContentBuilder contentBuilder, NotificationBroadcaster notificationBroadcaster, ActivityLogService activityLogService, General general, @Value("${frontend.url}")String frontendUrl) {
+        this.notificationRepository = notificationRepository;
+        this.emailService = emailService;
+        this.contentBuilder = contentBuilder;
+        this.notificationBroadcaster = notificationBroadcaster;
+        this.activityLogService = activityLogService;
+        this.general = general;
+        this.frontendUrl = frontendUrl;
+    }
+   
 
     /**
      * Fires the full essential action flow:

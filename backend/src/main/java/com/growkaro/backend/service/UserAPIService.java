@@ -65,10 +65,7 @@ import com.growkaro.backend.repository.UserSchemeRepository;
 import com.growkaro.backend.security.AdminPolicy;
 import com.growkaro.backend.security.JwtService;
 
-import lombok.RequiredArgsConstructor;
-
 @Service
-@RequiredArgsConstructor
 public class UserAPIService {
 
     private static final Logger log = LoggerFactory.getLogger(UserAPIService.class);
@@ -92,6 +89,33 @@ public class UserAPIService {
     private final ReedemLedgerRepository reedemLedgerRepository;
     private final TransactionService transactionService;
 
+    public UserAPIService(ApiService apiService, UserRepository userRepository,
+            TransactionRepository transactionRepository, NotificationRepository notificationRepository,
+            SchemeRepository schemeRepository, UserSchemeRepository userSchemeRepository,
+            ActivityLogService activityLogService, BankDetailsRepository bankDetailsRepository, General general,
+            CrucialNotificationService crucialNotificationService, EmailService emailService,
+            SupportIssueRepository supportIssueRepository, JwtService jwtService, AdminPolicy adminPolicy,
+            RedisService redisService, ReedemLedgerRepository reedemLedgerRepository,
+            TransactionService transactionService) {
+        this.apiService = apiService;
+        this.userRepository = userRepository;
+        this.transactionRepository = transactionRepository;
+        this.notificationRepository = notificationRepository;
+        this.schemeRepository = schemeRepository;
+        this.userSchemeRepository = userSchemeRepository;
+        this.activityLogService = activityLogService;
+        this.bankDetailsRepository = bankDetailsRepository;
+        this.general = general;
+        this.crucialNotificationService = crucialNotificationService;
+        this.emailService = emailService;
+        this.supportIssueRepository = supportIssueRepository;
+        this.jwtService = jwtService;
+        this.adminPolicy = adminPolicy;
+        this.redisService = redisService;
+        this.reedemLedgerRepository = reedemLedgerRepository;
+        this.transactionService = transactionService;
+    }
+
     // @Cacheable(value = "testApis", key = "#id")
     @Transactional
     public Object testApis() {
@@ -104,12 +128,13 @@ public class UserAPIService {
             // System.out.println("updated successfully");
             // return true;
             // }
-            // Pageable pageable = PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "requestDate"));
-            // var rawUsers = userSchemeRepository.findNearMaturityUsers("", 15, pageable);
-            // var mapped = rawUsers.map(NearMaturityUserSchemeResponse::fromUserScheme);
-            // return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
-            User u =userRepository.findByEmail("wv9304@gmail.com").orElse(null);
-            return u != null ? u.hashCode() : "User not found";
+            Pageable pageable = PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "requestDate"));
+            var rawUsers = userSchemeRepository.findNearMaturityOrOverdueUsers("", 10, UserSchemeStatus.MATURED,
+                    pageable);
+            var mapped = rawUsers.map(NearMaturityUserSchemeResponse::fromUserScheme);
+            return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
+            // User u =userRepository.findByEmail("wv9304@gmail.com").orElse(null);
+            // return u != null ? u.hashCode() : "User not found";
 
         } catch (Exception e) {
             log.error("Failed to set user status active", e.getMessage());
@@ -585,13 +610,6 @@ public class UserAPIService {
                 UserProfile.fromEntity(user, general.generateToken(user.getId(), user.getEmail(), "ROLE_GRAHAK")));
     }
 
-    /**
-     * Handles a withdrawal/redemption request for a user's scheme.
-     * Supports two modes:
-     * - General withdrawal: redeem profit up to the un-redeemed profit balance
-     * (calculated live from the profit and redeem ledgers).
-     * - Aggressive withdrawal: full payout of the scheme's paidAmount.
-     */
     @Caching(evict = {
             @CacheEvict(value = "userTransactions", key = "#p0.userId()"),
             @CacheEvict(value = "userPortfolio", key = "#p0.userId()") })
@@ -613,18 +631,17 @@ public class UserAPIService {
 
             // check if user have already pending reddem then return
             List<UserSchemeReedemLedger> reedemLedger = us.getReedemLedger();
-            for (UserSchemeReedemLedger ledger : reedemLedger) {
-                if (ledger.getStatus().equals(ReedeemStatus.REQUESTED)) {
-                    return general.response("error",
-                            "You have already pending reedem of amount : " + ledger.getRedeemAmount(), null);
+            BigDecimal totalRedeemed = BigDecimal.ZERO;
+            if (reedemLedger == null || reedemLedger.isEmpty() || reedemLedger.size() == 0) {
+                for (UserSchemeReedemLedger ledger : reedemLedger) {
+                    if (ledger.getStatus().equals(ReedeemStatus.REQUESTED)) {
+                        return general.response("error",
+                                "You have already pending reedem of amount : " + ledger.getRedeemAmount(), null);
+                    }
                 }
+
+                totalRedeemed = general.countReedem(reedemLedger);
             }
-            // Compute totals live from the ledgers (source of truth) instead of
-            // relying on cached fields on UserScheme.
-            BigDecimal totalProfit = general.countProfit(us.getProfitLedger());
-
-            BigDecimal totalRedeemed = general.countReedem(reedemLedger);
-
             User user = us.getUser();
             // ownership check: scheme must belong to this user
             if (user == null || !user.getId().equals(wa.userId())) {
@@ -632,7 +649,9 @@ public class UserAPIService {
                         Map.of("userSchemeId", us.getUserSchemeId(), "userId", wa.userId()));
                 return general.response("error", "userScheme does not belong to user...", null);
             }
-
+            // Compute totals live from the ledgers (source of truth) instead of
+            // relying on cached fields on UserScheme.
+            BigDecimal totalProfit = general.countProfit(us.getProfitLedger());
             // Amount still available to redeem = total profit accrued - total profit
             // already redeemed.
             BigDecimal availableToRedeem = totalProfit.subtract(totalRedeemed);
@@ -706,6 +725,7 @@ public class UserAPIService {
                 usrl.setUserScheme(us);
                 usrl.setRedeemDate(general.getCurrentDate());
                 usrl.setStatus(UserSchemeReedemLedger.ReedeemStatus.REQUESTED);
+                usrl.setRedeemType(RedeemType.INTEREST_REDEEM);
 
                 reedemLedgerRepository.save(usrl);
             }

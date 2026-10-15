@@ -13,14 +13,18 @@ import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
 import com.growkaro.backend.repository.TransactionRepository;
 
-import lombok.RequiredArgsConstructor;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class TransactionService {
     private final TransactionRepository transactionRepository;
+
+    public TransactionService(TransactionRepository transactionRepository) {
+        this.transactionRepository = transactionRepository;
+    }
+
 
     @Async
     public void createDepositTransaction(UserScheme userScheme, User user, BigDecimal amount,

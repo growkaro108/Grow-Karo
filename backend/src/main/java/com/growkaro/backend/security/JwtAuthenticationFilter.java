@@ -15,18 +15,21 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final String cookieName;
 
-    @Value("${app.jwt.cookie-name:authToken}")
-    private String cookieName;
+    public JwtAuthenticationFilter(JwtService jwtService,@Value("${app.jwt.cookie-name:authToken}") String cookieName) {
+        this.jwtService = jwtService;
+        this.cookieName = cookieName;
+    }
+    
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)

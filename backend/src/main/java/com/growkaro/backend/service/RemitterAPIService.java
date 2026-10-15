@@ -20,7 +20,7 @@ import com.growkaro.backend.repository.NotificationRepository;
 import com.growkaro.backend.repository.RemitterRepository;
 import com.growkaro.backend.repository.TransactionRepository;
 
-import lombok.RequiredArgsConstructor;
+
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.cache.annotation.Cacheable;
@@ -44,7 +44,6 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class RemitterAPIService {
 
     private static final int DEFAULT_PAGE_SIZE = 20;
@@ -59,6 +58,20 @@ public class RemitterAPIService {
     private final NotificationRepository notificationRepository;
     private final CrucialNotificationService crucialNotificationService;
     private final com.growkaro.backend.security.JwtService jwtService;
+
+
+    public RemitterAPIService(RemitterRepository remitterRepository, EmailService emailService, ApiService apiService, General general, ActivityLogService activityLogService, TransactionRepository transactionRepository, LocalFileStorageService localFileStorageService, NotificationRepository notificationRepository, CrucialNotificationService crucialNotificationService, com.growkaro.backend.security.JwtService jwtService) {
+        this.remitterRepository = remitterRepository;
+        this.emailService = emailService;
+        this.apiService = apiService;
+        this.general = general;
+        this.activityLogService = activityLogService;
+        this.transactionRepository = transactionRepository;
+        this.localFileStorageService = localFileStorageService;
+        this.notificationRepository = notificationRepository;
+        this.crucialNotificationService = crucialNotificationService;
+        this.jwtService = jwtService;
+    }
 
     private static final Set<String> ALLOWED_DOCUMENT_TYPES = Set.of("application/pdf", "image/jpeg", "image/png",
             "image/webp");

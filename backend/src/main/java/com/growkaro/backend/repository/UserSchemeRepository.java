@@ -18,6 +18,7 @@ import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
+import com.growkaro.backend.enums.UserSchemeStatus;
 
 import jakarta.persistence.LockModeType;
 
@@ -54,8 +55,12 @@ public interface UserSchemeRepository extends JpaRepository<UserScheme, String> 
                         "(LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
                         "LOWER(s.schemeName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
                         "LOWER(us.bondNumber) LIKE LOWER(CONCAT('%', :query, '%'))) " +
-                        "AND us.maturityDate BETWEEN CURRENT_DATE AND (CURRENT_DATE + :remainingDays DAY)")
-        Page<UserScheme> findNearMaturityUsers(@Param("query") String query, @Param("remainingDays") int remainingDays,
+                        "AND us.maturityDate <= (CURRENT_DATE + :remainingDays DAY) " +
+                        "AND us.status = :status")
+        Page<UserScheme> findNearMaturityOrOverdueUsers(
+                        @Param("query") String query,
+                        @Param("remainingDays") int remainingDays,
+                        @Param("status") UserSchemeStatus status,
                         Pageable pageable);
 
         // get all approved user
