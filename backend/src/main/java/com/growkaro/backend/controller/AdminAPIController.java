@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,6 +27,7 @@ import com.growkaro.backend.DRO.AddRemitter;
 import com.growkaro.backend.DRO.AdminUserProfileUpdateRequest;
 import com.growkaro.backend.DRO.ApproveUserScheme;
 import com.growkaro.backend.DRO.ManualUserScheme;
+import com.growkaro.backend.DRO.MaturitySettlementRequest;
 import com.growkaro.backend.DRO.NewNominee;
 import com.growkaro.backend.DRO.UserSchemeDetailsUpdateRequest;
 import com.growkaro.backend.DRO.UserSchemeLedgerUpdateRequest;
@@ -618,6 +620,14 @@ public class AdminAPIController {
         }
         return ResponseEntity.ok(general.response("success", "Fetched successfully...", result));
 
+    }
+
+    @PostMapping(value = "/maturity/user/{userSchemeId}/settlement", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Object>> settleMaturedScheme(
+            @PathVariable String userSchemeId,
+            @RequestPart("data") MaturitySettlementRequest request,
+            @RequestPart(value = "proof", required = false) MultipartFile proof) {
+        return ResponseEntity.ok(adminAPIService.settleMaturedScheme(userSchemeId, request, proof));
     }
 
     @GetMapping("/userProfile/{userId}")

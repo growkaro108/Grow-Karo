@@ -4,7 +4,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-  Eye,
   AlertTriangle,
   FileSpreadsheet,
   HandCoins,
@@ -16,22 +15,8 @@ import { TableRowLoader } from "@/loader/TableRowLoader";
 import { getAllMaturityUserScheme } from "../../../../../../services/malikService";
 import { resolveMediaUrl } from "@/api/apiClient";
 import { storage } from "../../../../../../services/storageService";
-// Mock Data Structure
-const MOCK_SCHEMES = [
-  {
-    id: "SCH-001",
-    userName: "Rajesh Kumar",
-    userEmail: "rajesh@example.com",
-    schemeName: "Guaranteed Growth Bond IX",
-    bondNumber: "BND-883920",
-    investmentAmount: 150000,
-    maturityAmount: 210000,
-    maturityDate: "2026-09-28",
-    daysRemaining: 4,
-    bondImage:
-      "https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?auto=format&fit=crop&q=80&w=200",
-  },
-];
+import SettlementForm from "./SettleByAdminForm";
+
 
 export default function MaturingSchemesAdminDark() {
   // Config States
@@ -46,6 +31,7 @@ export default function MaturingSchemesAdminDark() {
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [totalElement, setTotalElements] = useState(0);
   const [openForm, setOpenForm] = useState(false);
+  const [selectedScheme, setSelectedScheme] = useState(null);
   // Filter schemes based on threshold and search term
   const filteredSchemes = useMemo(() => {
     return schemes.filter((scheme) => {
@@ -180,8 +166,46 @@ export default function MaturingSchemesAdminDark() {
     return () => controller.abort();
   }, [currentPage, daysThreshold, itemsPerPage, debouncedSearch]);
 
-  const formAction = (userSchemeId) => {
-    setOpenForm(true)
+  const formAction = (scheme) => {
+    setSelectedScheme(scheme);
+    setOpenForm(true);
+  };
+
+  const handleSettlementSuccess = (action, settlementType, settledAmount) => {
+    if (action === "SEND_TO_REMITTER") {
+      setSchemes((current) =>
+        current.map((scheme) =>
+          scheme.userSchemId === selectedScheme?.userSchemId
+            ? { ...scheme, settlementPending: true }
+            : scheme,
+        ),
+      );
+    } else if (settlementType === "FULL") {
+      setSchemes((current) =>
+        current.filter(
+          (scheme) => scheme.userSchemId !== selectedScheme?.userSchemId,
+        ),
+      );
+      setTotalElements((current) => Math.max(0, current - 1));
+    } else {
+      setSchemes((current) =>
+        current.map((scheme) => {
+          if (scheme.userSchemId !== selectedScheme?.userSchemId) return scheme;
+          const amount = Number(settledAmount) || 0;
+          return {
+            ...scheme,
+            maturityAmount: Math.max(0, Number(scheme.maturityAmount) - amount),
+            totalRedeemed: Number(scheme.totalRedeemed || 0) + amount,
+            profitAvailable: Math.max(
+              0,
+              Number(scheme.profitAvailable || 0) - amount,
+            ),
+          };
+        }),
+      );
+    }
+    setOpenForm(false);
+    setSelectedScheme(null);
   };
 // console.log(schemes)
   return (
@@ -329,13 +353,19 @@ export default function MaturingSchemesAdminDark() {
                     </span>
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <button
-                      className="p-2 text-cyan-400 hover:text-emerald-400 rounded-lg hover:bg-slate-800 transition-all duration-150 flex items-center gap-1 hover:scale-95"
-                      title="Mark as paid"
-                      onClick={() => formAction(scheme.userSchemId)}
-                    >
-                      <HandCoins className="w-4 h-4" /> Settle
-                    </button>
+                    {scheme.settlementPending ? (
+                      <span className="text-xs text-amber-300">
+                        Pending with remitter
+                      </span>
+                    ) : (
+                      <button
+                        className="p-2 text-cyan-400 hover:text-emerald-400 rounded-lg hover:bg-slate-800 transition-all duration-150 flex items-center gap-1 hover:scale-95"
+                        title="Settle scheme"
+                        onClick={() => formAction(scheme)}
+                      >
+                        <HandCoins className="w-4 h-4" /> Settle
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))
@@ -428,12 +458,21 @@ export default function MaturingSchemesAdminDark() {
                 </div>
               </div>
 
-              {/* Card Footer 
-              <div className="pt-2 border-t border-slate-800 flex justify-end">
-                <button className="w-full py-2 bg-slate-800/50 hover:bg-slate-800 text-indigo-400 font-medium text-xs rounded-lg border border-slate-700/60 flex items-center justify-center gap-1">
-                  <Eye className="w-3.5 h-3.5" /> View Details
-                </button>
-              </div>*/}
+              <div className="border-t border-slate-800 pt-3">
+                {scheme.settlementPending ? (
+                  <p className="text-center text-xs text-amber-300">
+                    Pending with remitter
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => formAction(scheme)}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-800/50 py-2 text-xs font-medium text-cyan-400 hover:bg-slate-800"
+                  >
+                    <HandCoins className="h-4 w-4" /> Settle
+                  </button>
+                )}
+              </div>
             </div>
           ))
         ) : (
@@ -451,6 +490,18 @@ export default function MaturingSchemesAdminDark() {
         onPageSizeChange={setItemsPerPage}
         darkMode={true}
       />
+
+      {openForm && selectedScheme && (
+        <SettlementForm
+          userScheme={selectedScheme}
+          onClose={() => {
+            setOpenForm(false);
+            setSelectedScheme(null);
+          }}
+          onSuccess={handleSettlementSuccess}
+        />
+      )}
+
     </div>
   );
 }

@@ -5,6 +5,7 @@ import {
   ShieldX,
   CheckCircleIcon,
   Share,
+  BanknoteArrowUp,
 } from "lucide-react";
 
 export const SCHEMES = [
@@ -30,6 +31,12 @@ export const STATUS_META = {
     icon: ShieldX,
     className: "text-rose-400 bg-rose-400/10 ring-rose-400/30",
   },
+  settled: {
+    label: "Settled",
+    icon: BanknoteArrowUp,
+    className: "text-cyan-400 bg-cyan-400/10 ring-cyan-400/30",
+  },
+
   withdrawn: {
     label: "withdrawn",
     icon: Share,
@@ -46,7 +53,6 @@ export const STATUS_META = {
     className: "text-rose-400 bg-rose-400/10 ring-rose-400/30",
   },
 };
-
 
 export const USERS = [
   {

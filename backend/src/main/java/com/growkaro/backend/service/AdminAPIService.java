@@ -12,8 +12,10 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -60,6 +62,7 @@ import com.growkaro.backend.entity.Guardian;
 import com.growkaro.backend.DRO.AddRemitter;
 import com.growkaro.backend.DRO.AdminUserProfileUpdateRequest;
 import com.growkaro.backend.DRO.ManualUserScheme;
+import com.growkaro.backend.DRO.MaturitySettlementRequest;
 import com.growkaro.backend.DRO.NewNominee;
 import com.growkaro.backend.DRO.ReceiveSchemeData;
 import com.growkaro.backend.DRO.SipInstallmentRequest;
@@ -131,6 +134,11 @@ public class AdminAPIService {
     private static final long MAX_PDF_SIZE_BYTES = 2L * 1024 * 1024;
     private static final float JPEG_QUALITY = 0.70f;
     private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
+    private static final long MAX_SETTLEMENT_PROOF_BYTES = 3L * 1024 * 1024;
+    private static final Set<String> SETTLEMENT_PROOF_TYPES = Set.of(
+            "image/jpeg", "image/png", "image/webp", "application/pdf");
+    private static final Set<String> SETTLEMENT_PAYMENT_MODES = Set.of(
+            "BANK_TRANSFER", "UPI", "CASH");
 
     // one time only ek hi thread ko pdf render karne do, baki wait karein
     private final Semaphore pdfRenderPermits = new Semaphore(1);
@@ -1500,10 +1508,218 @@ public class AdminAPIService {
         if (query == null || query.trim().isEmpty()) {
             query = "";
         }
-        var rawUsers = userSchemeRepository.findNearMaturityOrOverdueUsers(query, days, UserSchemeStatus.MATURED,
-                pageable);
+        var rawUsers = userSchemeRepository.findNearMaturityOrOverdueUsers(
+                query, days, List.of(UserSchemeStatus.MATURED, UserSchemeStatus.SETTLEMENT_PENDING), pageable);
         var mapped = rawUsers.map(NearMaturityUserSchemeResponse::fromUserScheme);
         return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
+    }
+
+    @Transactional
+    public Map<String, Object> settleMaturedScheme(
+            String userSchemeId,
+            MaturitySettlementRequest request,
+            MultipartFile proof) {
+        if (request == null || userSchemeId == null || userSchemeId.isBlank()) {
+            return general.response("error", "Invalid settlement request", null);
+        }
+
+        boolean sendToRemitter = "SEND_TO_REMITTER".equals(request.action());
+        boolean markDone = "MARK_DONE".equals(request.action());
+        if (!sendToRemitter && !markDone) {
+            return general.response("error", "Choose a valid settlement action", null);
+        }
+        if (request.settlementType() == null
+                || !Set.of("FULL", "PARTIAL", "PROFIT_ONLY").contains(request.settlementType())) {
+            return general.response("error", "Choose a valid settlement amount type", null);
+        }
+
+        UserScheme userScheme = userSchemeRepository.findByUserSchemeIdForUpdate(userSchemeId).orElse(null);
+        if (userScheme == null) {
+            return general.response("error", "Scheme not found", null);
+        }
+        if (userScheme.getStatus() == UserSchemeStatus.SETTLEMENT_PENDING) {
+            return general.response("error", "This scheme is already assigned to a remitter", null);
+        }
+        if (userScheme.getStatus() != UserSchemeStatus.MATURED) {
+            return general.response("error", "Only matured schemes can be settled", null);
+        }
+        boolean hasOutstandingRedemption = userScheme.getReedemLedger().stream()
+                .anyMatch(ledger -> ledger.getStatus() == ReedeemStatus.REQUESTED
+                        || ledger.getStatus() == ReedeemStatus.IN_PROGRESS);
+        if (hasOutstandingRedemption) {
+            return general.response(
+                    "error", "Resolve the existing pending redemption before settling this scheme", null);
+        }
+
+        User user = userScheme.getUser();
+        Remitter remitter = null;
+        if (sendToRemitter) {
+            if (request.remitterId() == null || request.remitterId().isBlank()) {
+                return general.response("error", "Select a remitter", null);
+            }
+            remitter = remitterRepository.findByRemitterId(request.remitterId()).orElse(null);
+            if (remitter == null || !Boolean.TRUE.equals(remitter.getStatus())) {
+                return general.response("error", "The selected remitter is unavailable", null);
+            }
+            if (user.getBankDetails() == null) {
+                return general.response("error", "The user must add bank details before a remitter can be assigned", null);
+            }
+        }
+
+        String paymentMode = null;
+        String transactionRef = null;
+        String receivedBy = null;
+        if (markDone) {
+            if (request.paymentMode() == null) {
+                return general.response("error", "Select a payment mode", null);
+            }
+            paymentMode = request.paymentMode().trim().toUpperCase(Locale.ROOT);
+            if (!SETTLEMENT_PAYMENT_MODES.contains(paymentMode)) {
+                return general.response("error", "Select a valid payment mode", null);
+            }
+            if (request.paymentDate() == null || request.paymentDate().isAfter(LocalDate.now(IST))) {
+                return general.response("error", "Enter a valid payment date no later than today", null);
+            }
+            if (proof == null || proof.isEmpty()
+                    || !SETTLEMENT_PROOF_TYPES.contains(proof.getContentType())
+                    || proof.getSize() > MAX_SETTLEMENT_PROOF_BYTES) {
+                return general.response("error", "Upload a JPG, PNG, WEBP, or PDF proof under 3 MB", null);
+            }
+            if ("CASH".equals(paymentMode)) {
+                receivedBy = request.receivedBy() == null ? "" : request.receivedBy().trim();
+                if (receivedBy.length() < 2 || receivedBy.length() > 100) {
+                    return general.response("error", "Enter the name of the person who received the cash", null);
+                }
+            } else {
+                transactionRef = request.transactionRef() == null ? "" : request.transactionRef().trim();
+                if (transactionRef.length() < 4 || transactionRef.length() > 100) {
+                    return general.response("error", "Enter a valid transaction / UTR reference", null);
+                }
+            }
+            if (request.remarks() != null && request.remarks().length() > 300) {
+                return general.response("error", "Remarks cannot exceed 300 characters", null);
+            }
+        }
+
+        BigDecimal settleable = general.calculateMaturityAmount(userScheme);
+        if (settleable == null || settleable.compareTo(BigDecimal.ZERO) <= 0) {
+            return general.response("error", "There is no amount available to settle", null);
+        }
+        BigDecimal amount;
+        String settlementType = request.settlementType();
+        if ("FULL".equals(settlementType)) {
+            amount = settleable;
+        } else if ("PARTIAL".equals(settlementType)) {
+            if (request.amount() == null || request.amount().compareTo(BigDecimal.ZERO) <= 0
+                    || request.amount().compareTo(settleable) > 0) {
+                return general.response("error", "Enter a partial amount within the available balance", null);
+            }
+            try {
+                amount = request.amount().setScale(2, java.math.RoundingMode.UNNECESSARY);
+            } catch (ArithmeticException e) {
+                return general.response("error", "Settlement amount cannot have more than two decimal places", null);
+            }
+        } else {
+            BigDecimal totalProfit = general.countProfit(userScheme.getProfitLedger());
+            amount = totalProfit.subtract(general.countReedem(userScheme.getReedemLedger()))
+                    .max(BigDecimal.ZERO).min(settleable);
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+                return general.response("error", "There is no profit available to settle", null);
+            }
+        }
+        if (amount.compareTo(settleable) == 0) {
+            settlementType = "FULL";
+        }
+
+        Transaction transaction = new Transaction();
+        transaction.setUser(user);
+        transaction.setUserScheme(userScheme);
+        transaction.setSchemeName(userScheme.getScheme().getSchemeName());
+        transaction.setAmount(amount);
+        transaction.setBankDetails(user.getBankDetails());
+        transaction.setType(TransactionType.MATURITY_WITHDRAWAL);
+        transaction.setSettlementType(settlementType);
+
+        UserSchemeReedemLedger ledger = new UserSchemeReedemLedger();
+        ledger.setUserScheme(userScheme);
+        ledger.setRedeemAmount(amount);
+        ledger.setRedeemDate(LocalDate.now(IST));
+        ledger.setRedeemType(switch (settlementType) {
+            case "PARTIAL" -> RedeemType.PARTIAL_REDEEM;
+            case "PROFIT_ONLY" -> RedeemType.INTEREST_REDEEM;
+            default -> RedeemType.MATURITY_WITHDRAWAL;
+        });
+
+        if (sendToRemitter) {
+            transaction.setRemitter(remitter);
+            transaction.setStatus(TransactionStatus.PROCESSED);
+            ledger.setStatus(ReedeemStatus.IN_PROGRESS);
+            userScheme.setStatus(UserSchemeStatus.SETTLEMENT_PENDING);
+        } else {
+            String proofUrl = localFileStorageService.store(proof, "settlements/" + userSchemeId);
+            if (proofUrl == null || proofUrl.isBlank()) {
+                return general.response("error", "Payment proof could not be stored", null);
+            }
+            try {
+                transaction.setStatus(TransactionStatus.SUCCESS);
+                transaction.setProofUrl(proofUrl);
+                transaction.setPaymentMode(paymentMode);
+                transaction.setTransactionReference(transactionRef);
+                transaction.setPaymentRecipient(receivedBy);
+                transaction.setSettlementRemarks(
+                        request.remarks() == null || request.remarks().isBlank()
+                                ? null
+                                : request.remarks().trim());
+                transaction.setSettlementDate(request.paymentDate().atStartOfDay());
+                ledger.setStatus(ReedeemStatus.COMPLETED);
+                userScheme.setStatus("FULL".equals(settlementType)
+                        ? UserSchemeStatus.SETTLED
+                        : UserSchemeStatus.MATURED);
+                userScheme.getReedemLedger().add(ledger);
+                userSchemeRepository.save(userScheme);
+                Transaction saved = transactionRepository.save(transaction);
+                try {
+                    crucialNotificationService.notifyAllForEssentialAction(
+                            EssentialActionType.WITHDRAWAL_DISBURSED,
+                            user,
+                            List.of(),
+                            null,
+                            "/dashboard/transactions",
+                            Map.of("amount", amount.toString(), "txnId", saved.getId()));
+                } catch (RuntimeException notificationError) {
+                    log.error("Settlement saved but notification could not be dispatched. userSchemeId={}",
+                            userSchemeId, notificationError);
+                }
+                return general.response(
+                        "success", "Scheme marked as settled", AdminTransactionResponse.fromEntity(saved));
+            } catch (RuntimeException e) {
+                try {
+                    localFileStorageService.delete(proofUrl);
+                } catch (RuntimeException cleanupError) {
+                    log.error("Could not remove settlement proof after failed save for userSchemeId={}",
+                            userSchemeId, cleanupError);
+                }
+                throw e;
+            }
+        }
+
+        userScheme.getReedemLedger().add(ledger);
+        userSchemeRepository.save(userScheme);
+        Transaction saved = transactionRepository.save(transaction);
+        try {
+            crucialNotificationService.notifyAllForEssentialAction(
+                    EssentialActionType.WITHDRAWAL_APPROVED,
+                    user,
+                    List.of(),
+                    remitter,
+                    "/dashboard/transactions",
+                    Map.of("amount", amount.toString(), "txnId", saved.getId()));
+        } catch (RuntimeException notificationError) {
+            log.error("Payout assigned but notification could not be dispatched. userSchemeId={}",
+                    userSchemeId, notificationError);
+        }
+        return general.response(
+                "success", "Payout assigned to remitter", AdminTransactionResponse.fromEntity(saved));
     }
 
     public UserFullDetails userProfile(String userId) {

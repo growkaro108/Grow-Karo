@@ -68,8 +68,14 @@ export default function TransactionsView() {
                     <p className="font-semibold text-gray-900">{tx.username}</p>
                     <p className="text-xs text-gray-400">
                       {tx.txnId}
-                      {/* • {tx.method} */}
                     </p>
+                    {(tx.paymentMode || tx.transactionReference || tx.paymentRecipient) && (
+                      <p className="text-xs text-gray-500">
+                        {[tx.paymentMode, tx.transactionReference || tx.paymentRecipient]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
                   </td>
                   <td className="py-4">
                     <p className="font-semibold text-gray-900">{tx.amount}</p>

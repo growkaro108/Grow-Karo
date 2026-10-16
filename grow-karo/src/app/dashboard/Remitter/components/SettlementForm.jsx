@@ -8,7 +8,14 @@ export default function SettlementForm({
   handleFileChange,
   handleSubmitSettlement,
   settlementAmount,
-  setSettlementAmount,
+  paymentMode,
+  setPaymentMode,
+  paymentDate,
+  setPaymentDate,
+  transactionReference,
+  setTransactionReference,
+  receivedBy,
+  setReceivedBy,
   proofFile,
   setProofFile,
   formError,
@@ -135,12 +142,11 @@ export default function SettlementForm({
               <input
                 type="number"
                 step="0.01"
-                min="1"
-                max="100000"
+                min="0.01"
                 inputMode="decimal"
                 required
+                readOnly
                 value={settlementAmount}
-                onChange={(e) => setSettlementAmount(e.target.value)}
                 className="w-full bg-transparent font-bold text-lg text-gray-900 outline-none"
               />
               <span className="absolute right-4 top-2.5 font-bold text-xs text-gray-400 bg-white border border-gray-100 px-2 py-0.5 rounded-md shadow-2xs">
@@ -148,6 +154,79 @@ export default function SettlementForm({
               </span>
             </div>
           </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="remitter-payment-mode"
+                className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-400"
+              >
+                Payment mode
+              </label>
+              <select
+                id="remitter-payment-mode"
+                value={paymentMode}
+                onChange={(event) => setPaymentMode(event.target.value)}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900"
+              >
+                <option value="BANK_TRANSFER">Bank transfer</option>
+                <option value="UPI">UPI</option>
+                <option value="CASH">Cash</option>
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor="remitter-payment-date"
+                className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-400"
+              >
+                Payment date
+              </label>
+              <input
+                id="remitter-payment-date"
+                type="date"
+                value={paymentDate}
+                onChange={(event) => setPaymentDate(event.target.value)}
+                required
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900"
+              />
+            </div>
+          </div>
+
+          {paymentMode === "CASH" ? (
+            <div>
+              <label
+                htmlFor="remitter-cash-recipient"
+                className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-400"
+              >
+                Cash received by
+              </label>
+              <input
+                id="remitter-cash-recipient"
+                value={receivedBy}
+                onChange={(event) => setReceivedBy(event.target.value)}
+                maxLength={100}
+                required
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900"
+              />
+            </div>
+          ) : (
+            <div>
+              <label
+                htmlFor="remitter-transaction-reference"
+                className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-400"
+              >
+                {paymentMode === "UPI" ? "UPI transaction ID" : "Transaction / UTR reference"}
+              </label>
+              <input
+                id="remitter-transaction-reference"
+                value={transactionReference}
+                onChange={(event) => setTransactionReference(event.target.value)}
+                maxLength={100}
+                required
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-bold uppercase text-gray-400 tracking-wider mb-1">

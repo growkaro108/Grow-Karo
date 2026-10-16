@@ -37,7 +37,7 @@ export default function BondStub({ bond, userName, scheme, onView, viewUser }) {
           {bond.bondNumber? `Bond: ${bond.bondNumber}` : `ID: ${bondLabel}`}
         </span>
         <StatusPill
-          status={bond.status||"pending"}
+          status={bond.status ||"pending"}
         />
       </header>
 
@@ -58,7 +58,7 @@ export default function BondStub({ bond, userName, scheme, onView, viewUser }) {
       <button
         type="button"
         onClick={() => onView(bond)}
-        className="group relative block aspect-[8/3] w-full overflow-hidden border-b border-slate-800 bg-[#F3ECD9] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-500"
+        className="group relative block aspect-8/3 w-full overflow-hidden border-b border-slate-800 bg-[#F3ECD9] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-500"
         aria-label={`View certificate for bond ${bondLabel}`}
       >
         {/*
@@ -67,7 +67,7 @@ export default function BondStub({ bond, userName, scheme, onView, viewUser }) {
           it to the top half. To show the bottom half instead, change `top-0`
           to `bottom-0` on the wrapper below.
         */}
-        <div className="absolute inset-x-0 top-0 aspect-[4/3] w-full">
+        <div className="absolute inset-x-0 top-0 aspect-4/3 w-full">
           {bond.bondUrl ? (
             <Image
               src={resolveMediaUrl(bond.bondUrl)}
@@ -90,7 +90,7 @@ export default function BondStub({ bond, userName, scheme, onView, viewUser }) {
 
         {/* soft fade at the cut edge so it reads as "continues" */}
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#F3ECD9] to-transparent"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-linear-to-t from-[#F3ECD9] to-transparent"
           aria-hidden="true"
         />
 

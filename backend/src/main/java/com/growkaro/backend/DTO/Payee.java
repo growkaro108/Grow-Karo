@@ -1,6 +1,7 @@
 package com.growkaro.backend.DTO;
 
 public record Payee(String txnId, String username, String amount, String time, String proofUrl, String settlementDate,
-        String accountHolderName, String bankName, String accountNumber, String ifscCode, String requestedDate) {
+        String accountHolderName, String bankName, String accountNumber, String ifscCode, String requestedDate,
+        String paymentMode, String transactionReference) {
 
 }

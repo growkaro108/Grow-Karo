@@ -92,6 +92,21 @@ public class Transaction {
     @Column(length = 255, nullable = true)
     private String proofUrl;
 
+    @Column(length = 30)
+    private String paymentMode;
+
+    @Column(length = 20)
+    private String settlementType;
+
+    @Column(length = 100)
+    private String transactionReference;
+
+    @Column(length = 100)
+    private String paymentRecipient;
+
+    @Column(length = 300)
+    private String settlementRemarks;
+
     private LocalDateTime settlementDate;
 
     @Version
@@ -112,7 +127,8 @@ public class Transaction {
     public enum TransactionType {
         GENERAL_WITHDRAWAL,
         AGGRESSIVE_WITHDRAWAL,
-        DEPOSIT
+        DEPOSIT,
+        MATURITY_WITHDRAWAL
     }
 
     @PrePersist

@@ -139,9 +139,10 @@ export async function createRemitterApi(remitterData) {
   });
 }
 
-export async function getAllRemittersApi() {
+export async function getAllRemittersApi(page = 0, limit = 10) {
   return await apiRequest(`${END_POINT}remitters`, {
     method: "GET",
+    params: { page, limit },
   });
 }
 
@@ -222,6 +223,23 @@ export async function getAllMaturityUserSchemeApi(payload) {
     method: "POST",
     body: payload
   });
+}
+
+export async function settleMaturedSchemeApi(userSchemeId, payload, proof) {
+  const body = new FormData();
+  body.append(
+    "data",
+    new Blob([JSON.stringify(payload)], { type: "application/json" }),
+  );
+  if (proof) body.append("proof", proof);
+
+  return await apiRequest(
+    `${END_POINT}maturity/user/${encodeURIComponent(userSchemeId)}/settlement`,
+    {
+      method: "POST",
+      body,
+    },
+  );
 }
 
 export async function getUserProfileApi(userId) {

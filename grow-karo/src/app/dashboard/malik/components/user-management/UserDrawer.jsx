@@ -42,7 +42,7 @@ import {
 } from "../../../../../../services/malikService";
 
 const CertificateLightbox = dynamic(() => import("../Certificatelightbox"), {
-  loading: () => <div className="h-4 w-[80%] m-auto border border-dashed rounded-2xl"></div>,
+  loading: () => <div className=" m-auto h-3 w-5 border border-dashed rounded-2xl bg-slate-200 animate-pulse"></div>,
   ssr: false,
 });
 const EnrolledSchemes = dynamic(() => import("./EnrolledSchemes"), {

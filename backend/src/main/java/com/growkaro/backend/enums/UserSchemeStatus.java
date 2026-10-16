@@ -7,5 +7,7 @@ public enum UserSchemeStatus {
     REJECTED,
     WITHDRAWN,
     MATURED,
+    SETTLEMENT_PENDING,
+    SETTLED,
     REINVESTED
 }

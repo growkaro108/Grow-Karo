@@ -125,6 +125,12 @@ public class TaskScheduler {
                     .findAllByMaturityDate(today, today);
 
             for (UserScheme userScheme : allApprovedUserSchemes) {
+                if (userScheme.getStatus() == UserSchemeStatus.SETTLEMENT_PENDING
+                        || userScheme.getStatus() == UserSchemeStatus.SETTLED
+                        || userScheme.getStatus() == UserSchemeStatus.REINVESTED
+                        || userScheme.getStatus() == UserSchemeStatus.WITHDRAWN) {
+                    continue;
+                }
                 BigDecimal totalProfit = userScheme.getProfitLedger().stream().map(a -> a.getProfitAmount())
                         .reduce((a, b) -> a.add(b)).orElse(BigDecimal.ZERO);
                 BigDecimal totalReedem = userScheme.getReedemLedger().stream().map(a -> a.getRedeemAmount())

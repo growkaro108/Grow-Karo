@@ -24,6 +24,13 @@ public class AdminTransactionResponse {
     private String method; // derived from bankDetails / UPI etc.
     private String status; // "pending" | "approved" | "rejected"
     private LocalDateTime requestedAt;
+    private String paymentMode;
+    private String settlementType;
+    private String transactionReference;
+    private String paymentRecipient;
+    private String proofUrl;
+    private LocalDateTime settlementDate;
+    private String settlementRemarks;
 
     public static AdminTransactionResponse fromEntity(Transaction txn) {
         return AdminTransactionResponse.builder()
@@ -36,6 +43,13 @@ public class AdminTransactionResponse {
                         : "N/A")
                 .status(mapStatus(txn.getStatus()))
                 .requestedAt(txn.getCreatedAt())
+                .paymentMode(txn.getPaymentMode())
+                .settlementType(txn.getSettlementType())
+                .transactionReference(txn.getTransactionReference())
+                .paymentRecipient(txn.getPaymentRecipient())
+                .proofUrl(txn.getProofUrl())
+                .settlementDate(txn.getSettlementDate())
+                .settlementRemarks(txn.getSettlementRemarks())
                 .build();
     }
 

@@ -185,8 +185,10 @@ public class RemitterAPIController {
     @PostMapping("/settlements")
     public Map<String, Object> settlements(@ModelAttribute PaymentSettlement paymentSettlement) {
         try {
-            if (paymentSettlement.remitterId() == null || paymentSettlement.remitterId().isEmpty()) {
-                log.info("Invalid request: remitterId {}", paymentSettlement.remitterId());
+            if (paymentSettlement == null || paymentSettlement.remitterId() == null
+                    || paymentSettlement.remitterId().isEmpty()) {
+                log.info("Invalid request: remitterId {}",
+                        paymentSettlement == null ? null : paymentSettlement.remitterId());
                 return general.response("error", "Invalid request", null);
             }
             String success = remitterAPIService.settlements(paymentSettlement);
@@ -196,8 +198,8 @@ public class RemitterAPIController {
                 return general.response("error", "Something went wrong..", null);
             }
         } catch (Exception e) {
-            log.error("Error in remitter settlements: remitterId {} because {}", paymentSettlement.remitterId(),
-                    e.getMessage());
+            log.error("Error in remitter settlements: remitterId {}",
+                    paymentSettlement == null ? null : paymentSettlement.remitterId(), e);
             return general.response("error", "Internal server error..", null);
         }
     }

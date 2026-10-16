@@ -9,6 +9,7 @@ import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Transaction;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
+import com.growkaro.backend.enums.UserSchemeStatus;
 import com.growkaro.backend.enums.ActivityType;
 import com.growkaro.backend.entity.Transaction.TransactionStatus;
 import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
@@ -33,6 +34,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -40,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Service
@@ -47,6 +51,7 @@ import java.util.stream.Collectors;
 public class RemitterAPIService {
 
     private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final Set<String> PAYMENT_MODES = Set.of("BANK_TRANSFER", "UPI", "CASH");
 
     private final RemitterRepository remitterRepository;
     private final EmailService emailService;
@@ -185,19 +190,35 @@ public class RemitterAPIService {
 
     @Transactional
     public String settlements(PaymentSettlement paymentSettlement) {
-        if (paymentSettlement == null || paymentSettlement.txnId() == null) {
+        if (paymentSettlement == null || paymentSettlement.txnId() == null
+                || paymentSettlement.amount() == null) {
             log.error("Error in remitter settlements: null payload/txnId");
             return null;
         }
 
+        String uploadedUrl = null;
         try {
+            String paymentMode = paymentSettlement.paymentMode() == null
+                    ? ""
+                    : paymentSettlement.paymentMode().trim().toUpperCase(Locale.ROOT);
+            LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
             Transaction transaction = transactionRepository.findByTxnId(paymentSettlement.txnId()).orElse(null);
             // Null / validity check MUST come before any access on 'transaction'
             if (transaction == null
                     || transaction.getRemitter() == null
                     || !transaction.getRemitter().getRemitterId().equals(paymentSettlement.remitterId())
                     || transaction.getStatus() != TransactionStatus.PROCESSED
-                    || transaction.getAmount().compareTo(paymentSettlement.amount()) != 0) {
+                    || transaction.getAmount().compareTo(paymentSettlement.amount()) != 0
+                    || !PAYMENT_MODES.contains(paymentMode)
+                    || paymentSettlement.paymentDate() == null
+                    || paymentSettlement.paymentDate().isAfter(today)
+                    || ("CASH".equals(paymentMode)
+                            ? paymentSettlement.receivedBy() == null
+                                    || paymentSettlement.receivedBy().trim().length() < 2
+                                    || paymentSettlement.receivedBy().trim().length() > 100
+                            : paymentSettlement.transactionRef() == null
+                                    || paymentSettlement.transactionRef().trim().length() < 4
+                                    || paymentSettlement.transactionRef().trim().length() > 100)) {
                 log.error("Error in remitter settlements: invalid txn/remitter/status/amount. txnId={}, remitterId={}",
                         paymentSettlement.txnId(), paymentSettlement.remitterId());
                 return null;
@@ -212,7 +233,7 @@ public class RemitterAPIService {
                 return null;
             }
 
-            String uploadedUrl = localFileStorageService.store(paymentSettlement.file(),
+            uploadedUrl = localFileStorageService.store(paymentSettlement.file(),
                     "settlements/" + paymentSettlement.txnId());
             if (uploadedUrl == null || uploadedUrl.isEmpty()) {
                 log.error("Error in remitter settlements: file storage failed. txnId={}, remitterId={}",
@@ -220,13 +241,25 @@ public class RemitterAPIService {
                 return null;
             }
 
-            LocalDateTime now = general.getCurrentDateTime();
             Remitter remitter = transaction.getRemitter();
             User user = transaction.getUser();
 
+            boolean status = general.changeReedemStatus(us, paymentSettlement.amount(), ReedeemStatus.COMPLETED);
+            if (!status) {
+                localFileStorageService.delete(uploadedUrl);
+                log.error("Error in remitter settlements: invalid reedemLedger. txnId={}, remitterId={}",
+                        paymentSettlement.txnId(), paymentSettlement.remitterId());
+                return null;
+            }
+
             transaction.setStatus(TransactionStatus.SUCCESS);
             transaction.setProofUrl(uploadedUrl);
-            transaction.setSettlementDate(now);
+            transaction.setPaymentMode(paymentMode);
+            transaction.setTransactionReference(
+                    "CASH".equals(paymentMode) ? null : paymentSettlement.transactionRef().trim());
+            transaction.setPaymentRecipient(
+                    "CASH".equals(paymentMode) ? paymentSettlement.receivedBy().trim() : null);
+            transaction.setSettlementDate(paymentSettlement.paymentDate().atStartOfDay());
             transactionRepository.save(transaction);
 
             Set<User> users = remitter.getUsers();
@@ -239,11 +272,10 @@ public class RemitterAPIService {
             remitter.setTotalPaid(remitter.getTotalPaid().add(transaction.getAmount()));
             remitterRepository.save(remitter);
 
-            boolean status = general.changeReedemStatus(us, paymentSettlement.amount(), ReedeemStatus.COMPLETED);
-            if (!status) {
-                log.error("Error in remitter settlements: invalid reedemLedger. txnId={}, remitterId={}",
-                        paymentSettlement.txnId(), paymentSettlement.remitterId());
-                return null;
+            if (transaction.getType() == Transaction.TransactionType.MATURITY_WITHDRAWAL) {
+                us.setStatus("FULL".equals(transaction.getSettlementType())
+                        ? UserSchemeStatus.SETTLED
+                        : UserSchemeStatus.MATURED);
             }
 
             try {
@@ -265,7 +297,15 @@ public class RemitterAPIService {
         } catch (Exception e) {
             log.error("Error in remitter settlements: remitterId={} txnId={}",
                     paymentSettlement.remitterId(), paymentSettlement.txnId(), e);
-            return null;
+            if (uploadedUrl != null) {
+                try {
+                    localFileStorageService.delete(uploadedUrl);
+                } catch (RuntimeException cleanupError) {
+                    log.error("Could not remove failed settlement proof for txnId={}",
+                            paymentSettlement.txnId(), cleanupError);
+                }
+            }
+            throw new IllegalStateException("Remitter settlement could not be completed", e);
         }
     }
 

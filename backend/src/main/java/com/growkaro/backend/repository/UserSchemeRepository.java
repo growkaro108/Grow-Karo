@@ -56,12 +56,16 @@ public interface UserSchemeRepository extends JpaRepository<UserScheme, String> 
                         "LOWER(s.schemeName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
                         "LOWER(us.bondNumber) LIKE LOWER(CONCAT('%', :query, '%'))) " +
                         "AND us.maturityDate <= (CURRENT_DATE + :remainingDays DAY) " +
-                        "AND us.status = :status")
+                        "AND us.status IN :statuses")
         Page<UserScheme> findNearMaturityOrOverdueUsers(
                         @Param("query") String query,
                         @Param("remainingDays") int remainingDays,
-                        @Param("status") UserSchemeStatus status,
+                        @Param("statuses") List<UserSchemeStatus> statuses,
                         Pageable pageable);
+
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
+        @Query("SELECT us FROM UserScheme us JOIN FETCH us.scheme JOIN FETCH us.user WHERE us.userSchemeId = :userSchemeId")
+        Optional<UserScheme> findByUserSchemeIdForUpdate(@Param("userSchemeId") String userSchemeId);
 
         // get all approved user
         @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -71,7 +75,8 @@ public interface UserSchemeRepository extends JpaRepository<UserScheme, String> 
                         us JOIN
                         FETCH us.scheme
                         WHERE us.isApproved=true
-                        AND us.nextPayoutDate=:today""")
+                        AND us.nextPayoutDate=:today
+                        AND us.status NOT IN ('SETTLEMENT_PENDING', 'SETTLED', 'REINVESTED', 'WITHDRAWN', 'REJECTED')""")
 
         List<UserScheme> findAllApprovedUserSchemes(@Param("today") LocalDate today);
 

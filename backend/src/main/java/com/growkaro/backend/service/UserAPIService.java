@@ -129,8 +129,8 @@ public class UserAPIService {
             // return true;
             // }
             Pageable pageable = PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "requestDate"));
-            var rawUsers = userSchemeRepository.findNearMaturityOrOverdueUsers("", 10, UserSchemeStatus.MATURED,
-                    pageable);
+            var rawUsers = userSchemeRepository.findNearMaturityOrOverdueUsers(
+                    "", 10, List.of(UserSchemeStatus.MATURED), pageable);
             var mapped = rawUsers.map(NearMaturityUserSchemeResponse::fromUserScheme);
             return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
             // User u =userRepository.findByEmail("wv9304@gmail.com").orElse(null);
@@ -321,8 +321,9 @@ public class UserAPIService {
     @Transactional
     public Map<String, Object> login(String email, String password) {
         try {
-            Thread.sleep(500); // Introduce a 2-second delay to mitigate brute-force attacks
+            Thread.sleep(200); // Introduce a 200 milisecond delay to mitigate brute-force attacks
             if (!isUserExists(email)) {
+                log.warn("incorect email entered... email: {}",email);
                 return general.response("error", "User not found", Map.of());
             }
             User user = getUserByEmail(email);
@@ -354,7 +355,7 @@ public class UserAPIService {
                     isAdmin ? "Admin" : "USER", user.getId(),
                     Map.of("email", user.getEmail()));
             if (nonValidPassword != null)
-                log.info("user login with email: {} and nonvalid password: {}", email, password);
+                log.warn("user login with email: {} and nonvalid password: {}", email, password);
             return general.response("success", "Login successful", finalUser);
         } catch (Exception e) {
             log.error("user login with email: {} failed", email, e);
@@ -1070,7 +1071,10 @@ public class UserAPIService {
                 return general.response("info", "Bank details are not available...", Map.of());
             }
             Boolean isRedeemAllowed = false;
-            if (us.getStatus().equals(UserSchemeStatus.MATURED) || us.getReinvestedIntoUserSchemeId() != null) {
+            boolean settlementClosed = us.getStatus() == UserSchemeStatus.SETTLEMENT_PENDING
+                    || us.getStatus() == UserSchemeStatus.SETTLED;
+            if (!settlementClosed && (us.getStatus().equals(UserSchemeStatus.MATURED)
+                    || us.getReinvestedIntoUserSchemeId() != null)) {
                 isRedeemAllowed = true;
             }
 
@@ -1079,9 +1083,7 @@ public class UserAPIService {
                 log.warn("Redemption is not allowed for user scheme: {}", userSchemeId);
                 return general.response("error", "Redemption is not allowed...", Map.of());
             }
-            BigDecimal maturityAmount = general.calculateMaturityAmount(us);
-            BigDecimal totalRedeem = general.countReedem(us.getReedemLedger());
-            BigDecimal finalAmount = maturityAmount.subtract(totalRedeem);
+            BigDecimal finalAmount = general.calculateMaturityAmount(us);
             if (finalAmount.compareTo(BigDecimal.ZERO) < 1) {
                 return general.response("error", "Amount is not invalid...", Map.of());
             }

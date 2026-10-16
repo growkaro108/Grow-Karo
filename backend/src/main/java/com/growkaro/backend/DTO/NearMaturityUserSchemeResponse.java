@@ -11,6 +11,7 @@ import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
+import com.growkaro.backend.enums.UserSchemeStatus;
 
 public record NearMaturityUserSchemeResponse(
                 String id,
@@ -23,6 +24,9 @@ public record NearMaturityUserSchemeResponse(
                 String bondNumber,
                 BigDecimal investmentAmount,
                 BigDecimal maturityAmount,
+                BigDecimal totalProfit,
+                BigDecimal totalRedeemed,
+                BigDecimal profitAvailable,
                 String maturityDate,
                 int daysRemaining,
                 String bondImage,
@@ -31,7 +35,8 @@ public record NearMaturityUserSchemeResponse(
                 String ifsc,
                 String accountHolderName,
                 String bankName,
-                String cust_id) {
+                String cust_id,
+                boolean settlementPending) {
 
         private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy");
         private static final General g = new General();
@@ -45,6 +50,11 @@ public record NearMaturityUserSchemeResponse(
                 LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
                 int remainingDays = (int) ChronoUnit.DAYS.between(today, maturityDate);
                 BigDecimal maturityAmount = g.calculateMaturityAmount(us);
+                BigDecimal totalProfit = g.countProfit(us.getProfitLedger());
+                BigDecimal totalRedeemed = g.countReedem(us.getReedemLedger());
+                BigDecimal profitAvailable = totalProfit.subtract(totalRedeemed)
+                                .max(BigDecimal.ZERO)
+                                .min(maturityAmount.max(BigDecimal.ZERO));
                 return new NearMaturityUserSchemeResponse(
                                 us.getUserSchemeId(),
                                 u.getId(),
@@ -56,15 +66,19 @@ public record NearMaturityUserSchemeResponse(
                                 us.getBondNumber(),
                                 us.getPaidAmount(),
                                 maturityAmount,
+                                totalProfit,
+                                totalRedeemed,
+                                profitAvailable,
                                 maturityDate.format(DATE_FORMATTER),
                                 remainingDays,
                                 us.getBondImageURL(),
                                 us.getEnrollmentDate().format(DATE_FORMATTER),
-                                bd.getAccountNumber(),
-                                bd.getIfscCode(),
-                                bd.getAccountHolderName(),
-                                bd.getBankName(),
-                                g.getCustomerId(u.getId()));
+                                bd == null ? null : bd.getAccountNumber(),
+                                bd == null ? null : bd.getIfscCode(),
+                                bd == null ? null : bd.getAccountHolderName(),
+                                bd == null ? null : bd.getBankName(),
+                                g.getCustomerId(u.getId()),
+                                us.getStatus() == UserSchemeStatus.SETTLEMENT_PENDING);
         }
 
 }

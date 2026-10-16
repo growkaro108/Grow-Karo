@@ -35,6 +35,7 @@ import {
   addBulkUsersApi,
   addBulkUsersCsvApi,
   getAllMaturityUserSchemeApi,
+  settleMaturedSchemeApi,
   getUserProfileApi,
   updateAdminUserProfileApi,
 } from "@/api/adminApi";
@@ -285,6 +286,31 @@ export async function getAllMaturityUserScheme(debouncedSearch, daysThreshold, c
     return false;
   }
   return res.data;
+}
+
+export async function getActiveRemitters() {
+  const remitters = [];
+  let page = 0;
+  let totalPages = 1;
+
+  while (page < totalPages) {
+    const response = await getAllRemittersApi(page, 10);
+    if (response?.status !== "success") {
+      allRounderMessage(response);
+      return null;
+    }
+    remitters.push(...(response.data?.content ?? []));
+    totalPages = response.data?.totalPages ?? 0;
+    page += 1;
+  }
+
+  return remitters.filter((remitter) => remitter.status);
+}
+
+export async function settleMaturedScheme(userSchemeId, payload, proof) {
+  const response = await settleMaturedSchemeApi(userSchemeId, payload, proof);
+  allRounderMessage(response);
+  return response;
 }
 
 export async function getUserProfile(id) {

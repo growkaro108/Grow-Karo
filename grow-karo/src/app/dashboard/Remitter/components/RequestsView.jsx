@@ -32,17 +32,35 @@ function sanitizeText(value, maxLength = 100) {
     .slice(0, maxLength);
 }
 
+function todayForDateInput() {
+  const date = new Date();
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 10);
+}
+
 export default function RequestsView({ requests = [] }) {
   const [activeSettlement, setActiveSettlement] = useState(null);
   const [settlementAmount, setSettlementAmount] = useState("");
   const [proofFile, setProofFile] = useState(null);
   const [remitterMessage, setRemitterMessage] = useState("");
+  const [paymentMode, setPaymentMode] = useState("BANK_TRANSFER");
+  const [paymentDate, setPaymentDate] = useState(todayForDateInput);
+  const [transactionReference, setTransactionReference] = useState("");
+  const [receivedBy, setReceivedBy] = useState("");
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const { authRemitter } = use(remitterContext);
   const [pendingRemittanceRequests, setPendingRemittanceRequests] = useState(null);
+  useEffect(() => {
+    const previewUrl = proofFile?.url;
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [proofFile]);
+
   useEffect(() => {
     const getPendingRemittanceRequests = async () => {
       const response = await getRemittersPendingRequests(authRemitter?.id);
@@ -83,6 +101,10 @@ export default function RequestsView({ requests = [] }) {
     setFormError("");
     setProofFile(null);
     setRemitterMessage("");
+    setPaymentMode("BANK_TRANSFER");
+    setPaymentDate(todayForDateInput());
+    setTransactionReference("");
+    setReceivedBy("");
   };
 
   const handleCloseSettlement = () => {
@@ -90,6 +112,10 @@ export default function RequestsView({ requests = [] }) {
     setSettlementAmount("");
     setProofFile(null);
     setRemitterMessage("");
+    setPaymentMode("BANK_TRANSFER");
+    setPaymentDate(todayForDateInput());
+    setTransactionReference("");
+    setReceivedBy("");
     setFormError("");
     setIsSubmitting(false);
   };
@@ -135,19 +161,31 @@ export default function RequestsView({ requests = [] }) {
     }
 
     const parsedAmount = Number(settlementAmount);
-    if (
-      !Number.isFinite(parsedAmount) ||
-      parsedAmount <= 0 ||
-      parsedAmount > 1000000
-    ) {
-      setFormError(
-        "Enter a valid settlement amount between ₹0.01 and ₹1,000,000.",
-      );
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setFormError("The payout amount is invalid. Please contact an admin.");
       return;
     }
 
     if (!proofFile) {
       setFormError("Please upload payment proof before submitting.");
+      return;
+    }
+
+    if (!paymentDate || paymentDate > todayForDateInput()) {
+      setFormError("Enter a valid payment date no later than today.");
+      return;
+    }
+    if (
+      paymentMode === "CASH"
+        ? receivedBy.trim().length < 2 || receivedBy.trim().length > 100
+        : transactionReference.trim().length < 4 ||
+          transactionReference.trim().length > 100
+    ) {
+      setFormError(
+        paymentMode === "CASH"
+          ? "Enter the name of the person who received the cash."
+          : "Enter a valid transaction / UTR reference.",
+      );
       return;
     }
 
@@ -166,6 +204,10 @@ export default function RequestsView({ requests = [] }) {
     formData.append("remitterId", authRemitter?.id);
     formData.append("txnId", activeSettlement.txnId);
     formData.append("amount", parsedAmount);
+    formData.append("paymentMode", paymentMode);
+    formData.append("paymentDate", paymentDate);
+    formData.append("transactionRef", transactionReference.trim());
+    formData.append("receivedBy", receivedBy.trim());
     formData.append("file", proofFile?.file);
     // formData.append("remitterMessage", sanitizedMessage);
 
@@ -192,6 +234,9 @@ export default function RequestsView({ requests = [] }) {
         setIsSubmitting(false);
         handleCloseSettlement();
       }, 300);
+    } else {
+      setIsSubmitting(false);
+      setFormError("Settlement could not be submitted. Please try again.");
     }
   };
 
@@ -289,7 +334,14 @@ export default function RequestsView({ requests = [] }) {
           handleFileChange={handleFileChange}
           handleSubmitSettlement={handleSubmitSettlement}
           settlementAmount={settlementAmount}
-          setSettlementAmount={setSettlementAmount}
+          paymentMode={paymentMode}
+          setPaymentMode={setPaymentMode}
+          paymentDate={paymentDate}
+          setPaymentDate={setPaymentDate}
+          transactionReference={transactionReference}
+          setTransactionReference={setTransactionReference}
+          receivedBy={receivedBy}
+          setReceivedBy={setReceivedBy}
           proofFile={proofFile}
           setProofFile={setProofFile}
           formError={formError}

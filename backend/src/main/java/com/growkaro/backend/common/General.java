@@ -443,11 +443,13 @@ public class General {
                 request.getSettlementDate() != null
                         ? request.getSettlementDate().format(DATE_FORMATTER)
                         : "Not Yet Settled",
-                bd.getAccountHolderName(),
-                bd.getBankName(),
-                bd.getAccountNumber(),
-                bd.getIfscCode(),
-                request.getCreatedAt().format(DATE_FORMATTER));
+                bd != null ? bd.getAccountHolderName() : null,
+                bd != null ? bd.getBankName() : null,
+                bd != null ? bd.getAccountNumber() : null,
+                bd != null ? bd.getIfscCode() : null,
+                request.getCreatedAt().format(DATE_FORMATTER),
+                request.getPaymentMode(),
+                request.getTransactionReference());
     }
 
     public Recipient toRecipient(List<Transaction> userTransactions) {
@@ -555,7 +557,11 @@ public class General {
 
     public boolean changeReedemStatus(UserScheme u, BigDecimal amount, ReedeemStatus status) {
         UserSchemeReedemLedger reedemLedger = reedemLedgerRepository
-                .findByUserSchemeAndRedeemAmount(u, amount).orElse(null);
+                .findFirstByUserSchemeAndRedeemAmountAndStatusInOrderByIdDesc(
+                        u,
+                        amount,
+                        List.of(ReedeemStatus.REQUESTED, ReedeemStatus.IN_PROGRESS))
+                .orElse(null);
         if (reedemLedger == null) {
             log.error("Error in reedem ledger : invalid reedemLedger. userSchemeId={}, amount={}",
                     u.getUserSchemeId(), amount);
@@ -600,17 +606,12 @@ public class General {
             int periodDays = resolvePeriodDays(bond.getScheme().getPayoutFrequency(), bond.getScheme().getTenure());
             int times = bond.getScheme().getTenure() / periodDays; // Integer division floors automatically
 
-            // If you want to track or factor in redemptions:
-            BigDecimal totalRedeem = countReedem(bond.getReedemLedger());
-
             BigDecimal interestPerPeriod = paidAmount.multiply(profitMultiplier);
             totalMaturity = paidAmount.add(interestPerPeriod.multiply(BigDecimal.valueOf(times)));
-
-            // Subtract already redeemed amounts if applicable to your business logic:
-            totalMaturity = totalMaturity.subtract(totalRedeem);
         }
 
-        return totalMaturity;
+        return totalMaturity.subtract(countReedem(bond.getReedemLedger()))
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
     public String getCustomerId(String id) {
