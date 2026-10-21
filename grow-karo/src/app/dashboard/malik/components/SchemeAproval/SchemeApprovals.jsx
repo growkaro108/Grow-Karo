@@ -159,7 +159,12 @@ export default function SchemeApproval() {
     paidDate >= reqDate &&
     paidDate <= getToday();
 
-  const handleConfirmApproval = useCallback(async (submitTo, amountFrom) => {
+  const handleConfirmApproval = useCallback(async (
+    submitTo,
+    amountFrom,
+    totalInterestPercentage,
+    tenureMonths,
+  ) => {
     // console.log(submitTo, amountFrom);
     if (!selectedRequest || !isValidAmount) {
       // console.log(paidAmount);
@@ -201,6 +206,12 @@ export default function SchemeApproval() {
       paidDate: paidDate,
       amountFrom: amountFrom,
       submitTo: submitTo,
+      totalInterestPercentage: selectedRequest.planType === "PENSION"
+        ? Number(totalInterestPercentage)
+        : null,
+      tenureMonths: selectedRequest.planType === "PENSION"
+        ? Number(tenureMonths)
+        : null,
     };
     // console.log(payload);
     let response = null;
@@ -239,6 +250,7 @@ export default function SchemeApproval() {
       setSubmitting(false);
     }
   }, [
+    userId,
     selectedRequest,
     isValidAmount,
     isLessPaid,
@@ -246,7 +258,6 @@ export default function SchemeApproval() {
     numericPaid,
     paidDate,
     showToast,
-    mergeRequestInState,
     loadRequests,
   ]);
 
@@ -400,6 +411,7 @@ export default function SchemeApproval() {
       />
 
       <ApprovalModal
+        key={selectedRequest?.userSchemeId || "closed"}
         selectedRequest={selectedRequest}
         setSelectedRequest={setSelectedRequest}
         paidAmount={paidAmount}

@@ -57,6 +57,10 @@ public class UserSchemePayoutProcessor {
             return BatchOutcome.SKIPPED;
         }
 
+        if ("PENSION".equalsIgnoreCase(userScheme.getScheme().getPlanType())) {
+            return BatchOutcome.SKIPPED;
+        }
+
         LocalDate today = general.getCurrentDate();
 
         // Cheap early-exit (avoids the calculation work entirely on a normal re-run)

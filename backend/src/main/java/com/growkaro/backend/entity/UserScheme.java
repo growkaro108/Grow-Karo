@@ -81,6 +81,12 @@ public class UserScheme {
     @Column(name = "paid_amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal paidAmount = BigDecimal.ZERO;
 
+    @Column(name = "contract_total_interest_percentage")
+    private Double contractTotalInterestPercentage;
+
+    @Column(name = "contract_tenure_months")
+    private Integer contractTenureMonths;
+
     @Column(name = "amount_from")
     private String amountFrom;
 
@@ -200,4 +206,3 @@ public class UserScheme {
     }
 
 }
-

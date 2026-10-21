@@ -3,6 +3,8 @@ package com.growkaro.backend.DTO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Map;
 
 import com.growkaro.backend.common.General;
@@ -38,7 +40,11 @@ public record UserPortfolio(
         LocalDateTime update_on,
         BigDecimal minimumAmount,
         BigDecimal maximumAmount,
-        String reinvestedIntoUserSchemeId) {
+        String reinvestedIntoUserSchemeId,
+        String planType,
+        Integer tenureMonths,
+        BigDecimal contractInterestAmount,
+        List<UserSchemeProfitLedgerResponse> profitLedger) {
 
     public static final General general = new General();
 
@@ -51,12 +57,22 @@ public record UserPortfolio(
         BigDecimal pendingSchemeRedeem = profitAndReeemedProfit.get("pendingSchemeRedeem");
         Scheme scheme = us.getScheme();
         Nominee nominee = us.getNominee();
+        boolean isPension = "PENSION".equalsIgnoreCase(scheme.getPlanType());
+        Double profitPercentage = isPension && us.getContractTotalInterestPercentage() != null
+                ? us.getContractTotalInterestPercentage()
+                : scheme.getProfitPercentage();
+        Integer tenureMonths = isPension && us.getContractTenureMonths() != null
+                ? us.getContractTenureMonths()
+                : scheme.getTenureMonths();
+        Integer tenure = isPension && us.getPaidDate() != null && us.getMaturityDate() != null
+                ? Math.toIntExact(ChronoUnit.DAYS.between(us.getPaidDate(), us.getMaturityDate()))
+                : scheme.getTenure();
         return new UserPortfolio(
                 scheme.getSchemeId(),
                 scheme.getSchemeName(),
-                scheme.getTenure(),
+                tenure,
                 scheme.getPayoutFrequency(),
-                scheme.getProfitPercentage(),
+                profitPercentage,
                 us.getEnrollmentDate(),
                 us.getBondImageURL(),
                 us.getBondPdfURL(),
@@ -77,7 +93,14 @@ public record UserPortfolio(
                 us.getUpdatedAt(),
                 scheme.getMinimumAmount(),
                 scheme.getMaximumAmount(),
-                us.getReinvestedIntoUserSchemeId());
+                us.getReinvestedIntoUserSchemeId(),
+                scheme.getPlanType(),
+                tenureMonths,
+                isPension ? general.calculatePensionInterestAmount(us.getPaidAmount(), profitPercentage, tenureMonths) : null,
+                us.getProfitLedger().stream()
+                        .map(entry -> new UserSchemeProfitLedgerResponse(
+                                entry.getId(), entry.getProfitAmount(), entry.getProfitDate(), entry.isPaid()))
+                        .toList());
     }
 
 }

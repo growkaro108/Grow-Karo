@@ -76,6 +76,27 @@ export const calculateMaturityDate = (startDate, tenure) => {
   ].join("-");
 };
 
+export const calculateMaturityDateInMonths = (startDate, months) => {
+  if (!startDate || !Number.isInteger(Number(months)) || Number(months) <= 0) {
+    return "";
+  }
+
+  const [year, month, day] = startDate.split("-").map(Number);
+  if (!year || !month || !day) return "";
+
+  const maturity = new Date(Date.UTC(year, month - 1 + Number(months), 1));
+  const lastDay = new Date(
+    Date.UTC(maturity.getUTCFullYear(), maturity.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  maturity.setUTCDate(Math.min(day, lastDay));
+
+  return [
+    maturity.getUTCFullYear(),
+    String(maturity.getUTCMonth() + 1).padStart(2, "0"),
+    String(maturity.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+};
+
 export const initials = (name) =>
   name
     .split(" ")
@@ -113,6 +134,9 @@ function resolvePeriodDays(payoutFrequency, tenure) {
 }
 
 export const calculateMaturityAmount = (bond) => {
+  if (bond?.planType === "PENSION") {
+    return Number(bond.maturityAmount ?? bond.paidAmount ?? 0);
+  }
   if (bond.payoutCycle === "tenure-complete")
     return bond.paidAmount * (1 + bond.profitPercentage / 100);
   else {
@@ -170,7 +194,7 @@ export function validatePayload(payload) {
   const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/; // 11-character Indian IFSC
   const accountNoRegex = /^\d{9,18}$/; // 9-18 digit Bank Account Number
 
-  // Standard validations
+  // Standard validations (Required)
   if (!payload.name) errors.push("Name is required.");
   if (!payload.email || !emailRegex.test(payload.email))
     errors.push("Valid email address is required.");
@@ -185,29 +209,61 @@ export function validatePayload(payload) {
     errors.push("Date of birth must be a valid date.");
   }
 
-  // Guardian validations
-  if (!payload.guardian.name) errors.push("Guardian name is required.");
-  if (!payload.guardian.relation) errors.push("Guardian relation is required.");
+  // Guardian validations (Optional - validated only if provided)
+  if (
+    payload.guardian &&
+    (payload.guardian.name || payload.guardian.relation)
+  ) {
+    if (!payload.guardian.name)
+      errors.push(
+        "Guardian name is required if guardian details are provided.",
+      );
+    if (!payload.guardian.relation)
+      errors.push(
+        "Guardian relation is required if guardian details are provided.",
+      );
+  }
 
-  // Nominee validations
-  if (payload.nominee.aadharNo && !aadharRegex.test(payload.nominee.aadharNo)) {
-    errors.push("Nominee Aadhar number must be a valid 12-digit number.");
-  }
-  if (payload.nominee.mobileNo && !phoneRegex.test(payload.nominee.mobileNo)) {
-    errors.push("Nominee mobile number must be a valid 10-digit phone number.");
+  // Nominee validations (Optional - validated only if fields are present)
+  if (payload.nominee) {
+    if (
+      payload.nominee.aadharNo &&
+      !aadharRegex.test(payload.nominee.aadharNo)
+    ) {
+      errors.push("Nominee Aadhar number must be a valid 12-digit number.");
+    }
+    if (
+      payload.nominee.mobileNo &&
+      !phoneRegex.test(payload.nominee.mobileNo)
+    ) {
+      errors.push(
+        "Nominee mobile number must be a valid 10-digit phone number.",
+      );
+    }
   }
 
-  // Bank validations
-  if (!payload.bankName) errors.push("Bank name is required.");
-  if (!payload.accountHolderName)
-    errors.push("Account holder name is required.");
-  if (!payload.accountNumber || !accountNoRegex.test(payload.accountNumber)) {
-    errors.push("Valid bank account number (9 to 18 digits) is required.");
-  }
-  if (!payload.ifscCode || !ifscRegex.test(payload.ifscCode)) {
-    errors.push(
-      "Valid 11-character IFSC code is required (e.g., BKID0001234).",
-    );
+  // Bank validations (Optional - validated only if at least one bank field is present)
+  const hasBankDetails =
+    payload.bankName ||
+    payload.accountHolderName ||
+    payload.accountNumber ||
+    payload.ifscCode;
+
+  if (hasBankDetails) {
+    if (!payload.bankName)
+      errors.push("Bank name is required when providing bank details.");
+    if (!payload.accountHolderName)
+      errors.push(
+        "Account holder name is required when providing bank details.",
+      );
+    if (!payload.accountNumber || !accountNoRegex.test(payload.accountNumber)) {
+      errors.push("Valid bank account number (9 to 18 digits) is required.");
+    }
+    if (!payload.ifscCode || !ifscRegex.test(payload.ifscCode)) {
+      errors.push(
+        "Valid 11-character IFSC code is required (e.g., BKID0001234).",
+      );
+    }
   }
 
   return {

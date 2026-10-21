@@ -136,19 +136,28 @@ public class TaskScheduler {
                 BigDecimal totalReedem = userScheme.getReedemLedger().stream().map(a -> a.getRedeemAmount())
                         .reduce((a, b) -> a.add(b)).orElse(BigDecimal.ZERO);
                 BigDecimal netProfit = userScheme.getPaidAmount().add(totalProfit.subtract(totalReedem));
+                boolean isPension = "PENSION".equalsIgnoreCase(userScheme.getScheme().getPlanType());
+                BigDecimal maturityReturn = isPension ? general.calculateMaturityAmount(userScheme) : netProfit;
                 if (userScheme.getStatus() != UserSchemeStatus.MATURED) {
                     // Uncomment these when ready to save
                     userScheme.setStatus(UserSchemeStatus.MATURED);
                     userSchemeRepository.save(userScheme);
                     try {
                         String title = "Scheme Maturity Alert";
-                        String message = String.format(
-                                "Your investment in '%s' has matured today.\n\n" +
-                                        "• Maturity Returns: ₹%s\n" +
-                                        "• Status: Ready for withdrawal or reinvestment\n\n" +
-                                        "Visit your dashboard to view complete return details.",
-                                userScheme.getScheme().getSchemeName(),
-                                netProfit.toString());
+                        String message = isPension
+                                ? String.format(
+                                        "Your Pension Plan '%s' has matured today.\n\n" +
+                                                "• Principal due: ₹%s\n" +
+                                                "• Interest payouts are tracked separately.\n" +
+                                                "• Principal will be returned within 30 days; it is not automatically reinvested.\n\n" +
+                                                "Visit your dashboard to view the settlement details.",
+                                        userScheme.getScheme().getSchemeName(), maturityReturn)
+                                : String.format(
+                                        "Your investment in '%s' has matured today.\n\n" +
+                                                "• Maturity Returns: ₹%s\n" +
+                                                "• Status: Ready for withdrawal or reinvestment\n\n" +
+                                                "Visit your dashboard to view complete return details.",
+                                        userScheme.getScheme().getSchemeName(), maturityReturn);
 
                         crucialNotificationService.sendUserNotificationWithCustomMessage(
                                 title,
@@ -189,6 +198,10 @@ public class TaskScheduler {
 
         for (UserScheme us : allApprovedUserSchemes) {
             String userSchemeId = us.getUserSchemeId();
+            if ("PENSION".equalsIgnoreCase(us.getScheme().getPlanType())) {
+                log.info("Skipping automatic reinvestment for Pension Plan userScheme id={}", userSchemeId);
+                continue;
+            }
             try {
                 ReinvestResult result = payoutProcessor.reinvestSingle(us, today);
 

@@ -17,6 +17,7 @@ export function PlanCard({
   const isFull = plan.maxInvestorsAllowed != null && slotsLeft <= 0;
   const enrolledCount = enrolledMap.get(plan.schemeId) ?? 0;
   const { authRemitter } = use(remitterContext);
+  const isPension = plan.planType === "PENSION";
 
   return (
     <div
@@ -67,9 +68,14 @@ export function PlanCard({
           <p className="text-2xl font-bold" style={{ color: "#4f46e5" }}>
             {plan.profitPercentage}
             <span className="text-sm font-medium">
-              % on every {plan.payoutFrequency}
+              {isPension ? "% monthly interest" : `% on every ${plan.payoutFrequency}`}
             </span>
           </p>
+          {isPension && (
+            <p className="text-xs mt-0.5" style={{ color: "#64748b" }}>
+              {plan.tenureMonths} months · interest payouts recorded manually
+            </p>
+          )}
           <p className="text-xs mt-0.5" style={{ color: "#94a3b8" }}>
             Min. {currency(plan.minimumAmount)}
           </p>

@@ -36,9 +36,17 @@ export default function PortfolioTable({ holdings, loading, onOpenDetails, onOpe
         <td className={cells}><BondThumb src={resolveMediaUrl(bond.bondImageURL)} alt={bond.bondNumber || "Proof"} onExpand={() => onOpenLightbox(bond)} /></td>
         <td className={`${cells} font-semibold text-slate-800`}>{bond.bondNumber || (bond.isApproved ? "Approved" : "Pending")}</td>
         <td className={cells}>{bond.schemeName}</td>
-        <td className={cells}>{bond.payoutFrequency}</td>
-        <td className={`${cells} text-[#397299]`}>{bond.profitPercentage}</td>
-        <td className={`${cells} text-[#397299]`}>{bond.profit === 0 ? "Pending" : bond.profit}</td>
+        <td className={cells}>{bond.planType === "PENSION" ? "Monthly/manual" : bond.payoutFrequency}</td>
+        <td className={`${cells} text-[#397299]`}>
+          {bond.planType === "PENSION"
+            ? `${bond.profitPercentage}% monthly`
+            : bond.profitPercentage}
+        </td>
+        <td className={`${cells} text-[#397299]`}>
+          {bond.planType === "PENSION"
+            ? bond.profitReedemed || 0
+            : bond.profit === 0 ? "Pending" : bond.profit}
+        </td>
         <td className={cells}>
           {bond.reinvestedIntoUserSchemeId != null ?
             <StatusBadge status={"Reinvested"} /> :
@@ -52,7 +60,7 @@ export default function PortfolioTable({ holdings, loading, onOpenDetails, onOpe
   return (
     <div className="p-6 bg-white rounded-xl shadow-sm border border-slate-100">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h3 className="text-lg font-semibold text-slate-800">Your Bond Holdings</h3><p className="text-sm mt-1 text-slate-500">Click a row for full details, or click the image to view it full-size</p></div><label className="relative w-full sm:w-64"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><input value={query} onChange={(event) => changeQuery(event.target.value)} placeholder="Search holdings" aria-label="Search holdings" className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" /></label></div>
-      <div className="mt-4 overflow-x-auto"><table className="w-full border-collapse text-left"><thead><tr className="border-b-2 border-slate-100"><th className={headers}>Bond</th><th className={headers}>Bond No.</th><th className={headers}>Scheme Name</th><th className={headers}>Payout Cycle</th><th className={headers}>Yield %</th><th className={headers}>Profit</th><th className={headers}>Status</th></tr></thead><tbody className="divide-y divide-slate-100">{renderRows()}</tbody></table></div>
+      <div className="mt-4 overflow-x-auto"><table className="w-full border-collapse text-left"><thead><tr className="border-b-2 border-slate-100"><th className={headers}>Bond</th><th className={headers}>Bond No.</th><th className={headers}>Scheme Name</th><th className={headers}>Payout Cycle</th><th className={headers}>Yield / Monthly Interest</th><th className={headers}>Paid Interest / Profit</th><th className={headers}>Status</th></tr></thead><tbody className="divide-y divide-slate-100">{renderRows()}</tbody></table></div>
       <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3"><span className="text-xs text-slate-500">{filtered.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length}</span><div className="flex items-center gap-2"><button type="button" disabled={currentPage === 1} onClick={() => setPage((value) => value - 1)} aria-label="Previous page" className="rounded-lg border border-slate-200 p-2 text-slate-600 disabled:opacity-40"><ChevronLeft size={16} /></button><span className="text-xs font-medium text-slate-600">Page {currentPage} of {totalPages}</span><button type="button" disabled={currentPage === totalPages} onClick={() => setPage((value) => value + 1)} aria-label="Next page" className="rounded-lg border border-slate-200 p-2 text-slate-600 disabled:opacity-40"><ChevronRight size={16} /></button></div></div>
     </div>
   );

@@ -49,4 +49,8 @@ public class UserSchemeProfitLedger {
     @NotNull
     @Column(name = "profit_date", nullable = false)
     private LocalDate profitDate;
+
+    @NotNull
+    @Column(name = "is_paid", nullable = false)
+    private boolean paid;
 }

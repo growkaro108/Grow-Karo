@@ -228,7 +228,8 @@ public class AdminAPIController {
         return ResponseEntity
                 .ok(adminAPIService.activateUsersScheme(approveUserScheme.userId(), approveUserScheme.userSchemeId(),
                         approveUserScheme.paidAmount(), approveUserScheme.paidDate(), approveUserScheme.amountFrom(),
-                        approveUserScheme.submitTo()));
+                        approveUserScheme.submitTo(), approveUserScheme.totalInterestPercentage(),
+                        approveUserScheme.tenureMonths()));
     }
 
     @PutMapping("/user-scheme/reject/{userSchemeId}")
@@ -446,7 +447,7 @@ public class AdminAPIController {
         int safePage = Math.min(Math.max(page, 1), 500);
         int safeSize = Math.min(Math.max(size, 1), 1000);
         Pageable pageable = PageRequest.of(safePage - 1, safeSize,
-                Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id")));
+                Sort.by(Sort.Direction.DESC, "updatedAt").and(Sort.by(Sort.Direction.DESC, "id")));
         try {
             PagedResponse<AdminUser> users = adminAPIService.getAllUsers(query, pageable);
             if (users == null) {

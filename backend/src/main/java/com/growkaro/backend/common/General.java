@@ -53,6 +53,11 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class General {
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    private static final Set<RedeemType> PENSION_PRINCIPAL_REDEMPTION_TYPES = EnumSet.of(
+            RedeemType.FULL_REDEEM,
+            RedeemType.PARTIAL_REDEEM,
+            RedeemType.PREMATURE_WITHDRAWAL,
+            RedeemType.MATURITY_WITHDRAWAL);
     public static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy");
     private static final int DEFAULT_PAGE_SIZE = 5;
     @Value("${frontend.url}")
@@ -377,6 +382,26 @@ public class General {
         return profit.setScale(2, RoundingMode.HALF_UP);
     }
 
+    public BigDecimal calculatePensionMonthlyInterestAmount(BigDecimal principal, Double monthlyInterestPercentage) {
+        if (principal == null || principal.signum() < 0 || monthlyInterestPercentage == null
+                || !Double.isFinite(monthlyInterestPercentage) || monthlyInterestPercentage < 0) {
+            throw new IllegalArgumentException("Valid principal and monthly interest percentage are required");
+        }
+        return principal.multiply(BigDecimal.valueOf(monthlyInterestPercentage))
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal calculatePensionInterestAmount(
+            BigDecimal principal,
+            Double monthlyInterestPercentage,
+            int months) {
+        if (months < 0) {
+            throw new IllegalArgumentException("Pension term cannot be negative");
+        }
+        return calculatePensionMonthlyInterestAmount(principal, monthlyInterestPercentage)
+                .multiply(BigDecimal.valueOf(months));
+    }
+
     public int resolvePeriodDays(String payoutFrequency, int tenure) {
         if (payoutFrequency == null) {
             throw new IllegalArgumentException("Payout frequency is required");
@@ -408,7 +433,11 @@ public class General {
         return new UserRequest(us.getUserSchemeId(), us.getPaidAmount(), us.getEnrollmentDate(),
                 us.getIsApproved(),
                 us.getRequestDate(), us.getBondImageURL(), s.getSchemeName(), u.getName(),
-                u.getEmail(), u.getPhone());
+                u.getEmail(), u.getPhone(), s.getPlanType(),
+                us.getContractTotalInterestPercentage() == null
+                        ? s.getProfitPercentage()
+                        : us.getContractTotalInterestPercentage(),
+                us.getContractTenureMonths() == null ? s.getTenureMonths() : us.getContractTenureMonths());
     }
 
     public LocalDate getCurrentDate() {
@@ -508,6 +537,44 @@ public class General {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
+    public BigDecimal countPensionInterestRedeemed(UserScheme bond) {
+        BigDecimal ledgerPaid = bond.getProfitLedger().stream()
+                .filter(UserSchemeProfitLedger::isPaid)
+                .map(UserSchemeProfitLedger::getProfitAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal interestRedemptions = bond.getReedemLedger().stream()
+                .filter(ledger -> ledger.getRedeemType() == RedeemType.INTEREST_REDEEM
+                        && ledger.getStatus() != ReedeemStatus.REJECTED)
+                .map(UserSchemeReedemLedger::getRedeemAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return ledgerPaid.max(interestRedemptions);
+    }
+
+    public BigDecimal countCompletedPensionInterestRedeemed(UserScheme bond) {
+        BigDecimal ledgerPaid = bond.getProfitLedger().stream()
+                .filter(UserSchemeProfitLedger::isPaid)
+                .map(UserSchemeProfitLedger::getProfitAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal completedRedemptions = bond.getReedemLedger().stream()
+                .filter(ledger -> ledger.getStatus() == ReedeemStatus.COMPLETED
+                        && ledger.getRedeemType() == RedeemType.INTEREST_REDEEM)
+                .map(UserSchemeReedemLedger::getRedeemAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return ledgerPaid.max(completedRedemptions);
+    }
+
+    public boolean isPensionPrincipalRedemptionType(RedeemType redeemType) {
+        return PENSION_PRINCIPAL_REDEMPTION_TYPES.contains(redeemType);
+    }
+
+    private BigDecimal countCompletedPensionPrincipalRedeemed(UserScheme bond) {
+        return bond.getReedemLedger().stream()
+                .filter(ledger -> ledger.getStatus() == ReedeemStatus.COMPLETED
+                        && PENSION_PRINCIPAL_REDEMPTION_TYPES.contains(ledger.getRedeemType()))
+                .map(UserSchemeReedemLedger::getRedeemAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
     public Map<String, BigDecimal> countTotalProfitAndRedeemAndFinalAmount(UserScheme us) {
 
         Map<String, BigDecimal> profit = new HashMap<>();
@@ -518,22 +585,29 @@ public class General {
 
         List<UserSchemeReedemLedger> reedemLedgers = us.getReedemLedger();
 
-        BigDecimal totalReedem = reedemLedgers.stream()
-                .filter(reedemLedger -> reedemLedger.getStatus() == UserSchemeReedemLedger.ReedeemStatus.COMPLETED
-                        || reedemLedger.getRedeemType() == UserSchemeReedemLedger.RedeemType.INTEREST_REDEEM)
-                .map(UserSchemeReedemLedger::getRedeemAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        boolean isPension = "PENSION".equalsIgnoreCase(us.getScheme().getPlanType());
+        BigDecimal totalReedem = isPension
+                ? countPensionInterestRedeemed(us)
+                : reedemLedgers.stream()
+                        .filter(reedemLedger -> reedemLedger.getStatus() == ReedeemStatus.COMPLETED
+                                || reedemLedger.getRedeemType() == RedeemType.INTEREST_REDEEM)
+                        .map(UserSchemeReedemLedger::getRedeemAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal schemeRedeem = reedemLedgers.stream()
-                .filter(reedemLedger -> reedemLedger.getStatus() == UserSchemeReedemLedger.ReedeemStatus.COMPLETED
-                        && reedemLedger.getRedeemType() == UserSchemeReedemLedger.RedeemType.FULL_REDEEM)
-                .map(UserSchemeReedemLedger::getRedeemAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal schemeRedeem = isPension
+                ? countCompletedPensionPrincipalRedeemed(us)
+                : reedemLedgers.stream()
+                        .filter(reedemLedger -> reedemLedger.getStatus() == ReedeemStatus.COMPLETED
+                                && reedemLedger.getRedeemType() == RedeemType.FULL_REDEEM)
+                        .map(UserSchemeReedemLedger::getRedeemAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         Set<ReedeemStatus> pendingSchemeRedeemStatus = EnumSet.of(ReedeemStatus.REQUESTED, ReedeemStatus.IN_PROGRESS);
 
         BigDecimal pendingSchemeRedeem = reedemLedgers.stream()
-                .filter(reedemLedger -> reedemLedger.getRedeemType() == UserSchemeReedemLedger.RedeemType.FULL_REDEEM
+                .filter(reedemLedger -> (isPension
+                        ? PENSION_PRINCIPAL_REDEMPTION_TYPES.contains(reedemLedger.getRedeemType())
+                        : reedemLedger.getRedeemType() == RedeemType.FULL_REDEEM)
                         && pendingSchemeRedeemStatus.contains(reedemLedger.getStatus()))
                 .map(UserSchemeReedemLedger::getRedeemAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -589,6 +663,15 @@ public class General {
 
     public BigDecimal calculateMaturityAmount(UserScheme bond) {
         BigDecimal paidAmount = bond.getPaidAmount() != null ? bond.getPaidAmount() : BigDecimal.ZERO;
+        if ("PENSION".equalsIgnoreCase(bond.getScheme().getPlanType())) {
+            BigDecimal principalRedeemed = bond.getReedemLedger().stream()
+                    .filter(entry -> entry.getStatus() == UserSchemeReedemLedger.ReedeemStatus.COMPLETED
+                            && PENSION_PRINCIPAL_REDEMPTION_TYPES.contains(entry.getRedeemType()))
+                    .map(UserSchemeReedemLedger::getRedeemAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            return paidAmount.subtract(principalRedeemed).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+        }
+
         double profitPercentage = bond.getScheme().getProfitPercentage();
 
         // Convert profit percentage to BigDecimal safely avoiding double precision

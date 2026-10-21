@@ -8,5 +8,7 @@ public record UserSchemeDetailsUpdateRequest(
         BigDecimal paidAmount,
         LocalDate paidDate,
         LocalDate maturityDate,
-        String nomineeId) {
+        String nomineeId,
+        Double profitPercentage,
+        Integer tenureMonths) {
 }

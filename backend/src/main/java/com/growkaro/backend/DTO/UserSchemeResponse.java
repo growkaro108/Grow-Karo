@@ -1,6 +1,7 @@
 package com.growkaro.backend.DTO;
 
 import java.math.BigDecimal;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -36,7 +37,8 @@ public record UserSchemeResponse(
                 Integer tenureMonths,
                 List<SipInstallmentResponse> sipLedger,
                 BigDecimal minimumAmount,
-                BigDecimal maximumAmount) {
+                BigDecimal maximumAmount,
+                BigDecimal contractInterestAmount) {
         private static final General GENERAL = new General();
 
         public static UserSchemeResponse toUserSchemeResponse(UserScheme us) {
@@ -44,28 +46,45 @@ public record UserSchemeResponse(
 
                 List<UserSchemeProfitLedgerResponse> profitLedger = us.getProfitLedger().stream()
                                 .map(entry -> new UserSchemeProfitLedgerResponse(
-                                                entry.getId(), entry.getProfitAmount(), entry.getProfitDate()))
+                                                entry.getId(), entry.getProfitAmount(), entry.getProfitDate(),
+                                                entry.isPaid()))
                                 .toList();
                 BigDecimal profit = profitLedger.stream()
                                 .map(UserSchemeProfitLedgerResponse::profitAmount)
                                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                 List<UserSchemeReedemLedgerResponse> reedemLedger = us.getReedemLedger().stream()
-                                .filter(r -> r.getStatus() == UserSchemeReedemLedger.ReedeemStatus.COMPLETED)
                                 .map(entry -> new UserSchemeReedemLedgerResponse(
                                                 entry.getId(), entry.getRedeemAmount(), entry.getRedeemDate()))
                                 .toList();
-                BigDecimal profitRedeemed = reedemLedger.stream()
-                                .map(UserSchemeReedemLedgerResponse::redeemAmount)
-                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                boolean isPension = "PENSION".equalsIgnoreCase(us.getScheme().getPlanType());
+                BigDecimal profitRedeemed = isPension
+                                ? GENERAL.countCompletedPensionInterestRedeemed(us)
+                                : reedemLedger.stream()
+                                                .map(UserSchemeReedemLedgerResponse::redeemAmount)
+                                                .reduce(BigDecimal.ZERO, BigDecimal::add);
                 Scheme s = us.getScheme();
                 BigDecimal maturityAmount = GENERAL.calculateMaturityAmount(us);
+                Double profitPercentage = isPension && us.getContractTotalInterestPercentage() != null
+                                ? us.getContractTotalInterestPercentage()
+                                : s.getProfitPercentage();
+                Integer tenureMonths = isPension && us.getContractTenureMonths() != null
+                                ? us.getContractTenureMonths()
+                                : s.getTenureMonths();
+                Integer tenure = isPension && us.getPaidDate() != null && us.getMaturityDate() != null
+                                ? Math.toIntExact(ChronoUnit.DAYS.between(us.getPaidDate(), us.getMaturityDate()))
+                                : s.getTenure();
+                BigDecimal contractInterestAmount = isPension
+                                ? GENERAL.calculatePensionInterestAmount(
+                                                us.getPaidAmount(),
+                                                profitPercentage, tenureMonths)
+                                : null;
                 return new UserSchemeResponse(
                                 us.getUserSchemeId(),
                                 s.getSchemeName(),
                                 s.getSchemeDetails(),
-                                s.getTenure(),
-                                s.getProfitPercentage(),
+                                tenure,
+                                profitPercentage,
                                 us.getStatus().toString().toLowerCase(),
                                 us.getPaidAmount(),
                                 maturityAmount,
@@ -83,14 +102,15 @@ public record UserSchemeResponse(
                                 reedemLedger,
                                 us.getNominee() == null ? null : NomineeResponse.fromEntity(us.getNominee()),
                                 s.getPlanType(),
-                                s.getTenureMonths(),
+                                tenureMonths,
                                 
                                 IntStream.range(0, us.getSipLedger().size())
                                                 .mapToObj(index -> SipInstallmentResponse.fromEntity(
                                                                 us.getSipLedger().get(index), index))
                                                 .toList(),
                                 s.getMinimumAmount(),
-                                s.getMaximumAmount());
+                                s.getMaximumAmount(),
+                                contractInterestAmount);
         }
 
 }

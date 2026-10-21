@@ -28,6 +28,7 @@ const INPUT_TEXTAREA_CLS = `${INPUT_CLS} resize-none`;
 const PLAN_TYPES = [
   { value: "FD", label: "Fixed Deposit (FD)", description: "One-time lump sum investment with fixed tenure" },
   { value: "SIP", label: "Systematic Investment Plan (SIP)", description: "Monthly recurring installment plan" },
+  { value: "PENSION", label: "Pension Plan", description: "Interest-only payouts; principal is settled at maturity" },
 ];
 
 // Same wording the bond certificate falls back to when a scheme has no terms.
@@ -35,6 +36,11 @@ const DEFAULT_TERMS = [
   "This Bond is valid only till maturity date*",
   "Profit will be generated within 7 to 10 working days after completion of tenure*",
   "Payment is not made on Saturday, Sunday and Bank Holidays as the office remains closed*",
+];
+const PENSION_DEFAULT_TERMS = [
+  "Interest payouts are recorded manually and are separate from principal*",
+  "Principal is settled separately within 30 days after the maturity date*",
+  "This Bond is valid only till the stated maturity date*",
 ];
 
 /* ------------------------------------------------------------------ */
@@ -47,7 +53,7 @@ const PlanTypeSelector = memo(function PlanTypeSelector({ value, onSelect }) {
       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
         Plan Type
       </p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {PLAN_TYPES.map((pt) => {
           const active = value === pt.value;
           return (
@@ -231,7 +237,7 @@ export default function FormModal({
       setForm((prev) => ({
         ...prev,
         planType: value,
-        ...(value === "SIP" && !prev.tenureMonths
+        ...(["SIP", "PENSION"].includes(value) && !prev.tenureMonths
           ? {
               tenureMonths: prev.tenure
                 ? String(Math.max(1, Math.round(Number(prev.tenure) / 30)))
@@ -288,10 +294,11 @@ export default function FormModal({
   );
 
   // Not named `useXxx` on purpose: it's an event handler, not a hook.
-  const applyDefaultTerms = useCallback(
-    () => setForm((prev) => ({ ...prev, terms: [...DEFAULT_TERMS] })),
-    [setForm],
-  );
+  const applyDefaultTerms = useCallback(() => {
+    const defaultTerms =
+      planType === "PENSION" ? PENSION_DEFAULT_TERMS : DEFAULT_TERMS;
+    setForm((prev) => ({ ...prev, terms: [...defaultTerms] }));
+  }, [planType, setForm]);
 
   /* ---- lifecycle ---- */
   const closeModal = useCallback(() => {
@@ -313,11 +320,13 @@ export default function FormModal({
           ...form,
           planType,
           tenure:
-            planType === "SIP"
+            planType === "SIP" || planType === "PENSION"
               ? Number(form.tenureMonths) * 30
               : Number(form.tenure),
           tenureMonths:
-            planType === "SIP" ? Number(form.tenureMonths) : null,
+            planType === "SIP" || planType === "PENSION"
+              ? Number(form.tenureMonths)
+              : null,
           sipAmount:
             planType === "SIP" ? Number(form.sipAmount) : null,
           sipDay: planType === "SIP" ? Number(form.sipDay) : null,
@@ -483,19 +492,27 @@ export default function FormModal({
                 className={INPUT_CLS}
               />
             </Field>
-            <Field label={planType === "SIP" ? "Tenure (Months)" : "Asset Tenure (Days)"}>
+            <Field
+              label={
+                planType === "SIP"
+                  ? "Tenure (Months)"
+                  : planType === "PENSION"
+                    ? "Default bond term (Months)"
+                    : "Asset Tenure (Days)"
+              }
+            >
               <input
                 type="number"
                 required
                 min="1"
-                name={planType === "SIP" ? "tenureMonths" : "tenure"}
-                value={planType === "SIP" ? form.tenureMonths || "" : form.tenure || ""}
+                name={planType === "SIP" || planType === "PENSION" ? "tenureMonths" : "tenure"}
+                value={planType === "SIP" || planType === "PENSION" ? form.tenureMonths || "" : form.tenure || ""}
                 onChange={handleChange}
-                placeholder={planType === "SIP" ? "12" : "365"}
+                placeholder={planType === "SIP" || planType === "PENSION" ? "12" : "365"}
                 className={INPUT_CLS}
               />
             </Field>
-            <Field label="Profit Percentage (%)">
+            <Field label={planType === "PENSION" ? "Default monthly interest (%)" : "Profit Percentage (%)"}>
               <input
                 type="number"
                 step="0.01"
@@ -503,11 +520,18 @@ export default function FormModal({
                 name="profitPercentage"
                 value={form.profitPercentage || ""}
                 onChange={handleChange}
-                placeholder="8.5"
+                placeholder={planType === "PENSION" ? "10" : "8.5"}
                 className={INPUT_PROFIT_CLS}
               />
             </Field>
           </div>
+          {planType === "PENSION" && (
+            <p className="text-xs leading-5 text-slate-400">
+              Each bond can use its own principal, monthly interest rate, and
+              term. Monthly interest is scheduled at enrollment; principal is
+              returned separately after maturity.
+            </p>
+          )}
 
           {/* {planType === "SIP" && (
             <div className="bg-indigo-950/20 border border-indigo-900/60 rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">

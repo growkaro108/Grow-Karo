@@ -80,10 +80,16 @@ const BondCertificate = forwardRef(function BondCertificate(
   const isSingle = marital === "single";
 
   const payMode = bond.paymentMode || "Cash";
+  const isPension = bond.planType === "PENSION";
   const terms =
     bond.terms && bond.terms.length
       ? bond.terms
-      : [
+      : isPension
+        ? [
+            "Interest payouts are recorded manually according to the agreed schedule; principal is separate*",
+            "Principal will be returned within 30 days after the maturity date*",
+          ]
+        : [
         "This Bond is valid only till maturity date*",
         `Profit will be generated within 7 to 10 working days after completion of tenure in ( ${payMode} )*`,
         "Payment is not made on Saturday, Sunday and Bank Holidays as the office remains closed*",
@@ -214,14 +220,20 @@ const BondCertificate = forwardRef(function BondCertificate(
   const brandBottom = brandRest.join(" ").toLowerCase();
 
   const investValues = [
-    bond.tenure
+    isPension && bond.tenureMonths
+      ? `${bond.tenureMonths} Months`
+      : bond.tenure
       ? `${daysToMonths(bond.tenure)}`
       : bond.tenureMonths
         ? `${bond.tenureMonths} Months`
         : "",
     formatAmount(bond.paidAmount),
-    bond.investmentMode ||
-    (bond.profitPercentage ? `${bond.profitPercentage}% Flat` : ""),
+    isPension && bond.profitPercentage != null
+      ? bond.contractInterestAmount == null
+        ? `${bond.profitPercentage}% monthly interest`
+        : `${bond.profitPercentage}% monthly / ₹${formatAmount(bond.contractInterestAmount)} total`
+      : bond.investmentMode ||
+        (bond.profitPercentage != null ? `${bond.profitPercentage}% Flat` : ""),
     safeDate(bond.maturityDate),
   ];
 
@@ -308,12 +320,12 @@ const BondCertificate = forwardRef(function BondCertificate(
           fill="#333333"
           style={{ fontFamily: FONT_SERIF }}
         >
-          {String("GKFD"||scheme || bond.schemeName).toUpperCase()}
+          {String(isPension ? "GKPENSION" : scheme || bond.schemeName || "GKFD").toUpperCase()}
         </text>
       ) : null}
 
       {/* applicant photo */}
-      {/* {profilePhoto ? (
+      {profilePhoto ? (
         <image
           href={profilePhoto}
           x={372}
@@ -343,7 +355,7 @@ const BondCertificate = forwardRef(function BondCertificate(
             {(name || "?").trim().charAt(0).toUpperCase()}
           </text>
         </>
-      )} */}
+      )}
 
       {/* date / mobile boxes */}
       <rect x={224} y={116} width={94} height={20} fill="none" stroke={TAN} strokeWidth={0.7} />
@@ -511,7 +523,7 @@ const BondCertificate = forwardRef(function BondCertificate(
           x={(colX[i] + colX[i + 1]) / 2}
           y={investTop + investHeadH + baseOff(investRowH)}
           textAnchor="middle"
-          fontSize={FS}
+          fontSize={isPension && i === 2 ? 6.6 : FS}
         >
           {val}
         </text>

@@ -10,6 +10,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -19,6 +20,7 @@ import java.util.Set;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.function.Function;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -300,8 +302,15 @@ public class AdminAPIService {
     }
 
     private boolean isValidSchemeData(ReceiveSchemeData data) {
-        if (data == null || !List.of("FD", "SIP").contains(data.planType())) {
+        if (data == null || !List.of("FD", "SIP", "PENSION").contains(data.planType())) {
             return false;
+        }
+        if ("PENSION".equals(data.planType())) {
+            return data.tenureMonths() != null && data.tenureMonths() > 0
+                    && data.minimumAmount() != null && data.maximumAmount() != null
+                    && data.minimumAmount().compareTo(data.maximumAmount()) <= 0
+                    && data.profitPercentage() != null && Double.isFinite(data.profitPercentage())
+                    && data.profitPercentage() >= 0;
         }
         return !"SIP".equals(data.planType())
                 || (data.tenureMonths() != null && data.tenureMonths() > 0
@@ -367,6 +376,14 @@ public class AdminAPIService {
                 return general.response("error", "Scheme not found", null);
             }
             boolean isSip = "SIP".equalsIgnoreCase(scheme.getPlanType());
+            boolean isPension = "PENSION".equalsIgnoreCase(scheme.getPlanType());
+            if (isPension && !isValidPensionTerms(request.profitPercentage(), request.tenureMonths())) {
+                return general.response("error", "Pension bonds require a valid monthly interest rate and term", null);
+            }
+            if (isPension && request.maturityDate() != null
+                    && !request.paidDate().plusMonths(request.tenureMonths()).equals(request.maturityDate())) {
+                return general.response("error", "Pension maturity date must match the contracted term", null);
+            }
             if ((!isSip && request.paidAmount().signum() <= 0)
                     || (isSip && !isValidSipLedger(request.sipLedger(), scheme))) {
                 return general.response("error", "Invalid SIP installment schedule", null);
@@ -381,7 +398,9 @@ public class AdminAPIService {
             LocalDate today = general.getCurrentDate();
 
             LocalDate maturityDate = (request.maturityDate() == null)
-                    ? general.calculateMaturityDate(enrollmentDate, scheme.getTenure())
+                    ? isPension
+                            ? request.paidDate().plusMonths(request.tenureMonths())
+                            : general.calculateMaturityDate(enrollmentDate, scheme.getTenure())
                     : request.maturityDate();
 
             UserSchemeStatus status;
@@ -403,6 +422,8 @@ public class AdminAPIService {
             userScheme.setScheme(scheme);
             userScheme.setNominee(nomineeRef); // Proxy instance: sets nominee_id foreign key directly
             userScheme.setPaidAmount(isSip ? totalSipPaid(request.sipLedger()) : request.paidAmount());
+            userScheme.setContractTotalInterestPercentage(isPension ? request.profitPercentage() : null);
+            userScheme.setContractTenureMonths(isPension ? request.tenureMonths() : null);
             userScheme.setIsApproved(true);
             userScheme.setAmountFrom("general");
             userScheme.setSubmitTo("general");
@@ -410,11 +431,14 @@ public class AdminAPIService {
             userScheme.setPaidDate(request.paidDate());
 
             replaceLedgers(userScheme, request.profitLedger(), request.reedemLedger());
+            if (isPension) {
+                replacePensionInterestSchedule(userScheme, request.paidDate());
+            }
             if (isSip) {
                 replaceSipLedger(userScheme, request.sipLedger());
             }
 
-            userScheme.setNextPayoutDate(general.calculateNextPayoutDate(
+            userScheme.setNextPayoutDate(isPension ? null : general.calculateNextPayoutDate(
                     enrollmentDate, scheme.getPayoutFrequency(), scheme.getTenure()));
             userScheme.setMaturityDate(maturityDate);
             userScheme.setStatus(status);
@@ -525,6 +549,19 @@ public class AdminAPIService {
         }
         try {
             if (request.profitLedger() != null) {
+                if ("PENSION".equalsIgnoreCase(userScheme.getScheme().getPlanType())
+                        && !isPensionPayoutLedgerWithinContract(
+                                userScheme.getPaidAmount(),
+                                userScheme.getContractTotalInterestPercentage() == null
+                                        ? userScheme.getScheme().getProfitPercentage()
+                                        : userScheme.getContractTotalInterestPercentage(),
+                                request.profitLedger(),
+                                userScheme.getContractTenureMonths() == null
+                                        ? userScheme.getScheme().getTenureMonths()
+                                        : userScheme.getContractTenureMonths())) {
+                    return general.response("error",
+                            "Interest payouts cannot exceed the scheduled contract interest", null);
+                }
                 replaceLedgers(userScheme, request.profitLedger(), request.reedemLedger());
             }
             if (request.sipLedger() != null) {
@@ -583,6 +620,25 @@ public class AdminAPIService {
         if (!"SIP".equalsIgnoreCase(targetScheme.getPlanType()) && request.paidAmount().signum() <= 0) {
             return general.response("error", "Paid amount must be greater than zero", null);
         }
+        boolean isPension = "PENSION".equalsIgnoreCase(targetScheme.getPlanType());
+        if (isPension && !isValidPensionTerms(request.profitPercentage(), request.tenureMonths())) {
+            return general.response("error", "Pension bonds require a valid monthly interest rate and term", null);
+        }
+        if (isPension && !request.paidDate().plusMonths(request.tenureMonths()).equals(request.maturityDate())) {
+            return general.response("error", "Pension maturity date must match the contracted term", null);
+        }
+        boolean pensionTermsChanged = isPension && (
+                userScheme.getPaidAmount() == null
+                        || userScheme.getPaidAmount().compareTo(request.paidAmount()) != 0
+                        || !java.util.Objects.equals(
+                                userScheme.getContractTotalInterestPercentage(), request.profitPercentage())
+                        || !java.util.Objects.equals(
+                                userScheme.getContractTenureMonths(), request.tenureMonths())
+                        || !java.util.Objects.equals(userScheme.getPaidDate(), request.paidDate()));
+        if (pensionTermsChanged && userScheme.getProfitLedger().stream().anyMatch(UserSchemeProfitLedger::isPaid)) {
+            return general.response(
+                    "error", "Pension terms cannot be changed after an interest installment is marked paid", null);
+        }
 
         LocalDateTime enrollmentDate = LocalDateTime.of(
                 request.paidDate(),
@@ -595,12 +651,17 @@ public class AdminAPIService {
         userScheme.setScheme(targetScheme);
 
         userScheme.setPaidAmount(request.paidAmount());
+        userScheme.setContractTotalInterestPercentage(isPension ? request.profitPercentage() : null);
+        userScheme.setContractTenureMonths(isPension ? request.tenureMonths() : null);
         userScheme.setPaidDate(request.paidDate());
         userScheme.setEnrollmentDate(enrollmentDate);
         userScheme.setNominee(nominee);
         userScheme.setMaturityDate(maturityDate);
-        userScheme.setNextPayoutDate(general.calculateNextPayoutDate(
+        userScheme.setNextPayoutDate(isPension ? null : general.calculateNextPayoutDate(
                 enrollmentDate, userScheme.getScheme().getPayoutFrequency(), userScheme.getScheme().getTenure()));
+        if (isPension && (pensionTermsChanged || userScheme.getProfitLedger().isEmpty())) {
+            replacePensionInterestSchedule(userScheme, request.paidDate());
+        }
 
         if (maturityDate.isEqual(today)) {
             userScheme.setStatus(UserSchemeStatus.MATURED);
@@ -614,31 +675,110 @@ public class AdminAPIService {
         return general.response("success", "Scheme details updated", null);
     }
 
+    private boolean isValidPensionTerms(Double profitPercentage, Integer tenureMonths) {
+        return profitPercentage != null && Double.isFinite(profitPercentage) && profitPercentage >= 0
+                && tenureMonths != null && tenureMonths > 0;
+    }
+
+    private boolean isPensionPayoutLedgerWithinContract(
+            BigDecimal principal,
+            Double monthlyInterestPercentage,
+            List<UserSchemeProfitLedgerRequest> payouts,int months) {
+        if (payouts == null || payouts.stream().anyMatch(
+                payout -> payout == null || payout.profitAmount() == null
+                        || payout.profitAmount().signum() < 0 || payout.profitDate() == null)) {
+            return false;
+        }
+        BigDecimal totalPayouts = payouts.stream()
+                .map(UserSchemeProfitLedgerRequest::profitAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return totalPayouts.compareTo(
+                general.calculatePensionInterestAmount(principal, monthlyInterestPercentage, months)) <= 0;
+    }
+
+    private void replacePensionInterestSchedule(UserScheme userScheme, LocalDate enrollmentDate) {
+        userScheme.getProfitLedger().clear();
+        BigDecimal monthlyInterest = general.calculatePensionMonthlyInterestAmount(
+                userScheme.getPaidAmount(),
+                userScheme.getContractTotalInterestPercentage());
+        for (int month = 1; month <= userScheme.getContractTenureMonths(); month++) {
+            UserSchemeProfitLedger payout = new UserSchemeProfitLedger();
+            payout.setUserScheme(userScheme);
+            payout.setProfitAmount(monthlyInterest);
+            payout.setProfitDate(enrollmentDate.plusMonths(month));
+            payout.setPaid(false);
+            userScheme.getProfitLedger().add(payout);
+        }
+    }
+
     private void replaceLedgers(UserScheme userScheme,
             List<UserSchemeProfitLedgerRequest> profits,
             List<UserSchemeReedemLedgerRequest> redeems) {
-        userScheme.getProfitLedger().clear();
-        userScheme.getReedemLedger().clear();
+        Map<Long, UserSchemeProfitLedger> existingProfits = userScheme.getProfitLedger().stream()
+                .filter(entry -> entry.getId() != null)
+                .collect(Collectors.toMap(UserSchemeProfitLedger::getId, Function.identity()));
+        Set<Long> retainedProfitIds = new HashSet<>();
+        List<UserSchemeProfitLedger> newProfits = new ArrayList<>();
         for (UserSchemeProfitLedgerRequest request : profits) {
-            if (request == null || request.profitAmount() == null || request.profitAmount().signum() < 0) {
+            if (request == null || request.profitAmount() == null || request.profitAmount().signum() < 0
+                    || request.profitDate() == null) {
                 throw new IllegalArgumentException("Profit amounts cannot be negative");
             }
-            UserSchemeProfitLedger entry = new UserSchemeProfitLedger();
-            entry.setUserScheme(userScheme);
+            UserSchemeProfitLedger entry;
+            if (request.id() != null) {
+                entry = existingProfits.get(request.id());
+                if (entry == null || !retainedProfitIds.add(request.id())) {
+                    throw new IllegalArgumentException("Invalid or duplicate profit ledger entry");
+                }
+            } else {
+                entry = new UserSchemeProfitLedger();
+                entry.setUserScheme(userScheme);
+                entry.setPaid(request.paid() != null
+                        ? request.paid()
+                        : !"PENSION".equalsIgnoreCase(userScheme.getScheme().getPlanType()));
+                newProfits.add(entry);
+            }
             entry.setProfitAmount(request.profitAmount());
             entry.setProfitDate(request.profitDate());
-            userScheme.getProfitLedger().add(entry);
+            if (request.paid() != null) {
+                entry.setPaid(request.paid());
+            }
         }
+        userScheme.getProfitLedger().removeIf(
+                entry -> entry.getId() != null && !retainedProfitIds.contains(entry.getId()));
+        userScheme.getProfitLedger().addAll(newProfits);
+        boolean isPension = "PENSION".equalsIgnoreCase(userScheme.getScheme().getPlanType());
+        Map<Long, UserSchemeReedemLedger> existingRedemptions = userScheme.getReedemLedger().stream()
+                .filter(entry -> entry.getId() != null)
+                .collect(Collectors.toMap(UserSchemeReedemLedger::getId, Function.identity()));
+        Set<Long> retainedRedemptionIds = new HashSet<>();
+        List<UserSchemeReedemLedger> newRedemptions = new ArrayList<>();
         for (UserSchemeReedemLedgerRequest request : redeems) {
             if (request == null || request.redeemAmount() == null || request.redeemAmount().signum() < 0) {
                 throw new IllegalArgumentException("Redeem amounts cannot be negative");
             }
-            UserSchemeReedemLedger entry = new UserSchemeReedemLedger();
-            entry.setUserScheme(userScheme);
+            UserSchemeReedemLedger entry;
+            if (request.id() != null) {
+                entry = existingRedemptions.get(request.id());
+                if (entry == null || !retainedRedemptionIds.add(request.id())) {
+                    throw new IllegalArgumentException("Invalid or duplicate redemption ledger entry");
+                }
+            } else {
+                entry = new UserSchemeReedemLedger();
+                entry.setUserScheme(userScheme);
+                if (isPension) {
+                    entry.setStatus(ReedeemStatus.COMPLETED);
+                    entry.setRedeemType(RedeemType.INTEREST_REDEEM);
+                }
+                newRedemptions.add(entry);
+            }
             entry.setRedeemAmount(request.redeemAmount());
             entry.setRedeemDate(request.redeemDate());
-            userScheme.getReedemLedger().add(entry);
         }
+        userScheme.getReedemLedger().removeIf(entry -> entry.getId() == null
+                || (!retainedRedemptionIds.contains(entry.getId())
+                        && !(isPension && general.isPensionPrincipalRedemptionType(entry.getRedeemType()))));
+        userScheme.getReedemLedger().addAll(newRedemptions);
     }
 
     private boolean isValidSipLedger(List<SipInstallmentRequest> installments, Scheme scheme) {
@@ -676,7 +816,8 @@ public class AdminAPIService {
     })
     @Transactional
     public Map<String, Object> activateUsersScheme(String userId, String userSchemeId, BigDecimal paidAmount,
-            LocalDate paidDate, String amountFrom, String submitTo) {
+            LocalDate paidDate, String amountFrom, String submitTo, Double totalInterestPercentage,
+            Integer tenureMonths) {
         if (userSchemeId == null || userSchemeId.isBlank() || paidAmount == null
                 || paidAmount.compareTo(BigDecimal.ZERO) <= 0 || paidDate == null || amountFrom == null
                 || submitTo == null || amountFrom.isBlank() || submitTo.isBlank()) {
@@ -696,12 +837,45 @@ public class AdminAPIService {
             userScheme = (UserScheme) isUserSchemeValid.get("userScheme");
             user = (User) isUserSchemeValid.get("user");
             scheme = (Scheme) isUserSchemeValid.get("scheme");
+            boolean isPension = "PENSION".equalsIgnoreCase(scheme.getPlanType());
+            if (isPension && (!isValidPensionTerms(totalInterestPercentage, tenureMonths)
+                    || paidDate.isAfter(general.getCurrentDate()))) {
+                return general.response("error", "Pension approval requires a valid monthly rate, term, and payment date",
+                        null);
+            }
+
+            LocalDateTime enrollmentDate = LocalDateTime.of(
+                    paidDate,
+                    LocalDateTime.now(ZoneId.of("Asia/Kolkata")).toLocalTime());
+            LocalDate maturityDate = isPension
+                    ? paidDate.plusMonths(tenureMonths)
+                    : general.calculateMaturityDate(enrollmentDate, scheme.getTenure());
+
             // approved user
             userScheme.setIsApproved(true);
 
             // set paid amount and date
             userScheme.setPaidAmount(paidAmount);
             userScheme.setPaidDate(paidDate);
+            userScheme.setEnrollmentDate(enrollmentDate);
+            userScheme.setMaturityDate(maturityDate);
+            userScheme.setContractTotalInterestPercentage(isPension ? totalInterestPercentage : null);
+            userScheme.setContractTenureMonths(isPension ? tenureMonths : null);
+            if (isPension) {
+                replacePensionInterestSchedule(userScheme, paidDate);
+            }
+            userScheme.setNextPayoutDate(isPension ? null : general.calculateNextPayoutDate(
+                    enrollmentDate, scheme.getPayoutFrequency(), scheme.getTenure()));
+            LocalDate today = general.getCurrentDate();
+            if (isPension && !maturityDate.isAfter(today)) {
+                userScheme.setStatus(UserSchemeStatus.MATURED);
+            } else if (maturityDate.isBefore(today.minusDays(15))) {
+                userScheme.setStatus(UserSchemeStatus.WITHDRAWN);
+            } else if (!maturityDate.isAfter(today)) {
+                userScheme.setStatus(UserSchemeStatus.MATURED);
+            } else {
+                userScheme.setStatus(UserSchemeStatus.ACTIVE);
+            }
             userScheme.setAmountFrom(amountFrom);
             userScheme.setSubmitTo(submitTo);
             userSchemeRepository.save(userScheme);
@@ -1621,13 +1795,18 @@ public class AdminAPIService {
             }
         } else {
             BigDecimal totalProfit = general.countProfit(userScheme.getProfitLedger());
-            amount = totalProfit.subtract(general.countReedem(userScheme.getReedemLedger()))
-                    .max(BigDecimal.ZERO).min(settleable);
+            BigDecimal redeemedInterest = "PENSION".equalsIgnoreCase(userScheme.getScheme().getPlanType())
+                    ? general.countPensionInterestRedeemed(userScheme)
+                    : general.countReedem(userScheme.getReedemLedger());
+            amount = totalProfit.subtract(redeemedInterest).max(BigDecimal.ZERO);
+            if (!"PENSION".equalsIgnoreCase(userScheme.getScheme().getPlanType())) {
+                amount = amount.min(settleable);
+            }
             if (amount.compareTo(BigDecimal.ZERO) <= 0) {
                 return general.response("error", "There is no profit available to settle", null);
             }
         }
-        if (amount.compareTo(settleable) == 0) {
+        if (amount.compareTo(settleable) == 0 && !"PROFIT_ONLY".equals(settlementType)) {
             settlementType = "FULL";
         }
 

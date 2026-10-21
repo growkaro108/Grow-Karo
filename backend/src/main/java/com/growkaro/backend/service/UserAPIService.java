@@ -424,6 +424,10 @@ public class UserAPIService {
             UserScheme newUserScheme = new UserScheme();
             newUserScheme.setUser(user);
             newUserScheme.setPaidAmount(amount); // <-- was validated but never persisted
+            if ("PENSION".equalsIgnoreCase(scheme.getPlanType())) {
+                newUserScheme.setContractTotalInterestPercentage(scheme.getProfitPercentage());
+                newUserScheme.setContractTenureMonths(scheme.getTenureMonths());
+            }
             scheme.enrollUserInScheme(newUserScheme); // sets scheme + adds to scheme's joinedUsers
             user.enrollInScheme(newUserScheme); // if you keep this method, make sure it doesn't create a second
             newUserScheme.setNominee(selectedNominee);
@@ -957,6 +961,11 @@ public class UserAPIService {
             if (existingUserScheme == null) {
                 log.error("Reinvest failed: UserScheme not found for ID: {}", userSchemeId);
                 return general.response("error", "User scheme not found", Map.of("id", userSchemeId));
+            }
+            if ("PENSION".equalsIgnoreCase(existingUserScheme.getScheme().getPlanType())) {
+                return general.response("error",
+                        "Pension principal must be settled separately before starting a new investment",
+                        Map.of("userSchemeId", userSchemeId));
             }
 
             // 1. Calculate profit & redemptions cleanly

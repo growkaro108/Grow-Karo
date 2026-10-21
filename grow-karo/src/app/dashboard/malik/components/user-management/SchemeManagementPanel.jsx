@@ -13,6 +13,7 @@ const inputClass =
 
 function SchemeSummary({ scheme }) {
   const isSip = scheme.planType === "SIP";
+  const isPension = scheme.planType === "PENSION";
   return (
     <div className="grid grid-cols-2 items-center gap-x-6 gap-y-3 rounded-xl border border-slate-800 bg-slate-900/60 px-5 py-3.5">
       <div className="flex items-center gap-2">
@@ -33,7 +34,8 @@ function SchemeSummary({ scheme }) {
         <Percent className="h-4 w-4 text-emerald-500" />
         {/* <span className="text-[13px] text-slate-500">Interest</span> */}
         <span className="text-[15px] font-semibold text-emerald-400">
-          {scheme.profitPercentage ?? "0"}%{isSip ? "/mo" : ""}
+          {scheme.profitPercentage ?? "0"}%
+          {isSip || isPension ? "/mo" : ""}
         </span>
       </div>
       <div className="flex items-center gap-2">
@@ -41,7 +43,9 @@ function SchemeSummary({ scheme }) {
         <span className="text-[14px] font-medium text-slate-100">
           {isSip
             ? `${scheme.tenureMonths ?? "?"} months`
-            : (daysToMonths(scheme.tenure) ?? "0 days")}
+            : isPension
+              ? `${scheme.tenureMonths ?? "?"} months default`
+              : (daysToMonths(scheme.tenure) ?? "0 days")}
         </span>
       </div>
       {isSip && (
@@ -54,12 +58,18 @@ function SchemeSummary({ scheme }) {
           </span>
         </div>
       )}
+      {isPension && (
+        <div className="col-span-2 text-xs text-slate-400">
+          Default monthly interest rate; individual bond terms can be changed.
+        </div>
+      )}
     </div>
   );
 }
 
-function LedgerRows({ type, rows, onChange, onAdd }) {
+function LedgerRows({ type, rows, onChange, onAdd, interestOnly = false }) {
   const isProfit = type === "profit";
+  const label = isProfit && interestOnly ? "interest" : isProfit ? "profit" : "redeem";
   const amount = isProfit ? "profitAmount" : "redeemAmount";
   const date = isProfit ? "profitDate" : "redeemDate";
   return (
@@ -70,17 +80,17 @@ function LedgerRows({ type, rows, onChange, onAdd }) {
           className="grid grid-cols-2 gap-2 rounded-md border border-slate-800 p-2"
         >
           <input
-            aria-label={isProfit ? "Profit amount" : "Redeem amount"}
+            aria-label={`${label} amount`}
             type="number"
             min={isProfit ? "100" : "0"}
             step={isProfit ? "100" : "0.01"}
-            placeholder={isProfit ? "Profit amount" : "Redeem amount"}
+            placeholder={`${label[0].toUpperCase()}${label.slice(1)} amount`}
             value={entry[amount]}
             onChange={(event) => onChange(index, amount, event.target.value)}
             className={inputClass}
           />
           <input
-            aria-label={isProfit ? "Profit date" : "Redeem date"}
+            aria-label={`${label} date`}
             type="date"
             value={entry[date]}
             onChange={(event) => onChange(index, date, event.target.value)}
@@ -93,7 +103,7 @@ function LedgerRows({ type, rows, onChange, onAdd }) {
         onClick={onAdd}
         className="text-xs font-medium text-teal-300 hover:text-teal-200"
       >
-        + Add {isProfit ? "profit" : "redeem"} row
+        + Add {label} row
       </button>
     </>
   );
@@ -401,8 +411,17 @@ export default function SchemeManagementPanel({
                   <input
                     name="paidAmount"
                     type="number"
-                    min="1000"
-                    step="1000"
+                    min={
+                      selectedScheme?.planType === "PENSION"
+                        ? selectedScheme.minimumAmount || "0.01"
+                        : "1000"
+                    }
+                    max={
+                      selectedScheme?.planType === "PENSION"
+                        ? selectedScheme.maximumAmount || undefined
+                        : undefined
+                    }
+                    step={selectedScheme?.planType === "PENSION" ? "0.01" : "1000"}
                     value={form.paidAmount}
                     onChange={updateForm}
                     required
@@ -420,6 +439,51 @@ export default function SchemeManagementPanel({
                     className={`mt-1 ${inputClass}`}
                   />
                 </label>
+                {selectedScheme?.planType === "PENSION" && (
+                  <>
+                    <label className="text-xs text-slate-400">
+                      Monthly interest rate (%)
+                      <input
+                        name="profitPercentage"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={form.profitPercentage}
+                        onChange={updateForm}
+                        required
+                        className={`mt-1 ${inputClass}`}
+                      />
+                    </label>
+                    <label className="text-xs text-slate-400">
+                      Contract term (months)
+                      <input
+                        name="tenureMonths"
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={form.tenureMonths}
+                        onChange={updateForm}
+                        required
+                        className={`mt-1 ${inputClass}`}
+                      />
+                    </label>
+                    <p className="col-span-2 text-xs text-slate-400">
+                      Monthly interest:{" "}
+                      {currency(
+                        (Number(form.paidAmount) * Number(form.profitPercentage)) / 100 || 0,
+                      )}
+                      {" · Total interest: "}
+                      {currency(
+                        (Number(form.paidAmount) *
+                          Number(form.profitPercentage) *
+                          Number(form.tenureMonths)) /
+                          100 || 0,
+                      )}
+                      . The monthly schedule is created automatically; principal
+                      is settled separately at maturity.
+                    </p>
+                  </>
+                )}
                 <label className="col-span-2 text-xs text-slate-400">
                   Maturity date
                   <input
@@ -428,11 +492,14 @@ export default function SchemeManagementPanel({
                     value={form.maturityDate}
                     onChange={updateForm}
                     min={form.paidDate || undefined}
+                    readOnly={selectedScheme?.planType === "PENSION"}
                     required
                     className={`mt-1 ${inputClass}`}
                   />
                   <span className="mt-1 block text-[10px] text-slate-500">
-                    Calculated from enrollment date and tenure; editable.
+                    {selectedScheme?.planType === "PENSION"
+                      ? "Calculated from enrollment date and the individual contract term."
+                      : "Calculated from enrollment date and tenure; editable."}
                   </span>
                 </label>
               </>
@@ -442,14 +509,24 @@ export default function SchemeManagementPanel({
           {showLedgers && (
             <div className="space-y-2">
               <p className="text-xs text-slate-400">
-                Profit and redemption entries
+                {selectedScheme?.planType === "PENSION"
+                  ? "Interest-only payouts and principal redemption"
+                  : "Profit and redemption entries"}
               </p>
-              <LedgerRows
-                type="profit"
-                rows={form.profitLedger}
-                onChange={updateFormLedger("profit")}
-                onAdd={addFormLedgerRow("profit")}
-              />
+              {selectedScheme?.planType === "PENSION" ? (
+                <p className="text-xs text-slate-400">
+                  Monthly interest rows are generated from the principal, rate,
+                  and term when the bond is enrolled. Mark each installment as
+                  paid from the bond history after payment.
+                </p>
+              ) : (
+                <LedgerRows
+                  type="profit"
+                  rows={form.profitLedger}
+                  onChange={updateFormLedger("profit")}
+                  onAdd={addFormLedgerRow("profit")}
+                />
+              )}
               <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
                 Redeem history
               </p>

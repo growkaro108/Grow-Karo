@@ -129,6 +129,7 @@ A full-featured back-office panel with a collapsible sidebar navigation and a to
 #### 📜 Plans Tab
 - Full CRUD for investment schemes/plans
 - **Create Plan** — form with: name, description, interest rate, duration, min/max investment, type
+- **Pension Plan** — each bond uses its principal, monthly interest percentage, and term to generate a monthly interest schedule at enrollment. Admins mark each installment paid; principal is returned separately within 30 days after maturity.
 - **Edit Plan** — inline editing
 - **Activate / Deactivate** plans (toggle visibility to investors)
 - **Delete Plan** with confirmation
@@ -139,6 +140,7 @@ A full-featured back-office panel with a collapsible sidebar navigation and a to
 - **Filter tabs:** pending / approved / rejected / all
 - **Search** by investor name or scheme name
 - **Approve** — admin sets paid amount and date, then issues bond
+- **Pension approvals** — admin confirms the per-bond monthly interest percentage and term; the monthly payout is principal × rate, and total scheduled interest is monthly payout × term.
 - **Reject** — with reason field
 - **Add Bond** — allows uploading bond certificate files for approved schemes
 

@@ -80,6 +80,7 @@ export default function BondCard({
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   const isApproved = !!bond.enrollmentDate;
+  const isPension = bond.planType === "PENSION";
   const entryCount =
     (bond.profitLedger?.length ?? 0) + (bond.reedemLedger?.length ?? 0);
   const isTenureCompleteScheme = bond.payoutCycle === "tenure-complete";
@@ -170,23 +171,34 @@ export default function BondCard({
         </p>
       </div>
       <div
-        className={`grid grid-cols-1 ${isTenureCompleteScheme ? "sm:grid-cols-2" : "sm:grid-cols-4"} gap-3 px-4 py-3.5`}
+        className={`grid grid-cols-1 ${isPension ? "sm:grid-cols-4" : isTenureCompleteScheme ? "sm:grid-cols-2" : "sm:grid-cols-4"} gap-3 px-4 py-3.5`}
       >
         {!isTenureCompleteScheme && (
           <>
-            <Stat label="Profit" value={currency(bond.profit)} tone="emerald" />
+            <Stat
+              label={isPension ? "Interest paid" : "Profit"}
+              value={currency(isPension ? bond.profitRedeemed : bond.profit)}
+              tone="emerald"
+            />
             <Stat
               label="Redeemed"
               value={currency(bond.redeemAmount ?? bond.profitRedeemed)}
               tone="amber"
             />
+            {isPension && (
+              <Stat
+                label="Payable"
+                value={currency(bond.contractInterestAmount)}
+                tone="emerald"
+              />
+            )}
           </>
         )}
         <Stat
           label="Paid on"
           value={bond.paidDate ? dateFmt(bond.paidDate) : "—"}
         />
-        {!isTenureCompleteScheme && (
+        {!isPension && !isTenureCompleteScheme && (
           <Stat
             label="Redeem date"
             value={bond.redeemDate ? dateFmt(bond.redeemDate) : "—"}
@@ -308,16 +320,19 @@ export default function BondCard({
             <p className="text-xs text-slate-500">No ledger entries yet.</p>
           )}
           <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-300">
-            Profit history
+            {isPension ? "Interest payout history" : "Profit history"}
           </p>
           {profitRows.map((entry, index) => (
-            <div key={entry.id ?? index + 1} className="grid grid-cols-2 gap-2">
+            <div
+              key={entry.id ?? index + 1}
+              className={`grid gap-2 ${isPension ? "grid-cols-3" : "grid-cols-2"}`}
+            >
               <input
-                aria-label="Profit amount"
+                aria-label={isPension ? "Interest payout amount" : "Profit amount"}
                 type="number"
                 min="0"
                 step="0.01"
-                placeholder="Profit amount"
+                placeholder={isPension ? "Interest payout amount" : "Profit amount"}
                 value={entry.profitAmount}
                 onChange={(e) =>
                   onProfitFieldChange(index, "profitAmount", e.target.value)
@@ -326,7 +341,7 @@ export default function BondCard({
                 disabled={entry.id}
               />
               <input
-                aria-label="Profit date"
+                aria-label={isPension ? "Interest payout date" : "Profit date"}
                 type="date"
                 value={entry.profitDate}
                 onChange={(e) =>
@@ -335,15 +350,29 @@ export default function BondCard({
                 className={inputClass}
                 disabled={entry.id}
               />
+              {isPension && (
+                <label className="flex items-center justify-center gap-1.5 rounded-md border border-slate-700 px-2 text-xs text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(entry.paid)}
+                    onChange={(event) =>
+                      onProfitFieldChange(index, "paid", event.target.checked)
+                    }
+                  />
+                  {entry.paid ? "Paid" : "Unpaid"}
+                </label>
+              )}
             </div>
           ))}
-          <button
-            type="button"
-            onClick={onAddProfitRow}
-            className="text-xs font-medium text-teal-300 hover:text-teal-200"
-          >
-            + Add profit row
-          </button>
+          {!isPension && (
+            <button
+              type="button"
+              onClick={onAddProfitRow}
+              className="text-xs font-medium text-teal-300 hover:text-teal-200"
+            >
+              + Add profit row
+            </button>
+          )}
           <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
             Redeem history
           </p>

@@ -41,6 +41,7 @@ export default function PlanDetailsPage({
   mode = "day",
 }) {
   const t = THEMES[mode] || THEMES.day;
+  const isPension = plan.planType === "PENSION";
 
   const joinedCount = plan.joinedUsers?.length ?? 0;
   const slotsLeft = Math.max(0, (plan.maxInvestorsAllowed ?? 0) - joinedCount);
@@ -89,7 +90,7 @@ export default function PlanDetailsPage({
         style={{ backgroundColor: t.panel }}
       >
         <Tab
-          title={"Profit Rate"}
+          title={isPension ? "Monthly Interest Rate" : "Profit Rate"}
           data={plan.profitPercentage + "% "}
           margin={"1"}
           mode={mode}
@@ -108,11 +109,16 @@ export default function PlanDetailsPage({
         />
         <Tab
           title={"Payout"}
-          data={plan.payoutFrequency}
+          data={isPension ? "Manual interest payouts" : plan.payoutFrequency}
           margin={"1"}
           mode={mode}
         />
-        <Tab title={"Tenure"} data={plan.tenure} margin={"1"} mode={mode} />
+        <Tab
+          title={"Tenure"}
+          data={isPension ? `${plan.tenureMonths} months` : plan.tenure}
+          margin={"1"}
+          mode={mode}
+        />
         <Tab
           title={"Start Date"}
           data={formatDate(plan.startDate)}

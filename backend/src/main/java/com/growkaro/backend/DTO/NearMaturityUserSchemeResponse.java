@@ -36,7 +36,8 @@ public record NearMaturityUserSchemeResponse(
                 String accountHolderName,
                 String bankName,
                 String cust_id,
-                boolean settlementPending) {
+                boolean settlementPending,
+                String planType) {
 
         private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy");
         private static final General g = new General();
@@ -53,8 +54,23 @@ public record NearMaturityUserSchemeResponse(
                 BigDecimal totalProfit = g.countProfit(us.getProfitLedger());
                 BigDecimal totalRedeemed = g.countReedem(us.getReedemLedger());
                 BigDecimal profitAvailable = totalProfit.subtract(totalRedeemed)
-                                .max(BigDecimal.ZERO)
-                                .min(maturityAmount.max(BigDecimal.ZERO));
+                                .max(BigDecimal.ZERO);
+                if ("PENSION".equalsIgnoreCase(s.getPlanType())) {
+                        Double monthlyInterestPercentage = us.getContractTotalInterestPercentage() == null
+                                        ? s.getProfitPercentage()
+                                        : us.getContractTotalInterestPercentage();
+                        Integer contractMonths = us.getContractTenureMonths() == null
+                                        ? s.getTenureMonths()
+                                        : us.getContractTenureMonths();
+                        profitAvailable = totalProfit.subtract(g.countPensionInterestRedeemed(us))
+                                        .max(BigDecimal.ZERO)
+                                        .min(g.calculatePensionInterestAmount(
+                                                        us.getPaidAmount(),
+                                                        monthlyInterestPercentage,
+                                                        contractMonths));
+                } else {
+                        profitAvailable = profitAvailable.min(maturityAmount.max(BigDecimal.ZERO));
+                }
                 return new NearMaturityUserSchemeResponse(
                                 us.getUserSchemeId(),
                                 u.getId(),
@@ -78,7 +94,8 @@ public record NearMaturityUserSchemeResponse(
                                 bd == null ? null : bd.getAccountHolderName(),
                                 bd == null ? null : bd.getBankName(),
                                 g.getCustomerId(u.getId()),
-                                us.getStatus() == UserSchemeStatus.SETTLEMENT_PENDING);
+                                us.getStatus() == UserSchemeStatus.SETTLEMENT_PENDING,
+                                s.getPlanType());
         }
 
 }

@@ -20,6 +20,7 @@ import SchemeManagementPanel from "./SchemeManagementPanel";
 import AddUser from "./AddUser";
 import {
   calculateMaturityDate,
+  calculateMaturityDateInMonths,
   currency,
   initials,
   toDateInputValue,
@@ -57,8 +58,8 @@ const LEDGER = {
     key: "profitLedger",
     amount: "profitAmount",
     date: "profitDate",
-    blank: () => ({ profitAmount: "", profitDate: "" }),
-    blankExisting: () => ({ profitAmount: "0", profitDate: "" }),
+    blank: () => ({ profitAmount: "", profitDate: "", paid: true }),
+    blankExisting: () => ({ profitAmount: "0", profitDate: "", paid: true }),
   },
   redeem: {
     key: "reedemLedger",
@@ -75,6 +76,8 @@ const emptyForm = (schemeId = "") => ({
   paidAmount: "",
   paidDate: "",
   maturityDate: "",
+  profitPercentage: "",
+  tenureMonths: "",
   profitLedger: [LEDGER.profit.blank()],
   reedemLedger: [LEDGER.redeem.blank()],
   sipLedger: [],
@@ -186,6 +189,7 @@ const normalizeLedgerEntries = (entries, type) => {
       ...(entry.id ? { id: entry.id } : {}),
       [amount]: Number.isFinite(value) ? value : 0,
       [date]: rawDate || null,
+      ...(type === "profit" ? { paid: entry.paid ?? true } : {}),
     });
     return acc;
   }, []);
@@ -199,6 +203,7 @@ const toFormLedger = (entries, type) => {
     id: entry.id,
     [amount]: entry[amount] ?? "0",
     [date]: toDateInputValue(entry[date]),
+    ...(type === "profit" ? { paid: entry.paid ?? true } : {}),
   }));
 };
 
@@ -252,6 +257,9 @@ const normalizeSipLedger = (entries) =>
   }));
 
 const calculateSchemeMaturity = (startDate, scheme) => {
+  if (scheme?.planType === "PENSION") {
+    return calculateMaturityDateInMonths(startDate, scheme.tenureMonths);
+  }
   if (scheme?.planType !== "SIP" || !Number(scheme.tenureMonths)) {
     return calculateMaturityDate(startDate, scheme?.tenure);
   }
@@ -321,7 +329,15 @@ export default function UserDrawer({ user, onClose, onSaved }) {
           return {
             ...current,
             schemeId: first.schemeId,
-            maturityDate: calculateMaturityDate(current.paidDate, first.tenure),
+            maturityDate: calculateSchemeMaturity(current.paidDate, first),
+            profitPercentage:
+              first.planType === "PENSION"
+                ? String(first.profitPercentage ?? "")
+                : current.profitPercentage,
+            tenureMonths:
+              first.planType === "PENSION"
+                ? String(first.tenureMonths ?? "")
+                : current.tenureMonths,
           };
         });
       })
@@ -368,6 +384,7 @@ export default function UserDrawer({ user, onClose, onSaved }) {
               id: e.id,
               profitAmount: e.profitAmount ?? "0",
               profitDate: e.profitDate ?? "",
+              paid: e.paid ?? true,
             })),
             reedemLedger: (bond.reedemLedger ?? []).map((e) => ({
               id: e.id,
@@ -437,7 +454,14 @@ export default function UserDrawer({ user, onClose, onSaved }) {
 
   /* ------------------------- add / edit form logic ------------------------- */
   const resetForm = () => {
-    setForm(emptyForm(schemes[0]?.schemeId ?? ""));
+    const first = schemes[0];
+    setForm({
+      ...emptyForm(first?.schemeId ?? ""),
+      profitPercentage:
+        first?.planType === "PENSION" ? String(first.profitPercentage ?? "") : "",
+      tenureMonths:
+        first?.planType === "PENSION" ? String(first.tenureMonths ?? "") : "",
+    });
     setEditingBond(null);
     setAddFormOpen(false);
   };
@@ -446,12 +470,24 @@ export default function UserDrawer({ user, onClose, onSaved }) {
     const { name, value } = event.target;
     setForm((current) => {
       const updated = { ...current, [name]: value };
-      if (name === "paidDate" || name === "schemeId") {
-        const scheme = schemes.find((s) => s.schemeId === updated.schemeId);
+      const scheme = schemes.find((item) => item.schemeId === updated.schemeId);
+      if (name === "schemeId" && scheme?.planType === "PENSION") {
+        updated.profitPercentage = String(scheme.profitPercentage ?? "");
+        updated.tenureMonths = String(scheme.tenureMonths ?? "");
+      }
+      if (
+        name === "paidDate" ||
+        name === "schemeId" ||
+        (name === "tenureMonths" && scheme?.planType === "PENSION")
+      ) {
         updated.maturityDate = calculateSchemeMaturity(
           updated.paidDate,
-          scheme,
+          scheme
+            ? { ...scheme, tenureMonths: updated.tenureMonths }
+            : scheme,
         );
+      }
+      if (name === "paidDate" || name === "schemeId") {
         if (scheme?.planType === "SIP") {
           const generated = makeSipSchedule(updated.paidDate, scheme);
           updated.sipLedger =
@@ -541,6 +577,8 @@ export default function UserDrawer({ user, onClose, onSaved }) {
       paidAmount: String(bond.paidAmount ?? ""),
       paidDate,
       maturityDate: toDateInputValue(bond.maturityDate),
+      profitPercentage: String(bond.profitPercentage ?? matched?.profitPercentage ?? ""),
+      tenureMonths: String(bond.tenureMonths ?? matched?.tenureMonths ?? ""),
       profitLedger: toFormLedger(bond.profitLedger, "profit"),
       reedemLedger: toFormLedger(bond.reedemLedger, "redeem"),
       sipLedger: installments.map((entry) => ({
@@ -573,6 +611,22 @@ export default function UserDrawer({ user, onClose, onSaved }) {
     if (!form.paidDate) return "Please choose a valid paid date.";
     if (!form.maturityDate) return "Please choose a valid maturity date.";
     const scheme = schemes.find((item) => item.schemeId === form.schemeId);
+    if (scheme?.planType === "PENSION") {
+      const interestPercentage = Number(form.profitPercentage);
+      const tenureMonths = Number(form.tenureMonths);
+      if (!Number.isFinite(interestPercentage) || interestPercentage < 0) {
+        return "Monthly interest percentage must be zero or greater.";
+      }
+      if (!Number.isInteger(tenureMonths) || tenureMonths < 1) {
+        return "Pension term must be a positive whole number of months.";
+      }
+      if (
+        form.maturityDate !==
+        calculateMaturityDateInMonths(form.paidDate, tenureMonths)
+      ) {
+        return "Maturity date must match the contracted pension term.";
+      }
+    }
     if (scheme?.planType === "SIP") {
       if (!form.sipLedger.length) return "Add at least one SIP installment.";
       if (
@@ -615,6 +669,12 @@ export default function UserDrawer({ user, onClose, onSaved }) {
           : Number(form.paidAmount),
       paidDate: form.paidDate,
       maturityDate: form.maturityDate,
+      ...(selectedScheme?.planType === "PENSION"
+        ? {
+            profitPercentage: Number(form.profitPercentage),
+            tenureMonths: Number(form.tenureMonths),
+          }
+        : {}),
     };
     const ledgers = {
       profitLedger: normalizeLedgerEntries(form.profitLedger, "profit"),
@@ -631,12 +691,16 @@ export default function UserDrawer({ user, onClose, onSaved }) {
             selectedScheme?.planType === "SIP" ||
             editingBond.planType === "SIP" ||
             editingBond.schemeType === "SIP";
-          saved = await updateUserSchemeLedger(id, {
-            ...ledgers,
-            ...(includeSipLedger
-              ? { sipLedger: normalizeSipLedger(form.sipLedger) }
-              : {}),
-          });
+          if (selectedScheme?.planType === "PENSION" || editingBond.planType === "PENSION") {
+            saved = true;
+          } else {
+            saved = await updateUserSchemeLedger(id, {
+              ...ledgers,
+              ...(includeSipLedger
+                ? { sipLedger: normalizeSipLedger(form.sipLedger) }
+                : {}),
+            });
+          }
         }
       } else {
         saved = await addManualUserScheme({
@@ -945,7 +1009,9 @@ export default function UserDrawer({ user, onClose, onSaved }) {
   };
 
   /* --------------------------------- render --------------------------------- */
-  const showLedgers = selectedScheme?.payoutFrequency !== "tenure-complete";
+  const showLedgers =
+    selectedScheme?.planType === "PENSION" ||
+    selectedScheme?.payoutFrequency !== "tenure-complete";
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -1074,6 +1140,7 @@ export default function UserDrawer({ user, onClose, onSaved }) {
             logoUrl="/logo.png"
             watermarkUrl="/logo.png"
             stampUrl="/stamp.png"
+            profilePhoto="/profile.jpg"
           />
         </div>
 

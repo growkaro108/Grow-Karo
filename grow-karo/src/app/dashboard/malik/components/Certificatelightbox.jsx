@@ -5,6 +5,7 @@ import BondCertificate from "./BondCertificate.jsx";
 import BondDownloadButton from "./BondDownloadButton.jsx";
 import { resolveMediaUrl } from "../../../../api/apiClient";
 import SIPBondCertificate from "./SIPBondCertificate.jsx";
+import PensionBondCertificate from "@/certificate/PensionCertificate.jsx";
 
 export default function CertificateLightbox({
   bond,
@@ -26,6 +27,9 @@ export default function CertificateLightbox({
 
   const hasUploadedImage = Boolean(bond?.bondUrl);
   const isSip = bond?.planType === "SIP" || bond?.schemeType === "SIP";
+  const isPension =
+    bond?.planType === "PENSION" || bond?.schemeType === "PENSION";
+
   if (!bond) return null;
 
   return (
@@ -38,29 +42,32 @@ export default function CertificateLightbox({
 
       <div className="relative w-full max-w-2xl animate-[popIn_.2s_ease-out]">
         <div className="absolute -top-11 right-0 flex items-center gap-2">
-
           <div className="flex items-center rounded-lg bg-slate-900/90 p-1 border border-slate-700 text-xs">
-            {hasUploadedImage ? <button
-              type="button"
-              onClick={() => setShowUploadedImage(true)}
-              className={`flex items-center gap-1.5 rounded px-2.5 py-1 transition ${showUploadedImage
-                ? "bg-teal-600 text-white font-medium"
-                : "text-slate-400 hover:text-slate-200"
+            {hasUploadedImage ? (
+              <button
+                type="button"
+                onClick={() => setShowUploadedImage(true)}
+                className={`flex items-center gap-1.5 rounded px-2.5 py-1 transition ${
+                  showUploadedImage
+                    ? "bg-teal-600 text-white font-medium"
+                    : "text-slate-400 hover:text-slate-200"
                 }`}
-            >
-              <ImageIcon className="h-3.5 w-3.5" /> Uploaded Bond
-            </button> :
+              >
+                <ImageIcon className="h-3.5 w-3.5" /> Uploaded Bond
+              </button>
+            ) : (
               <button
                 type="button"
                 onClick={() => setShowUploadedImage(false)}
-                className={`flex items-center gap-1.5 rounded px-2.5 py-1 transition ${!showUploadedImage
-                  ? "bg-teal-600 text-white font-medium"
-                  : "text-slate-400 hover:text-slate-200"
-                  }`}
+                className={`flex items-center gap-1.5 rounded px-2.5 py-1 transition ${
+                  !showUploadedImage
+                    ? "bg-teal-600 text-white font-medium"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
               >
                 <FileText className="h-3.5 w-3.5" /> Certificate
               </button>
-            }
+            )}
           </div>
 
           <button
@@ -87,7 +94,19 @@ export default function CertificateLightbox({
             />
           ) : (
             <>
-              {isSip ? (
+              {isPension && (
+                <PensionBondCertificate
+                  ref={certRef}
+                  bond={bond}
+                  userData={userData}
+                  className="h-auto w-full"
+                  logoUrl="/logo.png"
+                  profilePhoto="/profile.jpg"
+                  watermarkUrl="/logo.png"
+                  stampUrl="/stamp.png"
+                />
+              )}
+              {isSip && (
                 <SIPBondCertificate
                   ref={certRef}
                   bond={bond}
@@ -96,21 +115,23 @@ export default function CertificateLightbox({
                   logoUrl="/logo.png"
                   watermarkUrl="/logo.png"
                   stampUrl="/stamp.png"
-                />
-              ) : (
-                <BondCertificate
-                  ref={certRef}
-                  bond={bond}
-                  userData={userData}
-                  userName={userName}
-                  scheme={scheme}
-                  className="h-auto w-full"
-                  logoUrl="/logo.png"
-                  watermarkUrl="/logo.png"
-                  stampUrl="/stamp.png"
+                  profilePhoto="/profile.jpg"
                 />
               )}
-
+              {!isPension &&
+                (!isSip && (
+                  <BondCertificate
+                    ref={certRef}
+                    bond={bond}
+                    userData={userData}
+                    userName={userName}
+                    scheme={scheme}
+                    className="h-auto w-full"
+                    logoUrl="/logo.png"
+                    watermarkUrl="/logo.png"
+                    stampUrl="/stamp.png"
+                  />
+                ))}
             </>
           )}
           {!isSip && (bond.bondPdfUrl || !showUploadedImage) && (

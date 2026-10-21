@@ -6,5 +6,6 @@ import java.time.LocalDate;
 public record UserSchemeProfitLedgerRequest(
         Long id,
         BigDecimal profitAmount,
-        LocalDate profitDate) {
+        LocalDate profitDate,
+        Boolean paid) {
 }

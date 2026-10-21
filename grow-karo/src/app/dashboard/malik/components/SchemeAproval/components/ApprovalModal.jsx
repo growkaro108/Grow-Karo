@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { currency } from "./constants";
 
 export default function ApprovalModal({
@@ -14,6 +14,16 @@ export default function ApprovalModal({
 }) {
   const [amountFrom, setAmountFrom] = useState("");
   const [submitTo, setSubmitTo] = useState("");
+  const [totalInterestPercentage, setTotalInterestPercentage] = useState(
+    selectedRequest?.profitPercentage == null
+      ? ""
+      : String(selectedRequest.profitPercentage),
+  );
+  const [tenureMonths, setTenureMonths] = useState(
+    selectedRequest?.tenureMonths == null
+      ? ""
+      : String(selectedRequest.tenureMonths),
+  );
 
   const modalRef = useRef(null);
   const today = new Date().toISOString().split("T")[0];
@@ -24,6 +34,20 @@ export default function ApprovalModal({
   // // const remainingAmount = Math.max(0, totalAmount - numericPaid);
   // const isOverpaid = numericPaid > totalAmount;
   const isValidAmount = paidAmount !== "" && numericPaid >= 0;
+  const isPension = selectedRequest?.planType === "PENSION";
+  const isValidPensionTerms =
+    !isPension ||
+    (totalInterestPercentage !== "" &&
+      Number.isFinite(Number(totalInterestPercentage)) &&
+      Number(totalInterestPercentage) >= 0 &&
+      tenureMonths !== "" &&
+      Number.isInteger(Number(tenureMonths)) &&
+      Number(tenureMonths) > 0);
+  const canConfirm =
+    isValidAmount &&
+    isValidPensionTerms &&
+    amountFrom.trim() !== "" &&
+    submitTo.trim() !== "";
 
   const closeModal = useCallback(() => {
     if (!submitting) setSelectedRequest(null);
@@ -36,10 +60,19 @@ export default function ApprovalModal({
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
         closeModal();
-      } else if (e.key === "Enter" && !submitting && isValidAmount) {
+      } else if (
+        e.key === "Enter" &&
+        !submitting &&
+        canConfirm
+      ) {
         // Avoid hijacking Enter from a textarea if one is ever added
         if (e.target.tagName !== "TEXTAREA") {
-          handleConfirmApproval();
+          handleConfirmApproval(
+            submitTo,
+            amountFrom,
+            totalInterestPercentage,
+            tenureMonths,
+          );
         }
       } else if (e.key === "Tab") {
         // Basic focus trap
@@ -65,7 +98,11 @@ export default function ApprovalModal({
   }, [
     selectedRequest,
     submitting,
-    isValidAmount,
+    canConfirm,
+    submitTo,
+    amountFrom,
+    totalInterestPercentage,
+    tenureMonths,
     handleConfirmApproval,
     closeModal,
   ]);
@@ -168,6 +205,54 @@ export default function ApprovalModal({
             disabled={submitting}
           />
         </div>
+        {isPension && (
+          <>
+            <div className="sea-field">
+              <label className="sea-label" htmlFor="sea-monthly-interest">
+                Monthly interest rate (%)
+              </label>
+              <input
+                id="sea-monthly-interest"
+                className="sea-input"
+                type="number"
+                min="0"
+                step="0.01"
+                value={totalInterestPercentage}
+                onChange={(e) => setTotalInterestPercentage(e.target.value)}
+                disabled={submitting}
+                required
+              />
+            </div>
+            <div className="sea-field">
+              <label className="sea-label" htmlFor="sea-tenure-months">
+                Bond term (months)
+              </label>
+              <input
+                id="sea-tenure-months"
+                className="sea-input"
+                type="number"
+                min="1"
+                step="1"
+                value={tenureMonths}
+                onChange={(e) => setTenureMonths(e.target.value)}
+                disabled={submitting}
+                required
+              />
+            </div>
+            <p className="sea-modal-sub">
+              Monthly interest:{" "}
+              {currency((numericPaid * Number(totalInterestPercentage || 0)) / 100)}
+              {" · Total over term: "}
+              {currency(
+                (numericPaid * Number(totalInterestPercentage || 0) *
+                  Number(tenureMonths || 0)) /
+                  100,
+              )}
+              . Interest is scheduled monthly; principal is returned separately
+              at maturity.
+            </p>
+          </>
+        )}
         <div className="sea-field">
           <label className="sea-label" htmlFor="sea-paid-amount-from">
             Amount From
@@ -226,8 +311,15 @@ export default function ApprovalModal({
           </button>
           <button
             className="sea-btn sea-btn-primary"
-            onClick={() => handleConfirmApproval(submitTo, amountFrom)}
-            disabled={submitting || !isValidAmount}
+            onClick={() =>
+              handleConfirmApproval(
+                submitTo,
+                amountFrom,
+                totalInterestPercentage,
+                tenureMonths,
+              )
+            }
+            disabled={submitting || !canConfirm}
           >
             {submitting ? "Approving..." : "Confirm approval"}
           </button>

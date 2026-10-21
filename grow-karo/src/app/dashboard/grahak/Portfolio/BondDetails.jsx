@@ -38,6 +38,7 @@ export default function BondDetails({
   const [isRedeeming, setIsRedeeming] = useState(false);
   const { authUser, schemes, getAllSchemes, updateUserPortfolio } = use(userContext);
   const isApproved = bond.isApproved;
+  const isPension = bond.planType === "PENSION";
   const handleWithdraw = async () => {
     if (!(await confirmMessage("you want to withdraw this application?")))
       return;
@@ -169,7 +170,7 @@ export default function BondDetails({
               <p className="text-sm font-medium text-slate-400">
                 {bond.schemeName}
               </p>
-              {isApproved && bond.reinvestedIntoUserSchemeId == null && bond.status.toLowerCase() !== 'matured' && bond.status.toLowerCase() !== 'withdrawn' && (
+              {isApproved && !isPension && bond.reinvestedIntoUserSchemeId == null && bond.status.toLowerCase() !== 'matured' && bond.status.toLowerCase() !== 'withdrawn' && (
                 <span className="text-xs font-semibold text-emerald-600 border border-emerald-500 bg-emerald-50 rounded-xl px-2 py-1">
                   Next profit on {formatDate(bond.nextPayoutDate)}
                 </span>
@@ -180,21 +181,33 @@ export default function BondDetails({
                 label={isApproved ? "Submit Amount" : "Amount Applied"}
                 value={currency(bond.paidAmount)}
               />
-              <DetailField label="Tenure" value={`${bond.tenure} Days`} />
               <DetailField
-                label="Yield %"
+                label="Tenure"
+                value={isPension ? `${bond.tenureMonths ?? "—"} months` : `${bond.tenure} Days`}
+              />
+              <DetailField
+                label={isPension ? "Monthly interest rate" : "Yield %"}
                 value={
                   bond.profitPercentage != null
-                    ? `${bond.profitPercentage}%`
+                    ? isPension
+                      ? `${bond.profitPercentage}% monthly`
+                      : `${bond.profitPercentage}%`
                     : "-"
                 }
                 highlight
               />
               <DetailField
-                label="Profit"
-                value={currency(bond.profit)}
+                label={isPension ? "Interest paid" : "Profit"}
+                value={currency(isPension ? bond.profitReedemed : bond.profit)}
                 highlight
               />
+              {isPension && (
+                <DetailField
+                  label="Total scheduled interest"
+                  value={bond.contractInterestAmount == null ? "-" : currency(bond.contractInterestAmount)}
+                  highlight
+                />
+              )}
               {isApproved && (
                 <DetailField
                   label="Enrollment Date"
@@ -221,7 +234,11 @@ export default function BondDetails({
                   />}
                 </>
               )}
-              <DetailField label="Cycle" value={bond.payoutFrequency} highlight />
+              <DetailField
+                label={isPension ? "Interest payout" : "Cycle"}
+                value={isPension ? "Manual" : bond.payoutFrequency}
+                highlight
+              />
             </div>
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
               <DetailField label="Nominee Name" value={bond.nominee?.name} />
@@ -261,7 +278,7 @@ export default function BondDetails({
           </div>
         )} */}
         {/* reinvest button */}
-        {(isReInvestEligible(bond) && bond.status.toLowerCase() === 'matured' && bond.reinvestedIntoUserSchemeId === null) && (
+        {(!isPension && isReInvestEligible(bond) && bond.status.toLowerCase() === 'matured' && bond.reinvestedIntoUserSchemeId === null) && (
           <div className="mt-8 flex justify-between items-center border-t border-slate-100 pt-6">
             <p className="text-sm font-medium text-slate-400">
               Mature on: {formatDate(bond.maturityDate)}

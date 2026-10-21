@@ -99,7 +99,10 @@ export default function SettleByAdminForm({ userScheme, onClose, onSuccess }) {
       : settleable - userScheme.investmentAmount;
   const redeemAmount = userScheme.totalRedeemed;
   const balanceDue = settleable;
-  const profitAvailable = Math.max(0, Number(profitEarned-redeemAmount) || 0);
+  const profitAvailable =
+    userScheme.planType === "PENSION"
+      ? Math.max(0, Number(userScheme.profitAvailable) || 0)
+      : Math.max(0, Number(profitEarned - redeemAmount) || 0);
   const settlementAmount =
     settlementType === "PARTIAL"
       ? Number(partialAmount) || 0
@@ -263,11 +266,24 @@ export default function SettleByAdminForm({ userScheme, onClose, onSuccess }) {
         </div>
 
         <div className="space-y-5 px-5 py-5 sm:px-6">
+          {userScheme.planType === "PENSION" && (
+            <p className="rounded-lg border border-amber-800/60 bg-amber-950/30 px-3 py-2 text-xs text-amber-200">
+              Pension principal is due within 30 days after maturity. Interest
+              payouts are recorded separately.
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Summary label="Invested" amount={investedAmount} />
             <Summary label="Profit earned" amount={profitEarned} />
             <Summary label="Redeemed" amount={redeemAmount} />
-            <Summary label="Balance due" amount={balanceDue} />
+            <Summary
+              label={
+                userScheme.planType === "PENSION"
+                  ? "Principal due"
+                  : "Balance due"
+              }
+              amount={balanceDue}
+            />
           </div>
 
           <fieldset>
@@ -276,8 +292,20 @@ export default function SettleByAdminForm({ userScheme, onClose, onSuccess }) {
             </legend>
             <div className="grid gap-4 sm:grid-cols-2">
               {[
-                ["FULL", "Full", "Pay the full remaining balance."],
-                ["PARTIAL", "Partial", "Choose an amount up to the balance."],
+                [
+                  "FULL",
+                  userScheme.planType === "PENSION" ? "Return principal" : "Full",
+                  userScheme.planType === "PENSION"
+                    ? "Pay the remaining principal; interest is separate."
+                    : "Pay the full remaining balance.",
+                ],
+                [
+                  "PARTIAL",
+                  "Partial",
+                  userScheme.planType === "PENSION"
+                    ? "Return part of the principal."
+                    : "Choose an amount up to the balance.",
+                ],
                 // ["PROFIT_ONLY", "Profit Only", "Pay available profit only."],
               ].map(([value, label, hint]) => (
                 <button

@@ -57,6 +57,7 @@ export default function EnrollConfirmModal({
 
 
   const canConfirm = !enrolling && Number(amount) > 0 && nomineeId;
+  const isPension = selectedplan?.planType === "PENSION";
 
   //remove scheme whose minimum investment is greater than maximum amount user had in his wallet
   const filteredSchemes = useMemo(() => {
@@ -117,12 +118,21 @@ export default function EnrollConfirmModal({
               style={{ color: "#64748b" }}
             >
               <span>
-                {selectedplan.profitPercentage}% - {selectedplan.payoutFrequency}
+                {isPension
+                  ? `${selectedplan.profitPercentage}% monthly interest for ${selectedplan.tenureMonths} months`
+                  : `${selectedplan.profitPercentage}% - ${selectedplan.payoutFrequency}`}
               </span>
               <span>·</span>
               <span>Min. {currency(selectedplan.minimumAmount)}</span>
               <span>Max. {currency(selectedplan.maximumAmount)}</span>
             </div>
+            {isPension && (
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                Interest payouts are recorded manually and principal is settled
+                separately at maturity. The final rate and term are confirmed
+                when your request is approved.
+              </p>
+            )}
           </div>
 
           <div className="h-px bg-slate-100 mx-5" />

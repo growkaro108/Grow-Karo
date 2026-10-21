@@ -113,6 +113,7 @@ public class User {
     protected void onCreate() {
         if (this.id == null || this.id.isBlank()) {
             this.id = "GKUID" + getTime().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+            this.updatedAt=getTime();
         }
     }
 

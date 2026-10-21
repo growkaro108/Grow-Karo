@@ -1,8 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import {
   Search,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   AlertTriangle,
   FileSpreadsheet,
@@ -72,10 +70,13 @@ export default function MaturingSchemesAdminDark() {
       "User Name": item.userName,
       "User Email": item.userEmail,
       "Scheme Name": item.schemeName,
+      "Plan Type": item.planType,
       "UserScheme ID": item.id,
       "Bond Number": item.bondNumber,
       "Investment Amount (INR)": item.investmentAmount,
-      "Maturity Amount (INR)": item.maturityAmount,
+      [item.planType === "PENSION"
+        ? "Principal Due (INR)"
+        : "Maturity Amount (INR)"]: item.maturityAmount,
       "Maturity Date": item.maturityDate,
       "Days Remaining": formatDaysRemaining(item.daysRemaining),
       "Enroll Date": item.enrollmentDate,
@@ -192,14 +193,18 @@ export default function MaturingSchemesAdminDark() {
         current.map((scheme) => {
           if (scheme.userSchemId !== selectedScheme?.userSchemId) return scheme;
           const amount = Number(settledAmount) || 0;
+          const isPension = scheme.planType === "PENSION";
           return {
             ...scheme,
-            maturityAmount: Math.max(0, Number(scheme.maturityAmount) - amount),
+            maturityAmount:
+              settlementType === "PROFIT_ONLY"
+                ? Number(scheme.maturityAmount) || 0
+                : Math.max(0, Number(scheme.maturityAmount) - amount),
             totalRedeemed: Number(scheme.totalRedeemed || 0) + amount,
-            profitAvailable: Math.max(
-              0,
-              Number(scheme.profitAvailable || 0) - amount,
-            ),
+            profitAvailable:
+              isPension && settlementType === "PARTIAL"
+                ? Number(scheme.profitAvailable) || 0
+                : Math.max(0, Number(scheme.profitAvailable || 0) - amount),
           };
         }),
       );
@@ -284,7 +289,7 @@ export default function MaturingSchemesAdminDark() {
               <th className="py-3.5 px-4">Bond Image</th>
               <th className="py-3.5 px-4">User Details</th>
               <th className="py-3.5 px-4">Scheme & Bond ID</th>
-              <th className="py-3.5 px-4">Maturity Amount</th>
+              <th className="py-3.5 px-4">Amount Due</th>
               <th className="py-3.5 px-4">Maturity Date</th>
               <th className="py-3.5 px-4">Days Left</th>
               <th className="py-3.5 px-4 text-right">Action</th>
@@ -328,7 +333,9 @@ export default function MaturingSchemesAdminDark() {
                       ₹{scheme.maturityAmount.toLocaleString("en-IN")}
                     </div>
                     <div className="text-xs text-slate-500">
-                      Inv: ₹{scheme.investmentAmount.toLocaleString("en-IN")}
+                      {scheme.planType === "PENSION"
+                        ? "Principal due"
+                        : `Inv: ₹${scheme.investmentAmount.toLocaleString("en-IN")}`}
                     </div>
                   </td>
                   <td className="py-3 px-4 text-slate-300 font-medium">
@@ -451,7 +458,9 @@ export default function MaturingSchemesAdminDark() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-slate-500">Payout</p>
+                  <p className="text-slate-500">
+                    {scheme.planType === "PENSION" ? "Principal due" : "Payout"}
+                  </p>
                   <p className="font-bold text-emerald-400 text-sm">
                     ₹{scheme.maturityAmount.toLocaleString("en-IN")}
                   </p>

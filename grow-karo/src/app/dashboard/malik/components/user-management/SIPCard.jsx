@@ -538,6 +538,7 @@ export default function SIPCard({
                   logoUrl={logoUrl}
                   stampUrl={stampUrl}
                   className="h-full w-full"
+                  profilePhoto="/profile.jpg"
                 />
               )}
             </div>

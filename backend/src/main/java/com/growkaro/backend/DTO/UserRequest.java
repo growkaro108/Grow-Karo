@@ -16,5 +16,8 @@ public record UserRequest( // userScheme
                 // user
                 String name,
                 String email,
-                String phone) {
+                String phone,
+                String planType,
+                Double profitPercentage,
+                Integer tenureMonths) {
 }

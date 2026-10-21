@@ -28,17 +28,15 @@ function Field({ label, children, emphasis = false }) {
 
 export default function BondStub({ bond, userName, scheme, onView, viewUser }) {
   const bondLabel = bond.userSchemeId || bond.id || "";
-// console.log(bond.status)
+  // console.log(bond.status)
   return (
     <article className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 transition-colors hover:border-slate-700">
       {/* counterfoil */}
       <header className="flex items-center justify-between gap-3 bg-white/5 px-4 py-2.5">
         <span className="truncate font-mono text-xs text-slate-400">
-          {bond.bondNumber? `Bond: ${bond.bondNumber}` : `ID: ${bondLabel}`}
+          {bond.bondNumber ? `Bond: ${bond.bondNumber}` : `ID: ${bondLabel}`}
         </span>
-        <StatusPill
-          status={bond.status ||"pending"}
-        />
+        <StatusPill status={bond.status || "pending"} />
       </header>
 
       {/* perforation */}
@@ -84,6 +82,10 @@ export default function BondStub({ bond, userName, scheme, onView, viewUser }) {
               userName={userName}
               scheme={scheme || bond?.schemeName}
               className="h-full w-full"
+              logoUrl="/logo.png"
+              watermarkUrl="/logo.png"
+              stampUrl="/stamp.png"
+              profilePhoto="/profile.jpg"
             />
           )}
         </div>
@@ -106,15 +108,34 @@ export default function BondStub({ bond, userName, scheme, onView, viewUser }) {
       {/* details */}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-4 px-4 py-4">
         <Field label="Principal">{currency(bond.paidAmount)}</Field>
-        <Field label="Rate">
-          {bond.profitPercentage}% per {bond.payoutCycle}
-        </Field>
+        {bond.planType === "PENSION" ? (
+          <>
+            <Field label="Total scheduled interest">
+              {bond.contractInterestAmount == null
+                ? "—"
+                : currency(bond.contractInterestAmount)}
+            </Field>
+            <Field label="Monthly interest rate">
+              {bond.profitPercentage ?? "—"}% monthly
+            </Field>
+            <Field label="Term">{bond.tenureMonths ?? "—"} months</Field>
+          </>
+        ) : (
+          <Field label="Rate">
+            {bond.profitPercentage}% per {bond.payoutCycle}
+          </Field>
+        )}
         <Field label="Maturity date">
           {bond.maturityDate ? bond.maturityDate : "—"}
         </Field>
-        <Field label="Payout at maturity" emphasis>
+        {bond.planType !== "PENSION"&&<Field
+          label={
+             "Payout at maturity"
+          }
+          emphasis
+        >
           {currency(calculateMaturityAmount(bond))}
-        </Field>
+        </Field>}
       </dl>
     </article>
   );
