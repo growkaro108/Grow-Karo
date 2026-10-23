@@ -50,18 +50,21 @@ public interface UserSchemeRepository extends JpaRepository<UserScheme, String> 
         @Query("SELECT us FROM UserScheme us JOIN FETCH us.user WHERE us.userSchemeId = :userSchemeId")
         Optional<UserScheme> findByUserSchemeIdWithUser(@Param("userSchemeId") String userSchemeId);
 
-        // query will be user name scheme name and bondnumber
         @Query("SELECT us FROM UserScheme us JOIN FETCH us.user u JOIN FETCH us.scheme s WHERE " +
                         "(LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
                         "LOWER(s.schemeName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
                         "LOWER(us.bondNumber) LIKE LOWER(CONCAT('%', :query, '%'))) " +
-                        "AND us.maturityDate <= (CURRENT_DATE + :remainingDays DAY) " +
+                        "AND us.maturityDate <= :maturityCutoff " +
                         "AND us.status IN :statuses")
         Page<UserScheme> findNearMaturityOrOverdueUsers(
                         @Param("query") String query,
-                        @Param("remainingDays") int remainingDays,
+                        @Param("maturityCutoff") LocalDate maturityCutoff,
                         @Param("statuses") List<UserSchemeStatus> statuses,
                         Pageable pageable);
+
+        @Query("SELECT us FROM UserScheme us JOIN FETCH us.user u JOIN FETCH u.bankDetails bd JOIN FETCH us.scheme s WHERE us.maturityDate <= :cutoff AND us.status NOT IN :statuses")
+        List<UserScheme> debugDateStatus(@Param("cutoff") LocalDate cutoff,
+                        @Param("statuses") List<UserSchemeStatus> statuses);
 
         @Lock(LockModeType.PESSIMISTIC_WRITE)
         @Query("SELECT us FROM UserScheme us JOIN FETCH us.scheme JOIN FETCH us.user WHERE us.userSchemeId = :userSchemeId")

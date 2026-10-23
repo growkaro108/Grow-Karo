@@ -37,13 +37,13 @@ export function userSendOTPMessage(response) {
 }
 
 export function userValidateOTPMessage(response) {
-    const isOk = response?.status === "ok";
+    const isOk = response?.status === "success";
     showMessage(isOk ? "success" : "error", response, isOk ? "OTP validated successfully" : "Invalid OTP");
     return isOk;
 }
 
 export function userSignUpMessage(response) {
-    const isOk = response?.status === "ok";
+    const isOk = response?.status === "success";
     showMessage(isOk ? "success" : "error", response, isOk ? "Signed up successfully" : "Sign up failed");
     return isOk;
 }

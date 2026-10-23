@@ -1,25 +1,24 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import {
-  Activity,
   AlertTriangle,
   Clock,
   Wallet,
   Users,
-  TrendingUp,
-  ArrowUpRight,
-  ArrowDownRight,
 } from "lucide-react";
-import { Line, Doughnut, Bar } from "react-chartjs-2";
+import { Doughnut, Bar } from "react-chartjs-2";
 import StatCard from "./StatCard";
 import { currency } from "../utils";
 import { useEventStream } from "@/api/useEventStream";
 import { buildSseUrl, apiRequest } from "@/api/apiClient";
+import { fetchAllUsersApi } from "@/api/adminApi";
+import EnrollmentChart from "./Report/EnrollmentChart";
 import {
   mapBackendLog,
   TYPE_DOT,
 } from "./Activity/activityLogShared";
+import { normalizeUser, PAGE_SIZE } from "./Report/reportUtils";
 
 const SCHEME_PALETTE = [
   "#10b981", "#6366f1", "#f59e0b", "#ef4444",
@@ -38,6 +37,8 @@ const STATUS_COLORS = {
 export default function OverviewTab() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [enrollmentUsers, setEnrollmentUsers] = useState([]);
+  const [selectedOverviewScheme, setSelectedOverviewScheme] = useState("");
 
   // ── Fetch overview stats ─────────────────────────────────────────
   useEffect(() => {
@@ -54,6 +55,60 @@ export default function OverviewTab() {
     load();
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadEnrollmentUsers = async () => {
+      try {
+        const firstPage = await fetchAllUsersApi("", 1, PAGE_SIZE);
+        if (
+          firstPage?.status !== "success" ||
+          !Array.isArray(firstPage.data?.content)
+        ) {
+          throw new Error(firstPage?.message || "Could not load enrollments.");
+        }
+
+        const totalUsers = Number(firstPage.data.totalElements);
+        if (!Number.isSafeInteger(totalUsers) || totalUsers < 0) {
+          throw new Error("The users API returned an invalid user count.");
+        }
+
+        const pages = [firstPage.data.content];
+        const totalPages = Math.ceil(totalUsers / PAGE_SIZE);
+        for (let firstPageInBatch = 2; firstPageInBatch <= totalPages; firstPageInBatch += 4) {
+          const lastPageInBatch = Math.min(firstPageInBatch + 3, totalPages);
+          const batch = await Promise.all(
+            Array.from({ length: lastPageInBatch - firstPageInBatch + 1 }, (_, index) =>
+              fetchAllUsersApi("", firstPageInBatch + index, PAGE_SIZE),
+            ),
+          );
+          batch.forEach((response) => {
+            if (
+              response?.status !== "success" ||
+              !Array.isArray(response.data?.content)
+            ) {
+              throw new Error(response?.message || "Could not load enrollments.");
+            }
+            pages.push(response.data.content);
+          });
+        }
+
+        const records = pages.flat();
+        if (records.length !== totalUsers) {
+          throw new Error("The users API returned an incomplete enrollment list.");
+        }
+        if (!cancelled) setEnrollmentUsers(records.map(normalizeUser));
+      } catch (error) {
+        console.error("Failed to load overview enrollments:", error);
+      }
+    };
+
+    loadEnrollmentUsers();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // ── Live activity SSE feed ───────────────────────────────────────
   const { items: feed, connectionStatus } = useEventStream({
     endpoint: buildSseUrl("admin/activity-logs/stream"),
@@ -68,51 +123,13 @@ export default function OverviewTab() {
     reconnecting: { dot: "bg-amber-400 animate-pulse", text: "text-amber-400", label: "Reconnecting…" },
   }[connectionStatus] ?? { dot: "bg-slate-500", text: "text-slate-400", label: "Connecting…" };
 
-  // ── Inflow chart ─────────────────────────────────────────────────
-  const inflowData = stats?.inflowData ?? [];
-  const inflowChartData = {
-    labels: inflowData.map((d) => {
-      try { return new Date(d.day).toLocaleDateString("en-IN", { day: "2-digit", month: "short" }); }
-      catch { return d.day; }
-    }),
-    datasets: [{
-      label: "Inflow",
-      data: inflowData.map((d) => Number(d.amount)),
-      borderColor: "#10b981",
-      borderWidth: 2,
-      pointRadius: 0,
-      pointHoverRadius: 5,
-      pointHoverBackgroundColor: "#10b981",
-      tension: 0.35,
-      fill: true,
-      backgroundColor: (ctx) => {
-        const { chart } = ctx;
-        const { chartArea } = chart;
-        if (!chartArea) return "rgba(16,185,129,0.15)";
-        const g = chart.ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-        g.addColorStop(0, "rgba(16,185,129,0.35)");
-        g.addColorStop(1, "rgba(16,185,129,0)");
-        return g;
-      },
-    }],
-  };
-
-  const inflowOptions = {
-    responsive: true, maintainAspectRatio: false,
-    interaction: { mode: "index", intersect: false },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: "#0f172a", borderColor: "#1e293b", borderWidth: 1,
-        titleColor: "#e2e8f0", bodyColor: "#e2e8f0", padding: 10, cornerRadius: 12, displayColors: false,
-        callbacks: { label: (i) => `Inflow: ${currency(i.parsed.y)}` },
-      },
-    },
-    scales: {
-      x: { grid: { display: false }, border: { display: false }, ticks: { color: "#64748b", font: { size: 10 } } },
-      y: { grid: { color: "#1e293b" }, border: { display: false }, ticks: { color: "#64748b", font: { size: 10 }, callback: (v) => `₹${(v / 1000).toFixed(0)}k` } },
-    },
-  };
+  const enrollmentSchemes = enrollmentUsers.flatMap((user) => user.schemes);
+  const overviewSchemeNames = Array.from(
+    new Set(enrollmentSchemes.map((scheme) => scheme.name)),
+  ).sort((first, second) => first.localeCompare(second));
+  const visibleEnrollmentSchemes = selectedOverviewScheme
+    ? enrollmentSchemes.filter((scheme) => scheme.name === selectedOverviewScheme)
+    : enrollmentSchemes;
 
   // ── Doughnut: scheme AUM ─────────────────────────────────────────
   const schemeAUM = stats?.schemeAUM ?? [];
@@ -220,23 +237,27 @@ export default function OverviewTab() {
 
       {/* ── Inflow Chart + Live Feed ── */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
-        {/* Inflow line chart */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 xl:col-span-3">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h3 className="font-display text-sm font-semibold text-slate-200 flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-emerald-400" />
-                Platform Inflow
-              </h3>
-              <p className="text-xs text-slate-500 font-body mt-0.5">Last 14 days · successful deposits</p>
-            </div>
+        {/* Enrollment timeline */}
+        <div className="space-y-3 xl:col-span-3">
+          <div className="flex justify-end">
+            <label className="sr-only" htmlFor="overview-scheme-select">Select scheme</label>
+            <select
+              id="overview-scheme-select"
+              value={selectedOverviewScheme}
+              onChange={(event) => setSelectedOverviewScheme(event.target.value)}
+              className="max-w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-200 outline-none focus:border-emerald-500"
+            >
+              <option value="">All schemes</option>
+              {overviewSchemeNames.map((schemeName) => (
+                <option key={schemeName} value={schemeName}>{schemeName}</option>
+              ))}
+            </select>
           </div>
-          <div className="h-56">
-            {inflowData.length > 0
-              ? <Line data={inflowChartData} options={inflowOptions} />
-              : <div className="flex h-full items-center justify-center text-xs text-slate-600">No deposit data in the last 14 days</div>
-            }
-          </div>
+          <EnrollmentChart
+            schemes={visibleEnrollmentSchemes}
+            view={selectedOverviewScheme ? "scheme" : "all"}
+            selectedScheme={selectedOverviewScheme}
+          />
         </div>
 
         {/* Live Activity feed */}

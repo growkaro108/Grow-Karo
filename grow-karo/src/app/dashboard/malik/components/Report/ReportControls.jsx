@@ -28,17 +28,43 @@ export default function ReportControls({
     return (
         <>
             <header className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[#C9A66B]/25 bg-[#C9A66B]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#E0C58F]">
-                        <Sparkles size={12} />
-                        Admin · Analytics
-                    </span>
-                    {/* <h1 className="mt-4 bg-linear-to-br from-white via-slate-100 to-slate-400 bg-clip-text text-3xl font-semibold tracking-tight text-transparent sm:text-4xl">
-                        Investor reports
-                    </h1> */}
-                    {/* <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-400">
-                        Account activity, scheme enrollments and portfolio performance — filter, drill in, and export exactly what you see.
-                    </p> */}
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="inline-flex rounded-xl border border-white/10 bg-white/3 p-1 backdrop-blur">
+                        {[
+                            { id: "all", label: "All users", icon: Users },
+                            { id: "scheme", label: "By scheme", icon: Layers },
+                        ].map(({ id, label, icon: Icon }) => (
+                            <button
+                                key={id}
+                                onClick={() => onViewChange(id)}
+                                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${view === id
+                                        ? "bg-linear-to-b from-white/15 to-white/5 text-white shadow-inner ring-1 ring-white/15"
+                                        : "text-slate-400 hover:text-slate-200"
+                                    }`}
+                            >
+                                <Icon size={15} className={view === id ? "text-[#E0C58F]" : ""} />
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {view === "scheme" && (
+                        <div className="relative">
+                            <Layers size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#C9A66B]" />
+                            <select
+                                value={selectedScheme}
+                                onChange={(event) => onSchemeChange(event.target.value)}
+                                aria-label="Filter by scheme"
+                                className="w-full appearance-none rounded-xl border border-white/10 bg-slate-900/80 py-2.5 pl-10 pr-10 text-sm text-slate-100 outline-none backdrop-blur transition focus:border-[#C9A66B]/60 focus:ring-2 focus:ring-[#C9A66B]/20 sm:w-72"
+                            >
+                                <option value="">Select a scheme…</option>
+                                {schemeOptions.map((scheme) => (
+                                    <option key={scheme.name} value={scheme.name}>{scheme.name}</option>
+                                ))}
+                            </select>
+                            <ChevronDown size={15} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
@@ -84,45 +110,7 @@ export default function ReportControls({
                 </div>
             </header>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="inline-flex rounded-xl border border-white/10 bg-white/3 p-1 backdrop-blur">
-                    {[
-                        { id: "all", label: "All users", icon: Users },
-                        { id: "scheme", label: "By scheme", icon: Layers },
-                    ].map(({ id, label, icon: Icon }) => (
-                        <button
-                            key={id}
-                            onClick={() => onViewChange(id)}
-                            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
-                                view === id
-                                    ? "bg-linear-to-b from-white/15 to-white/5 text-white shadow-inner ring-1 ring-white/15"
-                                    : "text-slate-400 hover:text-slate-200"
-                            }`}
-                        >
-                            <Icon size={15} className={view === id ? "text-[#E0C58F]" : ""} />
-                            {label}
-                        </button>
-                    ))}
-                </div>
 
-                {view === "scheme" && (
-                    <div className="relative">
-                        <Layers size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#C9A66B]" />
-                        <select
-                            value={selectedScheme}
-                            onChange={(event) => onSchemeChange(event.target.value)}
-                            aria-label="Filter by scheme"
-                            className="w-full appearance-none rounded-xl border border-white/10 bg-slate-900/80 py-2.5 pl-10 pr-10 text-sm text-slate-100 outline-none backdrop-blur transition focus:border-[#C9A66B]/60 focus:ring-2 focus:ring-[#C9A66B]/20 sm:w-72"
-                        >
-                            <option value="">Select a scheme…</option>
-                            {schemeOptions.map((scheme) => (
-                                <option key={scheme.name} value={scheme.name}>{scheme.name}</option>
-                            ))}
-                        </select>
-                        <ChevronDown size={15} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                    </div>
-                )}
-            </div>
         </>
     );
 }

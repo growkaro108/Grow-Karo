@@ -438,8 +438,9 @@ public class AdminAPIService {
                 replaceSipLedger(userScheme, request.sipLedger());
             }
 
-            userScheme.setNextPayoutDate(isPension ? null : general.calculateNextPayoutDate(
-                    enrollmentDate, scheme.getPayoutFrequency(), scheme.getTenure()));
+            userScheme.setNextPayoutDate(isPension ? null
+                    : general.calculateNextPayoutDate(
+                            enrollmentDate, scheme.getPayoutFrequency(), scheme.getTenure()));
             userScheme.setMaturityDate(maturityDate);
             userScheme.setStatus(status);
 
@@ -627,14 +628,13 @@ public class AdminAPIService {
         if (isPension && !request.paidDate().plusMonths(request.tenureMonths()).equals(request.maturityDate())) {
             return general.response("error", "Pension maturity date must match the contracted term", null);
         }
-        boolean pensionTermsChanged = isPension && (
-                userScheme.getPaidAmount() == null
-                        || userScheme.getPaidAmount().compareTo(request.paidAmount()) != 0
-                        || !java.util.Objects.equals(
-                                userScheme.getContractTotalInterestPercentage(), request.profitPercentage())
-                        || !java.util.Objects.equals(
-                                userScheme.getContractTenureMonths(), request.tenureMonths())
-                        || !java.util.Objects.equals(userScheme.getPaidDate(), request.paidDate()));
+        boolean pensionTermsChanged = isPension && (userScheme.getPaidAmount() == null
+                || userScheme.getPaidAmount().compareTo(request.paidAmount()) != 0
+                || !java.util.Objects.equals(
+                        userScheme.getContractTotalInterestPercentage(), request.profitPercentage())
+                || !java.util.Objects.equals(
+                        userScheme.getContractTenureMonths(), request.tenureMonths())
+                || !java.util.Objects.equals(userScheme.getPaidDate(), request.paidDate()));
         if (pensionTermsChanged && userScheme.getProfitLedger().stream().anyMatch(UserSchemeProfitLedger::isPaid)) {
             return general.response(
                     "error", "Pension terms cannot be changed after an interest installment is marked paid", null);
@@ -657,8 +657,10 @@ public class AdminAPIService {
         userScheme.setEnrollmentDate(enrollmentDate);
         userScheme.setNominee(nominee);
         userScheme.setMaturityDate(maturityDate);
-        userScheme.setNextPayoutDate(isPension ? null : general.calculateNextPayoutDate(
-                enrollmentDate, userScheme.getScheme().getPayoutFrequency(), userScheme.getScheme().getTenure()));
+        userScheme.setNextPayoutDate(isPension ? null
+                : general.calculateNextPayoutDate(
+                        enrollmentDate, userScheme.getScheme().getPayoutFrequency(),
+                        userScheme.getScheme().getTenure()));
         if (isPension && (pensionTermsChanged || userScheme.getProfitLedger().isEmpty())) {
             replacePensionInterestSchedule(userScheme, request.paidDate());
         }
@@ -683,7 +685,7 @@ public class AdminAPIService {
     private boolean isPensionPayoutLedgerWithinContract(
             BigDecimal principal,
             Double monthlyInterestPercentage,
-            List<UserSchemeProfitLedgerRequest> payouts,int months) {
+            List<UserSchemeProfitLedgerRequest> payouts, int months) {
         if (payouts == null || payouts.stream().anyMatch(
                 payout -> payout == null || payout.profitAmount() == null
                         || payout.profitAmount().signum() < 0 || payout.profitDate() == null)) {
@@ -840,7 +842,8 @@ public class AdminAPIService {
             boolean isPension = "PENSION".equalsIgnoreCase(scheme.getPlanType());
             if (isPension && (!isValidPensionTerms(totalInterestPercentage, tenureMonths)
                     || paidDate.isAfter(general.getCurrentDate()))) {
-                return general.response("error", "Pension approval requires a valid monthly rate, term, and payment date",
+                return general.response("error",
+                        "Pension approval requires a valid monthly rate, term, and payment date",
                         null);
             }
 
@@ -864,8 +867,9 @@ public class AdminAPIService {
             if (isPension) {
                 replacePensionInterestSchedule(userScheme, paidDate);
             }
-            userScheme.setNextPayoutDate(isPension ? null : general.calculateNextPayoutDate(
-                    enrollmentDate, scheme.getPayoutFrequency(), scheme.getTenure()));
+            userScheme.setNextPayoutDate(isPension ? null
+                    : general.calculateNextPayoutDate(
+                            enrollmentDate, scheme.getPayoutFrequency(), scheme.getTenure()));
             LocalDate today = general.getCurrentDate();
             if (isPension && !maturityDate.isAfter(today)) {
                 userScheme.setStatus(UserSchemeStatus.MATURED);
@@ -1155,7 +1159,7 @@ public class AdminAPIService {
                     break;
                 }
             }
-        }else{
+        } else {
             return null;
         }
 
@@ -1682,9 +1686,15 @@ public class AdminAPIService {
         if (query == null || query.trim().isEmpty()) {
             query = "";
         }
-        var rawUsers = userSchemeRepository.findNearMaturityOrOverdueUsers(
-                query, days, List.of(UserSchemeStatus.MATURED, UserSchemeStatus.SETTLEMENT_PENDING), pageable);
-        var mapped = rawUsers.map(NearMaturityUserSchemeResponse::fromUserScheme);
+        LocalDate maturityCutoff = LocalDate.now().plusDays(days);
+        // var rawUsers = userSchemeRepository.findNearMaturityOrOverdueUsers(
+        // query, maturityCutoff, List.of(UserSchemeStatus.MATURED,
+        // UserSchemeStatus.SETTLEMENT_PENDING),
+        // pageable);
+        List<UserScheme> rawUsers = userSchemeRepository.debugDateStatus(maturityCutoff,
+                List.of(UserSchemeStatus.WITHDRAWN, UserSchemeStatus.SETTLED));
+        List<NearMaturityUserSchemeResponse> mapped = rawUsers.stream()
+                .map(NearMaturityUserSchemeResponse::fromUserScheme).toList();
         return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
     }
 
@@ -1736,7 +1746,8 @@ public class AdminAPIService {
                 return general.response("error", "The selected remitter is unavailable", null);
             }
             if (user.getBankDetails() == null) {
-                return general.response("error", "The user must add bank details before a remitter can be assigned", null);
+                return general.response("error", "The user must add bank details before a remitter can be assigned",
+                        null);
             }
         }
 

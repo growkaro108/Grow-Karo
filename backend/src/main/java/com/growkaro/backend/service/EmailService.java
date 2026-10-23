@@ -42,13 +42,16 @@ public class EmailService {
     public void sendSimpleEmail(String to, String subject, String body) {
         if (to.contains("growwkaro.com"))
             return;
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom("growkaroanand@gmail.com"); // Must match your configured username
-        message.setTo(to);
-        message.setSubject(subject);
-        message.setText(body);
-        mailSender.send(message);
+        // SimpleMailMessage message = new SimpleMailMessage();
+        // message.setFrom("growkaroanand@gmail.com"); // Must match your configured
+        // username
+        // message.setTo(to);
+        // message.setSubject(subject);
+        // message.setText(body);
+        // mailSender.send(message);
         // System.out.println("Email sent successfully to " + to);
+        log.info("Email sent is off to {} - subject: {}", to, subject);
+
     }
 
     // @Async
@@ -57,25 +60,27 @@ public class EmailService {
         String subject = "Your Verification Code";
         String body = "Your " + remark + " OTP code is: " + otp + ". It will expire in 5 minutes.";
         sendSimpleEmail(email, subject, body);
+        log.warn("otp sent to " + email + " remark: " + remark + " otp: " + otp);
         redisService.saveOtp(remark, email, otp);
         // System.out.println("otp sent to " + email + " remark: " + remark);
     }
 
     public void sendHtml(String toEmail, String subject, String htmlBody) {
-        if (toEmail == null || toEmail.isBlank()||toEmail.contains("growwkaro.com")) {
-            log.warn("Skipping email '{}' subject - recipient email is empty",toEmail, subject);
+        if (toEmail == null || toEmail.isBlank() || toEmail.contains("growwkaro.com")) {
+            log.warn("Skipping email '{}' subject - recipient email is empty", toEmail, subject);
             return;
         }
 
         try {
-            MimeMessage mimeMessage = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            helper.setTo(toEmail);
-            helper.setSubject(subject);
-            helper.setText(htmlBody, true);
-            mailSender.send(mimeMessage);
+            // MimeMessage mimeMessage = mailSender.createMimeMessage();
+            // MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+            // helper.setTo(toEmail);
+            // helper.setSubject(subject);
+            // helper.setText(htmlBody, true);
+            // mailSender.send(mimeMessage);
 
-            log.info("Email sent to {} - subject: {}", toEmail, subject);
+            // log.info("Email sent to {} - subject: {}", toEmail, subject);
+            log.info("Email sent is off to {} - subject: {}", toEmail, subject);
         } catch (Exception ex) {
             // Never let an email failure roll back or block the business transaction.
             log.error("Failed to send email to {} - subject: {} - {}", toEmail, subject, ex.getMessage(), ex);
@@ -330,8 +335,10 @@ public class EmailService {
                     row("Amount Invested", "₹" + invested) +
                     row(isPension ? "Interest Recorded" : "Total Profit", "₹" + profit) +
                     row(isPension ? "Interest Redeemed" : "Amount Redeemed So Far", "₹" + redeemed) +
-                    row(isPension ? "<strong>Principal Due at Maturity</strong>" : "<strong>Total Maturity Amount</strong>",
-                            "<strong>₹" + totalAmount + "</strong>") +
+                    row(isPension ? "<strong>Principal Due at Maturity</strong>"
+                            : "<strong>Total Maturity Amount</strong>",
+                            "<strong>₹" + totalAmount + "</strong>")
+                    +
                     "</table>" +
 
                     (isPension
@@ -344,7 +351,8 @@ public class EmailService {
                                     + "<p style='margin: 0;'><strong>Reinvest:</strong> No action needed. If we don't receive a withdrawal request within 24 hours, the full amount of <strong>₹"
                                     + totalAmount
                                     + "</strong> will be <strong>automatically reinvested</strong> in the same scheme.</p>"
-                                    + "</div>") +
+                                    + "</div>")
+                    +
 
                     "<a href='" + general.loginUrl() + "' style='display: inline-block; background-color: #006633; " +
                     "color: white; padding: 10px 20px; margin: 15px 0; text-decoration: none; border-radius: 5px;'>" +

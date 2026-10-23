@@ -28,11 +28,10 @@ export default function WithdrawalFilters({
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-medium capitalize font-body transition-colors ${
-                filter === f
-                  ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30"
-                  : "bg-slate-900 text-slate-400 ring-1 ring-slate-800 hover:text-slate-200"
-              }`}
+              className={`rounded-full px-3.5 py-1.5 text-xs font-medium capitalize font-body transition-colors ${filter === f
+                ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30"
+                : "bg-slate-900 text-slate-400 ring-1 ring-slate-800 hover:text-slate-200"
+                }`}
             >
               {f}
             </button>
@@ -52,11 +51,10 @@ export default function WithdrawalFilters({
           </div>
           <button
             onClick={() => setShowFilters((v) => !v)}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium ring-1 transition-colors font-body ${
-              showFilters || activeFilterCount > 0
-                ? "bg-emerald-500/15 text-emerald-400 ring-emerald-500/30"
-                : "bg-slate-900 text-slate-400 ring-slate-800 hover:text-slate-200"
-            }`}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium ring-1 transition-colors font-body ${showFilters || activeFilterCount > 0
+              ? "bg-emerald-500/15 text-emerald-400 ring-emerald-500/30"
+              : "bg-slate-900 text-slate-400 ring-slate-800 hover:text-slate-200"
+              }`}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
             Filters

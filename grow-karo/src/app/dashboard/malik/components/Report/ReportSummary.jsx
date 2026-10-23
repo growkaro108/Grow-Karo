@@ -1,14 +1,12 @@
 import {
     ArrowDownRight,
     ArrowUpRight,
+    Landmark,
     Layers,
-    TrendingDown,
-    TrendingUp,
     Users,
     Wallet,
 } from "lucide-react";
 import { currency } from "../../utils";
-import { formatPercent } from "./reportUtils";
 
 const ACCENTS = {
     amber: { icon: "bg-amber-400/10 text-amber-300 ring-amber-400/20", glow: "from-amber-400/20" },
@@ -16,6 +14,7 @@ const ACCENTS = {
     violet: { icon: "bg-violet-400/10 text-violet-300 ring-violet-400/20", glow: "from-violet-400/20" },
     emerald: { icon: "bg-emerald-400/10 text-emerald-300 ring-emerald-400/20", glow: "from-emerald-400/20" },
     rose: { icon: "bg-rose-400/10 text-rose-300 ring-rose-400/20", glow: "from-rose-400/20" },
+    orange: { icon: "bg-orange-400/10 text-orange-300 ring-orange-400/20", glow: "from-orange-400/20" },
 };
 
 function StatCard({ icon: Icon, label, value, accent = "amber", delta, deltaUp }) {
@@ -26,9 +25,8 @@ function StatCard({ icon: Icon, label, value, accent = "amber", delta, deltaUp }
             <div className="relative flex items-center justify-between">
                 <span className={`grid h-9 w-9 place-items-center rounded-xl ring-1 ${tone.icon}`}><Icon size={17} /></span>
                 {delta && (
-                    <span className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${
-                        deltaUp ? "bg-emerald-400/10 text-emerald-300 ring-emerald-400/25" : "bg-rose-400/10 text-rose-300 ring-rose-400/25"
-                    }`}>
+                    <span className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${deltaUp ? "bg-emerald-400/10 text-emerald-300 ring-emerald-400/25" : "bg-rose-400/10 text-rose-300 ring-rose-400/25"
+                        }`}>
                         {deltaUp ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
                         {delta}
                     </span>
@@ -40,62 +38,28 @@ function StatCard({ icon: Icon, label, value, accent = "amber", delta, deltaUp }
     );
 }
 
-export default function ReportSummary({ totals, gain, gainPct, isGain, view, schemeBreakdown, Badge }) {
-    const showBreakdown = view === "all" && schemeBreakdown.length > 0;
+export default function ReportSummary({
+    totals,
+    schemeBreakdown = [],
+}) {
     return (
         <>
-            <section className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-                <StatCard icon={Users} label={totals.primaryLabel} value={totals.primaryValue.toLocaleString("en-IN")} accent="amber" />
-                <StatCard icon={Layers} label={totals.secondaryLabel} value={totals.secondaryValue.toLocaleString("en-IN")} accent="sky" />
-                <StatCard icon={Wallet} label="Total invested" value={currency(totals.totalInvested)} accent="violet" />
-                <StatCard
-                    icon={isGain ? TrendingUp : TrendingDown}
-                    label="Current value"
-                    value={currency(totals.totalCurrent)}
-                    accent={isGain ? "emerald" : "rose"}
-                    delta={totals.totalInvested > 0 ? formatPercent(gainPct) : null}
-                    deltaUp={isGain}
-                />
-            </section>
-
-            <section className={`mt-4 grid gap-4 ${showBreakdown ? "lg:grid-cols-5" : ""}`}>
-                <div className={`relative overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-white/6 to-white/1 p-5 backdrop-blur ${showBreakdown ? "lg:col-span-3" : ""}`}>
-                    <div className={`pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full blur-3xl ${isGain ? "bg-emerald-400/15" : "bg-rose-400/15"}`} />
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Portfolio performance</p>
-                            <p className={`mt-2 text-3xl font-semibold tabular-nums tracking-tight ${isGain ? "text-emerald-300" : "text-rose-300"}`}>
-                                {isGain ? "+" : "−"}{currency(Math.abs(gain))}
-                            </p>
-                            <p className="mt-1 text-xs text-slate-500">net {isGain ? "gain" : "loss"} on invested capital</p>
-                        </div>
-                        <Badge value={gainPct} large />
-                    </div>
-
-                    <div className="mt-6">
-                        <div className="mb-2 flex justify-between text-xs">
-                            <span className="text-slate-400">Invested</span>
-                            <span className="tabular-nums text-slate-200">{currency(totals.totalInvested)}</span>
-                        </div>
-                        <div className="h-2.5 overflow-hidden rounded-full bg-slate-800/80">
-                            <div className="h-full w-full rounded-full bg-linear-to-r from-violet-400/80 to-violet-300/60" />
-                        </div>
-                        <div className="mb-2 mt-4 flex justify-between text-xs">
-                            <span className="text-slate-400">Current value</span>
-                            <span className="tabular-nums text-slate-200">{currency(totals.totalCurrent)}</span>
-                        </div>
-                        <div className="h-2.5 overflow-hidden rounded-full bg-slate-800/80">
-                            <div
-                                className={`h-full rounded-full bg-linear-to-r ${isGain ? "from-emerald-400 to-teal-300" : "from-rose-400 to-orange-300"}`}
-                                style={{ width: `${Math.min(100, totals.totalInvested > 0 ? (totals.totalCurrent / totals.totalInvested) * 100 : 0)}%` }}
-                            />
-                        </div>
-                    </div>
+            <section className="mt-6 grid gap-4 lg:grid-cols-5">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:col-span-3">
+                    <StatCard icon={Users} label={totals.primaryLabel} value={totals.primaryValue.toLocaleString("en-IN")} accent="amber" />
+                    <StatCard icon={Layers} label={totals.secondaryLabel} value={totals.secondaryValue.toLocaleString("en-IN")} accent="sky" />
+                    <StatCard icon={Wallet} label="Total invested" value={currency(totals.totalInvested)} accent="violet" />
+                    <StatCard
+                        icon={Landmark}
+                        label="Current principal"
+                        value={currency(totals.currentPrincipal ?? 0)}
+                        accent="emerald"
+                    />
                 </div>
 
-                {showBreakdown && (
-                    <div className="rounded-2xl border border-white/10 bg-linear-to-br from-white/5 to-white/1 p-5 backdrop-blur lg:col-span-2">
-                        <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Top schemes by capital</p>
+                <div className="rounded-2xl border border-white/10 bg-linear-to-br from-white/5 to-white/1 p-5 backdrop-blur lg:col-span-2">
+                    <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Top schemes by capital</p>
+                    {schemeBreakdown.length > 0 ? (
                         <ul className="mt-4 space-y-3.5">
                             {schemeBreakdown.map((row, index) => (
                                 <li key={row.name}>
@@ -112,8 +76,10 @@ export default function ReportSummary({ totals, gain, gainPct, isGain, view, sch
                                 </li>
                             ))}
                         </ul>
-                    </div>
-                )}
+                    ) : (
+                        <p className="mt-4 text-xs text-slate-500">No scheme capital for the current filters.</p>
+                    )}
+                </div>
             </section>
         </>
     );

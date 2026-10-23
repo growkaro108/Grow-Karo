@@ -128,14 +128,16 @@ public class UserAPIService {
             // System.out.println("updated successfully");
             // return true;
             // }
-            Pageable pageable = PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "requestDate"));
-            var rawUsers = userSchemeRepository.findNearMaturityOrOverdueUsers(
-                    "", 10, List.of(UserSchemeStatus.MATURED), pageable);
-            var mapped = rawUsers.map(NearMaturityUserSchemeResponse::fromUserScheme);
-            return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
+            // Pageable pageable = PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC,
+            // "requestDate"));
+            // var rawUsers = userSchemeRepository.findNearMaturityOrOverdueUsers(
+            // "", 10, List.of(UserSchemeStatus.MATURED), pageable);
+            // var mapped = rawUsers.map(NearMaturityUserSchemeResponse::fromUserScheme);
+            // return PagedResponse.from(mapped, pageable.getPageNumber(),
+            // pageable.getPageSize());
             // User u =userRepository.findByEmail("wv9304@gmail.com").orElse(null);
             // return u != null ? u.hashCode() : "User not found";
-
+            return true;
         } catch (Exception e) {
             log.error("Failed to set user status active", e.getMessage());
             return e.getMessage();
@@ -323,7 +325,7 @@ public class UserAPIService {
         try {
             Thread.sleep(200); // Introduce a 200 milisecond delay to mitigate brute-force attacks
             if (!isUserExists(email)) {
-                log.warn("incorect email entered... email: {}",email);
+                log.warn("incorect email entered... email: {}", email);
                 return general.response("error", "User not found", Map.of());
             }
             User user = getUserByEmail(email);

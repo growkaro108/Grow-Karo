@@ -91,25 +91,25 @@ export default function BondCard({
   const file = bondFormState.image;
 
   // Build and clean up the preview URL whenever the selected file changes
- useEffect(() => {
-  // 1. Guard check: clear preview and return
-  if (!(file instanceof File)) {
-    setPreview(null);
-    return;
-  }
+  useEffect(() => {
+    // 1. Guard check: clear preview and return
+    if (!(file instanceof File)) {
+      setPreview(null);
+      return;
+    }
 
-  // 2. Create the blob URL
-  const objectUrl = URL.createObjectURL(file);
-  setPreview({ url: objectUrl, name: file.name, type: file.type });
+    // 2. Create the blob URL
+    const objectUrl = URL.createObjectURL(file);
+    setPreview({ url: objectUrl, name: file.name, type: file.type });
 
-  // 3. Guaranteed Cleanup: Always revokes the URL when:
-  //    - file changes
-  //    - file becomes null/invalid
-  //    - component unmounts
-  return () => {
-    URL.revokeObjectURL(objectUrl);
-  };
-}, [file]);
+    // 3. Guaranteed Cleanup: Always revokes the URL when:
+    //    - file changes
+    //    - file becomes null/invalid
+    //    - component unmounts
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [file]);
 
   const handleBondFileChange = (e) => {
     const selected = e.target.files?.[0];
@@ -188,7 +188,7 @@ export default function BondCard({
             {isPension && (
               <Stat
                 label="Payable"
-                value={currency(bond.contractInterestAmount)}
+                value={currency(bond.contractInterestAmount - (bond.redeemAmount ?? bond.profitRedeemed))}
                 tone="emerald"
               />
             )}
@@ -432,7 +432,7 @@ export default function BondCard({
           <input
             aria-label="Bond number"
             placeholder={bond.bondNumber || "Bond number"}
-            value={bondFormState.bondNumber ?? bond.bondNumber??"GKFD"}
+            value={bondFormState.bondNumber ?? bond.bondNumber ?? "GKFD"}
             onChange={(e) => onBondFormChange("bondNumber", e.target.value)}
             className={inputClass}
           />
@@ -452,7 +452,7 @@ export default function BondCard({
                     width={100}
                     height={100}
                     className="sea-file-thumb w-full h-auto object-contain"
-                    />
+                  />
                 )}
                 <span className="sea-file-name" title={preview.name}>
                   <FileText size={12} /> {preview.name}
@@ -482,11 +482,10 @@ export default function BondCard({
             disabled={savingBond}
             onClick={onSaveBond}
             aria-busy={savingBond}
-            className={`relative w-full overflow-hidden rounded-md px-3 py-2 text-xs font-semibold transition ${
-              savingBond
+            className={`relative w-full overflow-hidden rounded-md px-3 py-2 text-xs font-semibold transition ${savingBond
                 ? "cursor-not-allowed border-slate-600 bg-slate-950/30 text-slate-600"
                 : "border border-teal-700 text-teal-300 hover:bg-teal-950/50 focus:cursor-none focus:opacity-50"
-            }`}
+              }`}
           >
             {savingBond ? (
               <>

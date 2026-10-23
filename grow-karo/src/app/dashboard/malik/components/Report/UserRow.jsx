@@ -102,6 +102,9 @@ export default function UserRow({ user: u, isOpen, onToggle }) {
                       <th className="px-4 py-2.5 text-left font-medium">
                         Enrolled on
                       </th>
+                      <th className="px-4 py-2.5 text-left font-medium">
+                        Mature on
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -127,6 +130,9 @@ export default function UserRow({ user: u, isOpen, onToggle }) {
                         </td>
                         <td className="px-4 py-2.5 text-slate-400">
                           {s.enrolledOn || "—"}
+                        </td>
+                        <td className="px-4 py-2.5 text-slate-400">
+                          {s.maturityDate || "—"}
                         </td>
                       </tr>
                     ))}

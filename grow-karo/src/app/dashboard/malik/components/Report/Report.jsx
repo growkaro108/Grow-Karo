@@ -29,7 +29,6 @@ import {
   PAGE_SIZE,
   ROWS_PER_PAGE_OPTIONS,
   ReturnBadge,
-  StatusPill,
   displayStatus,
   formatPercent,
   normalizeUser,
@@ -37,12 +36,12 @@ import {
 } from "./reportUtils";
 import dynamic from "next/dynamic";
 import UserRow from "./UserRow";
+import StatusPill from "../user-management/StatusPill";
 // import ReportControls from "./ReportControls";
-// import ReportSummary from "./ReportSummary";
 
 //lazy load with progressive loading
 const ReportControls = dynamic(() => import("./ReportControls"), {
-  loading: () =><ReportControlSkeleton />,
+  loading: () => <ReportControlSkeleton />,
   ssr: false,
 });
 const ReportSummary = dynamic(() => import("./ReportSummary"), {
@@ -276,9 +275,25 @@ export default function Reports() {
     };
   }, [fetchUsers]);
 
+  const schemeOptions = useMemo(() => {
+    const names = new Set();
+    users.forEach((u) => u?.schemes.forEach((s) => names.add(s.name)));
+    return Array.from(names, (name) => ({ name })).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+  }, [users]);
+
+  const activeScheme =
+    view === "scheme"
+      ? selectedScheme || (schemeOptions.length > 0 ? schemeOptions[0].name : "")
+      : "";
+
   const changeView = (nextView) => {
     if (nextView === view) return;
     setView(nextView);
+    if (nextView === "scheme" && !selectedScheme && schemeOptions.length > 0) {
+      setSelectedScheme(schemeOptions[0].name);
+    }
     setExpandedId(null);
     setPage(1);
   };
@@ -307,23 +322,18 @@ export default function Reports() {
     setPage(1);
   };
 
-  const schemeOptions = useMemo(() => {
-    const names = new Set();
-    users.forEach((u) => u?.schemes.forEach((s) => names.add(s.name)));
-    return Array.from(names, (name) => ({ name })).sort((a, b) =>
-      a.name.localeCompare(b.name),
-    );
-  }, [users]);
-
   const filteredUsers = useMemo(() => {
     const q = query.trim().toLowerCase();
 
     return users
-      .filter((u) =>
-        view === "scheme"
-          ? u?.schemes.some((s) => s.name === selectedScheme)
-          : true,
-      )
+      .filter((u) => {
+        if (view === "scheme") {
+          return activeScheme
+            ? (u?.schemes || []).some((s) => s.name === activeScheme)
+            : true;
+        }
+        return true;
+      })
       .filter((u) => {
         const matchesQuery =
           !q ||
@@ -336,44 +346,86 @@ export default function Reports() {
           accountFilter === "All" || u.status === accountFilter;
         return matchesQuery && matchesAccount;
       });
-  }, [users, query, accountFilter, view, selectedScheme]);
+  }, [users, query, accountFilter, view, activeScheme]);
 
   const schemeEntryFor = useCallback(
-    (u) => u.schemes.find((s) => s.name === selectedScheme),
-    [selectedScheme],
+    (u) => (u?.schemes || []).find((s) => s.name === activeScheme),
+    [activeScheme],
   );
 
   const totals = useMemo(() => {
-    if (view === "scheme" && selectedScheme) {
-      const entries = filteredUsers
-        .map((u) => schemeEntryFor(u))
-        .filter(Boolean);
+    if (view === "scheme" && activeScheme) {
+      // All scheme enrollments matching activeScheme across all matching users
+      const entries = filteredUsers.flatMap((u) =>
+        (u.schemes || []).filter((s) => s.name === activeScheme),
+      );
+
+      const totalInvested = entries.reduce(
+        (sum, e) => sum + (e.investedAmount || 0),
+        0,
+      );
+      const withdrawnPrincipal = entries
+        .filter((e) => e.status === "withdrawn" || e.status === "settled")
+        .reduce((sum, e) => sum + (e.investedAmount || 0), 0);
+      const currentPrincipal = Math.max(0, totalInvested - withdrawnPrincipal);
+      const companyPaid = entries
+        .filter((e) => e.status === "withdrawn" || e.status === "settled")
+        .reduce((sum, e) => sum + (e.maturityAmount || 0), 0);
+
       return {
         primaryLabel: "Investors in scheme",
         primaryValue: filteredUsers.length,
-        secondaryLabel: "Approved enrollments",
-        secondaryValue: entries.filter((entry) => entry.status === "approved")
-          .length,
-        totalInvested: entries.reduce((sum, e) => sum + e.investedAmount, 0),
-        totalCurrent: entries.reduce((sum, e) => sum + e.currentValue, 0),
+        secondaryLabel: "Scheme enrollments",
+        secondaryValue: entries.length,
+        totalInvested,
+        currentPrincipal,
+        companyPaid,
+        totalPaid: companyPaid,
+        totalWithdrawn: companyPaid,
+        totalCurrent: entries.reduce(
+          (sum, e) => sum + (e.currentValue || 0),
+          0,
+        ),
       };
     }
+
+    const totalInvested = filteredUsers.reduce(
+      (sum, u) => sum + (u.totalInvested || 0),
+      0,
+    );
+    const withdrawnPrincipal = filteredUsers.reduce(
+      (sum, u) => sum + (u.totalWithdrawnPrincipal || 0),
+      0,
+    );
+    const currentPrincipal = Math.max(0, totalInvested - withdrawnPrincipal);
+    const companyPaid = filteredUsers.reduce(
+      (sum, u) => sum + (u.companyPaid ?? u.totalWithdrawn ?? 0),
+      0,
+    );
+
     return {
       primaryLabel: "Investors",
       primaryValue: filteredUsers.length,
       secondaryLabel: "Scheme enrollments",
       secondaryValue: filteredUsers.reduce(
-        (sum, u) => sum + u.schemes.length,
+        (sum, u) => sum + (u.schemes?.length || 0),
         0,
       ),
-      totalInvested: filteredUsers.reduce((sum, u) => sum + u.totalInvested, 0),
-      totalCurrent: filteredUsers.reduce((sum, u) => sum + u.currentValue, 0),
+      totalInvested,
+      currentPrincipal,
+      companyPaid,
+      totalPaid: companyPaid,
+      totalWithdrawn: companyPaid,
+      totalCurrent: filteredUsers.reduce(
+        (sum, u) => sum + (u.currentValue || 0),
+        0,
+      ),
     };
-  }, [view, selectedScheme, filteredUsers, schemeEntryFor]);
+  }, [view, activeScheme, filteredUsers]);
 
-  const gain = totals.totalCurrent - totals.totalInvested;
-  const gainPct = totals.totalInvested > 0 ? (gain / totals.totalInvested) * 100 : 0;
-  const isGain = gain >= 0;
+  // const gain = totals.totalCurrent - totals.totalInvested;
+  // const gainPct = totals.totalInvested > 0 ? (gain / totals.totalInvested) * 100 : 0;
+  // const isGain = gain >= 0;
 
   // Capital by scheme (all-users view)
   const schemeBreakdown = useMemo(() => {
@@ -419,33 +471,33 @@ export default function Reports() {
 
   /* ---- export rows ---- */
   const flattenRows = () => {
-    if (view === "scheme" && selectedScheme) {
+    if (view === "scheme" && activeScheme) {
       return exportUsers.map((u) => {
         const s = schemeEntryFor(u);
         return {
           "Investor ID": u.id,
           "Customer ID": u.customerId,
-          "Bond Number": s.bondNumber,
+          "Bond Number": s?.bondNumber || "-",
           Name: u.name,
           Email: u.email,
           Phone: u.phone,
           "Account Status": u.status,
-          Scheme: s.name,
-          Tenure: s.tenure,
-          "Profit %": formatPercent(s.profitPercentage),
-          "Invested Amount": s.investedAmount,
-          "Current Value": s.currentValue,
-          "Enrolled On": s.enrolledOn,
-          "Mature On": s.maturityDate,
-          "Scheme Status": displayStatus(s.status),
-          "Nominee Name": s.nomineeName,
-          "Nominee Relation": s.nomineeRelation,
-          "Nominee Phone": s.nomineePhone,
-          "Nominee Aadhar": s.nomineeAadhar,
-          "Bank Name": s.bankName,
-          "Bank Account": s.bankAccount,
-          "Bank IFSC": s.bankIfsc,
-          "Account Holder Name": s.bankAccountHolder,
+          Scheme: s?.name || "",
+          Tenure: s?.tenure || "",
+          "Profit %": s ? formatPercent(s.profitPercentage) : "",
+          "Invested Amount": s?.investedAmount ?? "",
+          "Current Value": s?.currentValue ?? "",
+          "Enrolled On": s?.enrolledOn || "",
+          "Mature On": s?.maturityDate || "",
+          "Scheme Status": s ? displayStatus(s.status) : "",
+          "Nominee Name": s?.nomineeName || "",
+          "Nominee Relation": s?.nomineeRelation || "",
+          "Nominee Phone": s?.nomineePhone || "",
+          "Nominee Aadhar": s?.nomineeAadhar || "",
+          "Bank Name": s?.bankName || "",
+          "Bank Account": s?.bankAccount || "",
+          "Bank IFSC": s?.bankIfsc || "",
+          "Account Holder Name": s?.bankAccountHolder || "",
           "Update By": "Anand",
           "Verified By": "",
         };
@@ -499,8 +551,8 @@ export default function Reports() {
       const doc = new jsPDF({ orientation: "landscape" });
 
       const title =
-        view === "scheme" && selectedScheme
-          ? `Investors Enrolled - ${selectedScheme}`
+        view === "scheme" && activeScheme
+          ? `Investors Enrolled - ${activeScheme}`
           : "Investor & Scheme Enrollment Report";
 
       doc.setFontSize(14);
@@ -548,7 +600,7 @@ export default function Reports() {
       worksheet["!cols"] = Object.keys(rows[0] ?? {}).map(() => ({ wch: 18 }));
       const workbook = XLSX.utils.book_new();
       const sheetName =
-        view === "scheme" && selectedScheme
+        view === "scheme" && activeScheme
           ? "Scheme Enrollments"
           : "Enrollments";
       XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
@@ -564,15 +616,15 @@ export default function Reports() {
   const exportDisabled =
     exporting !== null ||
     filteredUsers.length === 0 ||
-    (view === "scheme" && !selectedScheme);
-  const schemeReady = view === "scheme" && selectedScheme;
+    (view === "scheme" && !activeScheme);
+  const schemeReady = view === "scheme" && Boolean(activeScheme);
 
   return (
     <div className="relative isolate -m-4 min-h-full overflow-hidden bg-slate-950 text-slate-200">
       {/* ambient background */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-40 left-1/2 h-[480px] w-[900px] -translate-x-1/2 rounded-full bg-[#C9A66B]/10 blur-[120px]" />
-        <div className="absolute -right-32 top-64 h-[360px] w-[360px] rounded-full bg-emerald-500/10 blur-[110px]" />
+        <div className="absolute -top-40 left-1/2 h-120 w-225 -translate-x-1/2 rounded-full bg-[#C9A66B]/10 blur-[120px]" />
+        <div className="absolute -right-32 top-64 h-90 w-90 rounded-full bg-emerald-500/10 blur-[110px]" />
         <div
           className="absolute inset-0 opacity-[0.035]"
           style={{
@@ -587,11 +639,11 @@ export default function Reports() {
         />
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl py-4 px-1">
         <ReportControls
           view={view}
           onViewChange={changeView}
-          selectedScheme={selectedScheme}
+          selectedScheme={activeScheme}
           onSchemeChange={changeScheme}
           schemeOptions={schemeOptions}
           refreshing={refreshing}
@@ -672,12 +724,7 @@ export default function Reports() {
 
             <ReportSummary
               totals={totals}
-              gain={gain}
-              gainPct={gainPct}
-              isGain={isGain}
-              view={view}
               schemeBreakdown={schemeBreakdown}
-              Badge={ReturnBadge}
             />
 
             {/* Filters */}
@@ -710,11 +757,10 @@ export default function Reports() {
                   <button
                     key={filter}
                     onClick={() => changeAccountFilter(filter)}
-                    className={`whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-medium transition ${
-                      accountFilter === filter
-                        ? "bg-[#C9A66B]/15 text-[#E8D0A0] ring-1 ring-[#C9A66B]/40"
-                        : "text-slate-400 hover:text-slate-200"
-                    }`}
+                    className={`whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-medium transition ${accountFilter === filter
+                      ? "bg-[#C9A66B]/15 text-[#E8D0A0] ring-1 ring-[#C9A66B]/40"
+                      : "text-slate-400 hover:text-slate-200"
+                      }`}
                   >
                     {filter}
                   </button>
@@ -723,7 +769,7 @@ export default function Reports() {
             </div>
 
             {/* Scheme view, nothing picked */}
-            {view === "scheme" && !selectedScheme && (
+            {view === "scheme" && !activeScheme && (
               <EmptyState
                 icon={Layers}
                 title="Pick a scheme to see who's enrolled"
@@ -886,14 +932,17 @@ export default function Reports() {
                           <th className="px-2 py-3.5 text-right font-medium">
                             Current value
                           </th>
-                          <th className="px-2 py-3.5 text-right font-medium">
+                          {/* <th className="px-2 py-3.5 text-right font-medium">
                             Returns
-                          </th>
+                          </th> */}
                           <th className="px-4 py-3.5 font-medium">
                             Scheme status
                           </th>
                           <th className="px-4 py-3.5 font-medium">
                             Enrolled on
+                          </th>
+                          <th className="px-4 py-3.5 font-medium">
+                            Mature on
                           </th>
                         </tr>
                       </thead>
@@ -927,9 +976,9 @@ export default function Reports() {
                               <td className="px-2 py-3.5 text-right font-medium tabular-nums text-slate-100">
                                 {currency(s.currentValue)}
                               </td>
-                              <td className="px-2 py-3.5 text-right">
+                              {/* <td className="px-2 py-3.5 text-right">
                                 <ReturnBadge value={s.returns} />
-                              </td>
+                              </td> */}
                               <td className="px-4 py-3.5">
                                 <StatusPill
                                   status={s.status}
@@ -938,6 +987,9 @@ export default function Reports() {
                               </td>
                               <td className="px-4 py-3.5 text-slate-400">
                                 {s.enrolledOn || "—"}
+                              </td>
+                              <td className="px-4 py-3.5 text-slate-400">
+                                {s.maturityDate || "—"}
                               </td>
                             </tr>
                           );
@@ -1089,11 +1141,10 @@ export default function Reports() {
                             aria-current={
                               item === safePage ? "page" : undefined
                             }
-                            className={`h-8 min-w-8 rounded-lg px-2 text-xs font-medium tabular-nums transition ${
-                              item === safePage
-                                ? "bg-gradient-to-b from-[#E0C58F] to-[#C9A66B] text-[#1C1506] shadow-[0_6px_18px_-6px_rgba(201,166,107,0.6)]"
-                                : "border border-white/10 text-slate-300 hover:border-white/25 hover:bg-white/5"
-                            }`}
+                            className={`h-8 min-w-8 rounded-lg px-2 text-xs font-medium tabular-nums transition ${item === safePage
+                              ? "bg-gradient-to-b from-[#E0C58F] to-[#C9A66B] text-[#1C1506] shadow-[0_6px_18px_-6px_rgba(201,166,107,0.6)]"
+                              : "border border-white/10 text-slate-300 hover:border-white/25 hover:bg-white/5"
+                              }`}
                           >
                             {item}
                           </button>
@@ -1182,13 +1233,16 @@ function ReportControlSkeleton() {
 }
 function ReportSummarySkeleton() {
   return (
-    <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {Array.from({ length: 4 }, (_, i) => (
-        <div
-          key={i}
-          className="h-32 rounded-2xl border border-white/10 bg-white/4"
-        />
-      ))}
+    <div className="mt-6 grid gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:col-span-3">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div
+            key={i}
+            className="h-32 rounded-2xl border border-white/10 bg-white/4"
+          />
+        ))}
+      </div>
+      <div className="h-64 rounded-2xl border border-white/10 bg-white/4 lg:col-span-2" />
     </div>
   );
 }

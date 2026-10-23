@@ -45,25 +45,39 @@ export function normalizeUser(user) {
   const schemes = (user?.enrolledSchemes ?? []).map((scheme) => {
     const enrollment = scheme ?? {};
     const investedAmount = amount(enrollment.paidAmount);
-    const currentValue =
-      investedAmount +
-      amount(enrollment.profit) -
-      amount(enrollment.profitRedeemed);
+    const profit = amount(enrollment.profit);
+    const profitRedeemed = amount(enrollment.profitRedeemed);
+    const currentValue = investedAmount + profit - profitRedeemed;
+    const maturityAmount = amount(enrollment.maturityAmount);
+    const rawStatus = String(enrollment.status || "pending").toLowerCase().trim();
+    const isWithdrawn = rawStatus === "withdrawn" || rawStatus === "settled";
+    const withdrawnAmount = isWithdrawn ? maturityAmount : 0;
+    const withdrawnPrincipal = isWithdrawn ? investedAmount : 0;
     const nominee = enrollment.nominee ?? {};
+    const returns = investedAmount > 0
+      ? ((currentValue - investedAmount) / investedAmount) * 100
+      : amount(enrollment.profitPercentage);
+
     return {
       id: enrollment.userSchemeId || "",
       bondNumber: enrollment.bondNumber || "-",
       investedAmount: investedAmount || 0,
       currentValue: currentValue || 0,
-      maturityAmount: enrollment.maturityAmount || 0,
+      profit: profit || 0,
+      profitRedeemed: profitRedeemed || 0,
+      maturityAmount: maturityAmount || 0,
       name: enrollment.schemeName || "Unnamed scheme",
       tenure: enrollment.tenure || "-",
       profitPercentage: enrollment.profitPercentage || 0,
+      returns,
       enrolledOn: enrollment.enrollmentDate || enrollment.requestDate || "",
       maturityDate: enrollment.maturityDate || "-",
-      status: String(enrollment.status || "pending").toLowerCase(),
+      status: rawStatus,
+      isWithdrawn,
+      withdrawnAmount,
+      withdrawnPrincipal,
       nomineeName: nominee.name || "",
-      nomineeRelation: nominee.relation || "",
+      nomineeRelation: nominee.relation || "-",
       nomineePhone: nominee.mobileNo || "",
       nomineeAadhar: nominee.aadharNo || "",
       bankName: user?.bankDetails?.bankName || "",
@@ -72,6 +86,21 @@ export function normalizeUser(user) {
       bankAccountHolder: user?.bankDetails?.accountHolderName || "",
     };
   });
+
+  const totalInvested = schemes.reduce(
+    (total, scheme) => total + scheme.investedAmount,
+    0,
+  );
+  const totalWithdrawnPrincipal = schemes.reduce(
+    (total, scheme) => total + scheme.withdrawnPrincipal,
+    0,
+  );
+  const currentPrincipal = Math.max(0, totalInvested - totalWithdrawnPrincipal);
+  const totalWithdrawn = schemes.reduce(
+    (total, scheme) => total + scheme.withdrawnAmount,
+    0,
+  );
+  const companyPaid = totalWithdrawn;
 
   return {
     id: String(user?.userId ?? ""),
@@ -87,10 +116,11 @@ export function normalizeUser(user) {
     bankIfsc: user?.bankDetails?.ifscCode || "",
     bankAccountHolder: user?.bankDetails?.accountHolderName || "",
     status: user?.isActive ? "Active" : "Inactive",
-    totalInvested: schemes.reduce(
-      (total, scheme) => total + scheme.investedAmount,
-      0,
-    ),
+    totalInvested,
+    totalWithdrawnPrincipal,
+    currentPrincipal,
+    totalWithdrawn,
+    companyPaid,
     currentValue: schemes.reduce(
       (total, scheme) => total + scheme.currentValue,
       0,
@@ -172,11 +202,10 @@ export function EmptyState({
 }) {
   return (
     <div
-      className={`flex flex-col items-center justify-center px-6 py-14 text-center ${
-        bare
+      className={`flex flex-col items-center justify-center px-6 py-14 text-center ${bare
           ? ""
           : `mt-6 rounded-2xl border bg-white/[0.02] ${dashed ? "border-dashed border-white/15" : "border-white/10"}`
-      }`}
+        }`}
     >
       <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#C9A66B]/10 ring-1 ring-[#C9A66B]/25">
         <Icon size={22} className="text-[#D8BC82]" />
@@ -192,9 +221,8 @@ export function ReturnBadge({ value, large = false }) {
   const up = value >= 0;
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full font-semibold tabular-nums ring-1 ${
-        large ? "px-3 py-1.5 text-sm" : "px-2 py-0.5 text-[11px]"
-      } ${up ? "bg-emerald-400/10 text-emerald-300 ring-emerald-400/25" : "bg-rose-400/10 text-rose-300 ring-rose-400/25"}`}
+      className={`inline-flex items-center gap-1 rounded-full font-semibold tabular-nums ring-1 ${large ? "px-3 py-1.5 text-sm" : "px-2 py-0.5 text-[11px]"
+        } ${up ? "bg-emerald-400/10 text-emerald-300 ring-emerald-400/25" : "bg-rose-400/10 text-rose-300 ring-rose-400/25"}`}
     >
       {up ? (
         <ArrowUpRight size={large ? 15 : 12} />
