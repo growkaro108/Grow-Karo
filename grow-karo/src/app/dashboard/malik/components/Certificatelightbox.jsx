@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { X, FileText, Image as ImageIcon } from "lucide-react";
 import Image from "next/image";
-import BondCertificate from "./BondCertificate.jsx";
 import BondDownloadButton from "./BondDownloadButton.jsx";
 import { resolveMediaUrl } from "../../../../api/apiClient";
 import SIPBondCertificate from "./SIPBondCertificate.jsx";
 import PensionBondCertificate from "@/certificate/PensionCertificate.jsx";
+import BondCertificate from "./Bondcertificate.jsx";
 
 export default function CertificateLightbox({
   bond,

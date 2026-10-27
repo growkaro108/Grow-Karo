@@ -3,7 +3,7 @@ import { ZoomIn } from "lucide-react";
 import Image from "next/image";
 import StatusPill from "./StatusPill";
 import { calculateMaturityAmount, currency } from "./format";
-import BondCertificate from "../BondCertificate.jsx";
+import BondCertificate from "../Bondcertificate.jsx";
 import { resolveMediaUrl } from "../../../../../api/apiClient";
 
 // Must match the surface the card sits on so the perforation notches look "cut out".

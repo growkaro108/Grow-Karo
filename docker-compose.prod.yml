@@ -138,8 +138,14 @@ services:
 
 volumes:
   postgres_data:
+    external: true
+    name: growwkaro_postgres-data
   redis_data:
+    external: true
+    name: growwkaro_redis-data
   uploads_data:
+    external: true
+    name: growwkaro_uploads_data
   certbot_certs:
   certbot_www:
 

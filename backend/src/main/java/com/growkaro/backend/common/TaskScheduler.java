@@ -188,7 +188,7 @@ public class TaskScheduler {
         List<UserScheme> allApprovedUserSchemes;
         try {
             allApprovedUserSchemes = userSchemeRepository
-                    .findAllByMaturityDatePassedAndNotReInvestedYet(today.plusDays(40));
+                    .findAllByMaturityDatePassedAndNotReInvestedYet(today.plusDays(900));
         } catch (Exception e) {
             log.error("Failed to fetch matured userSchemes: {}", e.getMessage());
             return;
