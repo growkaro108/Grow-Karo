@@ -61,8 +61,8 @@ public record UserPortfolio(
         Double profitPercentage = isPension && us.getContractTotalInterestPercentage() != null
                 ? us.getContractTotalInterestPercentage()
                 : scheme.getProfitPercentage();
-        Integer tenureMonths = isPension && us.getContractTenureMonths() != null
-                ? us.getContractTenureMonths()
+        Integer tenureMonths = isPension && us.getContractTenureDays() != null
+                ? us.getContractTenureDays()
                 : scheme.getTenureMonths();
         Integer tenure = isPension && us.getPaidDate() != null && us.getMaturityDate() != null
                 ? Math.toIntExact(ChronoUnit.DAYS.between(us.getPaidDate(), us.getMaturityDate()))

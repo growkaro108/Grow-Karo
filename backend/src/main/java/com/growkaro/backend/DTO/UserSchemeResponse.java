@@ -34,6 +34,8 @@ public record UserSchemeResponse(
                 List<UserSchemeReedemLedgerResponse> reedemLedger,
                 NomineeResponse nominee,
                 String planType,
+                String sipFrequency,
+                BigDecimal sipAmount,
                 Integer tenureMonths,
                 List<SipInstallmentResponse> sipLedger,
                 BigDecimal minimumAmount,
@@ -68,8 +70,8 @@ public record UserSchemeResponse(
                 Double profitPercentage = isPension && us.getContractTotalInterestPercentage() != null
                                 ? us.getContractTotalInterestPercentage()
                                 : s.getProfitPercentage();
-                Integer tenureMonths = isPension && us.getContractTenureMonths() != null
-                                ? us.getContractTenureMonths()
+                Integer tenureMonths = isPension && us.getContractTenureDays() != null
+                                ? us.getContractTenureDays()
                                 : s.getTenureMonths();
                 Integer tenure = isPension && us.getPaidDate() != null && us.getMaturityDate() != null
                                 ? Math.toIntExact(ChronoUnit.DAYS.between(us.getPaidDate(), us.getMaturityDate()))
@@ -102,6 +104,8 @@ public record UserSchemeResponse(
                                 reedemLedger,
                                 us.getNominee() == null ? null : NomineeResponse.fromEntity(us.getNominee()),
                                 s.getPlanType(),
+                                s.getSipFrequency(),
+                                s.getSipAmount(),
                                 tenureMonths,
                                 
                                 IntStream.range(0, us.getSipLedger().size())

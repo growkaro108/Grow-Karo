@@ -14,6 +14,6 @@ public record ManualUserScheme(
         List<UserSchemeReedemLedgerRequest> reedemLedger,
         LocalDate maturityDate,
         List<SipInstallmentRequest> sipLedger,
-        Double profitPercentage,
-        Integer tenureMonths) {
+        Integer tenureMonths,
+        Double profitPercentage) {
 }

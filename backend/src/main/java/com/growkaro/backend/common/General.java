@@ -333,7 +333,17 @@ public class General {
         scheme.setSchemeCategory(schemeData.schemeCategory());
         scheme.setSchemeDetails(schemeData.schemeDetails());
         scheme.setPayoutFrequency(schemeData.payoutFrequency());
-        scheme.setTenure(schemeData.tenure());
+        String planType = schemeData.planType();
+        boolean usesMonthTenure = "SIP".equalsIgnoreCase(planType)
+                || "PENSION".equalsIgnoreCase(planType)
+                || "DAILY_DEPOSIT".equalsIgnoreCase(planType);
+        Integer tenureMonths = schemeData.tenureMonths();
+        if (usesMonthTenure && tenureMonths != null) {
+            scheme.setTenure(tenureMonths * 30);
+            scheme.setTenureMonths(tenureMonths);
+        } else {
+            scheme.setTenure(schemeData.tenure());
+        }
         scheme.setStartDate(schemeData.startDate());
         scheme.setEndDate(schemeData.endDate());
         scheme.setMinimumAmount(schemeData.minimumAmount());
@@ -344,7 +354,8 @@ public class General {
         scheme.setMaxInvestorsAllowed(schemeData.maxInvestorsAllowed());
         scheme.setTerms(new ArrayList<>(schemeData.terms()));
         scheme.setPlanType(schemeData.planType());
-        scheme.setTenureMonths(schemeData.tenureMonths());
+        scheme.setSipFrequency(schemeData.sipFrequency());
+        scheme.setSipAmount(schemeData.sipAmount());
         scheme.setCreatedBy(adminName());
         return scheme;
     }
@@ -437,7 +448,7 @@ public class General {
                 us.getContractTotalInterestPercentage() == null
                         ? s.getProfitPercentage()
                         : us.getContractTotalInterestPercentage(),
-                us.getContractTenureMonths() == null ? s.getTenureMonths() : us.getContractTenureMonths());
+null);
     }
 
     public LocalDate getCurrentDate() {
@@ -716,5 +727,104 @@ public class General {
     public int dayDiff(LocalDate start, LocalDate end) {
         return (int) ChronoUnit.DAYS.between(start, end);
     }
+
+    public boolean isValidSchemeData(ReceiveSchemeData data) {
+        if (data == null) {
+            log.error("Validation failed: ReceiveSchemeData object is null");
+            return false;
+        }
+
+        String planType = data.planType();
+        if (planType == null || !List.of("FD", "SIP", "PENSION", "DAILY_DEPOSIT").contains(planType)) {
+            log.error("Validation failed: Invalid or unsupported plan type: '{}'", planType);
+            return false;
+        }
+        if ("SIP".equals(planType)
+                && !List.of("MONTHLY", "DAILY").contains(data.sipFrequency())) {
+            log.error("Validation failed for SIP: unsupported installment frequency '{}'", data.sipFrequency());
+            return false;
+        }
+
+        // PENSION Plan Validation
+        if ("PENSION".equals(planType)) {
+            if (data.tenure() == null || data.tenure() <= 0) {
+                log.error("Validation failed for PENSION: tenure (months) is invalid (Value: {})", data.tenure());
+                return false;
+            }
+            if (data.minimumAmount() == null) {
+                log.error("Validation failed for PENSION: minimumAmount is null");
+                return false;
+            }
+            if (data.maximumAmount() == null) {
+                log.error("Validation failed for PENSION: maximumAmount is null");
+                return false;
+            }
+            if (data.minimumAmount().compareTo(data.maximumAmount()) > 0) {
+                log.error("Validation failed for PENSION: minimumAmount ({}) cannot be greater than maximumAmount ({})",
+                          data.minimumAmount(), data.maximumAmount());
+                return false;
+            }
+            if (data.profitPercentage() == null || !Double.isFinite(data.profitPercentage()) || data.profitPercentage() < 0) {
+                log.error("Validation failed for PENSION: profitPercentage is invalid (Value: {})", data.profitPercentage());
+                return false;
+            }
+            return true;
+        }
+
+        // SIP Plan Validation
+        if ("SIP".equals(planType)) {
+            if (data.tenure() == null || data.tenure() <= 0
+                    || (data.tenureMonths() != null && data.tenureMonths() <= 0)) {
+                log.error("Validation failed for SIP: tenure (months) is invalid (Value: {})", data.tenure());
+                return false;
+            }
+            if (data.minimumAmount() == null) {
+                log.error("Validation failed for SIP: minimumAmount is null");
+                return false;
+            }
+            if (data.maximumAmount() == null) {
+                log.error("Validation failed for SIP: maximumAmount is null");
+                return false;
+            }
+            if (data.minimumAmount().compareTo(data.maximumAmount()) > 0) {
+                log.error("Validation failed for SIP: minimumAmount ({}) cannot be greater than maximumAmount ({})",
+                          data.minimumAmount(), data.maximumAmount());
+                return false;
+            }
+            if (data.sipAmount() != null
+                    && (data.sipAmount().signum() <= 0
+                            || data.sipAmount().compareTo(data.minimumAmount()) < 0
+                            || data.sipAmount().compareTo(data.maximumAmount()) > 0)) {
+                log.error("Validation failed for SIP: sipAmount is outside the scheme amount limits");
+                return false;
+            }
+            return true;
+        }
+
+        // DAILY_DEPOSIT Plan Validation
+        if ("DAILY_DEPOSIT".equals(planType)) {
+            if (data.tenure() == null || data.tenure() <= 0) {
+                log.error("Validation failed for DAILY_DEPOSIT: tenure (months) is invalid (Value: {})", data.tenure());
+                return false;
+            }
+            if (data.minimumAmount() == null) {
+                log.error("Validation failed for DAILY_DEPOSIT: minimumAmount is null");
+                return false;
+            }
+            if (data.maximumAmount() == null) {
+                log.error("Validation failed for DAILY_DEPOSIT: maximumAmount is null");
+                return false;
+            }
+            if (data.minimumAmount().compareTo(data.maximumAmount()) > 0) {
+                log.error("Validation failed for DAILY_DEPOSIT: minimumAmount ({}) cannot be greater than maximumAmount ({})", data.minimumAmount(), data.maximumAmount());
+                return false;
+            }
+            return true;
+        }
+
+        // FD Plan Validation (agar koi aur specific checks hain toh yahan add kar sakte hain)
+        return true;
+    }
+ 
 
 }

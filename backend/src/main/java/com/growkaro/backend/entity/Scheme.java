@@ -76,6 +76,7 @@ public class Scheme {
     @Column(name = "risk_level", nullable = false)
     private Byte riskLevel;
 
+    // Always stored in days; month-based plans also retain their month tenure.
     @NotNull(message = "Tenure is required")
     @Positive(message = "Tenure must be greater than 0")
     @Column(name = "tenure", nullable = false)
@@ -86,6 +87,12 @@ public class Scheme {
 
     @Column(name = "tenure_months")
     private Integer tenureMonths;
+
+    @Column(name = "sip_frequency", nullable = false)
+    private String sipFrequency = "MONTHLY";
+
+    @Column(name = "sip_amount", precision = 19, scale = 2)
+    private BigDecimal sipAmount;
 
     @NotNull(message = "Start date is required")
     @Column(name = "start_date", nullable = false)
@@ -135,6 +142,9 @@ public class Scheme {
         if (this.planType == null || this.planType.isBlank()) {
             this.planType = "FD";
         }
+        if (this.sipFrequency == null || this.sipFrequency.isBlank()) {
+            this.sipFrequency = "MONTHLY";
+        }
         this.schemeId = "GKSID" + LocalDateTime.now(ZoneId.of("Asia/Kolkata")).format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
     }
 
@@ -165,7 +175,7 @@ public class Scheme {
         return getClass().hashCode();
     }
 
-    public Scheme(String schemeId, String schemeName, BigDecimal minimumAmount, BigDecimal maximumAmount, String schemeCategory, String schemeDetails, List<String> terms, String payoutFrequency, Byte riskLevel, Integer tenure, String planType, Integer tenureMonths, LocalDate startDate, LocalDate endDate, Boolean status, LocalDateTime createdAt, LocalDateTime updatedAt, Double profitPercentage, Integer maxInvestorsAllowed, List<UserScheme> joinedUsers, String updatedBy, String createdBy) {
+    public Scheme(String schemeId, String schemeName, BigDecimal minimumAmount, BigDecimal maximumAmount, String schemeCategory, String schemeDetails, List<String> terms, String payoutFrequency, Byte riskLevel, Integer tenure, String planType, LocalDate startDate, LocalDate endDate, Boolean status, LocalDateTime createdAt, LocalDateTime updatedAt, Double profitPercentage, Integer maxInvestorsAllowed, List<UserScheme> joinedUsers, String updatedBy, String createdBy) {
         this.schemeId = schemeId;
         this.schemeName = schemeName;
         this.minimumAmount = minimumAmount;
@@ -177,7 +187,6 @@ public class Scheme {
         this.riskLevel = riskLevel;
         this.tenure = tenure;
         this.planType = planType;
-        this.tenureMonths = tenureMonths;
         this.startDate = startDate;
         this.endDate = endDate;
         this.status = status;

@@ -428,7 +428,7 @@ public class UserAPIService {
             newUserScheme.setPaidAmount(amount); // <-- was validated but never persisted
             if ("PENSION".equalsIgnoreCase(scheme.getPlanType())) {
                 newUserScheme.setContractTotalInterestPercentage(scheme.getProfitPercentage());
-                newUserScheme.setContractTenureMonths(scheme.getTenureMonths());
+                newUserScheme.setContractTenureDays(scheme.getTenureMonths());
             }
             scheme.enrollUserInScheme(newUserScheme); // sets scheme + adds to scheme's joinedUsers
             user.enrollInScheme(newUserScheme); // if you keep this method, make sure it doesn't create a second

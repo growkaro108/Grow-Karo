@@ -22,13 +22,16 @@ public record ReceiveSchemeData(
         List<String> terms,
         String planType,
         Integer tenureMonths,
-        BigDecimal sipAmount,
-        Integer sipDay) {
+        String sipFrequency,
+        BigDecimal sipAmount) {
 
     // Old clients that don't send "terms" get an empty list, not null.
     // Also trims each term and drops blanks.
     public ReceiveSchemeData {
         planType = planType == null || planType.isBlank() ? "FD" : planType.trim().toUpperCase();
+        sipFrequency = sipFrequency == null || sipFrequency.isBlank()
+                ? "MONTHLY"
+                : sipFrequency.trim().toUpperCase();
         terms = terms == null
                 ? List.of()
                 : terms.stream()

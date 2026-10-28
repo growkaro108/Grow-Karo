@@ -84,8 +84,9 @@ public class UserScheme {
     @Column(name = "contract_total_interest_percentage")
     private Double contractTotalInterestPercentage;
 
-    @Column(name = "contract_tenure_months")
-    private Integer contractTenureMonths;
+    @Column(name = "contract_tenure_days")
+    // Always in days. For PENSION: months supplied by admin are converted to days (times 30) before storing.
+    private Integer contractTenureDays;
 
     @Column(name = "amount_from")
     private String amountFrom;

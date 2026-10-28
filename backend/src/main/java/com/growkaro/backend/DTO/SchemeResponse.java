@@ -28,7 +28,9 @@ public record SchemeResponse(
                 List<String> joinedUsers,
                 List<String> terms,
                 String planType,
-                Integer tenureMonths
+                Integer tenureMonths,
+                String sipFrequency,
+                BigDecimal sipAmount
                 // BigDecimal sipAmount,
                 // Integer sipDay
                 ) {
@@ -53,7 +55,9 @@ public record SchemeResponse(
                                 scheme.getJoinedUsers().stream().map(UserScheme::getUserSchemeId).toList(),
                                 termsOf(scheme),
                                 scheme.getPlanType(),
-                                scheme.getTenureMonths()
+                                scheme.getTenureMonths(),
+                                scheme.getSipFrequency(),
+                                scheme.getSipAmount()
                                 // scheme.getSipAmount(),
                                 // scheme.getSipDay()
                                 );
@@ -82,7 +86,9 @@ public record SchemeResponse(
                                                 : null,
                                 termsOf(scheme),
                                 scheme.getPlanType(),
-                                scheme.getTenureMonths()
+                                scheme.getTenureMonths(),
+                                scheme.getSipFrequency(),
+                                scheme.getSipAmount()
                                 // scheme.getSipAmount(),
                                 // scheme.getSipDay()
                                 );
