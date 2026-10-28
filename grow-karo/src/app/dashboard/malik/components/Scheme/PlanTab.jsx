@@ -58,8 +58,8 @@ const emptyPlan = {
   profitPercentage: "",
   maxInvestorsAllowed: "",
   planType: "FD",     // "FD" | "SIP" | "PENSION"
-  sipAmount: "",      // SIP: monthly installment amount
-  sipDay: "20",       // SIP: day of month (1–28)
+  sipAmount: "",      // SIP: default installment amount
+  sipFrequency: "MONTHLY",
 };
 
 export default function PlansPage() {
@@ -313,8 +313,10 @@ export default function PlansPage() {
                         {plan.schemeName || "Untitled Asset"}
                       </h2>
                       <p className="text-[11px] font-bold text-slate-500 tracking-wide uppercase mt-0.5">
-                        {plan.planType === "SIP" || plan.planType === "PENSION"
-                          ? `${plan.tenureMonths || "—"} months`
+                        {plan.planType === "SIP"
+                          ? `${plan.sipFrequency === "DAILY" ? "Daily" : "Monthly"} · ${plan.tenureMonths || "—"} months`
+                          : plan.planType === "PENSION"
+                            ? `${plan.tenureMonths || "—"} months`
                           : `${plan.tenure} days`}
                       </p>
                     </td>

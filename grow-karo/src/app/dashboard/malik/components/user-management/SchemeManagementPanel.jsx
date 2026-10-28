@@ -34,8 +34,11 @@ function SchemeSummary({ scheme }) {
         <Percent className="h-4 w-4 text-emerald-500" />
         {/* <span className="text-[13px] text-slate-500">Interest</span> */}
         <span className="text-[15px] font-semibold text-emerald-400">
-          {scheme.profitPercentage ?? "0"}%
-          {isSip || isPension ? "/mo" : ""}
+          {scheme.profitPercentage ?? "0"}%          {isPension
+            ? "/mo"
+            : isSip && scheme.sipFrequency !== "DAILY"
+              ? "/mo"
+              : ""}
         </span>
       </div>
       <div className="flex items-center gap-2">
@@ -54,7 +57,9 @@ function SchemeSummary({ scheme }) {
             SIP Plan
           </span> */}
           <span className="text-[13px] text-slate-300">
-           Due on every {scheme.sipDay || 20}th
+            {scheme.sipFrequency === "DAILY"
+              ? "Variable daily deposits · up to ₹2,000 per day"
+              : "Monthly installments"}
           </span>
         </div>
       )}
@@ -69,7 +74,8 @@ function SchemeSummary({ scheme }) {
 
 function LedgerRows({ type, rows, onChange, onAdd, interestOnly = false }) {
   const isProfit = type === "profit";
-  const label = isProfit && interestOnly ? "interest" : isProfit ? "profit" : "redeem";
+  const label =
+    isProfit && interestOnly ? "interest" : isProfit ? "profit" : "redeem";
   const amount = isProfit ? "profitAmount" : "redeemAmount";
   const date = isProfit ? "profitDate" : "redeemDate";
   return (
@@ -110,6 +116,7 @@ function LedgerRows({ type, rows, onChange, onAdd, interestOnly = false }) {
 }
 
 function SipInstallmentRows({ rows, onChange, onAdd, onRemove }) {
+  // console.log(rows.length);
   return (
     <div className="space-y-2 rounded-xl border border-indigo-900/60 bg-indigo-950/15 p-3 scrollbar-none">
       <div className="scrollbar-none">
@@ -121,19 +128,19 @@ function SipInstallmentRows({ rows, onChange, onAdd, onRemove }) {
           can differ from the amount due.
         </p>
       </div>
-      <div className="grid grid-cols-12 gap-1 px-1 text-[10px] text-slate-500">
+      <div className="grid grid-cols-8 gap-1 px-1 text-[10px] text-slate-500">
         <span className="col-span-1">No.</span>
         {/* <span className="col-span-3">Installment date</span>
         <span className="col-span-2">Due (₹)</span> */}
         <span className="col-span-3">Paid date</span>
-        <span className="col-span-2">Paid (₹)</span>
+        <span className="col-span-3">Paid (₹)</span>
         <span className="col-span-1" />
       </div>
       <div className="max-h-72 space-y-1 overflow-y-auto scroll-auto scrollbar-none">
         {rows.map((row, index) => (
           <div key={index} className="grid grid-cols-12 items-center gap-1">
             <span className="col-span-1 text-xs text-slate-500">
-              {index + 1}
+              {index + 1}.
             </span>
             {/* <input
               aria-label={`Installment ${index + 1} date`}
@@ -373,7 +380,7 @@ export default function SchemeManagementPanel({
                   <input
                     name="paidDate"
                     type="date"
-                    value={form.paidDate}
+                    value={form.paidDate || "2024-01-01"}
                     onChange={updateForm}
                     required
                     className={`mt-1 ${inputClass}`}
@@ -421,7 +428,9 @@ export default function SchemeManagementPanel({
                         ? selectedScheme.maximumAmount || undefined
                         : undefined
                     }
-                    step={selectedScheme?.planType === "PENSION" ? "0.01" : "1000"}
+                    step={
+                      selectedScheme?.planType === "PENSION" ? "0.01" : "1000"
+                    }
                     value={form.paidAmount}
                     onChange={updateForm}
                     required
@@ -470,7 +479,9 @@ export default function SchemeManagementPanel({
                     <p className="col-span-2 text-xs text-slate-400">
                       Monthly interest:{" "}
                       {currency(
-                        (Number(form.paidAmount) * Number(form.profitPercentage)) / 100 || 0,
+                        (Number(form.paidAmount) *
+                          Number(form.profitPercentage)) /
+                          100 || 0,
                       )}
                       {" · Total interest: "}
                       {currency(

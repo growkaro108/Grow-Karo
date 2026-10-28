@@ -95,11 +95,17 @@ const SIPBondCertificate = forwardRef(function SIPBondCertificate(
     bond.tenureMonths ||
     (bond.tenure ? Math.round(Number(bond.tenure) / 30) : "");
   const sipAmount = getSipPremium(bond);
+  const sipFrequency =
+    String(bond.sipFrequency || "MONTHLY").toUpperCase() === "DAILY"
+      ? "DAILY"
+      : "MONTHLY";
   const defaultTerms = [
     "The profit will be applicable on total deposit amount*",
     "This bond is valid only till maturity date*",
     "Profit will be credited 30 days*",
-    `Your premium date is the ${bond.sipDay || "20"}th of every month.*`,
+    sipFrequency === "DAILY"
+      ? "Daily installments are due every calendar day.*"
+      : "Monthly installments are due once each month.*",
   ];
   const terms = bond.terms?.length ? bond.terms : defaultTerms;
 
@@ -513,7 +519,11 @@ const SIPBondCertificate = forwardRef(function SIPBondCertificate(
           strokeWidth={0.6}
         />
       ))}
-      {["Your Fix Plan", "Tenure Month", "Monthly Premium"].map((label, i) => (
+      {[
+        "Your Fix Plan",
+        "Tenure Month",
+        sipFrequency === "DAILY" ? "Daily Installment" : "Monthly Installment",
+      ].map((label, i) => (
         <text
           key={label}
           x={(colX3[i] + colX3[i + 1]) / 2}

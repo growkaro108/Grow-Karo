@@ -14,7 +14,8 @@ export const AdminContextProvider = ({ children }) => {
   const [isLoading, setIsloading] = useState(true);
   const [codes, setCodes] = useState([]);
   const [issuesData, setIssuesData] = useState([]);
-
+  const [toast, setToast] = useState(null);
+  
   const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? "")
     .split(",")
     .map((email) => email.trim().toLowerCase())
@@ -49,6 +50,11 @@ export const AdminContextProvider = ({ children }) => {
     }
   }, []);
 
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 2600);
+  };
+
   //malik notification provider
   const contextValue = useMemo(
     () => ({
@@ -61,6 +67,8 @@ export const AdminContextProvider = ({ children }) => {
       issuesData,
       loadIssues,
       adminEmails,
+      toast,
+      showToast,
     }),
     [
       malikNotification,

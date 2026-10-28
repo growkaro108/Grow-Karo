@@ -1,9 +1,9 @@
 ﻿"use client";
 import React, { forwardRef } from "react";
-import { getSipPremium } from "./format";
+import { buildSipSchedule, getSipPremium } from "./format";
 
 /**
- * SIPLedgerSheet — printable A4 installment ledger for an SIP bond.
+ * SIPLedgerSheet — printable A4 installment ledger for a monthly or daily SIP bond.
  * Renders as an SVG for html2canvas / print export.
  *
  * Props:
@@ -27,6 +27,10 @@ const SIPLedgerSheet = forwardRef(function SIPLedgerSheet(
   const sipAmount = getSipPremium(bond);
   const bondNumber = bond.bondNumber || bond.userSchemeId || "";
   const tenureMonths = bond.tenureMonths || (bond.tenure ? Math.round(Number(bond.tenure)/30) : 0);
+  const sipFrequency =
+    String(bond.sipFrequency || "MONTHLY").toUpperCase() === "DAILY"
+      ? "DAILY"
+      : "MONTHLY";
 
   const safeDate = (val) => {
     if (!val) return "";
@@ -43,25 +47,23 @@ const SIPLedgerSheet = forwardRef(function SIPLedgerSheet(
 
   // Build installment rows from sipLedger or generate expected schedule
   const ledger = Array.isArray(bond.sipLedger) ? bond.sipLedger : [];
-  const sipDay = bond.sipDay || 20;
-
-  // Fill any missing rows up to tenureMonths
+  const generated = buildSipSchedule(bond.paidDate || bond.enrollmentDate, {
+    ...bond,
+    sipAmount,
+    sipFrequency,
+  });
   const rows = [];
-  for (let i = 0; i < Math.max(ledger.length, tenureMonths || 12); i++) {
+  for (let i = 0; i < Math.max(ledger.length, generated.length); i++) {
     const existing = ledger[i] || {};
-    const installDate = existing.installmentDate || (() => {
-      if (!bond.paidDate) return "";
-      const d = new Date(bond.paidDate);
-      d.setMonth(d.getMonth() + i + 1);
-      d.setDate(Math.min(sipDay, new Date(d.getFullYear(), d.getMonth()+1, 0).getDate()));
-      return d.toISOString().slice(0,10);
-    })();
+    const fallback = generated[i] || {};
+    const installDate =
+      existing.installmentDate || fallback.installmentDate || "";
     rows.push({
       no: i + 1,
       installmentDate: installDate,
-      dueDate:  existing.dueDate  || installDate,
+      dueDate: existing.dueDate || fallback.dueDate || installDate,
       paidDate: existing.paidDate || "",
-      dueAmount:  Number(existing.dueAmount  ?? sipAmount),
+      dueAmount: Number(existing.dueAmount ?? fallback.dueAmount ?? sipAmount),
       paidAmount: Number(existing.paidAmount ?? 0),
     });
   }
@@ -115,7 +117,7 @@ const SIPLedgerSheet = forwardRef(function SIPLedgerSheet(
       <text x={28} y={112} fontSize={FS}>Phone: {user.phone||""}</text>
       <text x={28} y={126} fontSize={FS}>Aadhaar: {user.aadhaarNo||user.aadharNo||""}</text>
       <text x={W-28} y={98} textAnchor="end" fontSize={FS}>Bond No: <tspan fontWeight={700}>{bondNumber}</tspan></text>
-      <text x={W-28} y={112} textAnchor="end" fontSize={FS}>Monthly Premium: <tspan fontWeight={700} fill={GREEN}>{sipAmount === null ? "Variable" : fmtAmt(sipAmount)}</tspan></text>
+      <text x={W-28} y={112} textAnchor="end" fontSize={FS}>{sipFrequency === "DAILY" ? "Daily Installment" : "Monthly Installment"}: <tspan fontWeight={700} fill={GREEN}>{sipAmount === null ? "Variable" : fmtAmt(sipAmount)}</tspan></text>
       <text x={W-28} y={126} textAnchor="end" fontSize={FS}>Tenure: <tspan fontWeight={700}>{tenureMonths} Months</tspan></text>
       <text x={28} y={140} fontSize={FS}>Investment Date: {safeDate(bond.paidDate)}</text>
       <text x={W-28} y={140} textAnchor="end" fontSize={FS}>Maturity Date: {safeDate(bond.maturityDate)}</text>

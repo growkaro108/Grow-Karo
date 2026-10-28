@@ -12,7 +12,7 @@ import {
   CalendarClock,
 } from "lucide-react";
 import Image from "next/image";
-import { currency, getSipPremium } from "./format";
+import { buildSipSchedule, currency, getSipPremium } from "./format";
 import dynamic from "next/dynamic";
 import SIPBondCertificate from "../SIPBondCertificate";
 import { resolveMediaUrl } from "../../../../../api/apiClient";
@@ -47,7 +47,7 @@ function StatusPill({ paidAmount, dueAmount, paidDate }) {
   );
 }
 
-/** SIPCard — displays one SIP bond with its monthly installment ledger */
+/** SIPCard displays one SIP bond and its monthly or daily installment ledger. */
 export default function SIPCard({
   bond,
   user,
@@ -78,46 +78,27 @@ export default function SIPCard({
   const [bondOpen, setBondOpen] = useState(false);
 
   const isApproved = !!bond.enrollmentDate;
-  const sipDay = bond.sipDay || 20;
+  const sipFrequency =
+    String(bond.sipFrequency || "MONTHLY").toUpperCase() === "DAILY"
+      ? "DAILY"
+      : "MONTHLY";
   const ledgerEntries = Array.isArray(sipLedger) ? [...sipLedger] : [];
   const sipAmount = getSipPremium({ ...bond, sipLedger: ledgerEntries });
   const tenureMonths =
     bond.tenureMonths ||
     (bond.tenure ? Math.round(Number(bond.tenure) / 30) : 0);
-  const totalPayableAmount=sipAmount * tenureMonths;
   const displayedSipAmount =
     sipAmount === null ? "Variable" : currency(sipAmount);
 
   // Compute auto schedule if no ledger entries
   const buildSchedule = () => {
     if (ledgerEntries.length) return ledgerEntries;
-    const rows = [];
     const startDate = bond.paidDate || bond.enrollmentDate;
-    if (!startDate) return rows;
-    const [year, month, startDay] = String(startDate)
-      .slice(0, 10)
-      .split("-")
-      .map(Number);
-    if (!year || !month || !startDay) return rows;
-    for (let i = 0; i < tenureMonths; i++) {
-      const d = new Date(year, month + i, 1);
-      const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-      d.setDate(Math.min(sipDay || startDay, lastDay));
-      const date = [
-        d.getFullYear(),
-        String(d.getMonth() + 1).padStart(2, "0"),
-        String(d.getDate()).padStart(2, "0"),
-      ].join("-");
-      rows.push({
-        no: i + 1,
-        installmentDate: date,
-        dueDate: date,
-        paidDate: "",
-        dueAmount: sipAmount,
-        paidAmount: 0,
-      });
-    }
-    return rows;
+    return buildSipSchedule(startDate, {
+      ...bond,
+      sipFrequency,
+      sipAmount,
+    }).map((row, index) => ({ ...row, no: index + 1, paidAmount: 0 }));
   };
 
   const schedule = ledgerEntries.length ? ledgerEntries : buildSchedule();
@@ -131,8 +112,12 @@ export default function SIPCard({
     0,
   );
   const totalPaid = schedule.reduce((s, r) => s + Number(r.paidAmount || 0), 0);
+  const totalPayableAmount = totalDue;
   const progress = schedule.length
-    ? ((totalPaid / totalPayableAmount) * 100).toFixed(1)
+    ? (totalPayableAmount > 0
+        ? (totalPaid / totalPayableAmount) * 100
+        : 0
+      ).toFixed(1)
     : 0;
   // console.log(sipAmount,tenureMonths,totalPayableAmount,totalPaid)
 
@@ -154,15 +139,19 @@ export default function SIPCard({
               <span className="text-[10px] text-indigo-300 ml-1">SIP</span>
             </p>
             <p className="text-xs text-white/50">
-              {paidCount}/{schedule.length} installments paid
+              {sipFrequency === "DAILY"
+                ? `${paidCount} deposit days · ${currency(totalPaid)} deposited`
+                : `${paidCount}/${schedule.length} installments paid`}
             </p>
           </div>
         </div>
         <div className="text-right shrink-0">
           <p className="font-[Space_Grotesk] text-sm font-semibold tabular-nums text-indigo-200">
-            {displayedSipAmount}
-            {sipAmount !== null && (
-              <span className="text-[10px] text-white/50">/mo</span>
+            {sipFrequency === "DAILY" ? "Variable" : displayedSipAmount}
+            {sipFrequency !== "DAILY" && sipAmount !== null && (
+              <span className="text-[10px] text-white/50">
+                /{sipFrequency === "DAILY" ? "day" : "mo"}
+              </span>
             )}
           </p>
           <p className="text-[10px] text-white/50">
@@ -174,20 +163,22 @@ export default function SIPCard({
       </div>
 
       {/* Progress bar */}
-      <div className="px-4 pt-3">
-        <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
-          <span>Progress</span>
-          <span>
-            {progress}% · {currency(totalPaid)} of {currency(totalPayableAmount)}
-          </span>
+      {sipFrequency !== "DAILY" && (
+        <div className="px-4 pt-3">
+          <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
+            <span>Progress</span>
+            <span>
+              {progress}% · {currency(totalPaid)} of {currency(totalPayableAmount)}
+            </span>
+          </div>
+          <div className="h-1.5 rounded-full bg-slate-800">
+            <div
+              className="h-1.5 rounded-full bg-indigo-500 transition-all duration-500"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
         </div>
-        <div className="h-1.5 rounded-full bg-slate-800">
-          <div
-            className="h-1.5 rounded-full bg-indigo-500 transition-all duration-500"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
+      )}
 
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3 px-4 py-3">
@@ -209,10 +200,10 @@ export default function SIPCard({
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-wide text-slate-500">
-            SIP Day
+            Frequency
           </p>
           <p className="mt-0.5 text-sm font-medium text-slate-200">
-            {sipDay}th
+            {sipFrequency === "DAILY" ? "Daily" : "Monthly"}
           </p>
         </div>
       </div>
@@ -276,7 +267,7 @@ export default function SIPCard({
         <div className="space-y-3 border-t border-slate-800/70 bg-slate-950/40 px-4 py-3.5">
           <div className="grid grid-cols-2 gap-2">
             <label className="text-xs text-slate-400">
-              SIP Monthly Amount
+              SIP {sipFrequency === "DAILY" ? "Daily" : "Monthly"} Amount
               <input
                 type="number"
                 min="100"
@@ -289,15 +280,11 @@ export default function SIPCard({
               />
             </label>
             <label className="text-xs text-slate-400">
-              SIP Day (1-28)
+              Installment Frequency
               <input
-                type="number"
-                min="1"
-                max="28"
-                value={schemeEditForm.sipDay ?? sipDay}
-                onChange={(e) =>
-                  onSchemeEditFieldChange("sipDay", e.target.value)
-                }
+                type="text"
+                value={sipFrequency === "DAILY" ? "Daily" : "Monthly"}
+                readOnly
                 className={`mt-1 ${inputClass}`}
               />
             </label>
@@ -362,12 +349,12 @@ export default function SIPCard({
 
         <div className="overflow-x-auto rounded-lg border border-slate-800">
           <div className="min-w-172.5">
-            <div className="grid grid-cols-[2.5rem_minmax(7rem,1.2fr)_minmax(6rem,.8fr)_minmax(7rem,1.2fr)_minmax(6rem,.8fr)_5rem] items-center gap-2 bg-slate-900 px-3 py-2 text-[10px] font-medium uppercase tracking-wide text-slate-500">
+            <div className={`grid ${sipFrequency === "DAILY" ? "grid-cols-[2rem_minmax(6rem,1fr)_minmax(6rem,1fr)_minmax(6rem,1fr)_4rem]" : "grid-cols-[2rem_minmax(6rem,1fr)_minmax(5rem,.8fr)_minmax(6rem,1fr)_minmax(5rem,.8fr)_4rem]"} items-center gap-2 bg-slate-900 px-3 py-2 text-[10px] font-medium uppercase tracking-wide text-slate-500`}>
               <span>#</span>
-              <span>Due date</span>
-              <span>Due amount</span>
+              <span>{sipFrequency === "DAILY" ? "Schedule date" : "Due date"}</span>
+              {sipFrequency !== "DAILY" && <span>Due amount</span>}
               <span>Paid date</span>
-              <span>Paid amount</span>
+              <span>{sipFrequency === "DAILY" ? "Deposit (₹)" : "Paid amount"}</span>
               <span>Status</span>
             </div>
             <div className="max-h-80 divide-y divide-slate-800/70 overflow-y-auto scrollbar-none">
@@ -380,10 +367,28 @@ export default function SIPCard({
                 return (
                   <div
                     key={i}
-                    className="grid grid-cols-[2.5rem_minmax(7rem,1.2fr)_minmax(6rem,.8fr)_minmax(7rem,1.2fr)_minmax(6rem,.8fr)_5rem] items-center gap-2 px-3 py-2"
+                    className={`grid ${sipFrequency === "DAILY" ? "grid-cols-[2rem_minmax(6rem,1fr)_minmax(6rem,1fr)_minmax(6rem,1fr)_4rem]" : "grid-cols-[2rem_minmax(6rem,1fr)_minmax(5rem,.8fr)_minmax(6rem,1fr)_minmax(5rem,.8fr)_4rem]"} items-center gap-2 px-3 py-2`}
                   >
                     <span className="text-xs tabular-nums text-slate-500">{i + 1}</span>
-                    
+                    <input
+                      type="date"
+                      aria-label={`Installment ${i + 1} schedule date`}
+                      value={lRow.installmentDate || lRow.dueDate || ""}
+                      onChange={(e) => onInstallmentChange(i, "installmentDate", e.target.value)}
+                      className={fieldCls}
+                      disabled
+                    />
+                    {sipFrequency !== "DAILY" && (
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        aria-label={`Installment ${i + 1} due amount`}
+                        value={lRow.dueAmount ?? row.dueAmount ?? sipAmount}
+                        className={fieldCls}
+                        disabled
+                      />
+                    )}
                     <input
                       type="date"
                       aria-label={`Installment ${i + 1} paid date`}
@@ -394,35 +399,22 @@ export default function SIPCard({
                     <input
                       type="number"
                       min="0"
+                      max={sipFrequency === "DAILY" ? "2000" : undefined}
                       step="0.01"
                       aria-label={`Installment ${i + 1} paid amount`}
                       value={lRow.paidAmount ?? 0}
+                      required={sipFrequency === "DAILY" && Number(lRow.paidAmount) > 0}
                       onChange={(e) => onInstallmentChange(i, "paidAmount", e.target.value)}
                       className={fieldCls}
                     />
                     <StatusPill
                       paidAmount={paidAmount}
-                      dueAmount={dueAmount}
-                      paidDate={lRow.paidDate}
-                      
-                    />
-                    <input
-                      type="date"
-                      aria-label={`Installment ${i + 1} due date`}
-                      value={lRow.installmentDate || lRow.dueDate || ""}
-                      onChange={(e) => onInstallmentChange(i, "installmentDate", e.target.value)}
-                      className={fieldCls}
-                      disabled
-                    />
-                    <input
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      aria-label={`Installment ${i + 1} due amount`}
-                      value={lRow.dueAmount ?? row.dueAmount ?? sipAmount}
-                      onChange={(e) => onInstallmentChange(i, "dueAmount", e.target.value)}
-                      className={fieldCls}
-                      disabled
+                      dueAmount={sipFrequency === "DAILY" ? 0 : dueAmount}
+                      paidDate={
+                        sipFrequency === "DAILY" && paidAmount === 0
+                          ? ""
+                          : lRow.paidDate
+                      }
                     />
                   </div>
                 );
@@ -504,7 +496,7 @@ export default function SIPCard({
             <SIPDownloadButton
               bond={certificateBond}
               userData={viewUser}
-              logoUrl={logoUrl}
+              logoUrl={stampUrl}
               stampUrl={stampUrl}
               watermarkUrl={logoUrl}
             />

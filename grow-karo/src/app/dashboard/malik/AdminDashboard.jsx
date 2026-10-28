@@ -137,16 +137,16 @@ export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [toast, setToast] = useState(null);
-  const { LoadCodes } = use(adminContext);
+  // const [toast, setToast] = useState(null);
+  const { LoadCodes,toast,showToast } = use(adminContext);
 
   const [withdrawals, setWithdrawals] = useState([]);
   const [issues, setIssues] = useState([]);
 
-  const showToast = (message, type = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 2600);
-  };
+  // const showToast = (message, type = "success") => {
+  //   setToast({ message, type });
+  //   setTimeout(() => setToast(null), 2600);
+  // };
 
   const handleNavigate = (id) => {
     if (id === activeTab) return;

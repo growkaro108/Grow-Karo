@@ -10,6 +10,12 @@ import {
   downloadSvgAsPng,
 } from "../../utils";
 import { getSipPremium } from "./format";
+import {
+  downloadDailyDepositLedgerXlsx,
+  depositsFromSipLedger,
+  isDailyDeposit,
+  loadLedgerLogo,
+} from "./dailyDepositLedgerXlsx";
 
 const SIPBondCertificate = dynamic(() => import("../SIPBondCertificate"), {
   ssr: false,
@@ -70,6 +76,35 @@ export default function SIPDownloadButton({
               { scale: 3 },
             );
         }
+        if (which === "ledgerxsls" && isDailyDeposit(bond)) {
+          // Daily Deposit gets its own ledger layout (same as the bond ledger
+          // the office prepares by hand), built from deposits by paid date.
+          try {
+            const logo = await loadLedgerLogo(logoUrl);
+            await downloadDailyDepositLedgerXlsx(
+              {
+                member: { name: userData?.name, phone: userData?.phone },
+                bond: {
+                  bondNo: bond?.bondNumber || bond?.userSchemeId,
+                  startDate: String(bond?.enrollmentDate || bond?.paidDate || "").slice(0, 10),
+                  tenureMonths: bond?.tenureMonths || Math.round(Number(bond?.tenure) / 30),
+                  ratePercent: Number(
+                    bond?.contractProfitPercentage ??
+                      bond?.contractTotalInterestPercentage ??
+                      bond?.profitPercentage ??
+                      bond?.scheme?.profitPercentage,
+                  ),
+                },
+                deposits: depositsFromSipLedger(bond?.sipLedger),
+                logo,
+              },
+              `Daily_Deposit_Ledger_${slug}_${memberName}`,
+            );
+          } catch (err) {
+            window.alert(err?.message || "Could not build the ledger");
+          }
+          return;
+        }
         if (which === "ledgerxsls") {
           const installments=bond?.sipLedger || [];
           await downloadLedgerXlsx(
@@ -77,7 +112,8 @@ export default function SIPDownloadButton({
               member: { name: memberName, phone:userData?.phone, aadhaar:userData?.aadhaarNo },
               bond: {
                 bondNo:bond?.bondNumber|| bond.userSchemeId,
-                monthlyPremium: getSipPremium(bond), //pending
+                installmentAmount: getSipPremium(bond),
+                sipFrequency: bond?.sipFrequency,
                 tenureMonths: (bond.tenure?Math.round(Number(bond.tenure)/30):""),
                 investmentDate: bond.enrollmentDate,
                 maturityDate: bond.maturityDate,
@@ -91,7 +127,7 @@ export default function SIPDownloadButton({
         setLoading(null);
       }
     },
-    [slug, memberName, bond, userData?.phone, userData?.aadhaarNo],
+    [slug, memberName, bond, logoUrl, userData?.name, userData?.phone, userData?.aadhaarNo],
   );
 
   const isLoading = loading !== null;
@@ -182,7 +218,7 @@ export default function SIPDownloadButton({
                 }}
                 className="flex w-full items-center gap-2 px-3 py-2.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-teal-300"
               >
-                <Sheet  size={13} className="text-amber-400" /> Ledger in xsls
+                <Sheet  size={13} className="text-amber-400" /> Ledger in xlsx
               </button>
               {/* <button type="button" onClick={() => { setOpen(false); go("both"); }}
                 className="flex w-full items-center gap-2 border-t border-slate-700 px-3 py-2.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-teal-300">

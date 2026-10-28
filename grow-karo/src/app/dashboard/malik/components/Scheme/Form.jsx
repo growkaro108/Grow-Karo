@@ -27,7 +27,7 @@ const INPUT_TEXTAREA_CLS = `${INPUT_CLS} resize-none`;
 
 const PLAN_TYPES = [
   { value: "FD", label: "Fixed Deposit (FD)", description: "One-time lump sum investment with fixed tenure" },
-  { value: "SIP", label: "Systematic Investment Plan (SIP)", description: "Monthly recurring installment plan" },
+  { value: "SIP", label: "Systematic Investment Plan (SIP)", description: "Monthly or daily recurring installment plan" },
   { value: "PENSION", label: "Pension Plan", description: "Interest-only payouts; principal is settled at maturity" },
 ];
 
@@ -327,9 +327,12 @@ export default function FormModal({
             planType === "SIP" || planType === "PENSION"
               ? Number(form.tenureMonths)
               : null,
+          sipFrequency:
+            planType === "SIP" ? form.sipFrequency || "MONTHLY" : null,
           sipAmount:
-            planType === "SIP" ? Number(form.sipAmount) : null,
-          sipDay: planType === "SIP" ? Number(form.sipDay) : null,
+            planType === "SIP" && form.sipFrequency !== "DAILY"
+              ? Number(form.sipAmount)
+              : null,
           terms: terms.map((t) => String(t || "").trim()).filter(Boolean),
         };
         const response = isEditing
@@ -533,36 +536,43 @@ export default function FormModal({
             </p>
           )}
 
-          {/* {planType === "SIP" && (
-            <div className="bg-indigo-950/20 border border-indigo-900/60 rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Default Monthly Installment (₹)">
-                <input
-                  type="number"
-                  min={form.minimumAmount || "0.01"}
-                  max={form.maximumAmount || undefined}
-                  step="0.01"
-                  required
-                  name="sipAmount"
-                  value={form.sipAmount || ""}
-                  onChange={handleChange}
-                  placeholder="1000"
-                  className={INPUT_CLS}
-                />
-              </Field>
-              <Field label="Default Installment Day (1-28)">
-                <input
-                  type="number"
-                  min="1"
-                  max="28"
-                  required
-                  name="sipDay"
-                  value={form.sipDay || "20"}
+           {planType === "SIP" && (
+             <div className="bg-indigo-950/20 border border-indigo-900/60 rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+               <Field label="Installment Frequency">
+                 <select
+                   name="sipFrequency"
+                  value={form.sipFrequency || "MONTHLY"}
                   onChange={handleChange}
                   className={INPUT_CLS}
-                />
+                >
+                  <option value="MONTHLY">Monthly</option>
+                  <option value="DAILY">Daily</option>
+                </select>
               </Field>
+              {form.sipFrequency !== "DAILY" && (
+                <Field label="Default Monthly Installment (₹)">
+                  <input
+                    type="number"
+                    min={form.minimumAmount || "0.01"}
+                    max={form.maximumAmount || undefined}
+                    step="0.01"
+                    required
+                    name="sipAmount"
+                    value={form.sipAmount || ""}
+                    onChange={handleChange}
+                    placeholder="1000"
+                    className={INPUT_CLS}
+                  />
+                </Field>
+              )}
+              {form.sipFrequency === "DAILY" && (
+                <p className="self-center text-xs leading-5 text-slate-400">
+                  Daily deposits can vary. Each calendar day allows up to ₹2,000;
+                  interest is calculated from the actual payment date.
+                </p>
+              )}
             </div>
-          )} */}
+          )}
 
           {/* Schedule */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">

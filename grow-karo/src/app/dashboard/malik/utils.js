@@ -373,7 +373,10 @@ export async function downloadLedgerXlsx(
   // Member (left) and bond (right) details
   const info = [
     [`Member: ${member.name}`, `Bond No: ${bond.bondNo}`],
-    [`Phone: ${member.phone}`, `Monthly Premium: ₹${bond.monthlyPremium}`],
+    [
+      `Phone: ${member.phone}`,
+      `${bond.sipFrequency === "DAILY" ? "Daily" : "Monthly"} Installment: ₹${bond.installmentAmount}`,
+    ],
     [`Aadhaar: ${member.aadhaar}`, `Tenure: ${bond.tenureMonths} Months`],
     [
       `Investment Date: ${bond.investmentDate}`,
