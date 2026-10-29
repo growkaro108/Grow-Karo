@@ -60,7 +60,7 @@ public record NearMaturityUserSchemeResponse(
                                         ? s.getProfitPercentage()
                                         : us.getContractTotalInterestPercentage();
                         Integer contractMonths = us.getContractTenureDays() == null
-                                        ? s.getTenureMonths()
+                                        ? s.getTenure()
                                         : us.getContractTenureDays();
                         profitAvailable = totalProfit.subtract(g.countPensionInterestRedeemed(us))
                                         .max(BigDecimal.ZERO)

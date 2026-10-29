@@ -7,6 +7,7 @@ import {
   Plus,
 } from "lucide-react";
 import { currency, daysToMonths } from "./format";
+import { useEffect } from "react";
 
 const inputClass =
   "w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-teal-500 [color-scheme:dark]";
@@ -115,8 +116,17 @@ function LedgerRows({ type, rows, onChange, onAdd, interestOnly = false }) {
   );
 }
 
-function SipInstallmentRows({ rows, onChange, onAdd, onRemove }) {
-  // console.log(rows.length);
+function SipInstallmentRows({ rows, onChange, onAdd, onRemove, isDaily }) {
+  // For daily SIPs, keep paidDate in sync with the scheduled installmentDate
+  useEffect(() => {
+    if (!isDaily) return;
+    rows.forEach((row, index) => {
+      if (row.installmentDate && row.paidDate !== row.installmentDate) {
+        onChange(index, "paidDate", row.installmentDate);
+      }
+    });
+  }, [isDaily, onChange, rows]);
+
   return (
     <div className="space-y-2 rounded-xl border border-indigo-900/60 bg-indigo-950/15 p-3 scrollbar-none">
       <div className="scrollbar-none">
@@ -132,7 +142,7 @@ function SipInstallmentRows({ rows, onChange, onAdd, onRemove }) {
         <span className="col-span-1">No.</span>
         {/* <span className="col-span-3">Installment date</span>
         <span className="col-span-2">Due (₹)</span> */}
-        <span className="col-span-3">Paid date</span>
+        <span className="col-span-3">{isDaily ? "Scheduled date" : "Paid date"}</span>
         <span className="col-span-3">Paid (₹)</span>
         <span className="col-span-1" />
       </div>
@@ -165,11 +175,12 @@ function SipInstallmentRows({ rows, onChange, onAdd, onRemove }) {
             <input
               aria-label={`Installment ${index + 1} paid date`}
               type="date"
-              value={row.paidDate ?? ""}
+              disabled={isDaily}
+              value={isDaily ? row.installmentDate : row.paidDate}
               onChange={(event) =>
                 onChange(index, "paidDate", event.target.value)
               }
-              className={`col-span-5 ${inputClass}`}
+              className={`col-span-5 ${inputClass} ${isDaily && "cursor-not-allowed"}`}
             />
             <input
               aria-label={`Installment ${index + 1} paid amount`}
@@ -235,11 +246,10 @@ export default function SchemeManagementPanel({
   return (
     <div
       ref={formTopRef}
-      className={`mb-7 overflow-hidden rounded-xl border ${
-        isEditing
-          ? "border-amber-700/70 bg-amber-950/10"
-          : "border-teal-900/70 bg-teal-950/20"
-      }`}
+      className={`mb-7 overflow-hidden rounded-xl border ${isEditing
+        ? "border-amber-700/70 bg-amber-950/10"
+        : "border-teal-900/70 bg-teal-950/20"
+        }`}
     >
       <button
         type="button"
@@ -247,9 +257,8 @@ export default function SchemeManagementPanel({
         className="flex w-full items-center justify-between px-4 py-3.5 text-left"
       >
         <span
-          className={`flex items-center font-[Space_Grotesk] text-sm font-semibold ${
-            isEditing ? "text-amber-300" : "text-teal-300"
-          }`}
+          className={`flex items-center font-[Space_Grotesk] text-sm font-semibold ${isEditing ? "text-amber-300" : "text-teal-300"
+            }`}
         >
           <Plus className="mr-0.5 h-5 w-5" />
           {isEditing
@@ -259,9 +268,8 @@ export default function SchemeManagementPanel({
         <span className="flex items-center gap-2 text-[10px] text-slate-500">
           Admin only
           <ChevronDown
-            className={`h-3.5 w-3.5 text-teal-300 transition-transform ${
-              addFormOpen ? "rotate-180" : ""
-            }`}
+            className={`h-3.5 w-3.5 text-teal-300 transition-transform ${addFormOpen ? "rotate-180" : ""
+              }`}
           />
         </span>
       </button>
@@ -405,6 +413,7 @@ export default function SchemeManagementPanel({
                 <div className="col-span-2">
                   <SipInstallmentRows
                     rows={sipLedger}
+                    isDaily={selectedScheme?.sipFrequency == "DAILY"}
                     onChange={onSipInstallmentChange}
                     onAdd={onAddSipInstallment}
                     onRemove={onRemoveSipInstallment}
@@ -481,14 +490,14 @@ export default function SchemeManagementPanel({
                       {currency(
                         (Number(form.paidAmount) *
                           Number(form.profitPercentage)) /
-                          100 || 0,
+                        100 || 0,
                       )}
                       {" · Total interest: "}
                       {currency(
                         (Number(form.paidAmount) *
                           Number(form.profitPercentage) *
                           Number(form.tenureMonths)) /
-                          100 || 0,
+                        100 || 0,
                       )}
                       . The monthly schedule is created automatically; principal
                       is settled separately at maturity.

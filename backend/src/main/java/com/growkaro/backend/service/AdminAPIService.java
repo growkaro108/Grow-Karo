@@ -852,45 +852,46 @@ public class AdminAPIService {
 
     private boolean isValidSipLedger(List<SipInstallmentRequest> installments, Scheme scheme) {
         final String schemeId = scheme.getSchemeId();
- 
+
         if (installments == null || installments.isEmpty()) {
             log.warn("SIP ledger rejected [scheme={}]: ledger is null or empty", schemeId);
             return false;
         }
- 
+
         final boolean daily = "DAILY".equalsIgnoreCase(scheme.getSipFrequency());
         log.debug("Validating SIP ledger [scheme={}, frequency={}, rows={}]",
                 schemeId, scheme.getSipFrequency(), installments.size());
- 
+
         Map<LocalDate, BigDecimal> depositsByDate = new HashMap<>();
- 
+
         for (int i = 0; i < installments.size(); i++) {
             final int rowNo = i + 1;
             final SipInstallmentRequest row = installments.get(i);
- 
+
             if (row == null) {
                 log.warn("SIP ledger rejected [scheme={}, row={}]: row is null", schemeId, rowNo);
                 return false;
             }
-            if (row.installmentDate() == null) {
-                log.warn("SIP ledger rejected [scheme={}, row={}]: installmentDate is missing, row={}",
-                        schemeId, rowNo, row);
-                return false;
-            }
+            // if (row.installmentDate() == null) {
+            // log.warn("SIP ledger rejected [scheme={}, row={}]: installmentDate is
+            // missing, row={}",
+            // schemeId, rowNo, row);
+            // return false;
+            // }
             if (row.dueAmount() == null) {
                 log.warn("SIP ledger rejected [scheme={}, row={}]: dueAmount is missing, row={}",
                         schemeId, rowNo, row);
                 return false;
             }
- 
+
             final BigDecimal paidAmount = row.paidAmount() == null ? BigDecimal.ZERO : row.paidAmount();
- 
+
             if (paidAmount.signum() < 0) {
                 log.warn("SIP ledger rejected [scheme={}, row={}]: paidAmount {} is negative, row={}",
                         schemeId, rowNo, paidAmount, row);
                 return false;
             }
- 
+
             if (daily) {
                 if (row.dueAmount().signum() < 0) {
                     log.warn("SIP ledger rejected [scheme={}, row={}]: dueAmount {} is negative, row={}",
@@ -898,7 +899,8 @@ public class AdminAPIService {
                     return false;
                 }
                 if (paidAmount.compareTo(MAX_DAILY_SIP_DEPOSIT) > 0) {
-                    log.warn("SIP ledger rejected [scheme={}, row={}]: paidAmount {} is above the daily maximum {}, row={}",
+                    log.warn(
+                            "SIP ledger rejected [scheme={}, row={}]: paidAmount {} is above the daily maximum {}, row={}",
                             schemeId, rowNo, paidAmount, MAX_DAILY_SIP_DEPOSIT, row);
                     return false;
                 }
@@ -910,29 +912,32 @@ public class AdminAPIService {
                     }
                     final BigDecimal dayTotal = depositsByDate.merge(row.paidDate(), paidAmount, BigDecimal::add);
                     if (dayTotal.compareTo(MAX_DAILY_SIP_DEPOSIT) > 0) {
-                        log.warn("SIP ledger rejected [scheme={}, row={}]: deposits on {} total {}, above the daily maximum {}",
+                        log.warn(
+                                "SIP ledger rejected [scheme={}, row={}]: deposits on {} total {}, above the daily maximum {}",
                                 schemeId, rowNo, row.paidDate(), dayTotal, MAX_DAILY_SIP_DEPOSIT);
                         return false;
                     }
                 }
             } else {
                 if (row.dueAmount().compareTo(scheme.getMinimumAmount()) < 0) {
-                    log.warn("SIP ledger rejected [scheme={}, row={}]: dueAmount {} is below the scheme minimum {}, row={}",
+                    log.warn(
+                            "SIP ledger rejected [scheme={}, row={}]: dueAmount {} is below the scheme minimum {}, row={}",
                             schemeId, rowNo, row.dueAmount(), scheme.getMinimumAmount(), row);
                     return false;
                 }
                 if (row.dueAmount().compareTo(scheme.getMaximumAmount()) > 0) {
-                    log.warn("SIP ledger rejected [scheme={}, row={}]: dueAmount {} is above the scheme maximum {}, row={}",
+                    log.warn(
+                            "SIP ledger rejected [scheme={}, row={}]: dueAmount {} is above the scheme maximum {}, row={}",
                             schemeId, rowNo, row.dueAmount(), scheme.getMaximumAmount(), row);
                     return false;
                 }
             }
         }
- 
+
         log.debug("SIP ledger accepted [scheme={}, rows={}]", schemeId, installments.size());
         return true;
     }
-   
+
     private boolean areDailyPaymentsWithinTerm(
             List<SipInstallmentRequest> installments,
             LocalDate startDate,

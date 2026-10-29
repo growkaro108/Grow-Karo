@@ -140,12 +140,12 @@ export const buildSipSchedule = (startDate, scheme) => {
     const end = new Date(`${maturityDate}T00:00:00Z`);
     const date = new Date(`${isoStartDate}T00:00:00Z`);
     const rows = [];
-    let i=1;
-    // while (date < end) {
-    while (i < 7) {
+    // let i=1;
+    while (date < end) {
+      // while (i < 7) {
       rows.push(makeRow(date));
       date.setUTCDate(date.getUTCDate() + 1);
-      i++;
+      // i++;
     }
     return rows;
   }

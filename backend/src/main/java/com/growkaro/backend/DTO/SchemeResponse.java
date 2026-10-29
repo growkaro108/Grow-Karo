@@ -31,9 +31,9 @@ public record SchemeResponse(
                 Integer tenureMonths,
                 String sipFrequency,
                 BigDecimal sipAmount
-                // BigDecimal sipAmount,
-                // Integer sipDay
-                ) {
+// BigDecimal sipAmount,
+// Integer sipDay
+) {
 
         public static SchemeResponse fromEntity(Scheme scheme) {
                 return new SchemeResponse(
@@ -58,9 +58,9 @@ public record SchemeResponse(
                                 scheme.getTenureMonths(),
                                 scheme.getSipFrequency(),
                                 scheme.getSipAmount()
-                                // scheme.getSipAmount(),
-                                // scheme.getSipDay()
-                                );
+                // scheme.getSipAmount(),
+                // scheme.getSipDay()
+                );
         }
 
         public static SchemeResponse fromEntity(Scheme scheme, boolean wantJoinedUser) {
@@ -89,9 +89,9 @@ public record SchemeResponse(
                                 scheme.getTenureMonths(),
                                 scheme.getSipFrequency(),
                                 scheme.getSipAmount()
-                                // scheme.getSipAmount(),
-                                // scheme.getSipDay()
-                                );
+                // scheme.getSipAmount(),
+                // scheme.getSipDay()
+                );
         }
 
         // Never null, and an immutable copy so the Hibernate-managed list isn't

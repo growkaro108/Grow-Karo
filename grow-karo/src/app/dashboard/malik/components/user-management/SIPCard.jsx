@@ -31,18 +31,18 @@ function StatusPill({ paidAmount, dueAmount, paidDate }) {
   if (isPaid)
     return (
       <span className="rounded-full bg-emerald-900 px-2 py-0.5 text-[10px] font-semibold text-emerald-300 flex items-center gap-x-2 ">
-        <CheckCircle2 className="h-3.5 w-3.5"/> Paid
+        <CheckCircle2 className="h-3.5 w-3.5" /> Paid
       </span>
     );
   if (isPartial || hasPaidDate)
     return (
       <span className="rounded-full bg-fuchsia-600 px-2 py-0.5 text-[10px] font-semibold text-fuchsia-400 flex items-center gap-x-2">
-       <StarHalf className="h-3.5 w-3.5" /> Partial
+        <StarHalf className="h-3.5 w-3.5" /> Partial
       </span>
     );
   return (
     <span className="rounded-full bg-yellow-700 px-2 py-0.5 text-[10px] font-semibold text-slate-800 flex items-center gap-x-2">
-     <CalendarClock className="h-3.5 w-3.5"/> Pending
+      <CalendarClock className="h-3.5 w-3.5" /> Pending
     </span>
   );
 }
@@ -115,9 +115,9 @@ export default function SIPCard({
   const totalPayableAmount = totalDue;
   const progress = schedule.length
     ? (totalPayableAmount > 0
-        ? (totalPaid / totalPayableAmount) * 100
-        : 0
-      ).toFixed(1)
+      ? (totalPaid / totalPayableAmount) * 100
+      : 0
+    ).toFixed(1)
     : 0;
   // console.log(sipAmount,tenureMonths,totalPayableAmount,totalPaid)
 
@@ -125,11 +125,10 @@ export default function SIPCard({
     <div className="overflow-hidden rounded-xl border border-slate-800 bg-white/2">
       {/* Header band */}
       <div
-        className={`flex items-center justify-between gap-3 px-4 py-3.5 text-white ${
-          isApproved
-            ? "bg-linear-to-br from-indigo-900 to-[#1a0c3d]"
-            : "bg-linear-to-br from-amber-700 to-[#3d2c0c]"
-        }`}
+        className={`flex items-center justify-between gap-3 px-4 py-3.5 text-white ${isApproved
+          ? "bg-linear-to-br from-indigo-900 to-[#1a0c3d]"
+          : "bg-linear-to-br from-amber-700 to-[#3d2c0c]"
+          }`}
       >
         <div className="flex min-w-0 items-center gap-2.5">
           <TrendingUp className="h-5 w-5 shrink-0 text-indigo-300" />
@@ -215,11 +214,10 @@ export default function SIPCard({
           <button
             type="button"
             onClick={() => setLedgerOpen((v) => !v)}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition ${
-              ledgerOpen
-                ? "border-indigo-700 bg-indigo-950/50 text-indigo-300"
-                : "border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-200"
-            }`}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition ${ledgerOpen
+              ? "border-indigo-700 bg-indigo-950/50 text-indigo-300"
+              : "border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-200"
+              }`}
           >
             <Calendar className="h-3.5 w-3.5" />
             Installments
@@ -232,11 +230,10 @@ export default function SIPCard({
           <button
             type="button"
             onClick={() => setBondOpen((v) => !v)}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition ${
-              bondOpen
-                ? "border-teal-700 bg-teal-950/50 text-teal-300"
-                : "border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-200"
-            }`}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition ${bondOpen
+              ? "border-teal-700 bg-teal-950/50 text-teal-300"
+              : "border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-200"
+              }`}
           >
             <Landmark className="h-3.5 w-3.5" />
             {bond.bondUrl ? "Update Bond" : "Add Bond"}
@@ -251,11 +248,10 @@ export default function SIPCard({
             onClick={() =>
               editingScheme ? onCancelEditingScheme() : onStartEditingScheme()
             }
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition ${
-              editingScheme
-                ? "border-amber-700 bg-amber-950/50 text-amber-300"
-                : "border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-200"
-            }`}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition ${editingScheme
+              ? "border-amber-700 bg-amber-950/50 text-amber-300"
+              : "border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-200"
+              }`}
           >
             <Pen className="h-3.5 w-3.5" /> Edit
           </button>
@@ -335,112 +331,118 @@ export default function SIPCard({
       {/* ── Installment ledger panel ── */}
       {ledgerOpen && (
         <div className="space-y-3 border-t border-slate-800/70 bg-slate-950/40 px-4 py-4">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <p className="text-xs font-semibold text-indigo-200">Installment ledger</p>
-            <p className="mt-0.5 text-[11px] text-slate-500">
-              Edit each user’s due date, due amount, payment date and amount paid.
-            </p>
-          </div>
-          <span className="rounded-full bg-slate-800 px-2 py-1 text-[10px] text-slate-400">
-            {schedule.length} installments
-          </span>
-        </div>
-
-        <div className="overflow-x-auto rounded-lg border border-slate-800">
-          <div className="min-w-172.5">
-            <div className={`grid ${sipFrequency === "DAILY" ? "grid-cols-[2rem_minmax(6rem,1fr)_minmax(6rem,1fr)_minmax(6rem,1fr)_4rem]" : "grid-cols-[2rem_minmax(6rem,1fr)_minmax(5rem,.8fr)_minmax(6rem,1fr)_minmax(5rem,.8fr)_4rem]"} items-center gap-2 bg-slate-900 px-3 py-2 text-[10px] font-medium uppercase tracking-wide text-slate-500`}>
-              <span>#</span>
-              <span>{sipFrequency === "DAILY" ? "Schedule date" : "Due date"}</span>
-              {sipFrequency !== "DAILY" && <span>Due amount</span>}
-              <span>Paid date</span>
-              <span>{sipFrequency === "DAILY" ? "Deposit (₹)" : "Paid amount"}</span>
-              <span>Status</span>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="text-xs font-semibold text-indigo-200">Installment ledger</p>
+              <p className="mt-0.5 text-[11px] text-slate-500">
+                Edit each user’s due date, due amount, payment date and amount paid.
+              </p>
             </div>
-            <div className="max-h-80 divide-y divide-slate-800/70 overflow-y-auto scrollbar-none">
-              {schedule.map((row, i) => {
-                const lRow = sipLedger[i] || row;
-                const dueAmount = Number(lRow.dueAmount ?? row.dueAmount ?? sipAmount);
-                const paidAmount = Number(lRow.paidAmount || 0);
-                const fieldCls =
-                  "min-w-0 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-200 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 [color-scheme:dark]";
-                return (
-                  <div
-                    key={i}
-                    className={`grid ${sipFrequency === "DAILY" ? "grid-cols-[2rem_minmax(6rem,1fr)_minmax(6rem,1fr)_minmax(6rem,1fr)_4rem]" : "grid-cols-[2rem_minmax(6rem,1fr)_minmax(5rem,.8fr)_minmax(6rem,1fr)_minmax(5rem,.8fr)_4rem]"} items-center gap-2 px-3 py-2`}
-                  >
-                    <span className="text-xs tabular-nums text-slate-500">{i + 1}</span>
-                    <input
-                      type="date"
-                      aria-label={`Installment ${i + 1} schedule date`}
-                      value={lRow.installmentDate || lRow.dueDate || ""}
-                      onChange={(e) => onInstallmentChange(i, "installmentDate", e.target.value)}
-                      className={fieldCls}
-                      disabled
-                    />
-                    {sipFrequency !== "DAILY" && (
+            {/* total installment */}
+            <span className="rounded-full bg-slate-800 px-2 py-1 text-[10px] text-slate-400">
+              {schedule.length} installments
+            </span>
+          </div>
+
+          <div className="overflow-x-auto rounded-lg border border-slate-800">
+            <div className={sipFrequency === "DAILY" ? "min-w-172.5" : "max-w-3xl"}>
+              <div className={`grid ${sipFrequency === "DAILY" ? "grid-cols-[2rem_minmax(6rem,1fr)_minmax(6rem,1fr)_minmax(6rem,1fr)_4rem]" : "grid-cols-[2rem_minmax(6rem,1fr)_minmax(5rem,.8fr)_minmax(6rem,1fr)_minmax(5rem,.8fr)_4rem]"} items-center gap-2 bg-slate-900 px-3 py-2 text-[10px] font-medium uppercase tracking-wide text-slate-500`}>
+                <span>#</span>
+                <span>{sipFrequency === "DAILY" ? "Schedule date" : "Paid date"}</span>
+                {sipFrequency !== "DAILY" && <span>Due amount</span>}
+                {/* <span>Paid date</span> */}
+                <span>{sipFrequency === "DAILY" ? "Deposit (₹)" : "Paid amount"}</span>
+                <span>Status</span>
+              </div>
+              <div className="max-h-80 divide-y divide-slate-800/70 overflow-y-auto scrollbar-none">
+                {schedule.map((row, i) => {
+                  const lRow = sipLedger[i] || row;
+                  const dueAmount = Number(lRow.dueAmount ?? row.dueAmount ?? sipAmount);
+                  const paidAmount = Number(lRow.paidAmount || 0);
+                  const fieldCls =
+                    "min-w-0 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-200 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 [color-scheme:dark]";
+                  return (
+                    <div
+                      key={i}
+                      className={`grid ${sipFrequency === "DAILY" ? "grid-cols-[2rem_minmax(6rem,1fr)_minmax(6rem,1fr)_minmax(6rem,1fr)_4rem]" : "grid-cols-[2rem_minmax(6rem,1fr)_minmax(5rem,.8fr)_minmax(6rem,1fr)_minmax(5rem,.8fr)_4rem]"} items-center gap-2 px-3 py-2`}
+                    >
+                      <span className="text-xs tabular-nums text-slate-500">{i + 1}</span>
+                      {sipFrequency !== "DAILY" && (<>
+                        <input
+                          type="date"
+                          aria-label={`Installment ${i + 1} schedule date`}
+                          value={lRow.installmentDate || lRow.dueDate || ""}
+                          onChange={(e) => onInstallmentChange(i, "installmentDate", e.target.value)}
+                          className={fieldCls}
+                          disabled
+                        />
+
+                        <input
+                          type="number"
+                          min="0.01"
+                          step="1"
+                          aria-label={`Installment ${i + 1} due amount`}
+                          value={lRow.dueAmount ?? row.dueAmount ?? sipAmount}
+                          className={fieldCls + "hidden"}
+                          disabled
+                        />
+                      </>)}
+                      <input
+                        type="date"
+                        aria-label={`Installment ${i + 1} paid date`}
+                        value={lRow.paidDate || ""}
+                        onChange={(e) => onInstallmentChange(i, "paidDate", e.target.value)}
+                        className={fieldCls}
+                      />
                       <input
                         type="number"
-                        min="0.01"
-                        step="0.01"
-                        aria-label={`Installment ${i + 1} due amount`}
-                        value={lRow.dueAmount ?? row.dueAmount ?? sipAmount}
+                        min="0"
+                        max={sipFrequency === "DAILY" ? "2000" : undefined}
+                        step="1"
+                        aria-label={`Installment ${i + 1} paid amount`}
+                        value={lRow.paidAmount ?? 0}
+                        required={sipFrequency === "DAILY" && Number(lRow.paidAmount) > 0}
+                        onChange={(e) => onInstallmentChange(i, "paidAmount", e.target.value)}
                         className={fieldCls}
-                        disabled
                       />
-                    )}
-                    <input
-                      type="date"
-                      aria-label={`Installment ${i + 1} paid date`}
-                      value={lRow.paidDate || ""}
-                      onChange={(e) => onInstallmentChange(i, "paidDate", e.target.value)}
-                      className={fieldCls}
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      max={sipFrequency === "DAILY" ? "2000" : undefined}
-                      step="0.01"
-                      aria-label={`Installment ${i + 1} paid amount`}
-                      value={lRow.paidAmount ?? 0}
-                      required={sipFrequency === "DAILY" && Number(lRow.paidAmount) > 0}
-                      onChange={(e) => onInstallmentChange(i, "paidAmount", e.target.value)}
-                      className={fieldCls}
-                    />
-                    <StatusPill
-                      paidAmount={paidAmount}
-                      dueAmount={sipFrequency === "DAILY" ? 0 : dueAmount}
-                      paidDate={
-                        sipFrequency === "DAILY" && paidAmount === 0
-                          ? ""
-                          : lRow.paidDate
-                      }
-                    />
-                  </div>
-                );
-              })}
+                      {lRow.paidAmount ? <StatusPill
+                        paidAmount={paidAmount}
+                        dueAmount={sipFrequency === "DAILY" ? 0 : dueAmount}
+                        paidDate={
+                          sipFrequency === "DAILY" && paidAmount === 0
+                            ? ""
+                            : lRow.paidDate
+                        }
+                      /> :
+                        // cross symbol
+                        <div>
+                          <span className="hover:cursor-pointer">❌</span>
+                        </div>}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex flex-wrap justify-between gap-2">
-          <button
-            type="button"
-            onClick={onAddInstallment}
-            className="rounded-md border border-slate-700 px-3 py-2 text-xs font-medium text-slate-300 transition hover:border-indigo-600 hover:text-indigo-200"
-          >
-            + Add installment
-          </button>
-          <button
-            type="button"
-            onClick={onSaveLedger}
-            disabled={savingLedger}
-            className="inline-flex items-center justify-center gap-2 rounded-md bg-indigo-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-wait disabled:opacity-60"
-          >
-            {savingLedger && <Loader2 size={14} className="animate-spin" />}
-            {savingLedger ? "Saving…" : "Save ledger"}
-          </button>
-        </div>
+          <div className="flex flex-wrap justify-between gap-2">
+            <button
+              type="button"
+              onClick={onAddInstallment}
+              className="rounded-md border border-slate-700 px-3 py-2 text-xs font-medium text-slate-300 transition hover:border-indigo-600 hover:text-indigo-200"
+            >
+              + Add installment
+            </button>
+            <button
+              type="button"
+              onClick={onSaveLedger}
+              disabled={savingLedger}
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-indigo-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-wait disabled:opacity-60"
+            >
+              {savingLedger && <Loader2 size={14} className="animate-spin" />}
+              {savingLedger ? "Saving…" : "Save ledger"}
+            </button>
+          </div>
         </div>
       )}
 
@@ -468,11 +470,10 @@ export default function SIPCard({
             type="button"
             disabled={savingBond}
             onClick={onSaveBond}
-            className={`relative w-full overflow-hidden rounded-md px-3 py-2 text-xs font-semibold transition ${
-              savingBond
-                ? "cursor-not-allowed border-slate-600 bg-slate-950/30 text-slate-600"
-                : "border border-teal-700 text-teal-300 hover:bg-teal-950/50"
-            }`}
+            className={`relative w-full overflow-hidden rounded-md px-3 py-2 text-xs font-semibold transition ${savingBond
+              ? "cursor-not-allowed border-slate-600 bg-slate-950/30 text-slate-600"
+              : "border border-teal-700 text-teal-300 hover:bg-teal-950/50"
+              }`}
           >
             {savingBond ? (
               <span className="inline-flex items-center gap-2">
