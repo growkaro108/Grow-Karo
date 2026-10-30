@@ -89,7 +89,11 @@ export default function BondCard({
 
   const [preview, setPreview] = useState(null);
   const file = bondFormState.image;
-
+  //for SIP, if the frequency is daily, we need to show "GKDDP00" as the bond number prefix, else "GKFD"
+   const sipFrequency =
+    String(bond.sipFrequency || "MONTHLY").toUpperCase() === "DAILY"
+      ? "DAILY"
+      : "MONTHLY";
   // Build and clean up the preview URL whenever the selected file changes
   useEffect(() => {
     // 1. Guard check: clear preview and return
@@ -111,6 +115,7 @@ export default function BondCard({
     };
   }, [file]);
 
+  // Handle file selection and validation
   const handleBondFileChange = (e) => {
     const selected = e.target.files?.[0];
     if (!selected) return;
@@ -188,7 +193,10 @@ export default function BondCard({
             {isPension && (
               <Stat
                 label="Payable"
-                value={currency(bond.contractInterestAmount - (bond.redeemAmount ?? bond.profitRedeemed))}
+                value={currency(
+                  bond.contractInterestAmount -
+                    (bond.redeemAmount ?? bond.profitRedeemed),
+                )}
                 tone="emerald"
               />
             )}
@@ -208,12 +216,14 @@ export default function BondCard({
       {/* hide if scheme is not approved */}
       {isApproved && (
         <div className="flex flex-wrap gap-2 border-t border-slate-800/70 px-4 py-2.5">
-          <PanelToggle
-            open={historyOpen}
-            onClick={() => setHistoryOpen((v) => !v)}
-          >
-            Update Ledger
-          </PanelToggle>
+          {sipFrequency !== "DAILY" && (
+            <PanelToggle
+              open={historyOpen}
+              onClick={() => setHistoryOpen((v) => !v)}
+            >
+              Update Ledger
+            </PanelToggle>
+          )}
           <PanelToggle
             open={detailsOpen}
             onClick={() => setDetailsOpen((v) => !v)}
@@ -328,11 +338,15 @@ export default function BondCard({
               className={`grid gap-2 ${isPension ? "grid-cols-3" : "grid-cols-2"}`}
             >
               <input
-                aria-label={isPension ? "Interest payout amount" : "Profit amount"}
+                aria-label={
+                  isPension ? "Interest payout amount" : "Profit amount"
+                }
                 type="number"
                 min="0"
                 step="0.01"
-                placeholder={isPension ? "Interest payout amount" : "Profit amount"}
+                placeholder={
+                  isPension ? "Interest payout amount" : "Profit amount"
+                }
                 value={entry.profitAmount}
                 onChange={(e) =>
                   onProfitFieldChange(index, "profitAmount", e.target.value)
@@ -432,7 +446,13 @@ export default function BondCard({
           <input
             aria-label="Bond number"
             placeholder={bond.bondNumber || "Bond number"}
-            value={bondFormState.bondNumber ?? bond.bondNumber ?? "GKFD"}
+            value={
+              (bondFormState.bondNumber ??
+              bond.bondNumber ??
+              sipFrequency === "DAILY")
+                ? "GKDDP00"
+                : "GKFD"
+            }
             onChange={(e) => onBondFormChange("bondNumber", e.target.value)}
             className={inputClass}
           />
@@ -464,7 +484,11 @@ export default function BondCard({
                   disabled={savingBond}
                   aria-label={`Remove ${preview.name}`}
                 >
-                  <X size={14} color="white " className="hover:text-red-500 transition-all duration-150 hover:scale-105 hover:rotate-180 cursor-pointer" />
+                  <X
+                    size={14}
+                    color="white "
+                    className="hover:text-red-500 transition-all duration-150 hover:scale-105 hover:rotate-180 cursor-pointer"
+                  />
                 </button>
               </div>
             </div>
@@ -482,10 +506,11 @@ export default function BondCard({
             disabled={savingBond}
             onClick={onSaveBond}
             aria-busy={savingBond}
-            className={`relative w-full overflow-hidden rounded-md px-3 py-2 text-xs font-semibold transition ${savingBond
+            className={`relative w-full overflow-hidden rounded-md px-3 py-2 text-xs font-semibold transition ${
+              savingBond
                 ? "cursor-not-allowed border-slate-600 bg-slate-950/30 text-slate-600"
                 : "border border-teal-700 text-teal-300 hover:bg-teal-950/50 focus:cursor-none focus:opacity-50"
-              }`}
+            }`}
           >
             {savingBond ? (
               <>

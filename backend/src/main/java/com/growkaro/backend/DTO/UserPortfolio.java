@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.Nominee;
@@ -26,6 +27,7 @@ public record UserPortfolio(
         LocalDateTime requestDate,
         String userSchemeId,
         BigDecimal paidAmount,
+        BigDecimal maturityAmount,
         Boolean isApproved,
         BigDecimal profit,
         BigDecimal profitReedemed,
@@ -44,7 +46,8 @@ public record UserPortfolio(
         String planType,
         Integer tenureMonths,
         BigDecimal contractInterestAmount,
-        List<UserSchemeProfitLedgerResponse> profitLedger) {
+        List<UserSchemeProfitLedgerResponse> profitLedger,
+        List<DailyDepositResponse> dailyDepositLedger) {
 
     public static final General general = new General();
 
@@ -80,6 +83,7 @@ public record UserPortfolio(
                 us.getRequestDate(),
                 us.getUserSchemeId(),
                 us.getPaidAmount(),
+                general.calculateMaturityAmount(us),
                 us.getIsApproved(),
                 totalprofit,
                 profitreedemed,
@@ -100,6 +104,10 @@ public record UserPortfolio(
                 us.getProfitLedger().stream()
                         .map(entry -> new UserSchemeProfitLedgerResponse(
                                 entry.getId(), entry.getProfitAmount(), entry.getProfitDate(), entry.isPaid()))
+                        .toList(),
+                IntStream.range(0, us.getDailyDepositLedger().size())
+                        .mapToObj(index -> DailyDepositResponse.fromEntity(
+                                us.getDailyDepositLedger().get(index), index))
                         .toList());
     }
 

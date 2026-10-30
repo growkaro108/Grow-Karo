@@ -19,5 +19,6 @@ public record UserRequest( // userScheme
                 String phone,
                 String planType,
                 Double profitPercentage,
-                Integer tenureMonths) {
+                Integer tenureMonths,
+                BigDecimal minimumAmount) {
 }

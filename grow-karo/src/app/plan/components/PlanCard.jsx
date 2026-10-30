@@ -18,6 +18,9 @@ export function PlanCard({
   const enrolledCount = enrolledMap.get(plan.schemeId) ?? 0;
   const { authRemitter } = use(remitterContext);
   const isPension = plan.planType === "PENSION";
+  const isDailyDeposit = plan.planType === "DAILY_DEPOSIT";
+  const isLegacyDailySip =
+    plan.planType === "SIP" && plan.sipFrequency === "DAILY";
 
   return (
     <div
@@ -68,12 +71,18 @@ export function PlanCard({
           <p className="text-2xl font-bold" style={{ color: "#4f46e5" }}>
             {plan.profitPercentage}
             <span className="text-sm font-medium">
-              {isPension ? "% monthly interest" : `% on every ${plan.payoutFrequency}`}
+              {isPension
+                ? "% monthly interest"
+                : isDailyDeposit
+                  ? "% total return"
+                  : `% on every ${plan.payoutFrequency}`}
             </span>
           </p>
-          {isPension && (
+          {(isPension || isDailyDeposit) && (
             <p className="text-xs mt-0.5" style={{ color: "#64748b" }}>
-              {plan.tenureMonths} months · interest payouts recorded manually
+              {isPension
+                ? `${plan.tenureMonths} months · interest payouts recorded manually`
+                : `Variable deposits · ${currency(plan.minimumAmount)} minimum · ₹2,000/day maximum`}
             </p>
           )}
           <p className="text-xs mt-0.5" style={{ color: "#94a3b8" }}>
@@ -87,7 +96,7 @@ export function PlanCard({
               e.stopPropagation();
               onRequestEnroll(plan);
             }}
-            disabled={isFull || !plan.status}
+            disabled={isFull || !plan.status || isLegacyDailySip}
             className="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: "#4f46e5" }}
             onMouseEnter={(e) =>
@@ -99,7 +108,7 @@ export function PlanCard({
               (e.currentTarget.style.backgroundColor = "#4f46e5")
             }
           >
-            {isFull ? "Full" : !plan.status ? "Closed" : "Enroll"}
+            {isFull ? "Full"             : isLegacyDailySip ? "Legacy only" : !plan.status ? "Closed" : "Enroll"}
           </button>
         )}
       </div>

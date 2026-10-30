@@ -40,7 +40,8 @@ public record UserSchemeResponse(
                 List<SipInstallmentResponse> sipLedger,
                 BigDecimal minimumAmount,
                 BigDecimal maximumAmount,
-                BigDecimal contractInterestAmount) {
+                BigDecimal contractInterestAmount,
+                List<DailyDepositResponse> dailyDepositLedger) {
         private static final General GENERAL = new General();
 
         public static UserSchemeResponse toUserSchemeResponse(UserScheme us) {
@@ -114,7 +115,11 @@ public record UserSchemeResponse(
                                                 .toList(),
                                 s.getMinimumAmount(),
                                 s.getMaximumAmount(),
-                                contractInterestAmount);
+                                contractInterestAmount,
+                                IntStream.range(0, us.getDailyDepositLedger().size())
+                                                .mapToObj(index -> DailyDepositResponse.fromEntity(
+                                                                us.getDailyDepositLedger().get(index), index))
+                                                .toList());
         }
 
 }

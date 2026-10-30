@@ -42,6 +42,9 @@ export default function PlanDetailsPage({
 }) {
   const t = THEMES[mode] || THEMES.day;
   const isPension = plan.planType === "PENSION";
+  const isDailyDeposit = plan.planType === "DAILY_DEPOSIT";
+  const isLegacyDailySip =
+    plan.planType === "SIP" && plan.sipFrequency === "DAILY";
 
   const joinedCount = plan.joinedUsers?.length ?? 0;
   const slotsLeft = Math.max(0, (plan.maxInvestorsAllowed ?? 0) - joinedCount);
@@ -90,7 +93,7 @@ export default function PlanDetailsPage({
         style={{ backgroundColor: t.panel }}
       >
         <Tab
-          title={isPension ? "Monthly Interest Rate" : "Profit Rate"}
+          title={isPension ? "Monthly Interest Rate" : isDailyDeposit ? "Whole-term Return" : "Profit Rate"}
           data={plan.profitPercentage + "% "}
           margin={"1"}
           mode={mode}
@@ -102,20 +105,20 @@ export default function PlanDetailsPage({
           mode={mode}
         />
         <Tab
-          title={"Max. Investment"}
-          data={currency(plan.maximumAmount)}
+          title={isDailyDeposit ? "Max. Daily Deposit" : "Max. Investment"}
+          data={isDailyDeposit ? "₹2,000" : currency(plan.maximumAmount)}
           margin={"1"}
           mode={mode}
         />
         <Tab
           title={"Payout"}
-          data={isPension ? "Manual interest payouts" : plan.payoutFrequency}
+          data={isPension ? "Manual interest payouts" : isDailyDeposit ? "Daily deposits" : plan.payoutFrequency}
           margin={"1"}
           mode={mode}
         />
         <Tab
           title={"Tenure"}
-          data={isPension ? `${plan.tenureMonths} months` : plan.tenure}
+          data={isPension || plan.planType === "SIP" ? `${plan.tenureMonths} months` : plan.tenure}
           margin={"1"}
           mode={mode}
         />
@@ -171,6 +174,21 @@ export default function PlanDetailsPage({
         </section>
       )}
 
+      {isDailyDeposit && (
+        <p className="mt-4 text-xs leading-5" style={{ color: t.muted }}>
+          Each deposit must be at least {currency(plan.minimumAmount)}. Total
+          deposits on a calendar day cannot exceed ₹2,000. Returns are
+          calculated for each deposit from its payment date to maturity.
+        </p>
+      )}
+
+      {isLegacyDailySip && (
+        <p className="mt-4 text-xs leading-5 text-amber-600">
+          This legacy daily-SIP plan is closed to new enrollments. Existing
+          enrollments and their records remain unchanged.
+        </p>
+      )}
+
       <p className="text-xs mt-4" style={{ color: t.muted }}>
         Last updated:- {formatDateTime(plan.updatedAt)}
       </p>
@@ -181,7 +199,7 @@ export default function PlanDetailsPage({
         ) : (
           <button
             onClick={() => onRequestEnroll(plan)}
-            disabled={isFull || !plan.status}
+            disabled={isFull || !plan.status || isLegacyDailySip}
             className="px-5 py-2.5 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: t.accent }}
             onMouseEnter={(e) =>
@@ -197,7 +215,7 @@ export default function PlanDetailsPage({
               ? "Fully subscribed"
               : !plan.status
                 ? "Enrollment closed"
-                : "Enroll in this plan"}
+                : isLegacyDailySip ? "Legacy plan" : "Enroll in this plan"}
           </button>
         )}
       </div>

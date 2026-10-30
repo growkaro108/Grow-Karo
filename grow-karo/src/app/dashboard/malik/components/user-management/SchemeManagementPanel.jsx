@@ -8,13 +8,18 @@ import {
 } from "lucide-react";
 import { currency, daysToMonths } from "./format";
 import { useEffect } from "react";
-
+// import DailyDepositRows from "./DailyDepositRows";
+import dynamic from "next/dynamic";
+const DailyDepositRows = dynamic(() => import("./DailyDepositRows"), {
+  ssr: false,
+});
 const inputClass =
-  "w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-teal-500 [color-scheme:dark]";
+  "w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-teal-500 [color-scheme:dark]";
 
 function SchemeSummary({ scheme }) {
   const isSip = scheme.planType === "SIP";
   const isPension = scheme.planType === "PENSION";
+  const isDailyDeposit = scheme.planType === "DAILY_DEPOSIT";
   return (
     <div className="grid grid-cols-2 items-center gap-x-6 gap-y-3 rounded-xl border border-slate-800 bg-slate-900/60 px-5 py-3.5">
       <div className="flex items-center gap-2">
@@ -35,32 +40,37 @@ function SchemeSummary({ scheme }) {
         <Percent className="h-4 w-4 text-emerald-500" />
         {/* <span className="text-[13px] text-slate-500">Interest</span> */}
         <span className="text-[15px] font-semibold text-emerald-400">
-          {scheme.profitPercentage ?? "0"}%          {isPension
+          {scheme.profitPercentage ?? "0"}%{" "}
+          {isPension
             ? "/mo"
-            : isSip && scheme.sipFrequency !== "DAILY"
-              ? "/mo"
-              : ""}
+            : isDailyDeposit
+              ? " · whole term"
+              : isSip && scheme.sipFrequency !== "DAILY"
+                ? "/mo"
+                : ""}
         </span>
       </div>
       <div className="flex items-center gap-2">
         <CalendarClock className="h-4 w-4 text-slate-500" />
         <span className="text-[14px] font-medium text-slate-100">
-          {isSip
+          {isSip || isDailyDeposit
             ? `${scheme.tenureMonths ?? "?"} months`
             : isPension
               ? `${scheme.tenureMonths ?? "?"} months default`
               : (daysToMonths(scheme.tenure) ?? "0 days")}
         </span>
       </div>
-      {isSip && (
+      {(isSip || isDailyDeposit) && (
         <div className="flex items-center gap-2 col-span-2">
           {/* <span className="text-[13px] text-indigo-400 font-semibold">
             SIP Plan
           </span> */}
           <span className="text-[13px] text-slate-300">
-            {scheme.sipFrequency === "DAILY"
-              ? "Variable daily deposits · up to ₹2,000 per day"
-              : "Monthly installments"}
+            {isDailyDeposit
+              ? `Daily deposits · ${currency(scheme.minimumAmount)} minimum · up to ₹2,000/day`
+              : scheme.sipFrequency === "DAILY"
+                ? "Legacy daily SIP · existing enrollments only"
+                : "Monthly installments"}
           </span>
         </div>
       )}
@@ -138,71 +148,120 @@ function SipInstallmentRows({ rows, onChange, onAdd, onRemove, isDaily }) {
           can differ from the amount due.
         </p>
       </div>
-      <div className="grid grid-cols-8 gap-1 px-1 text-[10px] text-slate-500">
-        <span className="col-span-1">No.</span>
-        {/* <span className="col-span-3">Installment date</span>
-        <span className="col-span-2">Due (₹)</span> */}
-        <span className="col-span-3">{isDaily ? "Scheduled date" : "Paid date"}</span>
-        <span className="col-span-3">Paid (₹)</span>
-        <span className="col-span-1" />
-      </div>
-      <div className="max-h-72 space-y-1 overflow-y-auto scroll-auto scrollbar-none">
-        {rows.map((row, index) => (
-          <div key={index} className="grid grid-cols-12 items-center gap-1">
-            <span className="col-span-1 text-xs text-slate-500">
-              {index + 1}.
-            </span>
-            {/* <input
-              aria-label={`Installment ${index + 1} date`}
-              type="date"
-              value={row.installmentDate ?? ""}
-              onChange={(event) =>
-                onChange(index, "installmentDate", event.target.value)
-              }
-              className={`col-span-3 ${inputClass}`}
-            />
-            <input
-              aria-label={`Installment ${index + 1} due amount`}
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={row.dueAmount ?? ""}
-              onChange={(event) =>
-                onChange(index, "dueAmount", event.target.value)
-              }
-              className={`col-span-2 ${inputClass}`}
-            /> */}
-            <input
-              aria-label={`Installment ${index + 1} paid date`}
-              type="date"
-              disabled={isDaily}
-              value={isDaily ? row.installmentDate : row.paidDate}
-              onChange={(event) =>
-                onChange(index, "paidDate", event.target.value)
-              }
-              className={`col-span-5 ${inputClass} ${isDaily && "cursor-not-allowed"}`}
-            />
-            <input
-              aria-label={`Installment ${index + 1} paid amount`}
-              type="number"
-              min="0"
-              step="0.01"
-              value={row.paidAmount ?? "0"}
-              onChange={(event) =>
-                onChange(index, "paidAmount", event.target.value)
-              }
-              className={`col-span-5 ${inputClass}`}
-            />
-            <button
-              type="button"
-              aria-label={`Remove installment ${index + 1}`}
-              onClick={() => onRemove(index)}
-              className="col-span-1 text-sm text-rose-400 hover:text-rose-300"
-            >
-              ×
-            </button>
-          </div>
-        ))}
+      <div className="space-y-2">
+        {/* Table Header */}
+        <div className="grid grid-cols-12 items-center gap-1 px-1 text-[10px] text-slate-500 font-medium">
+          <span className="col-span-1">No.</span>
+          {!isDaily ? (
+            <>
+              <span className="col-span-4">Installment Date</span>
+              {/* <span className="col-span-2">Due (₹)</span> */}
+              <span className="col-span-4">Paid Date</span>
+              <span className="col-span-3">Paid (₹)</span>
+            </>
+          ) : (
+            <>
+              <span className="col-span-5">Scheduled Date</span>
+              <span className="col-span-5">Paid (₹)</span>
+            </>
+          )}
+          <span className="col-span-1" />
+        </div>
+
+        {/* Table Rows */}
+        <div className="max-h-72 space-y-1 overflow-y-auto scrollbar-none">
+          {rows.map((row, index) => (
+            <div key={index} className="grid grid-cols-12 items-center gap-1">
+              <span className="col-span-1 text-xs text-slate-500">
+                {index + 1}.
+              </span>
+
+              {!isDaily ? (
+                <>
+                  {/* Standard Mode: Show Date, Due Amount, Paid Date, Paid Amount */}
+                  <input
+                    aria-label={`Installment ${index + 1} date`}
+                    type="date"
+                    disabled
+                    value={row.installmentDate ?? ""}
+                    title={row.installmentDate ?? ""}
+                    onChange={(e) =>
+                      onChange(index, "installmentDate", e.target.value)
+                    }
+                    className={`col-span-4 ${inputClass} [&::-webkit-calendar-picker-indicator]:hidden`}
+                  />
+                  {/* <input
+                    aria-label={`Installment ${index + 1} due amount`}
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={row.dueAmount ?? ""}
+                    title={row.dueAmount ?? ""}
+                    onChange={(e) =>
+                      onChange(index, "dueAmount", e.target.value)
+                    }
+                    className={`col-span-2 ${inputClass}`}
+                  /> */}
+                  <input
+                    aria-label={`Installment ${index + 1} paid date`}
+                    type="date"
+                    value={row.paidDate=="" ? row.installmentDate : row.paidDate}
+                    onChange={(e) =>
+                      onChange(index, "paidDate", e.target.value)
+                    }
+                    className={`col-span-4 ${inputClass} [&::-webkit-calendar-picker-indicator]:hidden`}
+                  />
+                  <input
+                    aria-label={`Installment ${index + 1} paid amount`}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={row.paidAmount ?? "0"}
+                    onChange={(e) =>
+                      onChange(index, "paidAmount", e.target.value)
+                    }
+                    className={`col-span-3 ${inputClass}`}
+                  />
+                </>
+              ) : (
+                <>
+                  {/* Daily Mode: Render fixed date and paid amount across available spans */}
+                  <input
+                    aria-label={`Installment ${index + 1} scheduled date`}
+                    type="date"
+                    disabled
+                    title={row.installmentDate ?? ""}
+                    value={row.installmentDate ?? ""}
+                    className={`col-span-5 ${inputClass} cursor-not-allowed opacity-75 [&::-webkit-calendar-picker-indicator]:hidden`}
+                  />
+                  <input
+                    aria-label={`Installment ${index + 1} paid amount`}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    title={row.paidAmount ?? "0"}
+                    value={row.paidAmount ?? "0"}
+                    onChange={(e) =>
+                      onChange(index, "paidAmount", e.target.value)
+                    }
+                    className={`col-span-5 ${inputClass}`}
+                  />
+                </>
+              )}
+
+              {/* Remove Button */}
+             {isDaily && (
+              <button
+                type="button"
+                aria-label={`Remove installment ${index + 1}`}
+                onClick={() => onRemove(index)}
+                className="col-span-1 text-center text-sm font-bold text-rose-400 hover:text-rose-300"
+              >
+                ×
+              </button>)}
+            </div>
+          ))}
+        </div>
       </div>
       <button
         type="button"
@@ -242,14 +301,19 @@ export default function SchemeManagementPanel({
   onSipInstallmentChange,
   onAddSipInstallment,
   onRemoveSipInstallment,
+  dailyDepositLedger = [],
+  onDailyDepositChange,
+  onAddDailyDeposit,
+  onRemoveDailyDeposit,
 }) {
   return (
     <div
       ref={formTopRef}
-      className={`mb-7 overflow-hidden rounded-xl border ${isEditing
-        ? "border-amber-700/70 bg-amber-950/10"
-        : "border-teal-900/70 bg-teal-950/20"
-        }`}
+      className={`mb-7 overflow-hidden rounded-xl border ${
+        isEditing
+          ? "border-amber-700/70 bg-amber-950/10"
+          : "border-teal-900/70 bg-teal-950/20"
+      }`}
     >
       <button
         type="button"
@@ -257,8 +321,9 @@ export default function SchemeManagementPanel({
         className="flex w-full items-center justify-between px-4 py-3.5 text-left"
       >
         <span
-          className={`flex items-center font-[Space_Grotesk] text-sm font-semibold ${isEditing ? "text-amber-300" : "text-teal-300"
-            }`}
+          className={`flex items-center font-[Space_Grotesk] text-sm font-semibold ${
+            isEditing ? "text-amber-300" : "text-teal-300"
+          }`}
         >
           <Plus className="mr-0.5 h-5 w-5" />
           {isEditing
@@ -268,8 +333,9 @@ export default function SchemeManagementPanel({
         <span className="flex items-center gap-2 text-[10px] text-slate-500">
           Admin only
           <ChevronDown
-            className={`h-3.5 w-3.5 text-teal-300 transition-transform ${addFormOpen ? "rotate-180" : ""
-              }`}
+            className={`h-3.5 w-3.5 text-teal-300 transition-transform ${
+              addFormOpen ? "rotate-180" : ""
+            }`}
           />
         </span>
       </button>
@@ -290,8 +356,17 @@ export default function SchemeManagementPanel({
             >
               <option value="">Select a scheme</option>
               {schemes.map((scheme) => (
-                <option key={scheme.schemeId} value={scheme.schemeId}>
+                <option
+                  key={scheme.schemeId}
+                  value={scheme.schemeId}
+                  disabled={
+                    scheme.planType === "SIP" && scheme.sipFrequency === "DAILY"
+                  }
+                >
                   {scheme.schemeName}
+                  {scheme.planType === "SIP" && scheme.sipFrequency === "DAILY"
+                    ? " (legacy; existing enrollments only)"
+                    : ""}
                 </option>
               ))}
             </select>
@@ -381,14 +456,20 @@ export default function SchemeManagementPanel({
           )}
 
           <div className="grid grid-cols-2 gap-3">
-            {selectedScheme?.planType === "SIP" ? (
+            {selectedScheme?.planType === "SIP" ||
+            selectedScheme?.planType === "DAILY_DEPOSIT" ? (
               <>
                 <label className="text-xs text-slate-400">
-                  Enrollment / First installment date
+                  {selectedScheme?.planType === "DAILY_DEPOSIT"
+                    ? "Enrollment / First deposit date"
+                    : "Enrollment / First installment date"}
                   <input
                     name="paidDate"
                     type="date"
-                    value={form.paidDate || "2024-01-01"}
+                    value={
+                      form.paidDate ||
+                      (selectedScheme?.planType === "SIP" ? "2024-01-01" : "")
+                    }
                     onChange={updateForm}
                     required
                     className={`mt-1 ${inputClass}`}
@@ -411,13 +492,22 @@ export default function SchemeManagementPanel({
                   </span>
                 </label>
                 <div className="col-span-2">
-                  <SipInstallmentRows
-                    rows={sipLedger}
-                    isDaily={selectedScheme?.sipFrequency == "DAILY"}
-                    onChange={onSipInstallmentChange}
-                    onAdd={onAddSipInstallment}
-                    onRemove={onRemoveSipInstallment}
-                  />
+                  {selectedScheme?.planType === "DAILY_DEPOSIT" ? (
+                    <DailyDepositRows
+                      rows={dailyDepositLedger}
+                      onChange={onDailyDepositChange}
+                      onAdd={onAddDailyDeposit}
+                      onRemove={onRemoveDailyDeposit}
+                    />
+                  ) : (
+                    <SipInstallmentRows
+                      rows={sipLedger}
+                      isDaily={selectedScheme?.sipFrequency == "DAILY"}
+                      onChange={onSipInstallmentChange}
+                      onAdd={onAddSipInstallment}
+                      onRemove={onRemoveSipInstallment}
+                    />
+                  )}
                 </div>
               </>
             ) : (
@@ -490,14 +580,14 @@ export default function SchemeManagementPanel({
                       {currency(
                         (Number(form.paidAmount) *
                           Number(form.profitPercentage)) /
-                        100 || 0,
+                          100 || 0,
                       )}
                       {" · Total interest: "}
                       {currency(
                         (Number(form.paidAmount) *
                           Number(form.profitPercentage) *
                           Number(form.tenureMonths)) /
-                        100 || 0,
+                          100 || 0,
                       )}
                       . The monthly schedule is created automatically; principal
                       is settled separately at maturity.

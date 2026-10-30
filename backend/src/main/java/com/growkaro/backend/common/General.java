@@ -32,6 +32,7 @@ import com.growkaro.backend.DTO.CustomerIdCodec;
 import com.growkaro.backend.DTO.Payee;
 import com.growkaro.backend.DTO.UserRequest;
 import com.growkaro.backend.entity.BankDetails;
+import com.growkaro.backend.entity.DailyDeposit;
 import com.growkaro.backend.entity.Recipient;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.Transaction;
@@ -333,17 +334,25 @@ public class General {
         scheme.setSchemeCategory(schemeData.schemeCategory());
         scheme.setSchemeDetails(schemeData.schemeDetails());
         scheme.setPayoutFrequency(schemeData.payoutFrequency());
+
         String planType = schemeData.planType();
         boolean usesMonthTenure = "SIP".equalsIgnoreCase(planType)
                 || "PENSION".equalsIgnoreCase(planType)
                 || "DAILY_DEPOSIT".equalsIgnoreCase(planType);
         Integer tenureMonths = schemeData.tenureMonths();
+
         if (usesMonthTenure && tenureMonths != null) {
-            scheme.setTenure(tenureMonths * 30);
+            // Use the scheme start date, or today if it is not provided
+            LocalDate start = schemeData.startDate() != null
+                    ? schemeData.startDate()
+                    : LocalDate.now();
+            int tenureDays = (int) ChronoUnit.DAYS.between(start, start.plusMonths(tenureMonths));
+            scheme.setTenure(tenureDays);
             scheme.setTenureMonths(tenureMonths);
         } else {
             scheme.setTenure(schemeData.tenure());
         }
+
         scheme.setStartDate(schemeData.startDate());
         scheme.setEndDate(schemeData.endDate());
         scheme.setMinimumAmount(schemeData.minimumAmount());
@@ -448,7 +457,8 @@ public class General {
                 us.getContractTotalInterestPercentage() == null
                         ? s.getProfitPercentage()
                         : us.getContractTotalInterestPercentage(),
-null);
+                s.getTenureMonths(),
+                s.getMinimumAmount());
     }
 
     public LocalDate getCurrentDate() {
@@ -683,6 +693,32 @@ null);
             return paidAmount.subtract(principalRedeemed).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
         }
 
+        if ("DAILY_DEPOSIT".equalsIgnoreCase(bond.getScheme().getPlanType())) {
+            LocalDate startDate = bond.getPaidDate();
+            LocalDate maturityDate = bond.getMaturityDate();
+            List<DailyDeposit> deposits = bond.getDailyDepositLedger();
+            if (startDate == null || maturityDate == null || !maturityDate.isAfter(startDate)
+                    || deposits == null || deposits.isEmpty()) {
+                return paidAmount.subtract(countReedem(bond.getReedemLedger()))
+                        .max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+            }
+
+            long tenureDays = ChronoUnit.DAYS.between(startDate, maturityDate);
+            BigDecimal rate = BigDecimal.valueOf(bond.getScheme().getProfitPercentage())
+                    .divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP);
+            BigDecimal maturityAmount = BigDecimal.ZERO;
+            for (DailyDeposit deposit : deposits) {
+                long earningDays = ChronoUnit.DAYS.between(deposit.getDepositDate(), maturityDate);
+                BigDecimal depositAmount = deposit.getDepositAmount();
+                BigDecimal interest = depositAmount.multiply(rate)
+                        .multiply(BigDecimal.valueOf(earningDays))
+                        .divide(BigDecimal.valueOf(tenureDays), 10, RoundingMode.HALF_UP);
+                maturityAmount = maturityAmount.add(depositAmount).add(interest);
+            }
+            return maturityAmount.subtract(countReedem(bond.getReedemLedger()))
+                    .max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+        }
+
         double profitPercentage = bond.getScheme().getProfitPercentage();
 
         // Convert profit percentage to BigDecimal safely avoiding double precision
@@ -761,11 +797,13 @@ null);
             }
             if (data.minimumAmount().compareTo(data.maximumAmount()) > 0) {
                 log.error("Validation failed for PENSION: minimumAmount ({}) cannot be greater than maximumAmount ({})",
-                          data.minimumAmount(), data.maximumAmount());
+                        data.minimumAmount(), data.maximumAmount());
                 return false;
             }
-            if (data.profitPercentage() == null || !Double.isFinite(data.profitPercentage()) || data.profitPercentage() < 0) {
-                log.error("Validation failed for PENSION: profitPercentage is invalid (Value: {})", data.profitPercentage());
+            if (data.profitPercentage() == null || !Double.isFinite(data.profitPercentage())
+                    || data.profitPercentage() < 0) {
+                log.error("Validation failed for PENSION: profitPercentage is invalid (Value: {})",
+                        data.profitPercentage());
                 return false;
             }
             return true;
@@ -788,7 +826,7 @@ null);
             }
             if (data.minimumAmount().compareTo(data.maximumAmount()) > 0) {
                 log.error("Validation failed for SIP: minimumAmount ({}) cannot be greater than maximumAmount ({})",
-                          data.minimumAmount(), data.maximumAmount());
+                        data.minimumAmount(), data.maximumAmount());
                 return false;
             }
             if (data.sipAmount() != null
@@ -803,7 +841,8 @@ null);
 
         // DAILY_DEPOSIT Plan Validation
         if ("DAILY_DEPOSIT".equals(planType)) {
-            if (data.tenure() == null || data.tenure() <= 0) {
+            if (data.tenure() == null || data.tenure() <= 0
+                    || data.tenureMonths() == null || data.tenureMonths() <= 0) {
                 log.error("Validation failed for DAILY_DEPOSIT: tenure (months) is invalid (Value: {})", data.tenure());
                 return false;
             }
@@ -816,15 +855,27 @@ null);
                 return false;
             }
             if (data.minimumAmount().compareTo(data.maximumAmount()) > 0) {
-                log.error("Validation failed for DAILY_DEPOSIT: minimumAmount ({}) cannot be greater than maximumAmount ({})", data.minimumAmount(), data.maximumAmount());
+                log.error(
+                        "Validation failed for DAILY_DEPOSIT: minimumAmount ({}) cannot be greater than maximumAmount ({})",
+                        data.minimumAmount(), data.maximumAmount());
+                return false;
+            }
+            if (data.minimumAmount().compareTo(DailyDeposit.MAX_PER_DAY) > 0) {
+                log.error("Validation failed for DAILY_DEPOSIT: minimumAmount exceeds the daily limit");
+                return false;
+            }
+            if (data.profitPercentage() == null || !Double.isFinite(data.profitPercentage())
+                    || data.profitPercentage() < 0) {
+                log.error("Validation failed for DAILY_DEPOSIT: profitPercentage is invalid (Value: {})",
+                        data.profitPercentage());
                 return false;
             }
             return true;
         }
 
-        // FD Plan Validation (agar koi aur specific checks hain toh yahan add kar sakte hain)
+        // FD Plan Validation (agar koi aur specific checks hain toh yahan add kar sakte
+        // hain)
         return true;
     }
- 
 
 }

@@ -6,6 +6,7 @@ import { resolveMediaUrl } from "../../../../api/apiClient";
 import SIPBondCertificate from "./SIPBondCertificate.jsx";
 import PensionBondCertificate from "@/certificate/PensionCertificate.jsx";
 import BondCertificate from "./Bondcertificate.jsx";
+import DailyDepositCertificate from "@/certificate/DailyDepositCertificate.jsx";
 
 export default function CertificateLightbox({
   bond,
@@ -29,7 +30,7 @@ export default function CertificateLightbox({
   const isSip = bond?.planType === "SIP" || bond?.schemeType === "SIP";
   const isPension =
     bond?.planType === "PENSION" || bond?.schemeType === "PENSION";
-
+  const isDailyDeposit = bond?.planType === "DAILY_DEPOSIT";
   if (!bond) return null;
 
   return (
@@ -118,20 +119,33 @@ export default function CertificateLightbox({
                   profilePhoto="/profile.jpg"
                 />
               )}
-              {!isPension &&
-                (!isSip && (
-                  <BondCertificate
-                    ref={certRef}
-                    bond={bond}
-                    userData={userData}
-                    userName={userName}
-                    scheme={scheme}
-                    className="h-auto w-full"
-                    logoUrl="/logo.png"
-                    watermarkUrl="/logo.png"
-                    stampUrl="/stamp.png"
-                  />
-                ))}
+              {isDailyDeposit && (
+                <DailyDepositCertificate
+                  ref={certRef}
+                  bond={bond}
+                  userData={userData}
+                  userName={userName}
+                  scheme={scheme}
+                  className="h-auto w-full"
+                  logoUrl="/logo.png"
+                  watermarkUrl="/logo.png"
+                  stampUrl="/stamp-removebg.png"
+                />
+              )}
+
+              {!isPension && !isSip && !isDailyDeposit && (
+                <BondCertificate
+                  ref={certRef}
+                  bond={bond}
+                  userData={userData}
+                  userName={userName}
+                  scheme={scheme}
+                  className="h-auto w-full"
+                  logoUrl="/logo.png"
+                  watermarkUrl="/logo.png"
+                  stampUrl="/stamp.png"
+                />
+              )}
             </>
           )}
           {!isSip && (bond.bondPdfUrl || !showUploadedImage) && (

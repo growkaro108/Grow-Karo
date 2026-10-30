@@ -132,6 +132,12 @@ public class UserScheme {
     @OrderColumn(name = "position")
     private List<SipInstallment> sipLedger = new ArrayList<>();
 
+    @NotAudited
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_scheme_daily_deposits", joinColumns = @JoinColumn(name = "user_scheme_id"))
+    @OrderColumn(name = "position")
+    private List<DailyDeposit> dailyDepositLedger = new ArrayList<>();
+
     @Column(name = "next_payout_date")
     private LocalDate nextPayoutDate;
 

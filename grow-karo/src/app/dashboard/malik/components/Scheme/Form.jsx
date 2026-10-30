@@ -27,7 +27,8 @@ const INPUT_TEXTAREA_CLS = `${INPUT_CLS} resize-none`;
 
 const PLAN_TYPES = [
   { value: "FD", label: "Fixed Deposit (FD)", description: "One-time lump sum investment with fixed tenure" },
-  { value: "SIP", label: "Systematic Investment Plan (SIP)", description: "Monthly or daily recurring installment plan" },
+  { value: "SIP", label: "Systematic Investment Plan (SIP)", description: "Monthly recurring installment plan" },
+  { value: "DAILY_DEPOSIT", label: "Daily Deposit", description: "Variable deposits with a daily limit" },
   { value: "PENSION", label: "Pension Plan", description: "Interest-only payouts; principal is settled at maturity" },
 ];
 
@@ -53,7 +54,7 @@ const PlanTypeSelector = memo(function PlanTypeSelector({ value, onSelect }) {
       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
         Plan Type
       </p>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {PLAN_TYPES.map((pt) => {
           const active = value === pt.value;
           return (
@@ -237,7 +238,7 @@ export default function FormModal({
       setForm((prev) => ({
         ...prev,
         planType: value,
-        ...(["SIP", "PENSION"].includes(value) && !prev.tenureMonths
+        ...(["SIP", "PENSION", "DAILY_DEPOSIT"].includes(value) && !prev.tenureMonths
           ? {
               tenureMonths: prev.tenure
                 ? String(Math.max(1, Math.round(Number(prev.tenure) / 30)))
@@ -319,16 +320,19 @@ export default function FormModal({
         const payload = {
           ...form,
           planType,
+          payoutFrequency:
+            planType === "DAILY_DEPOSIT"
+              ? "tenure-complete"
+              : form.payoutFrequency,
           tenure:
-            planType === "SIP" || planType === "PENSION"
+            ["SIP", "PENSION", "DAILY_DEPOSIT"].includes(planType)
               ? Number(form.tenureMonths) * 30
               : Number(form.tenure),
           tenureMonths:
-            planType === "SIP" || planType === "PENSION"
+            ["SIP", "PENSION", "DAILY_DEPOSIT"].includes(planType)
               ? Number(form.tenureMonths)
               : null,
-          sipFrequency:
-            planType === "SIP" ? form.sipFrequency || "MONTHLY" : null,
+          sipFrequency: planType === "SIP" ? form.sipFrequency || "MONTHLY" : null,
           sipAmount:
             planType === "SIP" && form.sipFrequency !== "DAILY"
               ? Number(form.sipAmount)
@@ -473,11 +477,12 @@ export default function FormModal({
 
           {/* Financials */}
           <div className="bg-slate-950/40 border border-slate-800/80 rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-            <Field label="Min. Investment (₹)">
+            <Field label={planType === "DAILY_DEPOSIT" ? "Minimum Daily Deposit (₹)" : "Min. Investment (₹)"}>
               <input
                 type="number"
                 required
                 name="minimumAmount"
+                max={planType === "DAILY_DEPOSIT" ? "2000" : undefined}
                 value={form.minimumAmount || ""}
                 onChange={handleChange}
                 placeholder="500"
@@ -497,7 +502,7 @@ export default function FormModal({
             </Field>
             <Field
               label={
-                planType === "SIP"
+                planType === "SIP" || planType === "DAILY_DEPOSIT"
                   ? "Tenure (Months)"
                   : planType === "PENSION"
                     ? "Default bond term (Months)"
@@ -508,10 +513,10 @@ export default function FormModal({
                 type="number"
                 required
                 min="1"
-                name={planType === "SIP" || planType === "PENSION" ? "tenureMonths" : "tenure"}
-                value={planType === "SIP" || planType === "PENSION" ? form.tenureMonths || "" : form.tenure || ""}
+                name={["SIP", "PENSION", "DAILY_DEPOSIT"].includes(planType) ? "tenureMonths" : "tenure"}
+                value={["SIP", "PENSION", "DAILY_DEPOSIT"].includes(planType) ? form.tenureMonths || "" : form.tenure || ""}
                 onChange={handleChange}
-                placeholder={planType === "SIP" || planType === "PENSION" ? "12" : "365"}
+                placeholder={["SIP", "PENSION", "DAILY_DEPOSIT"].includes(planType) ? "12" : "365"}
                 className={INPUT_CLS}
               />
             </Field>
@@ -536,6 +541,14 @@ export default function FormModal({
             </p>
           )}
 
+           {planType === "DAILY_DEPOSIT" && (
+            <p className="rounded-2xl border border-teal-900/60 bg-teal-950/20 p-5 text-xs leading-5 text-slate-300">
+              Deposits are variable, must be at least the scheme minimum, and
+              cannot exceed ₹2,000 in total per calendar day. Existing daily
+              SIP plans remain legacy and are not available for new enrollment.
+            </p>
+          )}
+
            {planType === "SIP" && (
              <div className="bg-indigo-950/20 border border-indigo-900/60 rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
                <Field label="Installment Frequency">
@@ -546,7 +559,9 @@ export default function FormModal({
                   className={INPUT_CLS}
                 >
                   <option value="MONTHLY">Monthly</option>
-                  <option value="DAILY">Daily</option>
+                  {form.sipFrequency === "DAILY" && (
+                    <option value="DAILY" disabled>Daily (legacy)</option>
+                  )}
                 </select>
               </Field>
               {form.sipFrequency !== "DAILY" && (
@@ -576,16 +591,26 @@ export default function FormModal({
 
           {/* Schedule */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
-            <Field label="Payout Frequency">
-              <select
-                name="payoutFrequency"
-                value={form.payoutFrequency || "Monthly"}
-                onChange={handleChange}
-                className={INPUT_CLS}
-              >
-                {payoutOptions}
-              </select>
-            </Field>
+            {planType === "DAILY_DEPOSIT" ? (
+              <Field label="Payout Frequency">
+                <input
+                  value="At maturity (whole-term return)"
+                  readOnly
+                  className={INPUT_CLS}
+                />
+              </Field>
+            ) : (
+              <Field label="Payout Frequency">
+                <select
+                  name="payoutFrequency"
+                  value={form.payoutFrequency || "Monthly"}
+                  onChange={handleChange}
+                  className={INPUT_CLS}
+                >
+                  {payoutOptions}
+                </select>
+              </Field>
+            )}
             <Field label="Risk Level">
               <select
                 name="riskLevel"

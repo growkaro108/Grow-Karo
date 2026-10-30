@@ -36,6 +36,7 @@ import com.growkaro.backend.DTO.TransactionSummary;
 import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.BankDetails;
+import com.growkaro.backend.entity.DailyDeposit;
 import com.growkaro.backend.entity.Guardian;
 import com.growkaro.backend.entity.Nominee;
 import com.growkaro.backend.entity.Notification;
@@ -323,7 +324,7 @@ public class UserAPIService {
     @Transactional
     public Map<String, Object> login(String email, String password) {
         try {
-            Thread.sleep(200); // Introduce a 200 milisecond delay to mitigate brute-force attacks
+            Thread.sleep(100); // Introduce a 100 milisecond delay to mitigate brute-force attacks
             if (!isUserExists(email)) {
                 log.warn("incorect email entered... email: {}", email);
                 return general.response("error", "User not found", Map.of());
@@ -335,6 +336,7 @@ public class UserAPIService {
                 return general.response("error", "Invalid email or password", Map.of());
             }
             boolean isAdmin = adminPolicy.isAdminEmail(email);
+            // System.out.println("isAdmin: " + isAdmin + " for email: " + email);
             String role = isAdmin ? "ROLE_ADMIN" : "ROLE_GRAHAK";
             String token = jwtService.generateToken(user.getId(), user.getEmail(), role);
             UserProfile finalUser = UserProfile.fromEntity(user, token);
@@ -398,6 +400,22 @@ public class UserAPIService {
 
             User user = getUserById(userId);
             Scheme scheme = getSchemeById(schemeId);
+            if (user == null || scheme == null) {
+                return general.response("error", "Invalid request...", null);
+            }
+            if ("SIP".equalsIgnoreCase(scheme.getPlanType())
+                    && "DAILY".equalsIgnoreCase(scheme.getSipFrequency())) {
+                return general.response("error",
+                        "Daily SIP enrollment has been retired. Please choose a Daily Deposit plan.",
+                        null);
+            }
+            if ("DAILY_DEPOSIT".equalsIgnoreCase(scheme.getPlanType())
+                    && (amount.compareTo(scheme.getMinimumAmount()) < 0
+                            || amount.compareTo(DailyDeposit.MAX_PER_DAY) > 0)) {
+                return general.response("error",
+                        "The initial daily deposit must meet the scheme minimum and stay within the ₹2,000 daily limit.",
+                        null);
+            }
 
             // check nominee is related to user
             boolean isNomineeRelated = false;
@@ -415,7 +433,7 @@ public class UserAPIService {
                 return general.response("error", "Nominee not related to user", null);
             }
 
-            if (user == null || scheme == null || amount.compareTo(scheme.getMinimumAmount()) < 0) {
+            if (amount.compareTo(scheme.getMinimumAmount()) < 0) {
                 return general.response("error", "Invalid request...", null);
             }
             // retrn if slot full
@@ -1003,6 +1021,18 @@ public class UserAPIService {
                         reinvestmentAmount,
                         targetScheme.getMaximumAmount());
                 return general.response("error", "Reinvestment amount exceeds maximum limit",
+                        Map.of("userSchemeId", userSchemeId));
+            }
+            if ("SIP".equalsIgnoreCase(targetScheme.getPlanType())
+                    && "DAILY".equalsIgnoreCase(targetScheme.getSipFrequency())) {
+                return general.response("error",
+                        "Daily SIP enrollment has been retired. Please choose a Daily Deposit plan.",
+                        Map.of("schemeId", targetScheme.getSchemeId()));
+            }
+            if ("DAILY_DEPOSIT".equalsIgnoreCase(targetScheme.getPlanType())
+                    && reinvestmentAmount.compareTo(DailyDeposit.MAX_PER_DAY) > 0) {
+                return general.response("error",
+                        "A Daily Deposit reinvestment cannot exceed ₹2,000 for the initial deposit.",
                         Map.of("userSchemeId", userSchemeId));
             }
 

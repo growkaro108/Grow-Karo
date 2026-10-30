@@ -1,4 +1,5 @@
 ﻿import dynamic from "next/dynamic";
+import DailyDepositLedgerPanel from "./DailyDepositLedgerPanel";
 
 const BondCard = dynamic(() => import("./BondCard"), {
   loading: () => (
@@ -42,6 +43,11 @@ export default function EnrolledSchemes({
   onSipInstallmentChange,
   onAddSipInstallment,
   onSaveSipLedger,
+  dailyDepositEdits = {},
+  onDailyDepositChange,
+  onAddDailyDeposit,
+  onRemoveDailyDeposit,
+  onSaveDailyDeposits,
   logoUrl,
   stampUrl,
 }) {
@@ -64,6 +70,7 @@ export default function EnrolledSchemes({
           {bonds.map((bond) => {
             const id = bond.userSchemeId;
             const isSip = bond.planType === "SIP" || bond.schemeType === "SIP";
+            const isDailyDeposit = bond.planType === "DAILY_DEPOSIT";
 
             if (isSip) {
               return (
@@ -99,8 +106,7 @@ export default function EnrolledSchemes({
               );
             }
 
-            // Regular FD bond
-            return (
+            const regularBondCard = (
               <BondCard
                 key={id}
                 bond={bond}
@@ -129,6 +135,28 @@ export default function EnrolledSchemes({
                 viewUser={viewUser}
               />
             );
+
+            if (isDailyDeposit) {
+              return (
+                <div key={id} className="space-y-2">
+                  {regularBondCard}
+                  <DailyDepositLedgerPanel
+                    bond={bond}
+                    user={user}
+                    rows={dailyDepositEdits[id] ?? bond.dailyDepositLedger ?? []}
+                    onChange={(index, field, value) =>
+                      onDailyDepositChange?.(id, index, field, value)
+                    }
+                    onAdd={() => onAddDailyDeposit?.(id)}
+                    onRemove={(index) => onRemoveDailyDeposit?.(id, index)}
+                    onSave={() => onSaveDailyDeposits?.(id)}
+                    saving={savingSipLedgerId === id}
+                  />
+                </div>
+              );
+            }
+
+            return regularBondCard;
           })}
         </div>
       )}

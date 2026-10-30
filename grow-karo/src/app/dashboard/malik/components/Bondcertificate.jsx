@@ -81,6 +81,7 @@ const BondCertificate = forwardRef(function BondCertificate(
 
   const payMode = bond.paymentMode || "Cash";
   const isPension = bond.planType === "PENSION";
+  const isDailyDeposit = bond.planType === "DAILY_DEPOSIT";
   const terms =
     bond.terms && bond.terms.length
       ? bond.terms
@@ -89,6 +90,12 @@ const BondCertificate = forwardRef(function BondCertificate(
             "Interest payouts are recorded manually according to the agreed schedule; principal is separate*",
             "Principal will be returned within 30 days after the maturity date*",
           ]
+        : isDailyDeposit
+          ? [
+              "Profit is calculated separately from the date of each deposit*",
+              "Maturity value is payable at the end of the scheme term*",
+              "Each deposit must meet the scheme minimum; total deposits are limited to ₹2,000 per day*",
+            ]
         : [
         "This Bond is valid only till maturity date*",
         `Profit will be generated within 7 to 10 working days after completion of tenure in ( ${payMode} )*`,
@@ -175,9 +182,6 @@ const BondCertificate = forwardRef(function BondCertificate(
   const investHeadH = 20.5;
   const investRowH = 21.3;
   const investBottom = investTop + investHeadH + investRowH;
-  const colRatios = [0.2245, 0.2415, 0.2735, 0.2605];
-  const colX = [LX];
-  colRatios.forEach((r) => colX.push(colX[colX.length - 1] + r * CW));
 
   const companyLabelY = investBottom + 18;
   const companyTop = companyLabelY + 8;
@@ -219,23 +223,39 @@ const BondCertificate = forwardRef(function BondCertificate(
   const [brandTop, ...brandRest] = String(companyName).split(/[\s_]+/);
   const brandBottom = brandRest.join(" ").toLowerCase();
 
-  const investValues = [
-    isPension && bond.tenureMonths
-      ? `${bond.tenureMonths} Months`
-      : bond.tenure
-      ? `${daysToMonths(bond.tenure)}`
-      : bond.tenureMonths
-        ? `${bond.tenureMonths} Months`
-        : "",
-    formatAmount(bond.paidAmount),
-    isPension && bond.profitPercentage != null
-      ? bond.contractInterestAmount == null
-        ? `${bond.profitPercentage}% monthly interest`
-        : `${bond.profitPercentage}% monthly / ₹${formatAmount(bond.contractInterestAmount)} total`
-      : bond.investmentMode ||
-        (bond.profitPercentage != null ? `${bond.profitPercentage}% Flat` : ""),
-    safeDate(bond.maturityDate),
-  ];
+  const investValues = isDailyDeposit
+    ? [
+        "Daily Deposit Plan",
+        `${bond.tenureMonths || (bond.tenure ? daysToMonths(bond.tenure) : "")} Month`,
+        bond.profitPercentage == null ? "" : `${bond.profitPercentage}%`,
+      ]
+    : [
+        isPension && bond.tenureMonths
+          ? `${bond.tenureMonths} Months`
+          : bond.tenure
+            ? `${daysToMonths(bond.tenure)}`
+            : bond.tenureMonths
+              ? `${bond.tenureMonths} Months`
+              : "",
+        formatAmount(bond.paidAmount),
+        isPension && bond.profitPercentage != null
+          ? bond.contractInterestAmount == null
+            ? `${bond.profitPercentage}% monthly interest`
+            : `${bond.profitPercentage}% monthly / ₹${formatAmount(bond.contractInterestAmount)} total`
+          : bond.investmentMode ||
+            (bond.profitPercentage != null ? `${bond.profitPercentage}% Flat` : ""),
+        safeDate(bond.maturityDate),
+      ];
+  const investHeaders = isDailyDeposit
+    ? ["Your Fix Plan", "Tenure Month", "Profit Percentage"]
+    : ["Tenure", "Amount", "Mode of Investment", "Date of Maturity"];
+  const investColRatios = isDailyDeposit
+    ? [1 / 3, 1 / 3, 1 / 3]
+    : [0.2245, 0.2415, 0.2735, 0.2605];
+  const investmentColumns = [LX];
+  investColRatios.forEach((ratio) =>
+    investmentColumns.push(investmentColumns.at(-1) + ratio * CW),
+  );
 
   return (
     <svg
@@ -307,9 +327,9 @@ const BondCertificate = forwardRef(function BondCertificate(
         fontWeight={700}
         style={{ fontFamily: FONT_SERIF }}
       >
-        Investment Bond
+        {isDailyDeposit ? "Daily Deposit Plan" : "Investment Bond"}
       </text>
-      {scheme || bond.schemeName ? (
+      {!isDailyDeposit && (scheme || bond.schemeName) ? (
         <text
           x={254}
           y={94}
@@ -358,17 +378,35 @@ const BondCertificate = forwardRef(function BondCertificate(
       )}
 
       {/* date / mobile boxes */}
-      <rect x={224} y={116} width={94} height={20} fill="none" stroke={TAN} strokeWidth={0.7} />
-      <rect x={318} y={116} width={116} height={20} fill="none" stroke={TAN} strokeWidth={0.7} />
-      <text x={229.5} y={129.5} fontSize={9.4}>
-        Date - {safeDate(bond.enrollmentDate || bond.date || bond.paidDate || bond.requestDate)}
-      </text>
-      <text x={323} y={129.5} fontSize={9.4}>
-        Mob No. - {user.phone || bond.mobileNo || ""}
-      </text>
-      <text x={431} y={147} textAnchor="end" fontSize={7.6}>
-        S. No. - {bond.userSchemeId || bond.id || ""}
-      </text>
+      {isDailyDeposit ? (
+        <>
+          <rect x={166} y={100} width={170} height={18} fill="none" stroke={TAN} strokeWidth={0.7} />
+          <rect x={166} y={120} width={170} height={18} fill="none" stroke={TAN} strokeWidth={0.7} />
+          <text x={171} y={113} fontSize={8.5}>
+            Investment Date - {safeDate(bond.paidDate || bond.enrollmentDate)}
+          </text>
+          <text x={171} y={133} fontSize={8.5}>
+            Maturity Date - {safeDate(bond.maturityDate)}
+          </text>
+          <text x={431} y={147} textAnchor="end" fontSize={7.6}>
+            Bond. No. - {bond.bondNumber || bond.userSchemeId || ""}
+          </text>
+        </>
+      ) : (
+        <>
+          <rect x={224} y={116} width={94} height={20} fill="none" stroke={TAN} strokeWidth={0.7} />
+          <rect x={318} y={116} width={116} height={20} fill="none" stroke={TAN} strokeWidth={0.7} />
+          <text x={229.5} y={129.5} fontSize={9.4}>
+            Date - {safeDate(bond.enrollmentDate || bond.date || bond.paidDate || bond.requestDate)}
+          </text>
+          <text x={323} y={129.5} fontSize={9.4}>
+            Mob No. - {user.phone || bond.mobileNo || ""}
+          </text>
+          <text x={431} y={147} textAnchor="end" fontSize={7.6}>
+            S. No. - {bond.userSchemeId || bond.id || ""}
+          </text>
+        </>
+      )}
 
       {/* ---------- Personal Information ---------- */}
       {heading("Personal Information", 144)}
@@ -426,6 +464,21 @@ const BondCertificate = forwardRef(function BondCertificate(
       <text x={149} y={rMarital + baseOff(hMarital)} fontSize={FS}>Single</text>
       <CheckBox x={184} y={rMarital + 5.6} checked={isMarried} />
       <text x={197} y={rMarital + baseOff(hMarital)} fontSize={FS}>Married</text>
+      {isDailyDeposit && (
+        <>
+          <line
+            x1={270}
+            y1={rMarital}
+            x2={270}
+            y2={rMarital + hMarital}
+            stroke={TAN}
+            strokeWidth={0.6}
+          />
+          <text x={278} y={rMarital + baseOff(hMarital)} fontSize={FS}>
+            Mob No. - {user.phone || bond.mobileNo || ""}
+          </text>
+        </>
+      )}
 
       {rowText(rAadhaar, hRow, "Aadhaar No.", user.aadhaarNo || user.aadharNo || bond.aadhaarNo || bond.aadharNo || "")}
       {rowText(rNomineeName, hRow, "Nominee Name", bond.nominee?.name || bond.nomineeName || user.nomineeName || "")}
@@ -451,14 +504,47 @@ const BondCertificate = forwardRef(function BondCertificate(
       />
       <line x1={LX} y1={rIfsc} x2={RX} y2={rIfsc} stroke={TAN} strokeWidth={0.6} />
       <line x1={LX} y1={rAccHolder} x2={RX} y2={rAccHolder} stroke={TAN} strokeWidth={0.6} />
-      {rowText(rAccNo, custRowH, "Account No.", user.accountNo || user.accountNumber || bond.accountNo || "")}
-      {rowText(
-        rIfsc,
-        custRowH,
-        "IFSC",
-        `${user.ifsc || bond.ifsc || ""}${user.bankName || bond.bankName ? ` ( ${user.bankName || bond.bankName} )` : ""}`,
+      {isDailyDeposit ? (
+        <>
+          {rowText(
+            rAccNo,
+            custRowH,
+            "A/C Holder Name",
+            user.accountHolderName || bond.accountHolderName || name,
+          )}
+          <line
+            x1={260}
+            y1={rIfsc}
+            x2={260}
+            y2={rIfsc + custRowH}
+            stroke={TAN}
+            strokeWidth={0.6}
+          />
+          <text x={LX + PAD} y={rIfsc + baseOff(custRowH)} fontSize={FS}>
+            Account No. - {user.accountNo || user.accountNumber || bond.accountNo || ""}
+          </text>
+          <text x={268} y={rIfsc + baseOff(custRowH)} fontSize={FS}>
+            IFSC - {user.ifsc || user.ifscCode || bond.ifsc || ""}
+          </text>
+          {rowText(
+            rAccHolder,
+            custRowH,
+            "Bank Name",
+            user.bankName || bond.bankName || "",
+          )}
+        </>
+      ) : (
+        <>
+          {rowText(rAccNo, custRowH, "Account No.", user.accountNo || user.accountNumber || bond.accountNo || "")}
+          {rowText(
+            rIfsc,
+            custRowH,
+            "IFSC",
+            `${user.ifsc || bond.ifsc || ""}${user.bankName || bond.bankName ? ` ( ${user.bankName || bond.bankName} )` : ""}`,
+          )}
+          {rowText(rAccHolder, custRowH, "A/C Holder Name", user.accountHolderName || bond.accountHolderName || name || "")}
+        </>
       )}
-      {rowText(rAccHolder, custRowH, "A/C Holder Name", user.accountHolderName || bond.accountHolderName || name || "")}
 
       {/* ---------- Terms ---------- */}
       {terms.map((t, i) => {
@@ -492,38 +578,36 @@ const BondCertificate = forwardRef(function BondCertificate(
         stroke={TAN}
         strokeWidth={0.6}
       />
-      {[1, 2, 3].map((i) => (
+      {investmentColumns.slice(1, -1).map((x, index) => (
         <line
-          key={i}
-          x1={colX[i]}
+          key={index}
+          x1={x}
           y1={investTop}
-          x2={colX[i]}
+          x2={x}
           y2={investTop + investHeadH + investRowH}
           stroke={TAN}
           strokeWidth={0.6}
         />
       ))}
-      {["Tenure", "Amount", "Mode of Investment", "Date of Maturity"].map(
-        (label, i) => (
-          <text
-            key={label}
-            x={(colX[i] + colX[i + 1]) / 2}
-            y={investTop + baseOff(investHeadH)}
-            textAnchor="middle"
-            fontSize={FS}
-            fontWeight={700}
-          >
-            {label}
-          </text>
-        ),
-      )}
-      {investValues.map((val, i) => (
+      {investHeaders.map((label, index) => (
         <text
-          key={i}
-          x={(colX[i] + colX[i + 1]) / 2}
+          key={label}
+          x={(investmentColumns[index] + investmentColumns[index + 1]) / 2}
+          y={investTop + baseOff(investHeadH)}
+          textAnchor="middle"
+          fontSize={FS}
+          fontWeight={700}
+        >
+          {label}
+        </text>
+      ))}
+      {investValues.map((val, index) => (
+        <text
+          key={index}
+          x={(investmentColumns[index] + investmentColumns[index + 1]) / 2}
           y={investTop + investHeadH + baseOff(investRowH)}
           textAnchor="middle"
-          fontSize={isPension && i === 2 ? 6.6 : FS}
+          fontSize={isPension && index === 2 ? 6.6 : FS}
         >
           {val}
         </text>

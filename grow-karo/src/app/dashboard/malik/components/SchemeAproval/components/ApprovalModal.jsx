@@ -33,7 +33,13 @@ export default function ApprovalModal({
   const numericPaid = Number(paidAmount) || 0;
   // // const remainingAmount = Math.max(0, totalAmount - numericPaid);
   // const isOverpaid = numericPaid > totalAmount;
-  const isValidAmount = paidAmount !== "" && numericPaid >= 0;
+  const isDailyDeposit = selectedRequest?.planType === "DAILY_DEPOSIT";
+  const isValidAmount =
+    paidAmount !== "" &&
+    numericPaid >= 0 &&
+    (!isDailyDeposit ||
+      (numericPaid >= Number(selectedRequest?.minimumAmount) &&
+        numericPaid <= 2000));
   const isPension = selectedRequest?.planType === "PENSION";
   const isValidPensionTerms =
     !isPension ||
@@ -175,14 +181,15 @@ export default function ApprovalModal({
 
         <div className="sea-field">
           <label className="sea-label" htmlFor="sea-paid-amount">
-            Amount paid (₹)
+            {isDailyDeposit ? "Initial deposit (₹)" : "Amount paid (₹)"}
           </label>
           <input
             id="sea-paid-amount"
             ref={inputRef}
             className="sea-input"
             type="number"
-            min="0"
+            min={isDailyDeposit ? selectedRequest?.minimumAmount : "0"}
+            max={isDailyDeposit ? "2000" : undefined}
             inputMode="decimal"
             value={paidAmount}
             onChange={(e) => setPaidAmount(e.target.value)}

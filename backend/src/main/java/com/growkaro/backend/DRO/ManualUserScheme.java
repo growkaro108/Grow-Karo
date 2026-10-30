@@ -15,5 +15,6 @@ public record ManualUserScheme(
         LocalDate maturityDate,
         List<SipInstallmentRequest> sipLedger,
         Integer tenureMonths,
-        Double profitPercentage) {
+        Double profitPercentage,
+        List<DailyDepositRequest> dailyDepositLedger) {
 }

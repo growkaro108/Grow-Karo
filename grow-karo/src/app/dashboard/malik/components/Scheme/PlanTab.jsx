@@ -314,7 +314,9 @@ export default function PlansPage() {
                       </h2>
                       <p className="text-[11px] font-bold text-slate-500 tracking-wide uppercase mt-0.5">
                         {plan.planType === "SIP"
-                          ? `${plan.sipFrequency === "DAILY" ? "Daily" : "Monthly"} · ${plan.tenureMonths || "—"} months`
+                          ? `${plan.sipFrequency === "DAILY" ? "Legacy daily" : "Monthly"} · ${plan.tenureMonths || "—"} months`
+                          : plan.planType === "DAILY_DEPOSIT"
+                            ? `Daily Deposit · ${plan.tenureMonths || "—"} months`
                           : plan.planType === "PENSION"
                             ? `${plan.tenureMonths || "—"} months`
                           : `${plan.tenure} days`}
@@ -332,6 +334,8 @@ export default function PlansPage() {
                       <span className="text-[10px] font-medium text-slate-500 tracking-normal block">
                         {plan.planType === "PENSION"
                           ? "monthly interest"
+                          : plan.planType === "DAILY_DEPOSIT"
+                            ? "whole-term return"
                           : plan.payoutFrequency}
                       </span>
                     </td>

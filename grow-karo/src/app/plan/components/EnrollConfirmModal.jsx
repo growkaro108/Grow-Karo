@@ -58,11 +58,22 @@ export default function EnrollConfirmModal({
 
   const canConfirm = !enrolling && Number(amount) > 0 && nomineeId;
   const isPension = selectedplan?.planType === "PENSION";
+  const isDailyDeposit = selectedplan?.planType === "DAILY_DEPOSIT";
+  const isLegacyDailySip =
+    selectedplan?.planType === "SIP" && selectedplan?.sipFrequency === "DAILY";
+  const dailyAmountIsValid =
+    !isDailyDeposit ||
+    (Number(amount) >= Number(selectedplan?.minimumAmount) &&
+      Number(amount) <= 2000);
 
   //remove scheme whose minimum investment is greater than maximum amount user had in his wallet
   const filteredSchemes = useMemo(() => {
     return AllSchemes?.filter(
-      (scheme) => scheme?.minimumAmount <= amount && scheme?.maximumAmount >= amount
+      (scheme) =>
+        scheme?.minimumAmount <= amount &&
+        scheme?.maximumAmount >= amount &&
+        (scheme?.planType !== "DAILY_DEPOSIT" || Number(amount) <= 2000) &&
+        !(scheme?.planType === "SIP" && scheme?.sipFrequency === "DAILY"),
     );
   }, [AllSchemes, amount]);
   return (
@@ -120,7 +131,9 @@ export default function EnrollConfirmModal({
               <span>
                 {isPension
                   ? `${selectedplan.profitPercentage}% monthly interest for ${selectedplan.tenureMonths} months`
-                  : `${selectedplan.profitPercentage}% - ${selectedplan.payoutFrequency}`}
+                  : isDailyDeposit
+                    ? `${selectedplan.profitPercentage}% whole-term return`
+                    : `${selectedplan.profitPercentage}% - ${selectedplan.payoutFrequency}`}
               </span>
               <span>·</span>
               <span>Min. {currency(selectedplan.minimumAmount)}</span>
@@ -131,6 +144,17 @@ export default function EnrollConfirmModal({
                 Interest payouts are recorded manually and principal is settled
                 separately at maturity. The final rate and term are confirmed
                 when your request is approved.
+              </p>
+            )}
+            {isDailyDeposit && (
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                Initial deposit must be between {currency(selectedplan.minimumAmount)}
+                {" "}and ₹2,000. Later deposits are recorded individually.
+              </p>
+            )}
+            {isLegacyDailySip && (
+              <p className="mt-2 text-xs leading-5 text-amber-700">
+                This legacy daily-SIP plan is closed to new enrollments.
               </p>
             )}
           </div>
@@ -190,6 +214,8 @@ export default function EnrollConfirmModal({
                 type="number"
                 id="amount"
                 disabled={isReInvest}
+                min={isDailyDeposit ? selectedplan.minimumAmount : undefined}
+                max={isDailyDeposit ? 2000 : undefined}
                 className="w-full pl-8 pr-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
                 placeholder="Enter amount"
                 value={amount}
@@ -298,7 +324,7 @@ export default function EnrollConfirmModal({
           </button>
           <button
             onClick={() => onConfirm(amount, nomineeId, selectedplan.schemeId)}
-            disabled={!canConfirm}
+            disabled={!canConfirm || !dailyAmountIsValid || isLegacyDailySip}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50"
             style={{ backgroundColor: "#4f46e5" }}
           >

@@ -422,7 +422,7 @@ export async function downloadDailyDepositLedgerXlsx(data, fileName) {
  */
 export async function loadLedgerLogo(
   url,
-  crop = { left: 0.05498, top: 0.13964, right: 0.05271, bottom: 0.21097 },
+  crop = { left: 0.1, top: 0.1, right: 0.1, bottom: 0.1 },
 ) {
   if (!url) return undefined;
   try {

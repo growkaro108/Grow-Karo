@@ -94,16 +94,21 @@ const SIPBondCertificate = forwardRef(function SIPBondCertificate(
   const tenureMonths =
     bond.tenureMonths ||
     (bond.tenure ? Math.round(Number(bond.tenure) / 30) : "");
+  const isDailyDeposit = bond.planType === "DAILY_DEPOSIT";
   const sipAmount = getSipPremium(bond);
   const sipFrequency =
     String(bond.sipFrequency || "MONTHLY").toUpperCase() === "DAILY"
       ? "DAILY"
       : "MONTHLY";
   const defaultTerms = [
-    "The profit will be applicable on total deposit amount*",
+    isDailyDeposit
+      ? "Profit is calculated from the date of each deposit*"
+      : "The profit will be applicable on total deposit amount*",
     "This bond is valid only till maturity date*",
     "Profit will be credited 30 days*",
-    sipFrequency === "DAILY"
+    isDailyDeposit
+      ? "Each deposit must meet the scheme minimum; total deposits are limited to ₹2,000 per day.*"
+      : sipFrequency === "DAILY"
       ? "Daily installments are due every calendar day.*"
       : "Monthly installments are due once each month.*",
   ];
@@ -522,7 +527,11 @@ const SIPBondCertificate = forwardRef(function SIPBondCertificate(
       {[
         "Your Fix Plan",
         "Tenure Month",
-        sipFrequency === "DAILY" ? "Daily Installment" : "Monthly Installment",
+        isDailyDeposit
+          ? "Daily Deposit"
+          : sipFrequency === "DAILY"
+            ? "Daily Installment"
+            : "Monthly Installment",
       ].map((label, i) => (
         <text
           key={label}
@@ -536,7 +545,7 @@ const SIPBondCertificate = forwardRef(function SIPBondCertificate(
         </text>
       ))}
       {[
-        "SIP PLAN",
+        isDailyDeposit ? "DAILY DEPOSIT PLAN" : "SIP PLAN",
         `${tenureMonths} Month`,
         sipAmount === null ? "Variable" : fmtAmt(sipAmount),
       ].map((val, i) => (

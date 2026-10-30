@@ -145,10 +145,16 @@ export default function SchemeApproval() {
   };
 
   const numericPaid = Number(paidAmount) || 0;
+  const isDailyDeposit = selectedRequest?.planType === "DAILY_DEPOSIT";
   const isLessPaid = selectedRequest
-    ? numericPaid < selectedRequest.paidAmount
+    ? isDailyDeposit
+      ? numericPaid < Number(selectedRequest.minimumAmount)
+      : numericPaid < selectedRequest.paidAmount
     : false;
-  const isValidAmount = paidAmount !== "" && numericPaid >= 0;
+  const isValidAmount =
+    paidAmount !== "" &&
+    numericPaid >= 0 &&
+    (!isDailyDeposit || numericPaid <= 2000);
 
   // Guarded against selectedRequest being null (e.g. right after the modal
   // closes but paidDate/paidAmount haven't been cleared yet).

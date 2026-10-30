@@ -16,6 +16,7 @@ import {
   isDailyDeposit,
   loadLedgerLogo,
 } from "./dailyDepositLedgerXlsx";
+import BondCertificate from "../Bondcertificate";
 
 const SIPBondCertificate = dynamic(() => import("../SIPBondCertificate"), {
   ssr: false,
@@ -52,6 +53,7 @@ export default function SIPDownloadButton({
     /\s+/g,
     "_",
   );
+  const isNewDailyDeposit = bond?.planType === "DAILY_DEPOSIT";
   const memberName = (userData?.name || "member").replace(/\s+/g, "_");
 
   const go = useCallback(
@@ -63,7 +65,7 @@ export default function SIPDownloadButton({
             // await downloadSvgAsPng(bondRef.current, `SIP_Bond_${slug}_${memberName}`, { scale: 3 });
             await downloadSvgAsPdf(
               bondRef.current,
-              `SIP_Bond_${slug}_${memberName}`,
+              `${isNewDailyDeposit ? "Daily_Deposit" : "SIP"}_Bond_${slug}_${memberName}`,
               { scale: 3 },
             );
         }
@@ -80,7 +82,7 @@ export default function SIPDownloadButton({
           // Daily Deposit gets its own ledger layout (same as the bond ledger
           // the office prepares by hand), built from deposits by paid date.
           try {
-            const logo = await loadLedgerLogo(logoUrl);
+            const logo = await loadLedgerLogo(stampUrl || logoUrl);
             await downloadDailyDepositLedgerXlsx(
               {
                 member: { name: userData?.name, phone: userData?.phone },
@@ -95,7 +97,12 @@ export default function SIPDownloadButton({
                       bond?.scheme?.profitPercentage,
                   ),
                 },
-                deposits: depositsFromSipLedger(bond?.sipLedger),
+                deposits: bond?.dailyDepositLedger?.length
+                  ? bond.dailyDepositLedger.map((deposit) => ({
+                      date: deposit.depositDate,
+                      amount: Number(deposit.depositAmount),
+                    }))
+                  : depositsFromSipLedger(bond?.sipLedger),
                 logo,
               },
               `Daily_Deposit_Ledger_${slug}_${memberName}`,
@@ -127,7 +134,7 @@ export default function SIPDownloadButton({
         setLoading(null);
       }
     },
-    [slug, memberName, bond, logoUrl, userData?.name, userData?.phone, userData?.aadhaarNo],
+    [slug, memberName, bond, isNewDailyDeposit, logoUrl, stampUrl, userData?.name, userData?.phone, userData?.aadhaarNo],
   );
 
   const isLoading = loading !== null;
@@ -148,14 +155,28 @@ export default function SIPDownloadButton({
               opacity: 0,
             }}
           >
-            <SIPBondCertificate
-              ref={bondRef}
-              bond={bond}
-              userData={userData}
-              logoUrl={logoUrl}
-              stampUrl={stampUrl}
-              watermarkUrl={logoUrl}
-            />
+            {isNewDailyDeposit ? (
+              <BondCertificate
+                ref={bondRef}
+                bond={bond}
+                userData={userData}
+                userName={userData?.name}
+                scheme={bond?.schemeName}
+                logoUrl={logoUrl}
+                stampUrl={stampUrl}
+                watermarkUrl={logoUrl}
+                profilePhoto="/profile.jpg"
+              />
+            ) : (
+              <SIPBondCertificate
+                ref={bondRef}
+                bond={bond}
+                userData={userData}
+                logoUrl={logoUrl}
+                stampUrl={stampUrl}
+                watermarkUrl={logoUrl}
+              />
+            )}
             <SIPLedgerSheet
               ref={ledgerRef}
               bond={bond}
@@ -197,19 +218,22 @@ export default function SIPDownloadButton({
                 }}
                 className="flex w-full items-center gap-2 px-3 py-2.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-teal-300"
               >
-                <Landmark size={13} className="text-teal-400" /> SIP Bond in PDF
+                <Landmark size={13} className="text-teal-400" />{" "}
+                {isNewDailyDeposit ? "Daily Deposit" : "SIP"} Bond in PDF
               </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  go("ledger");
-                }}
-                className="flex w-full items-center gap-2 px-3 py-2.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-teal-300"
-              >
-                <FileText size={13} className="text-amber-400" /> Ledger in PDF
-              </button>
+              {!isNewDailyDeposit && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    go("ledger");
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-teal-300"
+                >
+                  <FileText size={13} className="text-amber-400" /> Ledger in PDF
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -218,7 +242,8 @@ export default function SIPDownloadButton({
                 }}
                 className="flex w-full items-center gap-2 px-3 py-2.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-teal-300"
               >
-                <Sheet  size={13} className="text-amber-400" /> Ledger in xlsx
+                <Sheet size={13} className="text-amber-400" />{" "}
+                {isDailyDeposit(bond) ? "Daily Deposit ledger in XLSX" : "Ledger in XLSX"}
               </button>
               {/* <button type="button" onClick={() => { setOpen(false); go("both"); }}
                 className="flex w-full items-center gap-2 border-t border-slate-700 px-3 py-2.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-teal-300">

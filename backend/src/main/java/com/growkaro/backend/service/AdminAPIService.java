@@ -64,6 +64,7 @@ import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.Guardian;
 import com.growkaro.backend.DRO.AddRemitter;
 import com.growkaro.backend.DRO.AdminUserProfileUpdateRequest;
+import com.growkaro.backend.DRO.DailyDepositRequest;
 import com.growkaro.backend.DRO.ManualUserScheme;
 import com.growkaro.backend.DRO.MaturitySettlementRequest;
 import com.growkaro.backend.DRO.NewNominee;
@@ -91,6 +92,7 @@ import com.growkaro.backend.DTO.UserSchemeResponse;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.common.GlobalExceptionHandler.DuplicateResourceException;
 import com.growkaro.backend.entity.Notification;
+import com.growkaro.backend.entity.DailyDeposit;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.Reply;
 import com.growkaro.backend.entity.Scheme;
@@ -363,7 +365,14 @@ public class AdminAPIService {
             switch (planType) {
                 case "PENSION":
                     return addPensionScheme(request, scheme);
+                case "DAILY_DEPOSIT":
+                    return addDailyDepositScheme(request, scheme);
                 case "SIP":
+                    if ("DAILY".equalsIgnoreCase(scheme.getSipFrequency())) {
+                        return general.response("error",
+                                "Daily SIP enrollment has been retired. Use a Daily Deposit plan.",
+                                null);
+                    }
                     return addSipScheme(request, scheme);
                 case "FD":
                 default:
@@ -443,6 +452,31 @@ public class AdminAPIService {
         userSchemeRepository.save(userScheme);
 
         return general.response("success", "FD scheme added to user successfully",
+                UserSchemeResponse.toUserSchemeResponse(userScheme));
+    }
+
+    private Map<String, Object> addDailyDepositScheme(ManualUserScheme request, Scheme scheme) {
+        LocalDateTime enrollmentDate = LocalDateTime.of(request.paidDate(), LocalTime.now(IST));
+        LocalDate maturityDate = request.paidDate().plusMonths(scheme.getTenureMonths());
+        if (request.maturityDate() != null && !request.maturityDate().equals(maturityDate)) {
+            return general.response("error", "Daily Deposit maturity date must match the scheme term", null);
+        }
+        if (!isValidDailyDepositLedger(
+                request.dailyDepositLedger(), scheme, request.paidDate(), maturityDate)) {
+            return general.response("error", "Daily deposits must fall within the bond term", null);
+        }
+
+        User userRef = userRepository.getReferenceById(request.userId());
+        Nominee nomineeRef = nomineeRepository.getReferenceById(request.nomineeId());
+        UserScheme userScheme = createBaseUserScheme(
+                userRef, scheme, nomineeRef, enrollmentDate, request.paidDate(), maturityDate);
+        replaceLedgers(userScheme, request.profitLedger(), request.reedemLedger());
+        replaceDailyDepositLedger(userScheme, request.dailyDepositLedger());
+        userScheme.setPaidAmount(totalDailyDeposit(request.dailyDepositLedger()));
+        userScheme.setNextPayoutDate(null);
+        userSchemeRepository.save(userScheme);
+
+        return general.response("success", "Daily Deposit scheme added to user successfully",
                 UserSchemeResponse.toUserSchemeResponse(userScheme));
     }
 
@@ -603,7 +637,8 @@ public class AdminAPIService {
     public Map<String, Object> updateUserSchemeLedger(String userSchemeId, UserSchemeLedgerUpdateRequest request) {
         if (userSchemeId == null || userSchemeId.isBlank() || request == null
                 || (request.profitLedger() == null) != (request.reedemLedger() == null)
-                || (request.profitLedger() == null && request.sipLedger() == null)) {
+                || (request.profitLedger() == null && request.sipLedger() == null
+                        && request.dailyDepositLedger() == null)) {
             return general.response("error", "Invalid ledger details", null);
         }
         UserScheme userScheme = userSchemeRepository.findById(userSchemeId).orElse(null);
@@ -643,6 +678,18 @@ public class AdminAPIService {
                 if (isSip) {
                     userScheme.setPaidAmount(totalSipPaid(request.sipLedger()));
                 }
+            }
+            if (request.dailyDepositLedger() != null) {
+                if (!"DAILY_DEPOSIT".equalsIgnoreCase(userScheme.getScheme().getPlanType())
+                        || !isValidDailyDepositLedger(
+                                request.dailyDepositLedger(),
+                                userScheme.getScheme(),
+                                userScheme.getPaidDate(),
+                                userScheme.getMaturityDate())) {
+                    return general.response("error", "Invalid daily deposit ledger", null);
+                }
+                replaceDailyDepositLedger(userScheme, request.dailyDepositLedger());
+                userScheme.setPaidAmount(totalDailyDeposit(request.dailyDepositLedger()));
             }
             userSchemeRepository.save(userScheme);
             return general.response("success", "Profit and redemption ledger updated", null);
@@ -689,11 +736,16 @@ public class AdminAPIService {
             return general.response("error", "Paid amount must be greater than zero", null);
         }
         boolean isPension = "PENSION".equalsIgnoreCase(targetScheme.getPlanType());
+        boolean isDailyDeposit = "DAILY_DEPOSIT".equalsIgnoreCase(targetScheme.getPlanType());
         if (isPension && !isValidPensionTerms(request.profitPercentage(), request.tenureMonths())) {
             return general.response("error", "Pension bonds require a valid monthly interest rate and term", null);
         }
         if (isPension && !request.paidDate().plusMonths(request.tenureMonths()).equals(request.maturityDate())) {
             return general.response("error", "Pension maturity date must match the contracted term", null);
+        }
+        if (isDailyDeposit
+                && !request.paidDate().plusMonths(targetScheme.getTenureMonths()).equals(request.maturityDate())) {
+            return general.response("error", "Daily Deposit maturity date must match the scheme term", null);
         }
         boolean pensionTermsChanged = isPension && (userScheme.getPaidAmount() == null
                 || userScheme.getPaidAmount().compareTo(request.paidAmount()) != 0
@@ -724,10 +776,16 @@ public class AdminAPIService {
         userScheme.setEnrollmentDate(enrollmentDate);
         userScheme.setNominee(nominee);
         userScheme.setMaturityDate(maturityDate);
-        userScheme.setNextPayoutDate(isPension ? null
-                : general.calculateNextPayoutDate(
-                        enrollmentDate, userScheme.getScheme().getPayoutFrequency(),
-                        userScheme.getScheme().getTenure()));
+        // Option 2: Using negated OR
+        if (!(isPension || isDailyDeposit)) 
+            userScheme.setNextPayoutDate(
+                general.calculateNextPayoutDate(
+                    enrollmentDate, 
+                    userScheme.getScheme().getPayoutFrequency(),
+                    userScheme.getScheme().getTenure()
+                )
+            );
+        
         if (isPension && (pensionTermsChanged || userScheme.getProfitLedger().isEmpty())) {
             replacePensionInterestSchedule(userScheme, request.paidDate());
         }
@@ -938,6 +996,48 @@ public class AdminAPIService {
         return true;
     }
 
+    private boolean isValidDailyDepositLedger(
+            List<DailyDepositRequest> deposits,
+            Scheme scheme,
+            LocalDate startDate,
+            LocalDate maturityDate) {
+        if (deposits == null || deposits.isEmpty() || scheme.getMinimumAmount() == null) {
+            return false;
+        }
+
+        Map<LocalDate, BigDecimal> depositsByDate = new HashMap<>();
+        for (DailyDepositRequest deposit : deposits) {
+            if (deposit == null || deposit.depositDate() == null || deposit.depositAmount() == null
+                    || deposit.depositAmount().compareTo(scheme.getMinimumAmount()) < 0
+                    || deposit.depositAmount().compareTo(DailyDeposit.MAX_PER_DAY) > 0
+                    || (startDate != null && deposit.depositDate().isBefore(startDate))
+                    || (maturityDate != null && !deposit.depositDate().isBefore(maturityDate))) {
+                return false;
+            }
+
+            BigDecimal dailyTotal = depositsByDate.merge(
+                    deposit.depositDate(), deposit.depositAmount(), BigDecimal::add);
+            if (dailyTotal.compareTo(DailyDeposit.MAX_PER_DAY) > 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private BigDecimal totalDailyDeposit(List<DailyDepositRequest> deposits) {
+        return deposits.stream()
+                .map(DailyDepositRequest::depositAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private void replaceDailyDepositLedger(UserScheme userScheme, List<DailyDepositRequest> deposits) {
+        userScheme.getDailyDepositLedger().clear();
+        for (DailyDepositRequest request : deposits) {
+            userScheme.getDailyDepositLedger().add(
+                    new DailyDeposit(request.depositDate(), request.depositAmount()));
+        }
+    }
+
     private boolean areDailyPaymentsWithinTerm(
             List<SipInstallmentRequest> installments,
             LocalDate startDate,
@@ -999,10 +1099,18 @@ public class AdminAPIService {
             user = (User) isUserSchemeValid.get("user");
             scheme = (Scheme) isUserSchemeValid.get("scheme");
             boolean isPension = "PENSION".equalsIgnoreCase(scheme.getPlanType());
+            boolean isDailyDeposit = "DAILY_DEPOSIT".equalsIgnoreCase(scheme.getPlanType());
             if (isPension && (!isValidPensionTerms(totalInterestPercentage, tenureMonths)
                     || paidDate.isAfter(general.getCurrentDate()))) {
                 return general.response("error",
                         "Pension approval requires a valid monthly rate, term, and payment date",
+                        null);
+            }
+            if (isDailyDeposit
+                    && (paidAmount.compareTo(scheme.getMinimumAmount()) < 0
+                            || paidAmount.compareTo(DailyDeposit.MAX_PER_DAY) > 0)) {
+                return general.response("error",
+                        "Daily deposits must meet the scheme minimum and stay within the ₹2,000 daily limit",
                         null);
             }
 
@@ -1011,7 +1119,9 @@ public class AdminAPIService {
                     LocalDateTime.now(ZoneId.of("Asia/Kolkata")).toLocalTime());
             LocalDate maturityDate = isPension
                     ? paidDate.plusMonths(tenureMonths)
-                    : general.calculateMaturityDate(enrollmentDate, scheme.getTenure());
+                    : isDailyDeposit
+                            ? paidDate.plusMonths(scheme.getTenureMonths())
+                            : general.calculateMaturityDate(enrollmentDate, scheme.getTenure());
 
             // approved user
             userScheme.setIsApproved(true);
@@ -1021,6 +1131,10 @@ public class AdminAPIService {
             userScheme.setPaidDate(paidDate);
             userScheme.setEnrollmentDate(enrollmentDate);
             userScheme.setMaturityDate(maturityDate);
+            if (isDailyDeposit) {
+                userScheme.getDailyDepositLedger().clear();
+                userScheme.getDailyDepositLedger().add(new DailyDeposit(paidDate, paidAmount));
+            }
             userScheme.setContractTotalInterestPercentage(isPension ? totalInterestPercentage : null);
             userScheme.setContractTenureDays(isPension ? tenureMonths : null);
             if (isPension) {

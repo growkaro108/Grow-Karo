@@ -5,5 +5,6 @@ import java.util.List;
 public record UserSchemeLedgerUpdateRequest(
         List<UserSchemeProfitLedgerRequest> profitLedger,
         List<UserSchemeReedemLedgerRequest> reedemLedger,
-        List<SipInstallmentRequest> sipLedger) {
+        List<SipInstallmentRequest> sipLedger,
+        List<DailyDepositRequest> dailyDepositLedger) {
 }
