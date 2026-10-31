@@ -190,9 +190,9 @@ function SipInstallmentRows({ rows, onChange, onAdd, onRemove, isDaily }) {
                     }
                     className={`col-span-4 ${inputClass} [&::-webkit-calendar-picker-indicator]:hidden`}
                   />
-                  {/* <input
+                  <input
                     aria-label={`Installment ${index + 1} due amount`}
-                    type="number"
+                    type="hidden"
                     min="0.01"
                     step="0.01"
                     value={row.dueAmount ?? ""}
@@ -201,7 +201,7 @@ function SipInstallmentRows({ rows, onChange, onAdd, onRemove, isDaily }) {
                       onChange(index, "dueAmount", e.target.value)
                     }
                     className={`col-span-2 ${inputClass}`}
-                  /> */}
+                  />
                   <input
                     aria-label={`Installment ${index + 1} paid date`}
                     type="date"
@@ -621,7 +621,7 @@ export default function SchemeManagementPanel({
               <p className="text-xs text-slate-400">
                 {selectedScheme?.planType === "PENSION"
                   ? "Interest-only payouts and principal redemption"
-                  : "Profit and redemption entries"}
+                  : selectedScheme?.planType !== "SIP" && "Profit and redemption entries"}
               </p>
               {selectedScheme?.planType === "PENSION" ? (
                 <p className="text-xs text-slate-400">
@@ -629,23 +629,24 @@ export default function SchemeManagementPanel({
                   and term when the bond is enrolled. Mark each installment as
                   paid from the bond history after payment.
                 </p>
-              ) : (
+              ) : (selectedScheme?.planType === "SIP" ? null : (
                 <LedgerRows
                   type="profit"
                   rows={form.profitLedger}
                   onChange={updateFormLedger("profit")}
                   onAdd={addFormLedgerRow("profit")}
-                />
+                />)
               )}
-              <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
-                Redeem history
-              </p>
-              <LedgerRows
-                type="redeem"
-                rows={form.reedemLedger}
+              {selectedScheme?.planType !== "SIP" && 
+                <><p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
+                  Redeem history
+                </p>
+                <LedgerRows
+                  type="redeem"
+                  rows={form.reedemLedger}
                 onChange={updateFormLedger("redeem")}
                 onAdd={addFormLedgerRow("redeem")}
-              />
+              /></>}
             </div>
           )}
 

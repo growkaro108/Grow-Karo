@@ -952,13 +952,10 @@ export default function UserDrawer({ user, onClose, onSaved }) {
       (item) => item.userSchemeId === userSchemeId
     );
 
-    const rawInstallments = sipLedgerEdits[userSchemeId] ?? [];
-    const installments = rawInstallments.filter(
-      (row) => Number(row.paidAmount || 0) > 0
-    );
+    const installments = sipLedgerEdits[userSchemeId] ?? [];
 
     if (!installments.length) {
-      errorMessage("Please include at least one installment with a valid paid amount.");
+      errorMessage("Please include at least one SIP installment.");
       return;
     }
 
@@ -969,7 +966,7 @@ export default function UserDrawer({ user, onClose, onSaved }) {
     let failureReason = "";
     const hasInvalidRow = installments.some((row, i) => {
       const dueAmount = Number(row.dueAmount);
-      const paidAmount = Number(row.paidAmount);
+      const paidAmount = Number(row.paidAmount || 0);
       const hasDate = Boolean(row.installmentDate || row.dueDate);
 
       if (isNotDaily && !hasDate) {
@@ -977,19 +974,23 @@ export default function UserDrawer({ user, onClose, onSaved }) {
         return true;
       }
       if (!Number.isFinite(dueAmount) || dueAmount < 0) {
-        failureReason = `Row ${i + 1}: Due amount (${row.dueAmount}) is invalid or <= 0.`;
+        failureReason = `Row ${i + 1}: Due amount (${row.dueAmount}) is invalid or negative.`;
         return true;
       }
-      if (minimumAmount > 0 && dueAmount < minimumAmount) {
+      if (isNotDaily && minimumAmount > 0 && dueAmount < minimumAmount) {
         failureReason = `Row ${i + 1}: Due amount (${dueAmount}) is less than scheme minimum (${minimumAmount}).`;
         return true;
       }
-      if (dueAmount > maximumAmount) {
+      if (isNotDaily && dueAmount > maximumAmount) {
         failureReason = `Row ${i + 1}: Due amount (${dueAmount}) exceeds scheme maximum (${maximumAmount}).`;
         return true;
       }
-      if (!Number.isFinite(paidAmount) || paidAmount <= 0) {
-        failureReason = `Row ${i + 1}: Paid amount (${row.paidAmount}) is invalid or <= 0.`;
+      if (!Number.isFinite(paidAmount) || paidAmount < 0) {
+        failureReason = `Row ${i + 1}: Paid amount (${row.paidAmount}) is invalid or negative.`;
+        return true;
+      }
+      if (!isNotDaily && paidAmount > 0 && !row.paidDate) {
+        failureReason = `Row ${i + 1}: Missing payment date for a paid installment.`;
         return true;
       }
       return false;

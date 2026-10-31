@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import ExcelJS from "exceljs";
+import { getSipProfitRate } from "./components/user-management/format";
 export function currency(n) {
   if (typeof n !== "number" || Number.isNaN(n)) {
     return "₹0";
@@ -328,173 +329,201 @@ export async function downloadSvgAsPdf(
   pdf.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
 }
 
-export async function downloadLedgerXlsx(
-  { member, bond, installments },
-  filename = "SIP_Ledger",
-) {
+// NOTE: your file already imports ExcelJS at the top (e.g. `import ExcelJS from "exceljs";`) – keep that line.
+
+// Accepts Date | ISO string | "dd-mm-yyyy" / "dd/mm/yyyy" and returns a Date (or null)
+const parseDate = (v) => {
+  if (!v) return null;
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? null : v;
+  if (typeof v === "string") {
+    const m = v.trim().match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+    if (m) return new Date(Date.UTC(+m[3], +m[2] - 1, +m[1]));
+  }
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const GREY = "FF595959";
+const BLUE = { type: "pattern", pattern: "solid", fgColor: { argb: "FF5B9BD5" } };
+const YELLOW = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFF00" } };
+const thin = { style: "thin" };
+const BORDER = { top: thin, left: thin, bottom: thin, right: thin };
+const NUM = '_ * #,##0.00_ ;_ * \\-#,##0.00_ ;_ * "-"??_ ;_ @_ ';
+const DATE_FMT = "dd-mm-yyyy";
+// Fetches the logo and returns { buffer, extension } (or null if it can't be loaded)
+async function loadLogo(logoUrl) {
+  if (!logoUrl) return null;
+  try {
+    const res = await fetch(logoUrl);
+    if (!res.ok) return null;
+    const type = res.headers.get("content-type") || "";
+    const extension = type.includes("jpeg") || type.includes("jpg") ? "jpeg" : "png";
+    return { buffer: await res.arrayBuffer(), extension };
+  } catch {
+    return null;
+  }
+}
+
+export async function buildLedgerXlsxBuffer({ member, bond, installments, logoUrl }) {
   if (!installments?.length) throw new Error("No installments to export");
 
-  const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet("SIP Ledger");
-  const DATE_FMT = "dd/mm/yyyy";
-  const RUPEE_FMT = '"₹"#,##0';
-  ws.columns = [
-    { key: "no", width: 8 },
-    { key: "installmentDate", width: 18 },
-    { key: "dueDate", width: 18 },
-    { key: "paidDate", width: 18 },
-    { key: "dueAmount", width: 16 },
-    { key: "paidAmount", width: 16 },
-    { key: "status", width: 14 },
-  ];
-
-  // Title
-  ws.mergeCells("A1:G1");
-  ws.getCell("A1").value = "SIP Installment Ledger";
-  ws.getCell("A1").font = { bold: true, size: 18, color: { argb: "FFFFFFFF" } };
-  ws.getCell("A1").alignment = { horizontal: "center", vertical: "middle" };
-  ws.getCell("A1").fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FF0F172A" },
-  };
-  ws.getRow(1).height = 32;
-
-  ws.mergeCells("A2:G2");
-  ws.getCell("A2").value = "Systematic Investment Plan — Payment Record";
-  ws.getCell("A2").font = { color: { argb: "FFCBD5E1" } };
-  ws.getCell("A2").alignment = { horizontal: "center" };
-  ws.getCell("A2").fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FF0F172A" },
-  };
-
-  // Member (left) and bond (right) details
-  const info = [
-    [`Member: ${member.name}`, `Bond No: ${bond.bondNo}`],
-    [
-      `Phone: ${member.phone}`,
-      `${bond.sipFrequency === "DAILY" ? "Daily" : "Monthly"} Installment: ₹${bond.installmentAmount}`,
-    ],
-    [`Aadhaar: ${member.aadhaar}`, `Tenure: ${bond.tenureMonths} Months`],
-    [
-      `Investment Date: ${bond.investmentDate}`,
-      `Maturity Date: ${bond.maturityDate}`,
-    ],
-  ];
-  info.forEach(([left, right], i) => {
-    const r = 4 + i;
-    ws.mergeCells(`A${r}:C${r}`);
-    ws.mergeCells(`E${r}:G${r}`);
-    ws.getCell(`A${r}`).value = left;
-    ws.getCell(`E${r}`).value = right;
-    ws.getCell(`E${r}`).alignment = { horizontal: "right" };
+  const rate = getSipProfitRate(bond);
+  const n = installments.length;
+  const rowProfits = installments.map((it, idx) => {
+    const deposit = Number(it.paidAmount ?? 0) || 0;
+    return (deposit * rate * (n - idx)) / n;
   });
+  const totalDeposit = installments.reduce(
+    (sum, it) => sum + (Number(it.paidAmount ?? 0) || 0),
+    0,
+  );
+  const totalProfit = rowProfits.reduce((sum, profit) => sum + profit, 0);
 
-  // Table header
-  const headerRowNo = 9;
-  const headers = [
-    "#",
-    "Installment Date",
-    "Due Date",
-    "Paid Date",
-    "Due Amount",
-    "Paid Amount",
-    "Status",
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Sheet1");
+  ws.properties.defaultRowHeight = 15;
+  ws.columns = [
+    { key: "date", width: 13 },
+    { key: "days", width: 8 },
+    { key: "tenure", width: 13 },
+    { key: "deposit", width: 13 },
+    { key: "pct", width: 13 },
+    { key: "profit", width: 12 },
+    { key: "total", width: 15 },
   ];
-  const headerRow = ws.getRow(headerRowNo);
-  headers.forEach((h, i) => (headerRow.getCell(i + 1).value = h));
-  headerRow.height = 22;
-  headerRow.eachCell((c) => {
-    c.font = { bold: true, color: { argb: "FFFFFFFF" } };
-    c.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FF1E3A5F" },
-    };
+
+  // ---------- Title ----------
+  ws.mergeCells("A1:G1");
+  const title = ws.getCell("A1");
+  title.value = "Groow Karo SIP Ledger";
+  title.font = { name: "Calibri", bold: true, size: 22, color: { argb: GREY } };
+  title.alignment = { horizontal: "center", vertical: "middle" };
+  title.fill = BLUE;
+  ws.getRow(1).height = 29.1;
+  for (let c = 1; c <= 7; c++) ws.getCell(1, c).border = BORDER;
+
+  // ---------- Client info (A:C label, D:E value, F2:G7 logo) ----------
+  const info = [
+    ["Client Name:", member.name || "", null],
+    ["Starting Date:", parseDate(bond.investmentDate), DATE_FMT],
+    ["Ending Date:", parseDate(bond.maturityDate), DATE_FMT],
+    ["Mobile No.:", member.phone ? Number(member.phone) || member.phone : "", "0"],
+    ["Bond No. :", bond.bondNo || "", null],
+    ["Tenure:", `${bond.tenureMonths}M`, null],
+  ];
+  info.forEach(([label, value, fmt], i) => {
+    const r = 2 + i;
+    ws.mergeCells(`A${r}:C${r}`);
+    ws.mergeCells(`D${r}:E${r}`);
+    ws.getCell(`A${r}`).value = label;
+    ws.getCell(`A${r}`).alignment = { horizontal: "left" };
+    ws.getCell(`D${r}`).value = value;
+    ws.getCell(`D${r}`).alignment = { horizontal: "center" };
+    if (fmt) ws.getCell(`D${r}`).numFmt = fmt;
+    for (let c = 1; c <= 5; c++) ws.getCell(r, c).border = BORDER;
+  });
+  ws.mergeCells("F2:G7");
+  for (let r = 2; r <= 7; r++) for (let c = 6; c <= 7; c++) ws.getCell(r, c).border = BORDER;
+
+  const logo = await loadLogo(logoUrl);
+  if (logo) {
+    const id = wb.addImage(logo);
+    ws.addImage(id, {
+      tl: { col: 5.15, row: 1.1 },
+      ext: { width: 135, height: 118 },
+      editAs: "oneCell",
+    });
+  }
+
+  // ---------- Blue band (A:F) + G ----------
+  ws.mergeCells("A8:F8");
+  for (let c = 1; c <= 7; c++) {
+    ws.getCell(8, c).fill = BLUE;
+    ws.getCell(8, c).border = BORDER;
+  }
+
+  // ---------- Table header ----------
+  const headerRowNo = 9;
+  ["Date", "Days", "Tenure Day", "Deposit", "Percentage", "Profit", "Total Blance"].forEach((h, i) => {
+    const c = ws.getCell(headerRowNo, i + 1);
+    c.value = h;
+    c.font = { name: "Calibri", bold: true };
+    c.fill = YELLOW;
+    c.border = BORDER;
     c.alignment = { horizontal: "center", vertical: "middle" };
   });
 
-  // Rows (dates as real Date objects, amounts as numbers)
-  const toDate = (d) => (d ? new Date(d) : null);
-  installments.forEach((it, idx) => {
-    const row = ws.addRow({
-      no: it.no ?? idx + 1,
-      installmentDate: toDate(it.installmentDate),
-      dueDate: toDate(it.dueDate),
-      paidDate: toDate(it.paidDate),
-      dueAmount: Number(it.dueAmount ?? 0),
-      paidAmount: it.paidAmount != null ? Number(it.paidAmount) : null,
-      status: it.status,
-    });
-    ["B", "C", "D"].forEach((col) => (row.getCell(col).numFmt = DATE_FMT));
-    ["E", "F"].forEach((col) => (row.getCell(col).numFmt = RUPEE_FMT));
-    row.eachCell((c) => (c.alignment = { horizontal: "center" }));
-
-    const paid = String(it.status).toLowerCase() === "paid";
-    row.getCell("G").font = {
-      bold: true,
-      color: { argb: paid ? "FF16A34A" : "FFDC2626" },
-    };
-    if (paid) {
-      row.getCell("D").font = { color: { argb: "FF16A34A" } };
-      row.getCell("F").font = { color: { argb: "FF16A34A" } };
-    }
-    if (idx % 2 === 1) {
-      row.eachCell(
-        (c) =>
-          (c.fill = {
-            type: "pattern",
-            pattern: "solid",
-            fgColor: { argb: "FFF8FAFC" },
-          }),
-      );
-    }
-  });
-
-  // Totals with live formulas
+  // ---------- Rows ----------
   const first = headerRowNo + 1;
-  const last = headerRowNo + installments.length;
-  const totalRow = ws.addRow({});
-  const t = totalRow.number;
-  ws.getCell(`D${t}`).value = "Total";
-  ws.getCell(`E${t}`).value = { formula: `SUM(E${first}:E${last})` };
-  ws.getCell(`F${t}`).value = { formula: `SUM(F${first}:F${last})` };
-  ws.getCell(`G${t}`).value = { formula: `E${t}-F${t}` };
-  ws.getCell(`G${t}`).numFmt = RUPEE_FMT;
-  ws.getCell(`E${t}`).numFmt = RUPEE_FMT;
-  ws.getCell(`F${t}`).numFmt = RUPEE_FMT;
+  installments.forEach((it, idx) => {
+    const r = first + idx;
+    const deposit = Number(it.paidAmount ?? 0) || null; // blank until paid
+    const cells = [1, 2, 3, 4, 5, 6, 7].map((c) => ws.getCell(r, c));
+    cells.forEach((c) => (c.border = BORDER));
 
-  const labelRow = ws.addRow({});
-  ws.getCell(`D${labelRow.number}`).value = "";
-  ws.getCell(`E${labelRow.number}`).value = "Total Due";
-  ws.getCell(`F${labelRow.number}`).value = "Total Paid";
-  ws.getCell(`G${labelRow.number}`).value = "Balance";
-
-  [totalRow, labelRow].forEach((r) => {
-    r.eachCell((c) => {
-      c.font = { bold: true, color: { argb: "FFFFFFFF" } };
-      c.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FF0F172A" },
-      };
-      c.alignment = { horizontal: "center" };
-    });
+    cells[0].value = parseDate(it.installmentDate);
+    cells[0].numFmt = DATE_FMT;
+    cells[0].alignment = { horizontal: "center" };
+    cells[1].value = n - idx; // remaining days: 60 … 1
+    cells[2].value = n; // tenure day
+    cells[3].value = deposit;
+    cells[3].numFmt = NUM;
+    cells[4].value = rate;
+    cells[4].numFmt = "0.00%";
+    cells[5].value = {
+      formula: `D${r}*E${r}/C${r}*B${r}`,
+      result: rowProfits[idx],
+    };
+    cells[5].numFmt = NUM;
+    cells[5].alignment = { horizontal: "center", vertical: "middle" };
+    cells[6].value = {
+      formula: `D${r}+F${r}`,
+      result: (Number(it.paidAmount ?? 0) || 0) + rowProfits[idx],
+    };
+    cells[6].numFmt = NUM;
   });
 
-  // Footer
-  const footerNo = labelRow.number + 2;
-  ws.mergeCells(`A${footerNo}:G${footerNo}`);
-  ws.getCell(`A${footerNo}`).value =
-    "Generated by Groww Karo • www.growwkaro.com • +919430050782 • karogroww@gmail.com";
-  ws.getCell(`A${footerNo}`).font = { color: { argb: "FF94A3B8" }, size: 9 };
-  ws.getCell(`A${footerNo}`).alignment = { horizontal: "center" };
+  // ---------- Totals ----------
+  const last = first + n - 1;
+  const spacer = last + 1;
+  const tot = last + 2;
+  for (let c = 1; c <= 7; c++) {
+    ws.getCell(spacer, c).fill = YELLOW;
+    ws.getCell(spacer, c).border = BORDER;
+    ws.getCell(tot, c).border = BORDER;
+  }
+  const put = (col, value, fmt) => {
+    const c = ws.getCell(tot, col);
+    c.value = value;
+    c.font = { name: "Calibri", bold: true };
+    if (fmt) c.numFmt = fmt;
+  };
+  put(3, "Total Deposit");
+  put(4, { formula: `SUM(D${first}:D${spacer})`, result: totalDeposit }, NUM);
+  put(5, "Total Profit");
+  put(6, { formula: `SUM(F${first}:F${spacer})`, result: totalProfit }, NUM);
+  put(7, {
+    formula: `SUM(G${first}:G${spacer})`,
+    result: totalDeposit + totalProfit,
+  }, NUM);
 
-  ws.views = [{ state: "frozen", ySplit: headerRowNo }];
+  // ---------- Print setup ----------
+  ws.pageSetup = {
+    paperSize: 9,
+    orientation: "portrait",
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+  };
 
-  const buffer = await wb.xlsx.writeBuffer();
+  return wb.xlsx.writeBuffer();
+}
+
+export async function downloadLedgerXlsx(
+  { member, bond, installments, logoUrl },
+  filename = "SIP_Ledger",
+) {
+  const buffer = await buildLedgerXlsxBuffer({ member, bond, installments, logoUrl });
   const blob = new Blob([buffer], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });

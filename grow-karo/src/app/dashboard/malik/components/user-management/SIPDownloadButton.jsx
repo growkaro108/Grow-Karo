@@ -121,11 +121,18 @@ export default function SIPDownloadButton({
                 bondNo:bond?.bondNumber|| bond.userSchemeId,
                 installmentAmount: getSipPremium(bond),
                 sipFrequency: bond?.sipFrequency,
+                profitRate: bond?.profitRate,
+                profitPercentage: bond?.profitPercentage,
+                contractProfitPercentage: bond?.contractProfitPercentage,
+                contractTotalInterestPercentage:
+                  bond?.contractTotalInterestPercentage,
+                scheme: bond?.scheme,
                 tenureMonths: (bond.tenure?Math.round(Number(bond.tenure)/30):""),
                 investmentDate: bond.enrollmentDate,
                 maturityDate: bond.maturityDate,
               },
               installments, // the same array you map over to render the ledger rows
+              logoUrl: logoUrl,
             },
             `SIP_Ledger_${slug}_${memberName}`,
           );
@@ -182,6 +189,7 @@ export default function SIPDownloadButton({
               bond={bond}
               userData={userData}
               logoUrl={logoUrl}
+              stampUrl={stampUrl}
             />
           </div>,
           document.body,

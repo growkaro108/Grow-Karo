@@ -10,18 +10,40 @@ export const getSipPremium = (bond) => {
     return null;
   }
 
-  const dueAmounts = (Array.isArray(bond?.sipLedger) ? bond.sipLedger : [])
+  const ledger = Array.isArray(bond?.sipLedger) ? bond.sipLedger : [];
+  const firstPaidAmount = Number(ledger[0]?.paidAmount);
+  if (Number.isFinite(firstPaidAmount) && firstPaidAmount > 0) {
+    return firstPaidAmount;
+  }
+
+  const dueAmounts = ledger
     .map((installment) => Number(installment?.dueAmount))
     .filter((amount) => Number.isFinite(amount) && amount > 0);
   if (dueAmounts.length) {
     return new Set(dueAmounts).size === 1 ? dueAmounts[0] : null;
   }
-  console.log(bond?.sipLedger[0]?.paidAmount+" from format PAGE");
 
-  const amount = Number(
-  bond?.sipLedger[0]?.paidAmount ?? bond?.sipAmount ?? bond?.minimumAmount ?? bond?.paidAmount,
-  );
+  const amount = Number(bond?.sipAmount ?? bond?.minimumAmount);
   return Number.isFinite(amount) && amount > 0 ? amount : null;
+};
+
+export const getSipProfitRate = (bond) => {
+  const rawProfitRate = bond?.profitRate;
+  if (rawProfitRate != null && rawProfitRate !== "") {
+    const profitRate = Number(rawProfitRate);
+    if (Number.isFinite(profitRate)) return profitRate;
+  }
+
+  const rawProfitPercentage =
+    bond?.contractProfitPercentage ??
+    bond?.contractTotalInterestPercentage ??
+    bond?.profitPercentage ??
+    bond?.scheme?.profitPercentage;
+  if (rawProfitPercentage != null && rawProfitPercentage !== "") {
+    const profitPercentage = Number(rawProfitPercentage);
+    if (Number.isFinite(profitPercentage)) return profitPercentage / 100;
+  }
+  return 1.3115;
 };
 
 export const dateFmt = (d) =>
