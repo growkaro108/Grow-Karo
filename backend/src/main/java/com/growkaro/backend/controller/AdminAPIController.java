@@ -36,7 +36,6 @@ import com.growkaro.backend.DRO.RemitterCredentials;
 import com.growkaro.backend.DTO.AddedRemitter;
 import com.growkaro.backend.DTO.AdminTransactionResponse;
 import com.growkaro.backend.DTO.AdminUser;
-import com.growkaro.backend.DTO.NomineeResponse;
 import com.growkaro.backend.DTO.PagedResponse;
 import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.DTO.SchemeAuditProjection;
@@ -48,8 +47,6 @@ import com.growkaro.backend.common.General;
 import com.growkaro.backend.common.NotificationBroadcaster;
 import com.growkaro.backend.entity.Notification.ReceiverType;
 import com.growkaro.backend.entity.User;
-import com.growkaro.backend.entity.UserProfile;
-import com.growkaro.backend.security.JwtService;
 import com.growkaro.backend.entity.Remitter;
 import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionType;
 import com.growkaro.backend.entity.SupportIssue.Status;
@@ -548,7 +545,7 @@ public class AdminAPIController {
         }
     }
 
-     @GetMapping("/settings")
+    @GetMapping("/settings")
     public ResponseEntity<Map<String, Object>> getSettings() {
         try {
             SystemSettings settings = systemSettingsService.getSettings();

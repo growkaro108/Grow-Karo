@@ -1,7 +1,6 @@
 package com.growkaro.backend.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,8 +10,6 @@ import lombok.ToString;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.UUID;
-
 import org.hibernate.envers.Audited;
 
 @Getter
@@ -124,7 +121,9 @@ public class Notification {
         this.updatedAt = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
     }
 
-    public Notification(String id, ReceiverType receiverType, String receiverId, String title, String message, NotificationType notificationType, ActionType actionType, boolean read, String actionUrl, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public Notification(String id, ReceiverType receiverType, String receiverId, String title, String message,
+            NotificationType notificationType, ActionType actionType, boolean read, String actionUrl,
+            LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.receiverType = receiverType;
         this.receiverId = receiverId;

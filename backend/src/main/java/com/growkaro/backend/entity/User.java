@@ -1,7 +1,6 @@
 package com.growkaro.backend.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -113,7 +112,7 @@ public class User {
     protected void onCreate() {
         if (this.id == null || this.id.isBlank()) {
             this.id = "GKUID" + getTime().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-            this.updatedAt=getTime();
+            this.updatedAt = getTime();
         }
     }
 
@@ -130,7 +129,11 @@ public class User {
         return LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
     }
 
-    public User(String id, String name, String email, String phone, String passwordHash, LocalDate dob, String maritalStatus, String aadharNo, String address, BankDetails bankDetails, Guardian guardian, List<Nominee> nominees, List<UserScheme> enrolledSchemes, Role role, boolean active, boolean emailVerified, boolean phoneVerified, boolean securityAlerts, boolean schemeAlerts, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public User(String id, String name, String email, String phone, String passwordHash, LocalDate dob,
+            String maritalStatus, String aadharNo, String address, BankDetails bankDetails, Guardian guardian,
+            List<Nominee> nominees, List<UserScheme> enrolledSchemes, Role role, boolean active, boolean emailVerified,
+            boolean phoneVerified, boolean securityAlerts, boolean schemeAlerts, LocalDateTime createdAt,
+            LocalDateTime updatedAt) {
         this.id = id;
         this.name = name;
         this.email = email;
@@ -153,6 +156,5 @@ public class User {
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
-
 
 }

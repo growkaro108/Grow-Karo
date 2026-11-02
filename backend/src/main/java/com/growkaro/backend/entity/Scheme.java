@@ -6,10 +6,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
@@ -135,8 +133,6 @@ public class Scheme {
     @Column(name = "created_by")
     private String createdBy;
 
-
-
     @PrePersist
     protected void onCreate() {
         if (this.planType == null || this.planType.isBlank()) {
@@ -145,7 +141,8 @@ public class Scheme {
         if (this.sipFrequency == null || this.sipFrequency.isBlank()) {
             this.sipFrequency = "MONTHLY";
         }
-        this.schemeId = "GKSID" + LocalDateTime.now(ZoneId.of("Asia/Kolkata")).format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        this.schemeId = "GKSID"
+                + LocalDateTime.now(ZoneId.of("Asia/Kolkata")).format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
     }
 
     // --- Helper Methods for Defensive Association Management ---
@@ -175,7 +172,11 @@ public class Scheme {
         return getClass().hashCode();
     }
 
-    public Scheme(String schemeId, String schemeName, BigDecimal minimumAmount, BigDecimal maximumAmount, String schemeCategory, String schemeDetails, List<String> terms, String payoutFrequency, Byte riskLevel, Integer tenure, String planType, LocalDate startDate, LocalDate endDate, Boolean status, LocalDateTime createdAt, LocalDateTime updatedAt, Double profitPercentage, Integer maxInvestorsAllowed, List<UserScheme> joinedUsers, String updatedBy, String createdBy) {
+    public Scheme(String schemeId, String schemeName, BigDecimal minimumAmount, BigDecimal maximumAmount,
+            String schemeCategory, String schemeDetails, List<String> terms, String payoutFrequency, Byte riskLevel,
+            Integer tenure, String planType, LocalDate startDate, LocalDate endDate, Boolean status,
+            LocalDateTime createdAt, LocalDateTime updatedAt, Double profitPercentage, Integer maxInvestorsAllowed,
+            List<UserScheme> joinedUsers, String updatedBy, String createdBy) {
         this.schemeId = schemeId;
         this.schemeName = schemeName;
         this.minimumAmount = minimumAmount;
@@ -201,6 +202,5 @@ public class Scheme {
 
     public Scheme() {
     }
-    
 
 }
