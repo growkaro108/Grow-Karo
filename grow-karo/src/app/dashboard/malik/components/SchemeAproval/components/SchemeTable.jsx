@@ -1,5 +1,6 @@
 import React from "react";
 import { STATUS_STYLES, FILTER_TABS, currency, initials } from "./constants";
+import TablePagination from "@/components/TablePagination";
 
 function ActionButton({
   status,
@@ -67,6 +68,11 @@ export default function SchemeTable({
   filteredRequests,
   query,
   statusFilter,
+  currentPage,
+  pageSize,
+  totalItems,
+  onPageChange,
+  onPageSizeChange,
   handleOpenApproval,
   setRejectTarget,
   handleOpenAddBond,
@@ -122,7 +128,11 @@ export default function SchemeTable({
               return (
                 <tr key={req?.userSchemeId}>
                   <td className="sea-index">
-                    No. {String(idx + 1).padStart(3, "0")}
+                    No.{" "}
+                    {String((currentPage - 1) * pageSize + idx + 1).padStart(
+                      3,
+                      "0",
+                    )}
                   </td>
                   <td>
                     <div className="sea-user-row">
@@ -158,6 +168,14 @@ export default function SchemeTable({
             })}
         </tbody>
       </table>
+      <TablePagination
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+        darkMode
+      />
     </div>
   );
 }

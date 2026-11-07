@@ -48,9 +48,11 @@ export default function WithdrawalTable({
             <tr className="border-b border-slate-800 text-xs uppercase tracking-wide text-slate-500 font-body">
               <th className="px-5 py-3 font-medium font-body">Request</th>
               <th className="px-5 py-3 font-medium font-body">User</th>
+              <th className="px-5 py-3 font-medium font-body">Scheme / Redemption</th>
               <th className="px-5 py-3 font-medium font-body">Amount</th>
               <th className="px-5 py-3 font-medium font-body">Method</th>
-              <th className="px-5 py-3 font-medium font-body">Status</th>
+              <th className="px-5 py-3 font-medium font-body">Request status</th>
+              <th className="px-5 py-3 font-medium font-body">Redemption ledger</th>
               <th className="px-5 py-3 font-medium text-right font-body">Action</th>
             </tr>
           </thead>
@@ -58,7 +60,7 @@ export default function WithdrawalTable({
             {loading ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={8}
                   className="px-5 py-10 text-center text-sm text-slate-500 font-body"
                 >
                   <Loader2 className="inline h-4 w-4 animate-spin mr-2" />
@@ -86,6 +88,16 @@ export default function WithdrawalTable({
                       {w.userEmail}
                     </p>
                   </td>
+                  <td className="px-5 py-4">
+                    <p className="font-medium text-slate-200 font-body">
+                      {w.schemeName || "Scheme"}
+                    </p>
+                    <p className="text-xs text-slate-500 font-body">
+                      {(w.redemptionType || w.requestType || "Withdrawal")
+                        .replaceAll("_", " ")
+                        .toLowerCase()}
+                    </p>
+                  </td>
                   <td className="px-5 py-4 font-mono font-semibold text-slate-100">
                     {currency(w.amount)}
                   </td>
@@ -94,6 +106,13 @@ export default function WithdrawalTable({
                   </td>
                   <td className="px-5 py-4">
                     <StatusBadge status={w.status} />
+                  </td>
+                  <td className="px-5 py-4">
+                    {w.redemptionStatus ? (
+                      <StatusBadge status={w.redemptionStatus} />
+                    ) : (
+                      <span className="text-xs text-slate-600">No ledger entry</span>
+                    )}
                   </td>
                   <td className="px-5 py-4 text-right">
                     {w.status === "pending" ? (
@@ -105,7 +124,7 @@ export default function WithdrawalTable({
                           }
                           className="rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 ring-1 ring-emerald-500/30 hover:bg-emerald-500/20 transition-colors disabled:opacity-40"
                         >
-                          Processed
+                          Start processing
                         </button>
                         <button
                           disabled={actionLoadingId === w.id}
@@ -128,7 +147,7 @@ export default function WithdrawalTable({
             ) : (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={8}
                   className="px-5 py-10 text-center text-sm text-slate-500 font-body"
                 >
                   No withdrawal requests in this view.

@@ -22,6 +22,55 @@ import jakarta.persistence.LockModeType;
 
 public interface UserSchemeRepository extends JpaRepository<UserScheme, String> {
 
+        @Query(value = """
+                        SELECT us
+                        FROM UserScheme us
+                        WHERE (:status = 'all'
+                                OR (:status = 'pending' AND us.isApproved = false)
+                                OR (:status = 'approved' AND us.isApproved = true
+                                        AND us.bondImageURL IS NOT NULL AND us.bondImageURL <> '')
+                                OR (:status = 'notApproved'
+                                        AND (us.bondImageURL IS NULL OR us.bondImageURL = '')))
+                                AND (:query = ''
+                                        OR LOWER(us.user.name) LIKE LOWER(CONCAT('%', :query, '%'))
+                                        OR LOWER(us.scheme.schemeName) LIKE LOWER(CONCAT('%', :query, '%')))
+                        ORDER BY CASE WHEN us.bondImageURL IS NULL OR us.bondImageURL = '' THEN 0 ELSE 1 END,
+                                us.requestDate DESC
+                        """,
+                        countQuery = """
+                                        SELECT COUNT(us)
+                                        FROM UserScheme us
+                                        WHERE (:status = 'all'
+                                                OR (:status = 'pending' AND us.isApproved = false)
+                                                OR (:status = 'approved' AND us.isApproved = true
+                                                        AND us.bondImageURL IS NOT NULL AND us.bondImageURL <> '')
+                                                OR (:status = 'notApproved'
+                                                        AND (us.bondImageURL IS NULL OR us.bondImageURL = '')))
+                                                AND (:query = ''
+                                                        OR LOWER(us.user.name) LIKE LOWER(CONCAT('%', :query, '%'))
+                                                        OR LOWER(us.scheme.schemeName) LIKE LOWER(CONCAT('%', :query, '%')))
+                                        """)
+        Page<UserScheme> findEnrollmentRequests(
+                        @Param("status") String status,
+                        @Param("query") String query,
+                        Pageable pageable);
+
+        @Query("SELECT COUNT(us) FROM UserScheme us WHERE us.isApproved = false")
+        long countPendingEnrollmentRequests();
+
+        @Query("""
+                        SELECT COUNT(us) FROM UserScheme us
+                        WHERE us.isApproved = true
+                                AND us.bondImageURL IS NOT NULL AND us.bondImageURL <> ''
+                        """)
+        long countApprovedEnrollmentRequests();
+
+        @Query("""
+                        SELECT COUNT(us) FROM UserScheme us
+                        WHERE us.bondImageURL IS NULL OR us.bondImageURL = ''
+                        """)
+        long countEnrollmentRequestsWithoutBond();
+
         @Query("SELECT us FROM UserScheme us JOIN FETCH us.scheme AND JOIN FETCH us.user WHERE us.userSchemeId = :userSchemeId")
         Optional<UserScheme> findByUserSchemeId(@Param("userSchemeId") String userSchemeId);
 

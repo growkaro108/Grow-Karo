@@ -34,9 +34,11 @@ export async function deactivateScheme(payload) {
   });
 }
 
-export async function getAllUsersRequests() {
+export async function getAllUsersRequests(params, signal) {
   return await apiRequest(`${END_POINT}user-scheme/all-users`, {
     method: "GET",
+    params,
+    signal,
   });
 }
 
@@ -218,10 +220,11 @@ export async function getAllSchemAuditHistoryApi() {
 export async function getSelectedHistoryApi(id) {
   return await apiRequest(`${END_POINT}schemes/history/${id}`);
 }
-export async function getAllMaturityUserSchemeApi(payload) {
+export async function getAllMaturityUserSchemeApi(payload, options = {}) {
   return await apiRequest(`${END_POINT}maturity/user`, {
     method: "POST",
-    body: payload
+    body: payload,
+    ...options,
   });
 }
 

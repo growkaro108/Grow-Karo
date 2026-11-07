@@ -480,7 +480,7 @@ const BondCertificate = forwardRef(function BondCertificate(
         </>
       )}
 
-      {rowText(rAadhaar, hRow, "Aadhaar No.", user.aadhaarNo || user.aadharNo || bond.aadhaarNo || bond.aadharNo || "")}
+      {rowText(rAadhaar, hRow, "Aadhaar No.", user.aadhaarNo || user.aadharNo || bond.aadhaarNo || bond.aadharNo=="111111111111" && "N/A" || "")}
       {rowText(rNomineeName, hRow, "Nominee Name", bond.nominee?.name || bond.nomineeName || user.nomineeName || "")}
       {rowText(rRelation, hRow, "Relation", bond.nominee?.relation || bond.nomineeRelation || user.nomineeRelation || "")}
       {rowText(rNomineeMobile, hRow, "Nominee Mob. No.", bond.nominee?.mobileNo || bond.nominee?.mobile || bond.nomineeMobile || user.nomineeMobile || "")}
@@ -488,7 +488,7 @@ const BondCertificate = forwardRef(function BondCertificate(
         rNomineeAadhaar,
         hRow,
         "Nominee Aadhaar No.",
-        bond.nominee?.aadharNo || bond.nominee?.aadhaarNo || bond.nomineeAadhaar || user.nomineeAadhaar || "",
+        bond.nominee?.aadharNo || bond.nominee?.aadhaarNo || bond.nomineeAadhaar || user.nomineeAadhaar || bond.nomineeAadhaar=="111111111111" && "N/A" || "",
       )}
 
       {/* ---------- Customer A/C Details ---------- */}

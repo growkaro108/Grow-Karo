@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { Search, SlidersHorizontal, ArrowUpDown, UserCheck, UserCheckIcon, FileSpreadsheet } from "lucide-react";
+import {
+  Search,
+  SlidersHorizontal,
+  ArrowUpDown,
+  UserCheck,
+  UserCheckIcon,
+  FileSpreadsheet,
+  RefreshCcwDot,
+} from "lucide-react";
 import SelectFilter from "./SelectFilter";
 import { SCHEMES } from "./mockData";
 
@@ -26,6 +34,7 @@ export default function Toolbar({
   onToggleSort,
   onAddUserClick,
   onAddBulkUserClick,
+  loading,
 }) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const activeFilterCount =
@@ -35,18 +44,33 @@ export default function Toolbar({
     onStatusChange("all");
     onSchemeChange("all");
   };
+  // Function to sanitize the query input allowed characters: a-z, A-Z, 0-9, @, ., and spaces. Limit to 50 characters.
+ const sanitizeQuery = (input) => {
+    if (typeof input !== "string") return "";
 
+    return input.slice(0, 50) // enforce max length
+      // Keep only a-z, A-Z, 0-9, @, ., and spaces
+      .replace(/[^a-zA-Z0-9@. ]/g, "") 
+      // Collapse multiple spaces into a single space
+      .replace(/\s+/g, " ")
+      // Remove spaces if they are at the very beginning or end
+      .trim()
+  };
   return (
     <div className="mb-4 rounded-2xl border border-slate-800 bg-[#111827] p-4 shadow-lg shadow-black/20">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         {/* Search */}
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          {loading ? (
+            <RefreshCcwDot className="animate-spin pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#fcd34d]" />
+          ) : (
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          )}
           <input
             value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
+            onChange={(e) => onQueryChange(sanitizeQuery(e.target.value))}
             placeholder="Search by name, email, or user ID..."
-            className="w-full rounded-lg border border-slate-800 bg-[#0F172A] py-2.5 pl-9 pr-3 text-sm text-slate-200 placeholder:text-slate-500 focus:border-teal-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/30"
+            className={`w-full rounded-lg border border-slate-800 bg-[#0F172A] py-2.5 pl-9 pr-3 text-sm text-slate-200 placeholder:text-slate-500 ${loading ? "focus:border-[#fcd34d]" : "focus:border-teal-500"} focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/30`}
           />
         </div>
 

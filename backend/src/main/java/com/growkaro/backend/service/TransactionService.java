@@ -46,7 +46,6 @@ public class TransactionService {
         }
     }
 
-    @Async
     public void createPendingReedemTransaction(User u, BigDecimal amount, UserScheme us, BankDetails bankDetails,
             TransactionType type) {
         Transaction txn = new Transaction();

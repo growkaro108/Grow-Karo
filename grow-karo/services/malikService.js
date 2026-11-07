@@ -59,8 +59,8 @@ export async function activatePlan(payload) {
 export async function deactivatePlan(payload) {
   return await deactivateScheme(payload);
 }
-export async function getAllUserRequests() {
-  return await getAllUsersRequests();
+export async function getAllUserRequests(params, signal) {
+  return await getAllUsersRequests(params, signal);
 }
 export async function approveUserScheme(payload) {
   return await approveUserSchemes(payload);
@@ -274,13 +274,19 @@ export async function addBulkUsersCsv(file) {
   return response?.status === "success" ? response.data : null;
 }
 
-export async function getAllMaturityUserScheme(debouncedSearch, daysThreshold, currentPage, itemsPerPage) {
+export async function getAllMaturityUserScheme(
+  debouncedSearch,
+  daysThreshold,
+  currentPage,
+  itemsPerPage,
+  options = {},
+) {
   let payload = {};
   payload.query = debouncedSearch;
   payload.maturityDays = daysThreshold;
   payload.page = currentPage;
   payload.size = itemsPerPage;
-  const res = await getAllMaturityUserSchemeApi(payload);
+  const res = await getAllMaturityUserSchemeApi(payload, options);
   if (res.status !== "success") {
     allRounderMessage(res);
     return false;

@@ -90,10 +90,12 @@ export default function BondCard({
   const [preview, setPreview] = useState(null);
   const file = bondFormState.image;
   //for SIP, if the frequency is daily, we need to show "GKDDP00" as the bond number prefix, else "GKFD"
-   const sipFrequency =
+  const sipFrequency =
     String(bond.sipFrequency || "MONTHLY").toUpperCase() === "DAILY"
       ? "DAILY"
       : "MONTHLY";
+  const isDailySIP = bond.planType === "DAILY_DEPOSIT";
+  // console.log("sipFrequency", sipFrequency, "isDailySIP", isDailySIP);
   // Build and clean up the preview URL whenever the selected file changes
   useEffect(() => {
     // 1. Guard check: clear preview and return
@@ -161,13 +163,15 @@ export default function BondCard({
           )}
           <div className="min-w-0">
             <p className="truncate text-sm font-medium">{bond.schemeName}</p>
-            <p className="text-xs text-white/50">
-              {entryCount} ledger {entryCount === 1 ? "entry" : "entries"}
-            </p>
+            {!isDailySIP && (
+              <p className="text-xs text-white/50">
+                {entryCount} ledger {entryCount === 1 ? "entry" : "entries"}
+              </p>
+            )}
           </div>
         </div>
         <p className="shrink-0 font-[Space_Grotesk] text-sm font-semibold tabular-nums text-[#D8B77B] align-center justify-center text-right">
-          {currency(bond.paidAmount)}
+         {currency(bond.paidAmount)}
           <br />
           <span className="text-[10px] text-white/50">
             {isApproved ? "Enroll on: " : "Req on. "}
@@ -216,7 +220,8 @@ export default function BondCard({
       {/* hide if scheme is not approved */}
       {isApproved && (
         <div className="flex flex-wrap gap-2 border-t border-slate-800/70 px-4 py-2.5">
-          {sipFrequency !== "DAILY" && (
+          {/* hide if daily deposit */}
+          {!isDailySIP && (
             <PanelToggle
               open={historyOpen}
               onClick={() => setHistoryOpen((v) => !v)}
@@ -447,11 +452,9 @@ export default function BondCard({
             aria-label="Bond number"
             placeholder={bond.bondNumber || "Bond number"}
             value={
-              (bondFormState.bondNumber ??
+              bondFormState.bondNumber ??
               bond.bondNumber ??
-              sipFrequency === "DAILY")
-                ? "GKDDP00"
-                : "GKFD"
+              (isDailySIP ? "GKDDP00" : "GKFD")
             }
             onChange={(e) => onBondFormChange("bondNumber", e.target.value)}
             className={inputClass}

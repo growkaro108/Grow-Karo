@@ -28,6 +28,7 @@ function Field({ label, children, emphasis = false }) {
 
 export default function BondStub({ bond, userName, scheme, onView, viewUser }) {
   const bondLabel = bond.userSchemeId || bond.id || "";
+  const isDailySIP = bond.planType === "DAILY_DEPOSIT";
   // console.log(bond.status)
   return (
     <article className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 transition-colors hover:border-slate-700">
@@ -107,7 +108,7 @@ export default function BondStub({ bond, userName, scheme, onView, viewUser }) {
 
       {/* details */}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-4 px-4 py-4">
-        <Field label="Principal">{currency(bond.paidAmount)}</Field>
+        <Field label= {isDailySIP ? "Total Deposit ": "Principal"}>{currency(bond.paidAmount)}</Field>
         {bond.planType === "PENSION" ? (
           <>
             <Field label="Total scheduled interest">

@@ -21,6 +21,8 @@ export function PlanStatusBadge({ active }) {
 export function StatusBadge({ status }) {
   const map = {
     pending: "bg-amber-500/10 text-amber-400 ring-amber-500/30",
+    requested: "bg-amber-500/10 text-amber-400 ring-amber-500/30",
+    completed: "bg-emerald-500/10 text-emerald-400 ring-emerald-500/30",
     scheme_enrolled: "bg-emerald-500/10 text-emerald-400 ring-emerald-500/30",
     approved: "bg-emerald-500/10 text-emerald-400 ring-emerald-500/30",
     Reinvested: "bg-emerald-500/20 text-emerald-500 ring-emerald-500/40",

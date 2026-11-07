@@ -22,12 +22,12 @@ export const STATUS_STYLES = {
 };
 
 export const FILTER_TABS = [
-  { key: "pending", label: "Pending", ...STATUS_STYLES.pending },
-  { key: "notApproved", label: "Not Approved", ...STATUS_STYLES.notApproved },
+  { key: "pending", label: "Awaiting Approval", ...STATUS_STYLES.pending },
+  { key: "notApproved", label: "Bond Pending", ...STATUS_STYLES.notApproved },
   { key: "approved", label: "Approved", ...STATUS_STYLES.active },
   // { key: "rejected", label: "Rejected", ...STATUS_STYLES.rejected },
   // { key: "withdrawn", label: "Withdraw request", ...STATUS_STYLES.withdrawn },
-  { key: "all", label: "All", color: "var(--gold)", bg: "var(--gold-soft)" },
+  // { key: "all", label: "All Enrollments", color: "var(--gold)", bg: "var(--gold-soft)" },
 ];
 
 export const currency = (n) =>

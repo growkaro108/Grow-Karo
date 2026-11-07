@@ -3,7 +3,6 @@ import React, {
   useEffect,
   useCallback,
   useRef,
-  useMemo,
   use,
 } from "react";
 import { allRounderMessage, infoMessage } from "@/components/Message";
@@ -42,7 +41,17 @@ export default function SchemeApproval() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
+  const [statusCounts, setStatusCounts] = useState({
+    all: 0,
+    pending: 0,
+    approved: 0,
+    notApproved: 0,
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalRequests, setTotalRequests] = useState(0);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [rejectTarget, setRejectTarget] = useState(null);
   const [bondTarget, setBondTarget] = useState(null);
@@ -61,36 +70,78 @@ export default function SchemeApproval() {
     toastTimer.current = setTimeout(() => setToast(null), 3200);
   }, []);
 
-  const loadRequests = useCallback(async () => {
+  const loadRequests = useCallback(async (signal) => {
+    if (signal?.aborted) return;
     try {
       setLoading(true);
-      const response = await getAllUserRequests();
-      // console.log(response.data);
+      const response = await getAllUserRequests(
+        {
+          page: currentPage,
+          size: pageSize,
+          status: statusFilter,
+          query: debouncedQuery,
+        },
+        signal,
+      );
+      if (signal?.aborted) return;
+
       if (response.status !== "success") {
         allRounderMessage(response);
-        // console.log(response);
       } else {
-        setRequests(response.data);
+        const pageData = response.data;
+        if (!Array.isArray(pageData?.content) || !pageData.counts) {
+          throw new Error("Enrollment response did not contain page data and counts.");
+        }
+
+        if (
+          pageData.content.length === 0 &&
+          pageData.totalElements > 0 &&
+          currentPage > pageData.totalPages
+        ) {
+          setCurrentPage(Math.max(1, pageData.totalPages));
+          return;
+        }
+
+        setRequests(pageData.content);
+        setTotalRequests(pageData.totalElements);
+        setStatusCounts(pageData.counts);
       }
     } catch (error) {
+      if (
+        signal?.aborted ||
+        error?.name === "AbortError" ||
+        error?.name === "CanceledError"
+      ) {
+        return;
+      }
       console.error("Error loading enrollment requests:", error);
       showToast("error", "Couldn't load requests. Try again.");
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  }, [showToast]);
+  }, [
+    currentPage,
+    pageSize,
+    statusFilter,
+    debouncedQuery,
+    showToast,
+  ]);
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      if (!mounted) return;
-      await loadRequests();
-    })();
-    return () => {
-      mounted = false;
-      clearTimeout(toastTimer.current);
-    };
+    const controller = new AbortController();
+    Promise.resolve().then(() => loadRequests(controller.signal));
+    return () => controller.abort();
   }, [loadRequests]);
+
+  useEffect(() => () => clearTimeout(toastTimer.current), []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+      setCurrentPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [query]);
   // Autofocus the amount field on open.
   // (Escape-to-close is handled inside ApprovalModal itself, which also
   // guards against closing mid-submission — no need to duplicate it here.)
@@ -296,75 +347,15 @@ export default function SchemeApproval() {
     }
   }, [rejectTarget, showToast, loadRequests]);
 
-  const filteredRequests = useMemo(() => {
-    if (!requests?.length) return [];
-
-    const q = query.trim().toLowerCase();
-
-    // "has a bond" = a non-empty URL. Covers null, undefined and "" the same way
-    // everywhere (the old code used === null in the sort but == null in the filter).
-    const hasBond = (r) => Boolean(r.bondImageURL);
-
-    const matches = requests.filter((r) => {
-      // statusFilter is a FILTER_TABS key, not a boolean, so map each key to
-      // a condition. (r.isApproved === "approved" can never be true.)
-      let matchesStatus;
-      switch (statusFilter) {
-        case "approved":
-          matchesStatus = Boolean(r.isApproved) && hasBond(r);
-          break;
-        case "pending":
-          matchesStatus = !r.isApproved;
-          break;
-        case "notApproved":
-          matchesStatus = !hasBond(r);
-          break;
-        case "all":
-        default:
-          matchesStatus = true;
-      }
-
-      const matchesQuery =
-        !q ||
-        (r.name ?? "").toLowerCase().includes(q) ||
-        (r.schemeName ?? "").toLowerCase().includes(q);
-
-      return matchesStatus && matchesQuery;
-    });
-
-    // Requests without a bond first. Array.sort is stable, so the original order
-    // is kept inside each group.
-    return matches.sort((a, b) => Number(hasBond(a)) - Number(hasBond(b)));
-  }, [requests, query, statusFilter]);
-  const pendingCount = requests.filter((r) => r.isApproved === false).length;
-
-  const hasBond = (r) => Boolean(r.bondImageURL);
-
-  // Single source of truth for what each FILTER_TABS key means.
-  // Used by BOTH the tab counts and the list filter, so they can never disagree.
-  const matchesStatus = (r, key) => {
-    switch (key) {
-      case "approved":
-        return Boolean(r.isApproved) && hasBond(r);
-      case "pending":
-        return !r.isApproved;
-      case "notApproved":
-        return !hasBond(r);
-      case "all":
-      default:
-        return true;
-    }
+  const pendingCount = statusCounts.pending;
+  const handleStatusFilterChange = (nextStatus) => {
+    setStatusFilter(nextStatus);
+    setCurrentPage(1);
   };
-  const statusCounts = useMemo(() => {
-    const counts = { all: 0, pending: 0, approved: 0, notApproved: 0 };
-    (requests ?? []).forEach((r) => {
-      counts.all += 1;
-      if (matchesStatus(r, "pending")) counts.pending += 1;
-      if (matchesStatus(r, "approved")) counts.approved += 1;
-      if (matchesStatus(r, "notApproved")) counts.notApproved += 1;
-    });
-    return counts;
-  }, [requests]);
+  const handlePageSizeChange = (nextPageSize) => {
+    setPageSize(nextPageSize);
+    setCurrentPage(1);
+  };
 
   return (
     <div className="sea-root">
@@ -401,16 +392,21 @@ export default function SchemeApproval() {
 
       <FilterTabs
         statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
+        setStatusFilter={handleStatusFilterChange}
         statusCounts={statusCounts}
         showFilter={showFilter}
       />
 
       <SchemeTable
         loading={loading}
-        filteredRequests={filteredRequests}
+        filteredRequests={requests}
         query={query}
         statusFilter={statusFilter}
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalItems={totalRequests}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={handlePageSizeChange}
         handleOpenApproval={handleOpenApproval}
         setRejectTarget={setRejectTarget}
         handleOpenAddBond={handleOpenAddBond}

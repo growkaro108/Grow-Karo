@@ -74,7 +74,7 @@ const SchemeUpdateHistory = dynamic(() => import("./components/SchemeAuditHistor
 const SchemeApproval = dynamic(
   () => import("./components/SchemeAproval/SchemeApprovals"),
   {
-    loading: () => <TabLoader message={"Loading approvals..."} />,
+    loading: () => <TabLoader message={"Loading enrollment approvals..."} />,
     ssr: false,
   },
 );
@@ -134,7 +134,7 @@ const NAV_ITEMS = [
 ];
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState("user");
+  const [activeTab, setActiveTab] = useState("approvals");
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   // const [toast, setToast] = useState(null);
@@ -167,8 +167,8 @@ export default function AdminPanel() {
       prev.map((w) => (w.id === id ? { ...w, status: action } : w)),
     );
     showToast(
-      `Withdrawal ${id} ${action}.`,
-      action === "approved" ? "success" : "error",
+      `Withdrawal ${id} moved to ${action === "processed" ? "in progress" : "rejected"}.`,
+      "success",
     );
   };
 

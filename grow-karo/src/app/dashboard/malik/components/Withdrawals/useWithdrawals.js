@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, use } from "react";
+import { useState, useEffect, useCallback, useMemo, use, useRef } from "react";
 import {
   approveUserTranactions,
   getAllTransaction,
@@ -31,6 +31,7 @@ export function useWithdrawals(onDecision) {
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [reason, setReason] = useState("Rejected by Admin");
+  const latestLoadId = useRef(0);
 
   // Selected remitter state for approval modal
   const [selectedRemitter, setSelectedRemitter] = useState(null);
@@ -59,8 +60,9 @@ export function useWithdrawals(onDecision) {
     setMaxAmount("");
   };
 
-  const loadWithdrawals = useCallback(async () => {
-    setLoading(true);
+  const loadWithdrawals = useCallback(async ({ silent = false } = {}) => {
+    const requestId = ++latestLoadId.current;
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const offset = (currentPage - 1) * pageSize;
@@ -77,20 +79,23 @@ export function useWithdrawals(onDecision) {
       if (maxAmount) params.set("maxAmount", maxAmount);
 
       const res = await getAllTransaction(params.toString());
+      if (requestId !== latestLoadId.current) return;
       if (res.status !== "success") {
         allRounderMessage(res.message);
         setError(res.message);
-        setRows([]);
+        if (!silent) setRows([]);
       } else {
         const data = res.data;
-        setRows(data.content);
-        setTotalElements(data.totalElements);
-        setTotalPages(data.totalPages);
+        setRows(data?.content ?? []);
+        setTotalElements(data?.totalElements ?? 0);
+        setTotalPages(data?.totalPages ?? 1);
       }
     } catch (err) {
-      setError(err.message || "Could not load withdrawal requests.");
+      if (requestId === latestLoadId.current) {
+        setError(err.message || "Could not load withdrawal requests.");
+      }
     } finally {
-      setLoading(false);
+      if (!silent && requestId === latestLoadId.current) setLoading(false);
     }
   }, [
     filter,
@@ -149,11 +154,7 @@ export function useWithdrawals(onDecision) {
   const handleConfirm = async () => {
     if (!confirm) return;
     const { row, action } = confirm;
-    setActionLoadingId(row.id);
-    let res = null;
-    try {
-      // console.log(row)
-      // console.log(selectedRemitter);
+    if (action === "processed") {
       const allocationLimit = Number(selectedRemitter?.allocationLimit);
       const totalPaid = Number(selectedRemitter?.totalPaid);
       const withdrawalAmount = Number(row.amount);
@@ -163,57 +164,87 @@ export function useWithdrawals(onDecision) {
         return;
       }
 
-      // round to 2 decimals to avoid floating-point drift
       const remitterRemainingAmount = Math.round((allocationLimit - totalPaid) * 100) / 100;
 
       if (remitterRemainingAmount < withdrawalAmount) {
         infoMessage(
           `Remaining Amount : ₹${remitterRemainingAmount.toFixed(2)} | ` +
-          `Withdrawal Amount : ₹${withdrawalAmount.toFixed(2)}` + ".",
-          `Choose another remitter.`
+              `Withdrawal Amount : ₹${withdrawalAmount.toFixed(2)}.`,
+            "Choose another remitter.",
         );
         return;
       }
-
-      if (action === "processed") {
-        // Option to check if a remitter was selected or just proceed
-        // If there's extra logic for associating the selected remitter, you can include it here.
-        res = await approveUserTranactions(row.id, selectedRemitter?.id);
       } else {
-        //sanitize reason
         const sanitizedReason = reason.trim();
         if (sanitizedReason.length < 5 || sanitizedReason.length > 100) {
           infoMessage(
             "Reason must be at least 5 characters and at most 100 characters long.",
           );
-          setActionLoadingId(null);
           return;
         }
-        res = await rejectUserTranactions(row.id, sanitizedReason);
       }
-      // console.log(res);
-      if (!res) {
-        return;
-      }
-      loadWithdrawals();
-      const updated = res.data;
 
-      // Reflect the change locally instead of refetching the whole list
+      const previousRows = rows;
+      const previousTotalElements = totalElements;
+      const previousTotalPages = totalPages;
+      const previousPage = currentPage;
+      const nextStatus = action === "processed" ? "processed" : "rejected";
+      const nextRedemptionStatus =
+        action === "processed" ? "in_progress" : "rejected";
+      const isPendingView = filter === "pending";
+
+      setActionLoadingId(row.id);
       setRows((prev) =>
-        filter === "all"
-          ? prev.map((r) => (r.id === updated.id ? updated : r))
-          : prev.filter((r) => r.id !== updated?.id),
+        isPendingView
+          ? prev.filter((current) => current.id !== row.id)
+          : prev.map((current) =>
+              current.id === row.id
+                ? {
+                    ...current,
+                    status: nextStatus,
+                    redemptionStatus: nextRedemptionStatus,
+                  }
+                : current,
+            ),
       );
+      if (isPendingView) {
+        const nextTotal = Math.max(0, totalElements - 1);
+        const nextPages = Math.max(1, Math.ceil(nextTotal / pageSize));
+        setTotalElements(nextTotal);
+        setTotalPages(nextPages);
+        if (currentPage > nextPages) setCurrentPage(nextPages);
+      }
 
-      onDecision?.(row.id, action);
-    } catch (err) {
-      setError(err.message || "Could not complete this action.");
-      console.error(err);
-    } finally {
-      setActionLoadingId(null);
-      setConfirm(null);
-      setSelectedRemitter(null); // reset selected remitter
-    }
+      try {
+        const updated =
+          action === "processed"
+            ? await approveUserTranactions(row.id, selectedRemitter?.id)
+            : await rejectUserTranactions(row.id, reason.trim());
+        if (!updated?.id) {
+          throw new Error("Could not complete the withdrawal action.");
+        }
+
+        setRows((prev) =>
+          isPendingView
+            ? prev
+            : prev.map((current) =>
+                current.id === row.id ? { ...current, ...updated } : current,
+              ),
+        );
+        onDecision?.(row.id, action);
+        setConfirm(null);
+        setSelectedRemitter(null);
+        if (isPendingView) void loadWithdrawals({ silent: true });
+      } catch (err) {
+        setRows(previousRows);
+        setTotalElements(previousTotalElements);
+        setTotalPages(previousTotalPages);
+        setCurrentPage(previousPage);
+        setError(err.message || "Could not complete this action.");
+        console.error(err);
+      } finally {
+        setActionLoadingId(null);
+      }
   };
 
   return {

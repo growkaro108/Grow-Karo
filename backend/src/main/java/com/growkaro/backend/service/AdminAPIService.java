@@ -324,13 +324,32 @@ public class AdminAPIService {
         }
     }
 
-    public Map<String, Object> getAllUsersRequests() {
+    public Map<String, Object> getAllUsersRequests(int pageNumber, int pageSize, String status, String query) {
         try {
-            List<UserRequest> userSchemes = userSchemeRepository.findAll().stream().map(general::toUserRequest)
-                    .toList();
-            return general.response("success", "All user requests", userSchemes);
+            if (!Set.of("all", "pending", "approved", "notApproved").contains(status)) {
+                return general.response("error", "Invalid enrollment status", null);
+            }
+
+            Page<UserScheme> requestPage = userSchemeRepository.findEnrollmentRequests(
+                    status,
+                    query == null ? "" : query.trim(),
+                    PageRequest.of(pageNumber - 1, pageSize));
+            List<UserRequest> userSchemes = requestPage.getContent().stream().map(general::toUserRequest).toList();
+
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("content", userSchemes);
+            data.put("totalElements", requestPage.getTotalElements());
+            data.put("totalPages", requestPage.getTotalPages());
+            data.put("page", pageNumber);
+            data.put("size", pageSize);
+            data.put("counts", Map.of(
+                    "all", userSchemeRepository.count(),
+                    "pending", userSchemeRepository.countPendingEnrollmentRequests(),
+                    "approved", userSchemeRepository.countApprovedEnrollmentRequests(),
+                    "notApproved", userSchemeRepository.countEnrollmentRequestsWithoutBond()));
+            return general.response("success", "Enrollment requests fetched", data);
         } catch (Exception e) {
-            log.error("Error in getting user requests", e.getMessage());
+            log.error("Error in getting user requests", e);
             return general.response("error", "Error in getting user requests", null);
         }
     }
@@ -1391,19 +1410,25 @@ public class AdminAPIService {
                 .toList(); // Immutable list, minimal memory footprint
     }
 
+    @Transactional(readOnly = true)
     public PagedResponse<AdminTransactionResponse> getTransactions(
             String statusFilter, int offset, int limit) {
         int pageNumber = offset / limit; // Spring Data pages are page-index based
         Pageable pageable = PageRequest.of(pageNumber, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
         List<TransactionStatus> rejectedStatuses = List.of(TransactionStatus.FAILED, TransactionStatus.REFUNDED,
                 TransactionStatus.REJECTED);
+        Transaction.TransactionType depositType = Transaction.TransactionType.DEPOSIT;
 
         var page = switch (statusFilter) {
-            case "pending" -> transactionRepository.findByStatus(TransactionStatus.PENDING, pageable);
-            case "processed" -> transactionRepository.findByStatus(TransactionStatus.PROCESSED, pageable);
-            case "approved" -> transactionRepository.findByStatus(TransactionStatus.SUCCESS, pageable);
-            case "rejected" -> transactionRepository.findByStatusIn(rejectedStatuses, pageable);
-            default -> transactionRepository.findAll(pageable);
+            case "pending" -> transactionRepository.findWithdrawalsByStatus(
+                    TransactionStatus.PENDING, depositType, pageable);
+            case "processed" -> transactionRepository.findWithdrawalsByStatus(
+                    TransactionStatus.PROCESSED, depositType, pageable);
+            case "approved" -> transactionRepository.findWithdrawalsByStatus(
+                    TransactionStatus.SUCCESS, depositType, pageable);
+            case "rejected" -> transactionRepository.findWithdrawalsByStatusIn(
+                    rejectedStatuses, depositType, pageable);
+            default -> transactionRepository.findWithdrawals(depositType, pageable);
         };
 
         var mapped = page.map(AdminTransactionResponse::fromEntity);
@@ -1414,25 +1439,19 @@ public class AdminAPIService {
     public AdminTransactionResponse approve(String txnId, String remId) {
         Transaction txn = getPendingOrThrow(txnId);
         User user = txn.getUser();
-        // fetch reedeem ledger whose status is requested and type is full redeem and
-        // change status to in_progress
         List<UserSchemeReedemLedger> usrlList = txn.getUserScheme().getReedemLedger();
-        if (usrlList != null) {
-            for (UserSchemeReedemLedger usrl : usrlList) {
-                if (usrl.getStatus().equals(ReedeemStatus.REQUESTED)
-                        && usrl.getRedeemType().equals(RedeemType.FULL_REDEEM)) {
-                    usrl.setStatus(ReedeemStatus.IN_PROGRESS);
-                    reedemLedgerRepository.save(usrl);
-                    break;
-                }
-                if (usrl.getStatus().equals(ReedeemStatus.REQUESTED)
-                        && usrl.getRedeemType().equals(RedeemType.INTEREST_REDEEM)) {
-                    usrl.setStatus(ReedeemStatus.IN_PROGRESS);
-                    reedemLedgerRepository.save(usrl);
-                    break;
-                }
-            }
-        } else {
+        UserSchemeReedemLedger requestedRedemption = usrlList == null ? null : usrlList.stream()
+                .filter(ledger -> ledger.getStatus() == ReedeemStatus.REQUESTED
+                        && ledger.getRedeemAmount() != null
+                        && ledger.getRedeemAmount().compareTo(txn.getAmount()) == 0)
+                .max(Comparator.comparing(UserSchemeReedemLedger::getId,
+                        Comparator.nullsFirst(Long::compareTo)))
+                .orElse(null);
+        if (requestedRedemption != null) {
+            requestedRedemption.setStatus(ReedeemStatus.IN_PROGRESS);
+            reedemLedgerRepository.save(requestedRedemption);
+        } else if (txn.getType() != Transaction.TransactionType.AGGRESSIVE_WITHDRAWAL) {
+            log.error("No matching requested redemption ledger found for transaction {}", txnId);
             return null;
         }
 
@@ -1467,18 +1486,28 @@ public class AdminAPIService {
         Transaction txn = getPendingOrThrow(txnId);
         Transaction saved;
         try {
-            txn.setStatus(TransactionStatus.REJECTED);
-            txn.setFailureReason(reason != null ? reason : "Rejected by admin");
             UserScheme userScheme = txn.getUserScheme();
-            userSchemeRepository.save(userScheme);
-            saved = transactionRepository.save(txn);
-            // change status of reedem
-            boolean status = general.changeReedemStatus(userScheme, txn.getAmount(), ReedeemStatus.REJECTED);
-            if (!status) {
-                log.error("Error in rejecting transaction: invalid reedemLedger. txnId={}, remitterId={}",
-                        txnId, txn.getRemitter().getRemitterId());
+            List<UserSchemeReedemLedger> requestedRedemptions = userScheme.getReedemLedger();
+            UserSchemeReedemLedger redemption = requestedRedemptions == null ? null : requestedRedemptions.stream()
+                    .filter(ledger -> (ledger.getStatus() == ReedeemStatus.REQUESTED
+                            || ledger.getStatus() == ReedeemStatus.IN_PROGRESS)
+                            && ledger.getRedeemAmount() != null
+                            && ledger.getRedeemAmount().compareTo(txn.getAmount()) == 0)
+                    .max(Comparator.comparing(UserSchemeReedemLedger::getId,
+                            Comparator.nullsFirst(Long::compareTo)))
+                    .orElse(null);
+            if (redemption == null && txn.getType() != Transaction.TransactionType.AGGRESSIVE_WITHDRAWAL) {
+                log.error("No matching redemption ledger found for rejected transaction {}", txnId);
                 return null;
             }
+            if (redemption != null) {
+                redemption.setStatus(ReedeemStatus.REJECTED);
+                reedemLedgerRepository.save(redemption);
+            }
+            txn.setStatus(TransactionStatus.REJECTED);
+            txn.setFailureReason(reason != null ? reason : "Rejected by admin");
+            userSchemeRepository.save(userScheme);
+            saved = transactionRepository.save(txn);
         } catch (Exception e) {
             log.error("Error in rejecting transaction: {}", e.getMessage());
             return null;
@@ -1960,11 +1989,7 @@ public class AdminAPIService {
             query = "";
         }
         LocalDate maturityCutoff = LocalDate.now().plusDays(days);
-        // var rawUsers = userSchemeRepository.findNearMaturityOrOverdueUsers(
-        // query, maturityCutoff, List.of(UserSchemeStatus.MATURED,
-        // UserSchemeStatus.SETTLEMENT_PENDING),
-        // pageable);
-        List<UserScheme> rawUsers = userSchemeRepository.debugDateStatus(maturityCutoff,
+       List<UserScheme> rawUsers = userSchemeRepository.debugDateStatus(maturityCutoff,
                 List.of(UserSchemeStatus.WITHDRAWN, UserSchemeStatus.SETTLED));
         List<NearMaturityUserSchemeResponse> mapped = rawUsers.stream()
                 .map(NearMaturityUserSchemeResponse::fromUserScheme).toList();

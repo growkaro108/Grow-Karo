@@ -1,0 +1,1 @@
+UPDATE public.user_scheme_reedem_ledger SET status = NULL;

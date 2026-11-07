@@ -1,6 +1,12 @@
 import { Search, SlidersHorizontal, X } from "lucide-react";
 
-const NAV_ITEMS = ["pending", "processed", "approved", "rejected", "all"];
+const NAV_ITEMS = [
+  { value: "pending", label: "Pending" },
+  { value: "processed", label: "In progress" },
+  { value: "approved", label: "Approved" },
+  { value: "rejected", label: "Rejected" },
+  { value: "all", label: "All" },
+];
 
 export default function WithdrawalFilters({
   filter,
@@ -24,16 +30,16 @@ export default function WithdrawalFilters({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          {NAV_ITEMS.map((f) => (
+          {NAV_ITEMS.map(({ value, label }) => (
             <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-medium capitalize font-body transition-colors ${filter === f
+              key={value}
+              onClick={() => setFilter(value)}
+              className={`rounded-full px-3.5 py-1.5 text-xs font-medium capitalize font-body transition-colors ${filter === value
                 ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30"
                 : "bg-slate-900 text-slate-400 ring-1 ring-slate-800 hover:text-slate-200"
                 }`}
             >
-              {f}
+              {label}
             </button>
           ))}
         </div>

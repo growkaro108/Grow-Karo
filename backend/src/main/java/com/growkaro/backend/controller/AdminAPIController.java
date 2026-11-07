@@ -158,8 +158,14 @@ public class AdminAPIController {
     }
 
     @GetMapping("/user-scheme/all-users")
-    public ResponseEntity<Map<String, Object>> getAllUsersRequests() {
-        return ResponseEntity.ok(adminAPIService.getAllUsersRequests());
+    public ResponseEntity<Map<String, Object>> getAllUsersRequests(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "all") String status,
+            @RequestParam(defaultValue = "") String query) {
+        int safePage = Math.min(Math.max(page, 1), 500);
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        return ResponseEntity.ok(adminAPIService.getAllUsersRequests(safePage, safeSize, status, query));
     }
 
     @PostMapping("/user-scheme/add")
@@ -611,7 +617,7 @@ public class AdminAPIController {
 
         // System.out.println(query + "\n" + maturityDays + "\n" + page + "\n" + size);
 
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "requestDate"));
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.ASC, "maturityDate"));
         var result = adminAPIService.getNearMaturityUser(query, maturityDays, pageable);
         if (result == null) {
             return ResponseEntity.internalServerError().build();

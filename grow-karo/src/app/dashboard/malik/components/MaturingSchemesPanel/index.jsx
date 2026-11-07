@@ -15,7 +15,6 @@ import { resolveMediaUrl } from "@/api/apiClient";
 import { storage } from "../../../../../../services/storageService";
 import SettlementForm from "./SettleByAdminForm";
 
-
 export default function MaturingSchemesAdminDark() {
   // Config States
   const [daysThreshold, setDaysThreshold] = useState(15);
@@ -37,18 +36,18 @@ export default function MaturingSchemesAdminDark() {
       const matchesSearch =
         scheme.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         scheme.schemeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        scheme.bondNumber.toLowerCase().includes(searchTerm.toLowerCase());
+        scheme.bondNumber?.toLowerCase().includes(searchTerm.toLowerCase());
 
       return matchesDays && matchesSearch;
     });
   }, [schemes, daysThreshold, searchTerm]);
 
-  // // Pagination Logic
-  // const totalPages = Math.ceil(filteredSchemes.length / itemsPerPage);
-  // const paginatedSchemes = useMemo(() => {
-  //   const start = (currentPage - 1) * itemsPerPage;
-  //   return filteredSchemes.slice(start, start + itemsPerPage);
-  // }, [filteredSchemes, currentPage, itemsPerPage]);
+  // Pagination Logic
+  const totalPages = Math.ceil(filteredSchemes.length / itemsPerPage);
+  const paginatedSchemes = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredSchemes.slice(start, start + itemsPerPage);
+  }, [filteredSchemes, currentPage, itemsPerPage]);
 
   // XLSX Export Handler
   const handleExportXLSX = () => {
@@ -138,6 +137,8 @@ export default function MaturingSchemesAdminDark() {
             return;
           }
         }
+        // sort in ascending order of days remaining
+        content.sort((a, b) => a.daysRemaining - b.daysRemaining);
 
         setSchemes(content);
         setTotalElements(total);
@@ -165,7 +166,7 @@ export default function MaturingSchemesAdminDark() {
 
     fetchData();
     return () => controller.abort();
-  }, [currentPage, daysThreshold, itemsPerPage, debouncedSearch]);
+  }, [daysThreshold]);
 
   const formAction = (scheme) => {
     setSelectedScheme(scheme);
@@ -212,7 +213,7 @@ export default function MaturingSchemesAdminDark() {
     setOpenForm(false);
     setSelectedScheme(null);
   };
-// console.log(schemes)
+  // console.log(schemes)
   return (
     <div className="w-full max-w-7xl -m-7 mx-auto p-4 sm:p-6 lg:p-8 bg-slate-950 min-h-screen text-slate-100">
       {/* Control Bar: Search & Export Controls */}
@@ -297,7 +298,7 @@ export default function MaturingSchemesAdminDark() {
           </thead>
           <tbody className="divide-y divide-slate-800/60 text-sm">
             {!loading && filteredSchemes.length > 0 ? (
-              filteredSchemes.map((scheme) => (
+              paginatedSchemes.map((scheme) => (
                 <tr
                   key={scheme.id}
                   className="hover:bg-slate-800/30 transition-colors"
@@ -364,7 +365,7 @@ export default function MaturingSchemesAdminDark() {
                       <span className="text-xs text-amber-300">
                         Pending with remitter
                       </span>
-                    ) : (
+                    ) : scheme.daysRemaining < 0 ? (
                       <button
                         className="p-2 text-cyan-400 hover:text-emerald-400 rounded-lg hover:bg-slate-800 transition-all duration-150 flex items-center gap-1 hover:scale-95"
                         title="Settle scheme"
@@ -372,6 +373,8 @@ export default function MaturingSchemesAdminDark() {
                       >
                         <HandCoins className="w-4 h-4" /> Settle
                       </button>
+                    ) : (
+                      "-"
                     )}
                   </td>
                 </tr>
@@ -510,7 +513,6 @@ export default function MaturingSchemesAdminDark() {
           onSuccess={handleSettlementSuccess}
         />
       )}
-
     </div>
   );
 }

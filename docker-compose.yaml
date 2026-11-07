@@ -10,7 +10,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - C:\Users\Asus\Documents\Anand\2026-11-05_11-35-05\growwkaro_postgres-data_2026-11-05_11-35-05:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U growkaro -d growkaro_db"]
       interval: 10s

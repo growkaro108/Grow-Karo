@@ -124,7 +124,7 @@ export default function UserManagement() {
         setTotalUsers(res.totalElements);
       } catch (e) {
         if (e.name === "AbortError" || e.name === "CanceledError") return;
-        console.log(e);
+        console.warn(e);
         errorMessage("something went wrong, try later..");
       } finally {
         setLoading(false);
@@ -171,6 +171,7 @@ export default function UserManagement() {
 
     if (!validationResult.isValid) {
       errorMessage(validationResult.errors.join(" "));
+      setCreatingUser(false);
       return;
     }
     // console.log("Sanitized Payload:", sanitizedPayload);
@@ -212,6 +213,7 @@ export default function UserManagement() {
           onToggleSort={() => setSortDesc((v) => !v)}
           onAddUserClick={() => setShowAddUserModal(true)}
           onAddBulkUserClick={() => setShowBulkUserModal(true)}
+          loading={loading}
         />
 
         {/* <p className="mb-3 text-sm text-slate-400">

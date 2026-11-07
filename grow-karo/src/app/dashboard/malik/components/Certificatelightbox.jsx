@@ -1,40 +1,111 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  lazy,
+  memo,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { X, FileText, Image as ImageIcon } from "lucide-react";
 import Image from "next/image";
-import BondDownloadButton from "./BondDownloadButton.jsx";
 import { resolveMediaUrl } from "../../../../api/apiClient";
-import SIPBondCertificate from "./SIPBondCertificate.jsx";
-import PensionBondCertificate from "@/certificate/PensionCertificate.jsx";
-import BondCertificate from "./Bondcertificate.jsx";
-import DailyDepositCertificate from "@/certificate/DailyDepositCertificate.jsx";
+import dynamic from "next/dynamic";
 
-export default function CertificateLightbox({
-  bond,
-  userName,
-  userData,
-  scheme,
-  onClose,
-}) {
+// No ref needed (certRef is passed as a normal prop), and it likely
+// uses browser-only libs, so skip SSR
+const BondDownloadButton = dynamic(() => import("./BondDownloadButton.jsx"), {
+  ssr: false,
+  loading: () => null,
+});
+
+const CERTIFICATES = {
+  PENSION: {
+    Component: lazy(() => import("@/certificate/PensionCertificate.jsx")),
+    props: { profilePhoto: "/profile.jpg", stampUrl: "/stamp.png" },
+  },
+  SIP: {
+    Component: lazy(() => import("./SIPBondCertificate.jsx")),
+    props: { profilePhoto: "/profile.jpg", stampUrl: "/stamp.png" },
+  },
+  DAILY_DEPOSIT: {
+    Component: lazy(() => import("@/certificate/DailyDepositCertificate.jsx")),
+    props: { stampUrl: "/stamp-removebg.png" },
+    needsUserInfo: true,
+  },
+  DEFAULT: {
+    Component: lazy(() => import("./Bondcertificate.jsx")),
+    props: { stampUrl: "/stamp.png" },
+    needsUserInfo: true,
+  },
+};
+
+const getCertType = (bond) => {
+  const type = bond?.planType || bond?.schemeType;
+  if (type === "SIP" || bond?.schemeType === "SIP") return "SIP";
+  if (type === "PENSION" || bond?.schemeType === "PENSION") return "PENSION";
+  if (bond?.planType === "DAILY_DEPOSIT") return "DAILY_DEPOSIT";
+  return "DEFAULT";
+};
+
+const CertificateSkeleton = () => (
+  <div className="aspect-4/5 w-full animate-pulse bg-slate-800/60" />
+);
+
+function CertificateLightbox({ bond, userName, userData, scheme, onClose }) {
   const certRef = useRef(null);
-  const [showUploadedImage, setShowUploadedImage] = useState(
-    Boolean(bond?.bondUrl),
-  );
-
-  useEffect(() => {
-    const onKey = (e) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   const hasUploadedImage = Boolean(bond?.bondUrl);
-  const isSip = bond?.planType === "SIP" || bond?.schemeType === "SIP";
-  const isPension =
-    bond?.planType === "PENSION" || bond?.schemeType === "PENSION";
-  const isDailyDeposit = bond?.planType === "DAILY_DEPOSIT";
+  const [showUploadedImage, setShowUploadedImage] = useState(hasUploadedImage);
+
+  // Stable listener, bound once
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && onCloseRef.current();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Prevent background scroll while open
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  const certType = useMemo(() => getCertType(bond), [bond]);
+  const {
+    Component: Certificate,
+    props: certProps,
+    needsUserInfo,
+  } = CERTIFICATES[certType];
+
+  const imageSrc = useMemo(
+    () => (hasUploadedImage ? resolveMediaUrl(bond.bondUrl) : null),
+    [hasUploadedImage, bond?.bondUrl],
+  );
+
+  const showImage = showUploadedImage && hasUploadedImage;
+  const showDownload = certType !== "SIP";
+
+  const showImageView = useCallback(() => setShowUploadedImage(true), []);
+  const showCertView = useCallback(() => setShowUploadedImage(false), []);
+
   if (!bond) return null;
 
+  const tabClass = (active) =>
+    `flex items-center gap-1.5 rounded px-2.5 py-1 transition ${
+      active
+        ? "bg-teal-600 text-white font-medium"
+        : "text-slate-400 hover:text-slate-200"
+    }`;
+
   return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center p-4 sm:p-8 mt-16">
+    <div className="fixed inset-0 z-60 mt-16 flex items-center justify-center p-4 sm:p-8">
       <style>{`@keyframes popIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }`}</style>
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
@@ -43,33 +114,24 @@ export default function CertificateLightbox({
 
       <div className="relative w-full max-w-2xl animate-[popIn_.2s_ease-out]">
         <div className="absolute -top-11 right-0 flex items-center gap-2">
-          <div className="flex items-center rounded-lg bg-slate-900/90 p-1 border border-slate-700 text-xs">
-            {hasUploadedImage ? (
-              <button
+          {hasUploadedImage && (
+            <div className="flex items-center rounded-lg border border-slate-700 bg-slate-900/90 p-1 text-xs">
+             <button
                 type="button"
-                onClick={() => setShowUploadedImage(true)}
-                className={`flex items-center gap-1.5 rounded px-2.5 py-1 transition ${
-                  showUploadedImage
-                    ? "bg-teal-600 text-white font-medium"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
+                onClick={showCertView}
+                className={tabClass(!showUploadedImage)}
+              >
+                <FileText className="h-3.5 w-3.5" /> System Bond
+              </button>
+               <button
+                type="button"
+                onClick={showImageView}
+                className={tabClass(showUploadedImage)}
               >
                 <ImageIcon className="h-3.5 w-3.5" /> Uploaded Bond
               </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowUploadedImage(false)}
-                className={`flex items-center gap-1.5 rounded px-2.5 py-1 transition ${
-                  !showUploadedImage
-                    ? "bg-teal-600 text-white font-medium"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                <FileText className="h-3.5 w-3.5" /> Certificate
-              </button>
-            )}
-          </div>
+            </div>
+          )}
 
           <button
             onClick={onClose}
@@ -80,81 +142,63 @@ export default function CertificateLightbox({
           </button>
         </div>
 
-        <div
-          className="relative overflow-hidden rounded-md shadow-2xl shadow-black/50 ring-1 ring-white/10"
-          style={{ width: 400, margin: "0 auto" }}
-        >
-          {showUploadedImage && hasUploadedImage ? (
+        <div className="relative mx-auto w-100 max-w-full overflow-hidden rounded-md shadow-2xl shadow-black/50 ring-1 ring-white/10">
+          {showImage ? (
             <Image
-              src={resolveMediaUrl(bond.bondUrl)}
+              src={imageSrc}
               alt={`Bond certificate for ${userName}`}
               width={800}
               height={1000}
+              sizes="400px"
+              priority
               unoptimized
-              className="h-auto max-h-[80vh] w-full object-contain bg-slate-950"
+              className="h-auto max-h-[80vh] w-full bg-slate-950 object-contain"
             />
           ) : (
-            <>
-              {isPension && (
-                <PensionBondCertificate
-                  ref={certRef}
-                  bond={bond}
-                  userData={userData}
-                  className="h-auto w-full"
-                  logoUrl="/logo.png"
-                  profilePhoto="/profile.jpg"
-                  watermarkUrl="/logo.png"
-                  stampUrl="/stamp.png"
-                />
-              )}
-              {isSip && (
-                <SIPBondCertificate
-                  ref={certRef}
-                  bond={bond}
-                  userData={userData}
-                  className="h-auto w-full"
-                  logoUrl="/logo.png"
-                  watermarkUrl="/logo.png"
-                  stampUrl="/stamp.png"
-                  profilePhoto="/profile.jpg"
-                />
-              )}
-              {isDailyDeposit && (
-                <DailyDepositCertificate
-                  ref={certRef}
-                  bond={bond}
-                  userData={userData}
-                  userName={userName}
-                  scheme={scheme}
-                  className="h-auto w-full"
-                  logoUrl="/logo.png"
-                  watermarkUrl="/logo.png"
-                  stampUrl="/stamp-removebg.png"
-                />
-              )}
-
-              {!isPension && !isSip && !isDailyDeposit && (
-                <BondCertificate
-                  ref={certRef}
-                  bond={bond}
-                  userData={userData}
-                  userName={userName}
-                  scheme={scheme}
-                  className="h-auto w-full"
-                  logoUrl="/logo.png"
-                  watermarkUrl="/logo.png"
-                  stampUrl="/stamp.png"
-                />
-              )}
-            </>
+            <Suspense fallback={<CertificateSkeleton />}>
+              <Certificate
+                ref={certRef}
+                bond={bond}
+                userData={userData}
+                {...(needsUserInfo && { userName, scheme })}
+                className="h-auto w-full"
+                logoUrl="/logo.png"
+                watermarkUrl="/logo.png"
+                {...certProps}
+              />
+            </Suspense>
           )}
-          {!isSip && (bond.bondPdfUrl || !showUploadedImage) && (
-            <BondDownloadButton
-              className="absolute right-2 bottom-2"
-              certRef={certRef}
-              pdfUrl={bond.bondPdfUrl}
-              filename={`bond-${bond.userSchemeId || "certificate"}`}
-            />
+
+          {showImage && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -left-[10000px] top-0 w-100 opacity-0"
+            >
+              <Suspense fallback={null}>
+                <Certificate
+                  ref={certRef}
+                  bond={bond}
+                  userData={userData}
+                  {...(needsUserInfo && { userName, scheme })}
+                  className="h-auto w-full"
+                  logoUrl="/logo.png"
+                  watermarkUrl="/logo.png"
+                  {...certProps}
+                />
+              </Suspense>
+            </div>
+          )}
+
+          {showDownload && (
+            <Suspense fallback={null}>
+              <BondDownloadButton
+                className="absolute bottom-2 right-2"
+                certRef={certRef}
+                pdfUrl={bond.bondPdfUrl}
+                filename={`bond-${bond.userSchemeId || "certificate"}`}
+                systemAvailable
+              />
+            </Suspense>
           )}
         </div>
 
@@ -165,3 +209,5 @@ export default function CertificateLightbox({
     </div>
   );
 }
+
+export default memo(CertificateLightbox);

@@ -5,11 +5,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.IntStream;
 
-import com.growkaro.backend.DTO.SipInstallmentResponse;
 import com.growkaro.backend.common.General;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.UserScheme;
-import com.growkaro.backend.entity.UserSchemeReedemLedger;
 
 public record UserSchemeResponse(
                 String userSchemeId,
@@ -57,8 +55,7 @@ public record UserSchemeResponse(
                                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                 List<UserSchemeReedemLedgerResponse> reedemLedger = us.getReedemLedger().stream()
-                                .map(entry -> new UserSchemeReedemLedgerResponse(
-                                                entry.getId(), entry.getRedeemAmount(), entry.getRedeemDate()))
+                                .map(UserSchemeReedemLedgerResponse::fromEntity)
                                 .toList();
                 boolean isPension = "PENSION".equalsIgnoreCase(us.getScheme().getPlanType());
                 BigDecimal profitRedeemed = isPension

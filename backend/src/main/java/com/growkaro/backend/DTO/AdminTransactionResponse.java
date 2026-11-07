@@ -2,10 +2,12 @@ package com.growkaro.backend.DTO;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 
 import com.growkaro.backend.entity.Transaction;
+import com.growkaro.backend.entity.UserSchemeReedemLedger;
+import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
 
-import jakarta.persistence.criteria.CriteriaBuilder.Case;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -31,8 +33,30 @@ public class AdminTransactionResponse {
     private String proofUrl;
     private LocalDateTime settlementDate;
     private String settlementRemarks;
+    private String schemeName;
+    private String requestType;
+    private String redemptionType;
+    private String redemptionStatus;
 
     public static AdminTransactionResponse fromEntity(Transaction txn) {
+        ReedeemStatus expectedRedemptionStatus = switch (txn.getStatus()) {
+            case PENDING -> ReedeemStatus.REQUESTED;
+            case PROCESSED -> ReedeemStatus.IN_PROGRESS;
+            case SUCCESS -> ReedeemStatus.COMPLETED;
+            case FAILED, REJECTED, REFUNDED -> ReedeemStatus.REJECTED;
+        };
+        UserSchemeReedemLedger redemption = txn.getUserScheme() == null
+                || txn.getUserScheme().getReedemLedger() == null
+                        ? null
+                        : txn.getUserScheme().getReedemLedger().stream()
+                                .filter(ledger -> ledger.getStatus() == expectedRedemptionStatus
+                                        && ledger.getRedeemAmount() != null
+                                        && txn.getAmount() != null
+                                        && ledger.getRedeemAmount().compareTo(txn.getAmount()) == 0)
+                                .max(Comparator.comparing(UserSchemeReedemLedger::getId,
+                                        Comparator.nullsFirst(Long::compareTo)))
+                                .orElse(null);
+
         return AdminTransactionResponse.builder()
                 .id(txn.getId())
                 .userName(txn.getUser().getName())
@@ -50,6 +74,14 @@ public class AdminTransactionResponse {
                 .proofUrl(txn.getProofUrl())
                 .settlementDate(txn.getSettlementDate())
                 .settlementRemarks(txn.getSettlementRemarks())
+                .schemeName(txn.getSchemeName())
+                .requestType(txn.getType() == null ? null : txn.getType().name())
+                .redemptionType(redemption == null || redemption.getRedeemType() == null
+                        ? null
+                        : redemption.getRedeemType().name())
+                .redemptionStatus(redemption == null || redemption.getStatus() == null
+                        ? null
+                        : redemption.getStatus().name().toLowerCase())
                 .build();
     }
 

@@ -41,6 +41,25 @@ public interface TransactionRepository extends JpaRepository<Transaction, String
 
   Page<Transaction> findByStatusIn(List<TransactionStatus> statuses, Pageable pageable);
 
+  @Query("SELECT t FROM Transaction t WHERE t.status = :status "
+      + "AND (t.type IS NULL OR t.type <> :excludedType)")
+  Page<Transaction> findWithdrawalsByStatus(
+      @Param("status") TransactionStatus status,
+      @Param("excludedType") Transaction.TransactionType excludedType,
+      Pageable pageable);
+
+  @Query("SELECT t FROM Transaction t WHERE t.status IN :statuses "
+      + "AND (t.type IS NULL OR t.type <> :excludedType)")
+  Page<Transaction> findWithdrawalsByStatusIn(
+      @Param("statuses") List<TransactionStatus> statuses,
+      @Param("excludedType") Transaction.TransactionType excludedType,
+      Pageable pageable);
+
+  @Query("SELECT t FROM Transaction t WHERE t.type IS NULL OR t.type <> :excludedType")
+  Page<Transaction> findWithdrawals(
+      @Param("excludedType") Transaction.TransactionType excludedType,
+      Pageable pageable);
+
   Page<Transaction> findAll(Pageable pageable); // already provided by JpaRepository
 
   long countByRemitter_RemitterIdAndStatus(String remitterId, TransactionStatus status);

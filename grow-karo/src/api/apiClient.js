@@ -103,7 +103,7 @@ apiClient.interceptors.response.use(
  * Main API wrapper function
  */
 export async function apiRequest(endpoint, options = {}) {
-  const { method = "GET", body, params, headers = {} } = options;
+  const { method = "GET", body, params, headers = {}, signal } = options;
 
   // Clean leading slashes from endpoint to avoid breaking Axios baseURL joining
   const cleanEndpoint =
@@ -115,6 +115,7 @@ export async function apiRequest(endpoint, options = {}) {
     data: body,
     params,
     headers,
+    signal,
   });
 }
 
