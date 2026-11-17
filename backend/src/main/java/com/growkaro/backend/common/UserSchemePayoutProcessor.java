@@ -36,7 +36,7 @@ public class UserSchemePayoutProcessor {
 
     public UserSchemePayoutProcessor(UserSchemeRepository userSchemeRepository,
             ProfitLedgerRepository profitLedgerRepository, EmailService emailService, General general,
-            CrucialNotificationService crucialNotificationService,@Value("${admin.email}") String adminEmail) {
+            CrucialNotificationService crucialNotificationService, @Value("${admin.email}") String adminEmail) {
         this.userSchemeRepository = userSchemeRepository;
         this.profitLedgerRepository = profitLedgerRepository;
         this.emailService = emailService;
@@ -49,30 +49,32 @@ public class UserSchemePayoutProcessor {
         PROCESSED, SKIPPED
     }
 
+    private BatchOutcome skip(UserScheme userScheme, String reason) {
+        log.info("SKIPPED userScheme id={} | reason={}",
+                userScheme != null ? userScheme.getUserSchemeId() : null, reason);
+        return BatchOutcome.SKIPPED;
+    }
+
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public BatchOutcome processSingleUserScheme(UserScheme userScheme) {
 
         if (userScheme.getScheme() == null) {
-            log.warn("Skipping userScheme id={}: no scheme attached", userScheme.getUserSchemeId());
-            return BatchOutcome.SKIPPED;
+            return skip(userScheme, "no scheme attached");
         }
 
         if ("PENSION".equalsIgnoreCase(userScheme.getScheme().getPlanType())) {
-            return BatchOutcome.SKIPPED;
+            return skip(userScheme, "pension plan type");
         }
 
         LocalDate today = general.getCurrentDate();
 
-        // Cheap early-exit (avoids the calculation work entirely on a normal re-run)
         if (userScheme.getLastProfitUpdateDate() != null
                 && userScheme.getLastProfitUpdateDate().isEqual(today)) {
-            return BatchOutcome.SKIPPED;
+            return skip(userScheme, "profit already processed today (lastProfitUpdateDate=" + today + ")");
         }
 
-        // Hard guard: DB is the source of truth for "already paid today",
-        // protects against races / lock expiry / manual re-trigger
         if (profitLedgerRepository.existsByUserSchemeAndProfitDate(userScheme, today)) {
-            return BatchOutcome.SKIPPED;
+            return skip(userScheme, "profit ledger entry already exists for " + today);
         }
 
         BigDecimal paidAmount = userScheme.getPaidAmount();
@@ -82,6 +84,10 @@ public class UserSchemePayoutProcessor {
 
         if (paidAmount == null || profitPercentage == null || minimumAmount == null
                 || nextPayoutDate == null) {
+            // This is a failure, not a skip: it throws, so log it as such
+            log.error("FAILED userScheme id={} | reason=missing required fields "
+                    + "(paidAmount={}, profitPercentage={}, minimumAmount={}, nextPayoutDate={})",
+                    userScheme.getUserSchemeId(), paidAmount, profitPercentage, minimumAmount, nextPayoutDate);
             throw new IllegalStateException(
                     "UserScheme id=" + userScheme.getUserSchemeId()
                             + " missing required field(s) for profit calculation");
@@ -90,12 +96,14 @@ public class UserSchemePayoutProcessor {
         BigDecimal newProfit = general.calculateProfit(paidAmount, profitPercentage, minimumAmount);
 
         if (newProfit == null || newProfit.signum() < 0) {
+            log.error("FAILED userScheme id={} | reason=invalid profit calculation: {}",
+                    userScheme.getUserSchemeId(), newProfit);
             throw new IllegalStateException(
                     "UserScheme id=" + userScheme.getUserSchemeId() + " computed invalid profit: " + newProfit);
         }
 
         Scheme s = userScheme.getScheme();
-        int days = general.resolvePeriodDays(s.getPayoutFrequency(), s.getTenure());
+        int days = general.resolvePeriodDays(userScheme.getEnrollmentDate(), s.getPayoutFrequency(), s.getTenure());
 
         UserSchemeProfitLedger ledgerEntry = new UserSchemeProfitLedger();
         ledgerEntry.setUserScheme(userScheme);
@@ -103,18 +111,30 @@ public class UserSchemePayoutProcessor {
         ledgerEntry.setProfitDate(today);
 
         try {
-            profitLedgerRepository.save(ledgerEntry);
+            profitLedgerRepository.saveAndFlush(ledgerEntry);
+            log.info("Saved profit ledger entry for userScheme id={} with profit amount={}",
+                    userScheme.getUserSchemeId(), newProfit);
         } catch (DataIntegrityViolationException e) {
-            // Another thread/instance beat us to today's entry for this userScheme
-            log.warn("Duplicate profit ledger entry prevented for userScheme id={}, date={}",
-                    userScheme.getUserSchemeId(), today);
-            return BatchOutcome.SKIPPED;
+            return skip(userScheme, "duplicate ledger entry prevented by DB constraint for " + today);
         }
 
-        userScheme.setLastProfitUpdateDate(today);
-        userScheme.setNextPayoutDate(nextPayoutDate.plusDays(days));
-        userSchemeRepository.save(userScheme);
-
+        try {
+            userScheme.setLastProfitUpdateDate(today);
+            //compare with maturity date and update next payout date accordingly
+            if (userScheme.getMaturityDate() != null && nextPayoutDate.plusDays(days).isAfter(userScheme.getMaturityDate())) {
+                userScheme.setNextPayoutDate(userScheme.getMaturityDate());
+            } else {
+                userScheme.setNextPayoutDate(nextPayoutDate.plusDays(days));
+            }
+            userSchemeRepository.saveAndFlush(userScheme);
+        } catch (DataIntegrityViolationException e) {
+            log.error("FAILED userScheme id={} | reason=failed to update next payout date: {}",
+                    userScheme.getUserSchemeId(), e.getMessage(), e);
+            throw new IllegalStateException(
+                    "UserScheme id=" + userScheme.getUserSchemeId() + " failed to update next payout date", e);
+        }
+        log.info("Updated userScheme id={} with next payout date={}", userScheme.getUserSchemeId(),
+                userScheme.getNextPayoutDate());
         return BatchOutcome.PROCESSED;
     }
 

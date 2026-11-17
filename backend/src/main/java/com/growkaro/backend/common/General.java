@@ -14,6 +14,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -422,26 +423,42 @@ public class General {
                 .multiply(BigDecimal.valueOf(months));
     }
 
-    public int resolvePeriodDays(String payoutFrequency, int tenure) {
-        if (payoutFrequency == null) {
+    public int resolvePeriodDays(LocalDateTime enrollmentDay, String payoutFrequency, int tenure) {
+        if (payoutFrequency == null || payoutFrequency.isBlank()) {
             throw new IllegalArgumentException("Payout frequency is required");
         }
+        if (enrollmentDay == null) {
+            throw new IllegalArgumentException("Enrollment day is required");
+        }
 
-        String key = payoutFrequency.trim().toLowerCase();
+        // Normalize: trim, lowercase, treat hyphens/underscores/multiple spaces as a
+        // single space
+        String key = payoutFrequency.trim()
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[-_\\s]+", " ");
 
         return switch (key) {
-            case "21 days" -> 21;
-            case "monthly" -> 30;
-            case "quarterly" -> 90;
-            case "half-yearly", "half yearly" -> 182;
-            case "yearly" -> 365;
-            case "tenure-complete", "tenure complete" -> tenure;
+            case "21 days", "21 day", "21days" -> 21;
+            case "monthly" -> (int) ChronoUnit.DAYS.between(
+                    enrollmentDay.toLocalDate(), enrollmentDay.toLocalDate().plusMonths(1));
+            case "quarterly" -> (int) ChronoUnit.DAYS.between(
+                    enrollmentDay.toLocalDate(), enrollmentDay.toLocalDate().plusMonths(3));
+            case "half yearly", "halfyearly" -> (int) ChronoUnit.DAYS.between(
+                    enrollmentDay.toLocalDate(), enrollmentDay.toLocalDate().plusMonths(6));
+            case "yearly", "annually" -> (int) ChronoUnit.DAYS.between(
+                    enrollmentDay.toLocalDate(), enrollmentDay.toLocalDate().plusYears(1));
+            case "tenure complete", "tenurecomplete" -> {
+                if (tenure <= 0) {
+                    throw new IllegalArgumentException("Tenure must be positive for tenure-complete payout");
+                }
+                yield tenure;
+            }
             default -> throw new IllegalArgumentException("Unknown payout frequency: " + payoutFrequency);
         };
     }
 
     public LocalDate calculateNextPayoutDate(LocalDateTime enrollmentDate, String payoutFrequency, int tenure) {
-        int periodDays = resolvePeriodDays(payoutFrequency, tenure);
+        int periodDays = resolvePeriodDays(enrollmentDate, payoutFrequency, tenure);
         // convert to local date
         LocalDate enrollmentLocalDate = enrollmentDate.toLocalDate();
         return enrollmentLocalDate.plusDays(periodDays);
@@ -733,7 +750,8 @@ public class General {
             BigDecimal interest = paidAmount.multiply(profitMultiplier);
             totalMaturity = paidAmount.add(interest);
         } else {
-            int periodDays = resolvePeriodDays(bond.getScheme().getPayoutFrequency(), bond.getScheme().getTenure());
+            int periodDays = resolvePeriodDays(bond.getEnrollmentDate(), bond.getScheme().getPayoutFrequency(),
+                    bond.getScheme().getTenure());
             int times = bond.getScheme().getTenure() / periodDays; // Integer division floors automatically
 
             BigDecimal interestPerPeriod = paidAmount.multiply(profitMultiplier);

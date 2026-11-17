@@ -35,6 +35,7 @@ import com.growkaro.backend.DTO.TransactionResponse;
 import com.growkaro.backend.DTO.TransactionSummary;
 import com.growkaro.backend.DTO.UserPortfolio;
 import com.growkaro.backend.common.General;
+import com.growkaro.backend.common.TaskScheduler;
 import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.DailyDeposit;
 import com.growkaro.backend.entity.Guardian;
@@ -89,6 +90,7 @@ public class UserAPIService {
     private final RedisService redisService;
     private final ReedemLedgerRepository reedemLedgerRepository;
     private final TransactionService transactionService;
+    private final TaskScheduler taskScheduler;
 
     public UserAPIService(ApiService apiService, UserRepository userRepository,
             TransactionRepository transactionRepository, NotificationRepository notificationRepository,
@@ -97,7 +99,7 @@ public class UserAPIService {
             CrucialNotificationService crucialNotificationService, EmailService emailService,
             SupportIssueRepository supportIssueRepository, JwtService jwtService, AdminPolicy adminPolicy,
             RedisService redisService, ReedemLedgerRepository reedemLedgerRepository,
-            TransactionService transactionService) {
+            TransactionService transactionService, TaskScheduler taskScheduler) {
         this.apiService = apiService;
         this.userRepository = userRepository;
         this.transactionRepository = transactionRepository;
@@ -115,10 +117,10 @@ public class UserAPIService {
         this.redisService = redisService;
         this.reedemLedgerRepository = reedemLedgerRepository;
         this.transactionService = transactionService;
+        this.taskScheduler = taskScheduler;
     }
 
     // @Cacheable(value = "testApis", key = "#id")
-    @Transactional
     public Object testApis() {
         try {
             // User u =
@@ -138,12 +140,13 @@ public class UserAPIService {
             // pageable.getPageSize());
             // User u =userRepository.findByEmail("wv9304@gmail.com").orElse(null);
             // return u != null ? u.hashCode() : "User not found";
-            return true;
+            taskScheduler.addProfitToUserAccount();
+            return "Test API executed successfully";
         } catch (Exception e) {
-            log.error("Failed to set user status active", e.getMessage());
+            log.error("Failed to set user status active", e);
             return e.getMessage();
         }
-    }
+    } 
 
     public boolean isUserExists(String email) {
         return findAllUsersEmail().contains(email);

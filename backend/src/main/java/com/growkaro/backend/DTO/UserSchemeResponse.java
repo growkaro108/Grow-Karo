@@ -50,6 +50,8 @@ public record UserSchemeResponse(
                                                 entry.getId(), entry.getProfitAmount(), entry.getProfitDate(),
                                                 entry.isPaid()))
                                 .toList();
+                // System.out.println("Profit ledger for userScheme id=" + us.getUserSchemeId() + " has "
+                                // + profitLedger.size() + " entries");
                 BigDecimal profit = profitLedger.stream()
                                 .map(UserSchemeProfitLedgerResponse::profitAmount)
                                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -105,7 +107,7 @@ public record UserSchemeResponse(
                                 s.getSipFrequency(),
                                 s.getSipAmount(),
                                 tenureMonths,
-                                
+
                                 IntStream.range(0, us.getSipLedger().size())
                                                 .mapToObj(index -> SipInstallmentResponse.fromEntity(
                                                                 us.getSipLedger().get(index), index))

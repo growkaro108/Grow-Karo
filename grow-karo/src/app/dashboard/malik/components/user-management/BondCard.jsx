@@ -366,7 +366,7 @@ export default function BondCard({
                 onChange={(e) =>
                   onProfitFieldChange(index, "profitDate", e.target.value)
                 }
-                className={inputClass}
+                className={inputClass+" [&::-webkit-calendar-picker-indicator]:hidden"}
                 disabled={entry.id}
               />
               {isPension && (

@@ -114,6 +114,7 @@ logging:
           jdbc:
             spi:
               SqlExceptionHelper: DEBUG
+              
 
 # s3 storage
 #   storage:
@@ -121,3 +122,12 @@ logging:
 #     s3:
 #       bucket: your-bucket-name
 #       public-url-base: https://your-bucket-name.s3.ap-south-1.amazonaws.com
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+  metrics:
+    tags:
+      application: ${spring.application.name}

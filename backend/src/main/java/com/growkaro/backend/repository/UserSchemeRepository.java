@@ -118,7 +118,6 @@ public interface UserSchemeRepository extends JpaRepository<UserScheme, String> 
         Optional<UserScheme> findByUserSchemeIdForUpdate(@Param("userSchemeId") String userSchemeId);
 
         // get all approved user
-        @Lock(LockModeType.PESSIMISTIC_WRITE)
         @Query("""
                         SELECT us
                         FROM UserScheme
@@ -130,8 +129,8 @@ public interface UserSchemeRepository extends JpaRepository<UserScheme, String> 
 
         List<UserScheme> findAllApprovedUserSchemes(@Param("today") LocalDate today);
 
-        @Lock(LockModeType.PESSIMISTIC_WRITE)
         // find all user scheme whose maturity date is in range of 10 to 15 days
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
         @Query("SELECT DISTINCT us FROM UserScheme us JOIN FETCH us.user JOIN FETCH us.scheme WHERE us.maturityDate BETWEEN :today AND :endDate")
         List<UserScheme> findAllByMaturityDate(@Param("today") LocalDate today, @Param("endDate") LocalDate endDate);
         // ── Overview dashboard queries ────────────────────────────────────────────

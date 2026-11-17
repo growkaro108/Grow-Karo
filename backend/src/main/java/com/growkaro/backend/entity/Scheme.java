@@ -133,6 +133,9 @@ public class Scheme {
     @Column(name = "created_by")
     private String createdBy;
 
+    @Column(name = "is_principal_include_on_maturity", nullable = false)
+    private boolean isPrincipalIncludeOnMaturity = true;
+
     @PrePersist
     protected void onCreate() {
         if (this.planType == null || this.planType.isBlank()) {

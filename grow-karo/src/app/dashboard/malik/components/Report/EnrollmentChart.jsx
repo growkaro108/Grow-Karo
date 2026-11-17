@@ -54,7 +54,7 @@ export default function EnrollmentChart({ schemes = [], view, selectedScheme }) 
   // Aggregate investedAmount and enrollment count grouped by enrollmentDate
   const { timeline, totalAmount, totalCount, peakDay } = useMemo(() => {
     const map = new Map();
-
+// Aggregate investedAmount and enrollment count grouped by enrollmentDate
     schemes.forEach((s) => {
       const d = parseEnrollmentDate(s.enrolledOn);
       if (!d) return;
@@ -85,6 +85,7 @@ export default function EnrollmentChart({ schemes = [], view, selectedScheme }) 
       map.set(key, existing);
     });
 
+    // Sort the aggregated data by date
     const sorted = Array.from(map.values()).sort(
       (a, b) => a.dateObj.getTime() - b.dateObj.getTime(),
     );
@@ -93,6 +94,10 @@ export default function EnrollmentChart({ schemes = [], view, selectedScheme }) 
     let sumCount = 0;
     let maxDay = null;
 
+    //get latest 100 records by enrollment date
+    const latestSorted = sorted.slice(-99);
+
+    // Find the peak day with the maximum invested amount
     sorted.forEach((item) => {
       sumAmount += item.amount;
       sumCount += item.count;
@@ -102,7 +107,7 @@ export default function EnrollmentChart({ schemes = [], view, selectedScheme }) 
     });
 
     return {
-      timeline: sorted,
+      timeline: latestSorted,
       totalAmount: sumAmount,
       totalCount: sumCount,
       peakDay: maxDay,
@@ -116,7 +121,7 @@ export default function EnrollmentChart({ schemes = [], view, selectedScheme }) 
         {
           label: "Invested Amount",
           data: timeline.map((d) => d.amount),
-          borderColor: "#C9A66B",
+          borderColor: "#C9A66B", 
           borderWidth: 2.5,
           pointRadius: timeline.length === 1 ? 5 : 3,
           pointHoverRadius: 6,

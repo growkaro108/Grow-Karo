@@ -42,6 +42,7 @@ public class SecurityConfig {
 
                         // 2. Public health, assets, and informational endpoints
                         .requestMatchers(
+                                "/actuator/prometheus", "/actuator/health", "/actuator/info",
                                 "/api/health", "/health",
                                 "/api/home1-graph", "/home1-graph",
                                 "/api/top5-schemes", "/top5-schemes",
@@ -54,7 +55,7 @@ public class SecurityConfig {
                                 "/api/user/test", "/user/test",
                                 "/api/remitter/test", "/remitter/test",
                                 "/uploads/**", "/api/uploads/**",
-                                "/error", "/favicon.ico"
+                                "/error"
                         ).permitAll()
 
                         // 3. Public User Authentication & OTP endpoints

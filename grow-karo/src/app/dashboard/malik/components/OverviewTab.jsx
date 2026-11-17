@@ -126,7 +126,8 @@ export default function OverviewTab() {
   const enrollmentSchemes = enrollmentUsers.flatMap((user) => user.schemes);
   const overviewSchemeNames = Array.from(
     new Set(enrollmentSchemes.map((scheme) => scheme.name)),
-  ).sort((first, second) => first.localeCompare(second));
+    //sort scheme by enrollement date, latest first
+  ).sort((first, second) => second.localeCompare(first));
   const visibleEnrollmentSchemes = selectedOverviewScheme
     ? enrollmentSchemes.filter((scheme) => scheme.name === selectedOverviewScheme)
     : enrollmentSchemes;
@@ -312,7 +313,7 @@ export default function OverviewTab() {
                   {schemeAUM.map((s, i) => (
                     <li key={s.schemeName} className="flex items-center gap-2">
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: SCHEME_PALETTE[i % SCHEME_PALETTE.length] }} />
-                      <span className="text-slate-400 truncate max-w-[120px]">{s.schemeName}</span>
+                      <span className="text-slate-400 truncate max-w-30">{s.schemeName}</span>
                       <span className="ml-auto font-mono text-slate-300">{currency(Number(s.aum))}</span>
                     </li>
                   ))}
