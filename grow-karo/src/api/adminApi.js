@@ -227,6 +227,18 @@ export async function getAllMaturityUserSchemeApi(payload, options = {}) {
     ...options,
   });
 }
+export async function getDuePensionProfitsApi(payload, options = {}) {
+  return await apiRequest(`${END_POINT}maturity/profit-due`, {
+    method: "POST",
+    body: payload,
+    ...options,
+  });
+}
+export async function markPensionProfitPaidApi(ledgerId) {
+  return await apiRequest(`${END_POINT}maturity/profit-due/${encodeURIComponent(ledgerId)}/paid`, {
+    method: "PUT",
+  });
+}
 
 export async function settleMaturedSchemeApi(userSchemeId, payload, proof) {
   const body = new FormData();

@@ -626,6 +626,23 @@ public class AdminAPIController {
 
     }
 
+    @PostMapping("/maturity/profit-due")
+    public ResponseEntity<Map<String, Object>> getDuePensionProfits(@RequestBody Map<String, Object> payload) {
+        String query = general.stringValue(payload.get("query"));
+        int days = Math.max(0, Math.min(365, general.intValue(payload.get("days"))));
+        int page = Math.max(1, general.intValue(payload.get("page")));
+        int size = Math.max(1, Math.min(100, general.intValue(payload.get("size"))));
+        Pageable pageable = PageRequest.of(page - 1, size);
+        var result = adminAPIService.getDuePensionProfits(query, days, pageable);
+        return ResponseEntity.ok(general.response("success", "Fetched due pension profits", result));
+    }
+
+    @PutMapping("/maturity/profit-due/{ledgerId}/paid")
+    public ResponseEntity<Map<String, Object>> markPensionProfitPaid(@PathVariable Long ledgerId) {
+        Map<String, Object> result = adminAPIService.markPensionProfitPaid(ledgerId);
+        return ResponseEntity.ok(result);
+    }
+
     @PostMapping(value = "/maturity/user/{userSchemeId}/settlement", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> settleMaturedScheme(
             @PathVariable String userSchemeId,

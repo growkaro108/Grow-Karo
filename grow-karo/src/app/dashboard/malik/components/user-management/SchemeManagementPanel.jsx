@@ -100,7 +100,7 @@ function LedgerRows({ type, rows, onChange, onAdd, interestOnly = false }) {
             aria-label={`${label} amount`}
             type="number"
             min={isProfit ? "100" : "0"}
-            step={isProfit ? "100" : "0.01"}
+            step={"1"}
             placeholder={`${label[0].toUpperCase()}${label.slice(1)} amount`}
             value={entry[amount]}
             onChange={(event) => onChange(index, amount, event.target.value)}

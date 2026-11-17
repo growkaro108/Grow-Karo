@@ -81,6 +81,7 @@ import com.growkaro.backend.DTO.IssueResponse;
 import com.growkaro.backend.DTO.NearMaturityUserSchemeResponse;
 import com.growkaro.backend.DTO.NomineeResponse;
 import com.growkaro.backend.DTO.PagedResponse;
+import com.growkaro.backend.DTO.PensionProfitDueResponse;
 import com.growkaro.backend.DTO.RemitterResponse;
 import com.growkaro.backend.DTO.SchemeAuditProjection;
 import com.growkaro.backend.DTO.SchemeResponse;
@@ -118,6 +119,7 @@ import com.growkaro.backend.enums.WithdrawalStatus;
 import com.growkaro.backend.repository.ActivityLogRepository;
 import com.growkaro.backend.repository.NomineeRepository;
 import com.growkaro.backend.repository.NotificationRepository;
+import com.growkaro.backend.repository.ProfitLedgerRepository;
 import com.growkaro.backend.repository.RemitterRepository;
 import com.growkaro.backend.repository.SchemeRepository;
 import com.growkaro.backend.repository.SupportIssueRepository;
@@ -133,6 +135,7 @@ import lombok.extern.slf4j.Slf4j;
 public class AdminAPIService {
 
     private final ReedemLedgerRepository reedemLedgerRepository;
+    private final ProfitLedgerRepository profitLedgerRepository;
 
     private static final int DEFAULT_PAGE_SIZE = 20;
     private static final float PDF_PREVIEW_MAX_DIMENSION_PIXELS = 700f;
@@ -168,7 +171,8 @@ public class AdminAPIService {
     @PersistenceContext
     private EntityManager entityManager;
 
-    public AdminAPIService(ReedemLedgerRepository reedemLedgerRepository, UserRepository userRepository,
+    public AdminAPIService(ReedemLedgerRepository reedemLedgerRepository,
+            ProfitLedgerRepository profitLedgerRepository, UserRepository userRepository,
             RemitterRepository remitterRepository, TransactionRepository transactionRepository,
             SupportIssueRepository supportIssueRepository, SchemeRepository schemeRepository,
             UserSchemeRepository userSchemeRepository, ApiService apiService, ActivityLogService activityLogService,
@@ -177,6 +181,7 @@ public class AdminAPIService {
             CrucialNotificationService crucialNotificationService, EmailService emailService,
             TransactionService transactionService, NomineeRepository nomineeRepository, EntityManager entityManager) {
         this.reedemLedgerRepository = reedemLedgerRepository;
+        this.profitLedgerRepository = profitLedgerRepository;
         this.userRepository = userRepository;
         this.remitterRepository = remitterRepository;
         this.transactionRepository = transactionRepository;
@@ -796,15 +801,13 @@ public class AdminAPIService {
         userScheme.setNominee(nominee);
         userScheme.setMaturityDate(maturityDate);
         // Option 2: Using negated OR
-        if (!(isPension || isDailyDeposit)) 
+        if (!(isPension || isDailyDeposit))
             userScheme.setNextPayoutDate(
-                general.calculateNextPayoutDate(
-                    enrollmentDate, 
-                    userScheme.getScheme().getPayoutFrequency(),
-                    userScheme.getScheme().getTenure()
-                )
-            );
-        
+                    general.calculateNextPayoutDate(
+                            enrollmentDate,
+                            userScheme.getScheme().getPayoutFrequency(),
+                            userScheme.getScheme().getTenure()));
+
         if (isPension && (pensionTermsChanged || userScheme.getProfitLedger().isEmpty())) {
             replacePensionInterestSchedule(userScheme, request.paidDate());
         }
@@ -1440,13 +1443,14 @@ public class AdminAPIService {
         Transaction txn = getPendingOrThrow(txnId);
         User user = txn.getUser();
         List<UserSchemeReedemLedger> usrlList = txn.getUserScheme().getReedemLedger();
-        UserSchemeReedemLedger requestedRedemption = usrlList == null ? null : usrlList.stream()
-                .filter(ledger -> ledger.getStatus() == ReedeemStatus.REQUESTED
-                        && ledger.getRedeemAmount() != null
-                        && ledger.getRedeemAmount().compareTo(txn.getAmount()) == 0)
-                .max(Comparator.comparing(UserSchemeReedemLedger::getId,
-                        Comparator.nullsFirst(Long::compareTo)))
-                .orElse(null);
+        UserSchemeReedemLedger requestedRedemption = usrlList == null ? null
+                : usrlList.stream()
+                        .filter(ledger -> ledger.getStatus() == ReedeemStatus.REQUESTED
+                                && ledger.getRedeemAmount() != null
+                                && ledger.getRedeemAmount().compareTo(txn.getAmount()) == 0)
+                        .max(Comparator.comparing(UserSchemeReedemLedger::getId,
+                                Comparator.nullsFirst(Long::compareTo)))
+                        .orElse(null);
         if (requestedRedemption != null) {
             requestedRedemption.setStatus(ReedeemStatus.IN_PROGRESS);
             reedemLedgerRepository.save(requestedRedemption);
@@ -1488,14 +1492,15 @@ public class AdminAPIService {
         try {
             UserScheme userScheme = txn.getUserScheme();
             List<UserSchemeReedemLedger> requestedRedemptions = userScheme.getReedemLedger();
-            UserSchemeReedemLedger redemption = requestedRedemptions == null ? null : requestedRedemptions.stream()
-                    .filter(ledger -> (ledger.getStatus() == ReedeemStatus.REQUESTED
-                            || ledger.getStatus() == ReedeemStatus.IN_PROGRESS)
-                            && ledger.getRedeemAmount() != null
-                            && ledger.getRedeemAmount().compareTo(txn.getAmount()) == 0)
-                    .max(Comparator.comparing(UserSchemeReedemLedger::getId,
-                            Comparator.nullsFirst(Long::compareTo)))
-                    .orElse(null);
+            UserSchemeReedemLedger redemption = requestedRedemptions == null ? null
+                    : requestedRedemptions.stream()
+                            .filter(ledger -> (ledger.getStatus() == ReedeemStatus.REQUESTED
+                                    || ledger.getStatus() == ReedeemStatus.IN_PROGRESS)
+                                    && ledger.getRedeemAmount() != null
+                                    && ledger.getRedeemAmount().compareTo(txn.getAmount()) == 0)
+                            .max(Comparator.comparing(UserSchemeReedemLedger::getId,
+                                    Comparator.nullsFirst(Long::compareTo)))
+                            .orElse(null);
             if (redemption == null && txn.getType() != Transaction.TransactionType.AGGRESSIVE_WITHDRAWAL) {
                 log.error("No matching redemption ledger found for rejected transaction {}", txnId);
                 return null;
@@ -1989,11 +1994,69 @@ public class AdminAPIService {
             query = "";
         }
         LocalDate maturityCutoff = LocalDate.now().plusDays(days);
-       List<UserScheme> rawUsers = userSchemeRepository.debugDateStatus(maturityCutoff,
+        List<UserScheme> rawUsers = userSchemeRepository.debugDateStatus(maturityCutoff,
                 List.of(UserSchemeStatus.WITHDRAWN, UserSchemeStatus.SETTLED));
         List<NearMaturityUserSchemeResponse> mapped = rawUsers.stream()
                 .map(NearMaturityUserSchemeResponse::fromUserScheme).toList();
         return PagedResponse.from(mapped, pageable.getPageNumber(), pageable.getPageSize());
+    }
+
+    @Transactional(readOnly = true)
+    public PagedResponse<PensionProfitDueResponse> getDuePensionProfits(
+            String query, int days, Pageable pageable) {
+        String normalizedQuery = query == null ? "" : query.trim();
+        // String normalizedQuery ="";
+        LocalDate today = general.getCurrentDate();
+        return PagedResponse.from(
+                profitLedgerRepository.findDuePensionProfits(
+                        today, today.plusDays(days), normalizedQuery, pageable),
+                pageable.getPageNumber(),
+                pageable.getPageSize());
+    }
+
+    @Transactional
+    public Map<String, Object> markPensionProfitPaid(Long ledgerId) {
+        if (ledgerId == null || ledgerId <= 0) {
+            log.warn("Failed to mark profit paid: Invalid ledgerId provided -> {}", ledgerId);
+            return general.response("error", "Invalid pension profit entry", null);
+        }
+
+        UserSchemeProfitLedger entry = profitLedgerRepository.findByIdForUpdate(ledgerId).orElse(null);
+        if (entry == null) {
+            log.warn("Failed to mark profit paid: Ledger entry not found for ID -> {}", ledgerId);
+            return general.response("error", "Pension profit entry not found", null);
+        }
+
+        String planType = entry.getUserScheme().getScheme().getPlanType();
+
+        // Fixed: Must use && so it fails only if it is NEITHER pension NOR a valid FD
+        // condition
+        boolean isPension = "PENSION".equalsIgnoreCase(planType);
+        boolean isFdNonMaturity = "FD".equalsIgnoreCase(planType)
+                && !entry.getProfitDate().equals(entry.getUserScheme().getMaturityDate());
+
+        if (!isPension && !isFdNonMaturity) {
+            log.warn("Failed to mark profit paid: Invalid plan type '{}' for ledger ID -> {}", planType, ledgerId);
+            return general.response("error", "Pension profit entry not found or invalid plan type", null);
+        }
+
+        if (entry.isPaid()) {
+            log.info("Profit ledger ID {} is already marked as paid", ledgerId);
+            return general.response("success", "Pension profit is already marked as paid", null);
+        }
+
+        if (entry.getProfitDate().isAfter(general.getCurrentDate())) {
+            log.warn(
+                    "Failed to mark profit paid: Profit date {} is in the future (Current date: {}) for ledger ID -> {}",
+                    entry.getProfitDate(), general.getCurrentDate(), ledgerId);
+            return general.response("error", "Pension profit is not due yet", null);
+        }
+
+        entry.setPaid(true);
+        profitLedgerRepository.save(entry);
+
+        log.info("Successfully marked profit ledger ID {} as paid", ledgerId);
+        return general.response("success", "Pension profit marked as paid", null);
     }
 
     @Transactional

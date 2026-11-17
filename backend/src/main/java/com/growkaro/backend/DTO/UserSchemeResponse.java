@@ -1,6 +1,7 @@
 package com.growkaro.backend.DTO;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -50,8 +51,16 @@ public record UserSchemeResponse(
                                                 entry.getId(), entry.getProfitAmount(), entry.getProfitDate(),
                                                 entry.isPaid()))
                                 .toList();
-                // System.out.println("Profit ledger for userScheme id=" + us.getUserSchemeId() + " has "
-                                // + profitLedger.size() + " entries");
+                // in casse of quaterly and montly plans, we need to calculate the profit amount
+                // from the profit ledger
+                BigDecimal settledProfit = profitLedger.stream()
+                                .filter(UserSchemeProfitLedgerResponse::paid)
+                                .map(UserSchemeProfitLedgerResponse::profitAmount)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                                .setScale(2, RoundingMode.HALF_UP); // Optional: ensures standard currency formatting
+                // System.out.println("Profit ledger for userScheme id=" + us.getUserSchemeId()
+                // + " has "
+                // + profitLedger.size() + " entries");
                 BigDecimal profit = profitLedger.stream()
                                 .map(UserSchemeProfitLedgerResponse::profitAmount)
                                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -91,7 +100,7 @@ public record UserSchemeResponse(
                                 us.getPaidAmount(),
                                 maturityAmount,
                                 profit,
-                                profitRedeemed,
+                                profitRedeemed.add(settledProfit),
                                 us.getPaidDate() == null ? null : us.getPaidDate().toString(),
                                 us.getRequestDate().format(General.DATE_FORMATTER),
                                 isJoined ? us.getEnrollmentDate().format(General.DATE_FORMATTER) : null,

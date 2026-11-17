@@ -35,6 +35,8 @@ import {
   addBulkUsersApi,
   addBulkUsersCsvApi,
   getAllMaturityUserSchemeApi,
+  getDuePensionProfitsApi,
+  markPensionProfitPaidApi,
   settleMaturedSchemeApi,
   getUserProfileApi,
   updateAdminUserProfileApi,
@@ -292,6 +294,34 @@ export async function getAllMaturityUserScheme(
     return false;
   }
   return res.data;
+}
+
+export async function getDuePensionProfits(
+  query,
+  days,
+  currentPage,
+  itemsPerPage,
+  options = {},
+) {
+  const response = await getDuePensionProfitsApi(
+    { query, days, page: currentPage, size: itemsPerPage },
+    options,
+  );
+  if (response.status !== "success") {
+    allRounderMessage(response);
+    return false;
+  }
+  return response.data;
+}
+
+export async function markPensionProfitPaid(ledgerId) {
+  const response = await markPensionProfitPaidApi(ledgerId);
+  if (response.status !== "success") {
+    allRounderMessage(response);
+    return false;
+  }
+  allRounderMessage(response);
+  return true;
 }
 
 export async function getActiveRemitters() {

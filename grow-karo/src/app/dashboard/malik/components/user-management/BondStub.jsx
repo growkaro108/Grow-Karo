@@ -135,7 +135,7 @@ export default function BondStub({ bond, userName, scheme, onView, viewUser }) {
           }
           emphasis
         >
-          {currency(calculateMaturityAmount(bond))}
+          {currency(calculateMaturityAmount(bond)-(bond.redeemAmount ?? bond.profitRedeemed))}
         </Field>}
       </dl>
     </article>

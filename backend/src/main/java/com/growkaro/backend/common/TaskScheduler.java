@@ -51,9 +51,9 @@ public class TaskScheduler {
     // 6. Timezone Asia/Kolkata
     // 7. Run every day at 3:00:00 AM (Kolkata time)
 
-    // Runs every day at 12:44 PM (Kolkata time)
-    // @Scheduled(cron = "0 18 20 * * *", zone = timeZone)
-    // @SchedulerLock(name = "DailyProfitJob", lockAtMostFor = "5m", lockAtLeastFor = "3m")
+    // Runs every day at 3:00 AM (Kolkata time)
+    @Scheduled(cron = "0 0 3 * * *", zone = timeZone)
+    @SchedulerLock(name = "DailyProfitJob", lockAtMostFor = "5m", lockAtLeastFor = "3m")
     public void addProfitToUserAccount() {
         log.info("Starting daily profit payout job at {}", general.getCurrentDateTime());
         List<UserScheme> allApprovedUserSchemes = userSchemeRepository
