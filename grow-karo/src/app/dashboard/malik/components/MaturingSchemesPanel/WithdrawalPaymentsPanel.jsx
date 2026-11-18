@@ -1,12 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  AlertTriangle,
-  FileSpreadsheet,
-  HandCoins,
-  Clock,
-} from "lucide-react";
+import { AlertTriangle, FileSpreadsheet, HandCoins, Clock } from "lucide-react";
 import * as XLSX from "xlsx";
 import Image from "next/image";
 import TablePagination from "@/components/TablePagination";
@@ -38,9 +33,15 @@ export default function WithdrawalPaymentsPanel() {
     return schemes.filter((scheme) => {
       const matchesDays = scheme.daysRemaining <= daysThreshold;
       const matchesSearch =
-        String(scheme.userName || "").toLowerCase().includes(query) ||
-        String(scheme.schemeName || "").toLowerCase().includes(query) ||
-        String(scheme.bondNumber || "").toLowerCase().includes(query);
+        String(scheme.userName || "")
+          .toLowerCase()
+          .includes(query) ||
+        String(scheme.schemeName || "")
+          .toLowerCase()
+          .includes(query) ||
+        String(scheme.bondNumber || "")
+          .toLowerCase()
+          .includes(query);
       return matchesDays && matchesSearch;
     });
   }, [schemes, daysThreshold, searchTerm]);
@@ -51,9 +52,9 @@ export default function WithdrawalPaymentsPanel() {
   }, [filteredSchemes, currentPage, itemsPerPage]);
 
   useEffect(() => {
-    const handler = setTimeout(() => setDebouncedSearch(searchTerm), 700);
+    const handler = setTimeout(() => setDebouncedSearch(daysThreshold), 500);
     return () => clearTimeout(handler);
-  }, [searchTerm]);
+  }, [daysThreshold]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -62,8 +63,8 @@ export default function WithdrawalPaymentsPanel() {
         setLoading(true);
         setError("");
         const result = await getAllMaturityUserScheme(
+          searchTerm,
           debouncedSearch,
-          daysThreshold,
           currentPage,
           itemsPerPage,
           { signal: controller.signal },
@@ -108,7 +109,7 @@ export default function WithdrawalPaymentsPanel() {
 
     fetchSchemes();
     return () => controller.abort();
-  }, [debouncedSearch, currentPage, itemsPerPage, daysThreshold]);
+  }, [debouncedSearch]);
 
   const handleExportXLSX = () => {
     let dataToExport = [...filteredSchemes];
@@ -306,7 +307,10 @@ function WithdrawalTable({ schemes, daysThreshold, onSettle }) {
         <tbody className="divide-y divide-slate-800/60 text-sm">
           {schemes.length ? (
             schemes.map((scheme) => (
-              <tr key={scheme.id} className="transition-colors hover:bg-slate-800/30">
+              <tr
+                key={scheme.id}
+                className="transition-colors hover:bg-slate-800/30"
+              >
                 <td className="px-4 py-3">
                   <Image
                     src={resolveMediaUrl(scheme.bondImage) || "/logo.png"}
@@ -318,16 +322,27 @@ function WithdrawalTable({ schemes, daysThreshold, onSettle }) {
                   />
                 </td>
                 <td className="px-4 py-3">
-                  <div className="font-semibold text-slate-100">{scheme.userName}</div>
-                  <div className="text-xs text-slate-400">{scheme.userEmail}</div>
+                  <div className="font-semibold text-slate-100">
+                    {scheme.userName}
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {scheme.userEmail}
+                  </div>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="font-medium text-slate-200">{scheme.schemeName}</div>
-                  <div className="font-mono text-xs text-indigo-400">{scheme.bondNumber}</div>
+                  <div className="font-medium text-slate-200">
+                    {scheme.schemeName}
+                  </div>
+                  <div className="font-mono text-xs text-indigo-400">
+                    {scheme.bondNumber}
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   <div className="font-bold text-slate-100">
-                    ₹{Number(scheme.maturityAmount || 0).toLocaleString("en-IN")}
+                    ₹
+                    {Number(
+                      scheme.maturityAmount - scheme.totalRedeemed || 0,
+                    ).toLocaleString("en-IN")}
                   </div>
                   <div className="text-xs text-slate-500">
                     {scheme.planType === "PENSION"
@@ -343,7 +358,9 @@ function WithdrawalTable({ schemes, daysThreshold, onSettle }) {
                 </td>
                 <td className="px-4 py-3 text-right">
                   {scheme.settlementPending ? (
-                    <span className="text-xs text-amber-300">Pending with remitter</span>
+                    <span className="text-xs text-amber-300">
+                      Pending with remitter
+                    </span>
                   ) : scheme.daysRemaining < 0 ? (
                     <button
                       type="button"
@@ -393,8 +410,12 @@ function WithdrawalCards({ schemes, daysThreshold, onSettle }) {
                 unoptimized
               />
               <div className="min-w-0 flex-1">
-                <h3 className="truncate font-semibold text-slate-100">{scheme.schemeName}</h3>
-                <p className="font-mono text-xs text-indigo-400">{scheme.bondNumber}</p>
+                <h3 className="truncate font-semibold text-slate-100">
+                  {scheme.schemeName}
+                </h3>
+                <p className="font-mono text-xs text-indigo-400">
+                  {scheme.bondNumber}
+                </p>
               </div>
               <DaysRemaining days={scheme.daysRemaining} />
             </div>
@@ -404,9 +425,13 @@ function WithdrawalCards({ schemes, daysThreshold, onSettle }) {
               <Field label="Invested">
                 ₹{Number(scheme.investmentAmount || 0).toLocaleString("en-IN")}
               </Field>
-              <Field label={scheme.planType === "PENSION" ? "Principal due" : "Payout"}>
+              <Field
+                label={
+                  scheme.planType === "PENSION" ? "Principal due" : "Payout"
+                }
+              >
                 <span className="text-sm font-bold text-emerald-400">
-                  ₹{Number(scheme.maturityAmount || 0).toLocaleString("en-IN")}
+                  ₹{Number(scheme.investmentAmount + scheme.totalProfit - scheme.totalRedeemed || 0).toLocaleString("en-IN")}
                 </span>
               </Field>
             </div>

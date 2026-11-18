@@ -91,18 +91,21 @@ export default function SettleByAdminForm({ userScheme, onClose, onSuccess }) {
     };
   }, [action]);
 
-  const settleable = Math.max(0, Number(userScheme.maturityAmount) || 0);
+  const settleable = Math.max(0, Number(userScheme.maturityAmount - userScheme.totalRedeemed) || 0);
   const investedAmount = userScheme.investmentAmount;
+   const redeemAmount = userScheme.totalRedeemed;
+  // const settleable = userScheme.planType == "FD" ? userScheme.investmentAmount + userScheme.totalProfit - userScheme.totalRedeemed : userScheme.maturityAmount- redeemAmount;
   const profitEarned =
-    userScheme.totalProfit > 1
-      ? userScheme.totalProfit
-      : settleable - userScheme.investmentAmount;
-  const redeemAmount = userScheme.totalRedeemed;
-  const balanceDue = settleable;
+  userScheme.totalProfit > 1
+  ? userScheme.totalProfit
+  : settleable - userScheme.investmentAmount;
+ 
   const profitAvailable =
     userScheme.planType === "PENSION"
       ? Math.max(0, Number(userScheme.profitAvailable) || 0)
       : Math.max(0, Number(profitEarned - redeemAmount) || 0);
+  const balanceDue = settleable;
+
   const settlementAmount =
     settlementType === "PARTIAL"
       ? Number(partialAmount) || 0

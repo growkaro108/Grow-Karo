@@ -45,7 +45,7 @@ services:
       - growkaro-network
 
   backend:
-    image: growwkaro/backend:v4.5.3
+    image: growwkaro/backend:v4.5.5
     container_name: growkaro-backend
     restart: unless-stopped
     depends_on:
@@ -78,7 +78,7 @@ services:
       - growkaro-network
 
   frontend:
-    image: growwkaro/frontend:v4.5.3
+    image: growwkaro/frontend:v4.5.5
     container_name: growkaro-frontend
     restart: unless-stopped
     depends_on:

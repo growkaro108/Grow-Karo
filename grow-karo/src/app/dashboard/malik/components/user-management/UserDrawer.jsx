@@ -91,7 +91,7 @@ const emptyForm = (schemeId = "") => ({
 const emptyNominee = { name: "", relation: "", aadhaarNo: "", phone: "" };
 const MAX_BOND_FILE_SIZE_BYTES = 2 * 1024 * 1024;
 const TARGET_BOND_IMAGE_SIZE_BYTES = 1.5 * 1024 * 1024;
-const MAX_SOURCE_IMAGE_SIZE_BYTES = 20 * 1024 * 1024;
+const MAX_SOURCE_IMAGE_SIZE_BYTES = 3 * 1024 * 1024;
 
 async function prepareBondUpload(file) {
   if (
@@ -122,7 +122,7 @@ async function prepareBondUpload(file) {
       });
     }
 
-    const maxDimension = 2200;
+    const maxDimension = 2000;
     let width = bitmap.width;
     let height = bitmap.height;
     const initialScale = Math.min(1, maxDimension / Math.max(width, height));
@@ -133,20 +133,26 @@ async function prepareBondUpload(file) {
     const context = canvas.getContext("2d");
     if (!context) throw new Error("Could not prepare the selected image.");
 
-    const qualityLevels = [0.86, 0.78, 0.7, 0.62, 0.54];
+    // टेक्स्ट की क्लेरिटी बनाए रखने के लिए क्वालिटी कभी भी 0.80 से नीचे न जाए
+    const qualityLevels = [0.90, 0.85, 0.80]; 
+
     while (true) {
       canvas.width = width;
       canvas.height = height;
+      // टेक्स्ट को और शार्प रेंडर करने के लिए
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
       context.drawImage(bitmap, 0, 0, width, height);
 
       for (const quality of qualityLevels) {
         const compressed = await new Promise((resolve, reject) => {
+          // JPEG की जगह WEBP का उपयोग करें ताकि टेक्स्ट धुंधला न हो
           canvas.toBlob(
             (blob) =>
               blob
                 ? resolve(blob)
                 : reject(new Error("Could not compress the selected image.")),
-            "image/jpeg",
+            "image/webp", 
             quality,
           );
         });
@@ -155,21 +161,23 @@ async function prepareBondUpload(file) {
           compressed.size < file.size
         ) {
           const name = file.name.replace(/\.[^.]+$/, "") || "bond";
-          return new File([compressed], `${name}.jpg`, {
-            type: "image/jpeg",
+          return new File([compressed], `${name}.webp`, {
+            type: "image/webp",
             lastModified: file.lastModified,
           });
         }
       }
 
       const longestSide = Math.max(width, height);
-      if (longestSide <= 1100) {
+      if (longestSide <= 900) {
         if (file.size <= MAX_BOND_FILE_SIZE_BYTES) return file;
         throw new Error(
-          "This image cannot be reduced to 2 MB while keeping it readable. Please choose a smaller image.",
+          "This image cannot be reduced to the target size while keeping text readable. Please choose a smaller image.",
         );
       }
-      const scale = Math.max(1100 / longestSide, 0.85);
+      
+      // साइज ज्यादा होने पर क्वालिटी गिराने के बजाय इमेज का साइज (Dimensions) थोड़ा और घटाएं
+      const scale = 0.80; 
       width = Math.max(1, Math.round(width * scale));
       height = Math.max(1, Math.round(height * scale));
     }

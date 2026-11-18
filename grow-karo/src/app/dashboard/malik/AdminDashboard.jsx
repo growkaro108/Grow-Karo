@@ -62,7 +62,6 @@ const WithdrawalsTab = dynamic(
     ssr: false,
   },
 );
-
 const PlanTab = dynamic(() => import("./components/Scheme/PlanTab"), {
   loading: () => <TabLoader message={"Loading plans..."} />,
   ssr: false,
@@ -134,7 +133,7 @@ const NAV_ITEMS = [
 ];
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("maturity");
   const [loading, setLoading] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   // const [toast, setToast] = useState(null);
