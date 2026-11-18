@@ -37,7 +37,8 @@ public interface ProfitLedgerRepository extends JpaRepository<UserSchemeProfitLe
                             AND p.profitDate <= :toDate
                             AND (
                                 LOWER(s.planType) = 'pension'
-                                OR (LOWER(s.planType) = 'fd' AND p.profitDate <> us.maturityDate)
+                                 OR (LOWER(s.planType) = 'fd'
+                                 AND s.payoutFrequency != 'tenure-complete')
                             )
                             AND (:query = ''
                                 OR LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%'))
@@ -56,7 +57,9 @@ public interface ProfitLedgerRepository extends JpaRepository<UserSchemeProfitLe
                             AND p.profitDate <= :toDate
                             AND (
                                 LOWER(s.planType) = 'pension'
-                                OR (LOWER(s.planType) = 'fd' AND p.profitDate <> us.maturityDate)
+                                OR (LOWER(s.planType) = 'fd'
+                                 AND s.payoutFrequency != 'tenure-complete'
+                                 )
                             )
                             AND (:query = ''
                                 OR LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%'))

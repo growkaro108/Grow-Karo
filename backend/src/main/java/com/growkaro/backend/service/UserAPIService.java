@@ -52,6 +52,7 @@ import com.growkaro.backend.entity.NotificationContentBuilder.EssentialActionTyp
 import com.growkaro.backend.entity.Reply;
 import com.growkaro.backend.entity.SupportIssue.Status;
 import com.growkaro.backend.entity.Transaction.TransactionType;
+import com.growkaro.backend.entity.User.Role;
 import com.growkaro.backend.entity.UserSchemeReedemLedger.RedeemType;
 import com.growkaro.backend.entity.UserSchemeReedemLedger.ReedeemStatus;
 import com.growkaro.backend.enums.ActivityType;
@@ -121,7 +122,7 @@ public class UserAPIService {
     }
 
     // @Cacheable(value = "testApis", key = "#id")
-    public Object testApis() {
+    public Object testApis(int var) {
         try {
             // User u =
             // userRepository.findByEmail("vikaskumar01997@gmail.com").orElse(null);
@@ -140,8 +141,9 @@ public class UserAPIService {
             // pageable.getPageSize());
             // User u =userRepository.findByEmail("wv9304@gmail.com").orElse(null);
             // return u != null ? u.hashCode() : "User not found";
-            taskScheduler.addProfitToUserAccount();
+            taskScheduler.notifyForSchemeMatured();
             return "Test API executed successfully";
+        //    return Math.floorDiv(var, 30);
         } catch (Exception e) {
             log.error("Failed to set user status active", e);
             return e.getMessage();
@@ -338,9 +340,12 @@ public class UserAPIService {
                 log.error("Invalid email or password for email={}", email);
                 return general.response("error", "Invalid email or password", Map.of());
             }
-            boolean isAdmin = adminPolicy.isAdminEmail(email);
+            // boolean isAdmin = adminPolicy.isAdminEmail(email);
             // System.out.println("isAdmin: " + isAdmin + " for email: " + email);
-            String role = isAdmin ? "ROLE_ADMIN" : "ROLE_GRAHAK";
+            // String role = isAdmin ? "ROLE_ADMIN" : "ROLE_GRAHAK";
+            boolean isAdmin = user.getRole().equals(Role.ADMIN);
+
+            String role = user.getRole() != null && isAdmin ? "ROLE_ADMIN" : "ROLE_GRAHAK";
             String token = jwtService.generateToken(user.getId(), user.getEmail(), role);
             UserProfile finalUser = UserProfile.fromEntity(user, token);
 

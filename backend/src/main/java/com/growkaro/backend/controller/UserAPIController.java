@@ -64,10 +64,10 @@ public class UserAPIController {
         this.notificationBroadcaster = notificationBroadcaster;
         this.jwtService = jwtService;
     }
-    @GetMapping("/test")
-    public Object test() {
+    @GetMapping("/test/{var}")
+    public Object test(@PathVariable(required = false) int var) {
 
-        return userAPIService.testApis();
+        return userAPIService.testApis(var);
         // return null;
     }
 

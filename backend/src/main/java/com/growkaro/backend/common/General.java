@@ -10,12 +10,14 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -423,6 +425,21 @@ public class General {
                 .multiply(BigDecimal.valueOf(months));
     }
 
+    public int fequencyToMonths(String frequency, int tenure) {
+        // tenure to months conversion is not straightforward, as tenure is in days. We need to determine how many months are represented by the given frequency. For example, if the frequency is "monthly", then each period represents 1 month. If it's "quarterly", then each period represents 3 months, and so on.
+       int months=Math.floorDiv(tenure, 30); // approximate conversion of tenure in days to months, assuming 30 days per month. This is a simplification and may not be accurate for all cases.
+        if (frequency == null || frequency.isBlank()) {
+            throw new IllegalArgumentException("Frequency is required");
+        }
+        String key = frequency.trim().toLowerCase(Locale.ROOT).replaceAll("[-_\\s]+", " ");
+        return switch (key) {
+            case "monthly" -> months;
+            case "quarterly" -> months / 3;
+            case "half yearly", "halfyearly" -> months / 2;
+            case "yearly", "annually" ->months / 12;
+            default -> throw new IllegalArgumentException("Unknown frequency: " + frequency);
+        };
+    }
     public int resolvePeriodDays(LocalDateTime enrollmentDay, String payoutFrequency, int tenure) {
         if (payoutFrequency == null || payoutFrequency.isBlank()) {
             throw new IllegalArgumentException("Payout frequency is required");
@@ -750,9 +767,9 @@ public class General {
             BigDecimal interest = paidAmount.multiply(profitMultiplier);
             totalMaturity = paidAmount.add(interest);
         } else {
-            int periodDays = resolvePeriodDays(bond.getEnrollmentDate(), bond.getScheme().getPayoutFrequency(),
-                    bond.getScheme().getTenure());
-            int times = bond.getScheme().getTenure() / periodDays; // Integer division floors automatically
+            // int periodDays = resolvePeriodDays(bond.getEnrollmentDate(), bond.getScheme().getPayoutFrequency(),
+            //         bond.getScheme().getTenure());
+            int times = fequencyToMonths(bond.getScheme().getPayoutFrequency(), bond.getScheme().getTenure()); // Integer division floors automatically
 
             BigDecimal interestPerPeriod = paidAmount.multiply(profitMultiplier);
             totalMaturity = paidAmount.add(interestPerPeriod.multiply(BigDecimal.valueOf(times)));
@@ -896,4 +913,47 @@ public class General {
         return true;
     }
 
+    public UserScheme settingNextPayoutDate(UserScheme userScheme) {
+        if (userScheme == null || userScheme.getScheme() == null) {
+            return userScheme;
+        }
+
+        Scheme scheme = userScheme.getScheme();
+        String planType = scheme.getPlanType();
+
+        boolean hasScheduledPayout = !"PENSION".equalsIgnoreCase(planType)
+                && !"DAILY_DEPOSIT".equalsIgnoreCase(planType);
+
+        LocalDate maturityDate = userScheme.getMaturityDate();
+        List<UserSchemeProfitLedger> profitLedger = userScheme.getProfitLedger();
+
+        if (hasScheduledPayout && maturityDate != null && profitLedger != null && !profitLedger.isEmpty()) {
+            LocalDate lastPayoutDate = profitLedger.stream()
+                    .map(UserSchemeProfitLedger::getProfitDate)
+                    .filter(Objects::nonNull)
+                    .max(Comparator.naturalOrder())
+                    .orElse(null);
+
+            if (lastPayoutDate == null) {
+                log.info("No valid ledger entries found for userScheme id={}, keeping nextPayoutDate={}",
+                        userScheme.getUserSchemeId(), userScheme.getNextPayoutDate());
+            } else {
+                LocalDate next = calculateNextPayoutDate(
+                        lastPayoutDate.atStartOfDay(),
+                        scheme.getPayoutFrequency(),
+                        scheme.getTenure());
+
+                // Cleaner readability using isAfter or isEqual
+                if (!next.isBefore(maturityDate)) {
+                    next = maturityDate;
+                }
+
+                userScheme.setNextPayoutDate(next);
+                log.info("Next payout date for userScheme id={} set to {} (last ledger date {})",
+                        userScheme.getUserSchemeId(), next, lastPayoutDate);
+            }
+        }
+
+        return userScheme;
+    }
 }

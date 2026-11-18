@@ -30,6 +30,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.PostUpdate;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
@@ -121,6 +122,7 @@ public class UserScheme {
     private LocalDate lastProfitUpdateDate;
 
     @OneToMany(mappedBy = "userScheme", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("profitDate DESC")
     private List<UserSchemeProfitLedger> profitLedger = new ArrayList<>();
 
     @OneToMany(mappedBy = "userScheme", cascade = CascadeType.ALL, orphanRemoval = true)

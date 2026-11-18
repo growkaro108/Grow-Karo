@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -140,7 +141,7 @@ public class AdminAPIService {
     private static final int DEFAULT_PAGE_SIZE = 20;
     private static final float PDF_PREVIEW_MAX_DIMENSION_PIXELS = 700f;
     private static final long MAX_PDF_SIZE_BYTES = 2L * 1024 * 1024;
-    private static final float JPEG_QUALITY = 0.70f;
+    private static final float WEBP_QUALITY = 0.85f;
     private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
     private static final long MAX_SETTLEMENT_PROOF_BYTES = 3L * 1024 * 1024;
     private static final Set<String> SETTLEMENT_PROOF_TYPES = Set.of(
@@ -225,13 +226,14 @@ public class AdminAPIService {
         }
     }
 
+    @Cacheable(value = "allSchemes", key = "'allSchemes'")
     public List<SchemeResponse> getAllSchemes(boolean admin) {
         return schemeRepository.findAll().stream()
                 .filter(scheme -> admin || Boolean.TRUE.equals(scheme.getStatus()))
-                // Sort by startDate in DEScending order (nulls placed last to avoid
+                // Sort by updated date descending, nulls last (to avoid
                 // NullPointerException)
 
-                .sorted(Comparator.comparing(Scheme::getStartDate, Comparator.nullsLast(Comparator.reverseOrder())))
+                .sorted(Comparator.comparing(Scheme::getUpdatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(SchemeResponse::fromEntity)
                 .toList();
     }
@@ -470,10 +472,9 @@ public class AdminAPIService {
 
         replaceLedgers(userScheme, request.profitLedger(), request.reedemLedger());
 
-        userScheme.setNextPayoutDate(general.calculateNextPayoutDate(
-                enrollmentDate, scheme.getPayoutFrequency(), scheme.getTenure()));
+        userScheme = general.settingNextPayoutDate(userScheme);
 
-        userSchemeRepository.save(userScheme);
+        userSchemeRepository.saveAndFlush(userScheme);
 
         return general.response("success", "FD scheme added to user successfully",
                 UserSchemeResponse.toUserSchemeResponse(userScheme));
@@ -685,6 +686,7 @@ public class AdminAPIService {
                             "Interest payouts cannot exceed the scheduled contract interest", null);
                 }
                 replaceLedgers(userScheme, request.profitLedger(), request.reedemLedger());
+                userScheme = general.settingNextPayoutDate(userScheme);
             }
             if (request.sipLedger() != null) {
                 boolean isSip = "SIP".equalsIgnoreCase(userScheme.getScheme().getPlanType());
@@ -715,7 +717,7 @@ public class AdminAPIService {
                 replaceDailyDepositLedger(userScheme, request.dailyDepositLedger());
                 userScheme.setPaidAmount(totalDailyDeposit(request.dailyDepositLedger()));
             }
-            userSchemeRepository.save(userScheme);
+            userSchemeRepository.saveAndFlush(userScheme);
             return general.response("success", "Profit and redemption ledger updated", null);
         } catch (IllegalArgumentException e) {
             return general.response("error", e.getMessage(), null);
@@ -1279,7 +1281,7 @@ public class AdminAPIService {
                 String folder = "bonds/" + userSchemeId;
                 if ("application/pdf".equalsIgnoreCase(images.getContentType())) {
                     byte[] preview = renderPdfFirstPage(images); // validates size + renders
-                    newImageUrl = localFileStorageService.storeBytes(preview, ".jpg", folder);
+                    newImageUrl = localFileStorageService.storeBytes(preview, ".webp", folder);
                     newPdfUrl = localFileStorageService.store(images, folder);
                 } else {
                     newImageUrl = localFileStorageService.store(images, folder);
@@ -1381,7 +1383,7 @@ public class AdminAPIService {
 
             BufferedImage preview = renderer.renderImage(0, scale, ImageType.RGB);
             try {
-                return toJpeg(preview, JPEG_QUALITY);
+                return toWebp(preview, WEBP_QUALITY);
             } finally {
                 preview.flush();
             }
@@ -1390,13 +1392,24 @@ public class AdminAPIService {
         }
     }
 
-    private byte[] toJpeg(BufferedImage image, float quality) throws IOException {
-        ImageWriter writer = ImageIO.getImageWritersByFormatName("jpg").next();
+    private byte[] toWebp(BufferedImage image, float quality) throws IOException {
+        Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("webp");
+        if (!writers.hasNext()) {
+            throw new IOException("No WebP ImageWriter found. Please check your dependencies.");
+        }
+
+        ImageWriter writer = writers.next();
         try (ByteArrayOutputStream out = new ByteArrayOutputStream();
                 ImageOutputStream ios = ImageIO.createImageOutputStream(out)) {
+
             ImageWriteParam param = writer.getDefaultWriteParam();
-            param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-            param.setCompressionQuality(quality);
+
+            if (param.canWriteCompressed()) {
+                param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                param.setCompressionType(param.getCompressionTypes()[0]);
+                param.setCompressionQuality(quality);
+            }
+
             writer.setOutput(ios);
             writer.write(null, new IIOImage(image, null, null), param);
             ios.flush();
@@ -1988,6 +2001,7 @@ public class AdminAPIService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "nearMaturityUsers", key = "#days")
     public PagedResponse<NearMaturityUserSchemeResponse> getNearMaturityUser(String query, int days,
             Pageable pageable) {
         if (query == null || query.trim().isEmpty()) {

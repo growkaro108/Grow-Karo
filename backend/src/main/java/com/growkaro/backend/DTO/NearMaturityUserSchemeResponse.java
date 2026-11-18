@@ -1,6 +1,7 @@
 package com.growkaro.backend.DTO;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -11,6 +12,7 @@ import com.growkaro.backend.entity.BankDetails;
 import com.growkaro.backend.entity.Scheme;
 import com.growkaro.backend.entity.User;
 import com.growkaro.backend.entity.UserScheme;
+import com.growkaro.backend.entity.UserSchemeProfitLedger;
 import com.growkaro.backend.enums.UserSchemeStatus;
 
 public record NearMaturityUserSchemeResponse(
@@ -52,7 +54,12 @@ public record NearMaturityUserSchemeResponse(
                 int remainingDays = (int) ChronoUnit.DAYS.between(today, maturityDate);
                 BigDecimal maturityAmount = g.calculateMaturityAmount(us);
                 BigDecimal totalProfit = g.countProfit(us.getProfitLedger());
-                BigDecimal totalRedeemed = g.countReedem(us.getReedemLedger());
+                BigDecimal settledProfit = us.getProfitLedger().stream()
+                                .filter(ledger -> ledger.isPaid() == true)
+                                .map(UserSchemeProfitLedger::getProfitAmount)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                                .setScale(2, RoundingMode.HALF_UP); 
+                BigDecimal totalRedeemed = g.countReedem(us.getReedemLedger()).add(settledProfit);
                 BigDecimal profitAvailable = totalProfit.subtract(totalRedeemed)
                                 .max(BigDecimal.ZERO);
                 if ("PENSION".equalsIgnoreCase(s.getPlanType())) {
@@ -93,7 +100,8 @@ public record NearMaturityUserSchemeResponse(
                                 bd == null ? null : bd.getIfscCode(),
                                 bd == null ? null : bd.getAccountHolderName(),
                                 bd == null ? null : bd.getBankName(),
-                                g.getCustomerId(u.getId()),
+                                // g.getCustomerId(u.getId()),
+                                u.hashCode() + "",
                                 us.getStatus() == UserSchemeStatus.SETTLEMENT_PENDING,
                                 s.getPlanType());
         }

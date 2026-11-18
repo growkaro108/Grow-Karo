@@ -39,7 +39,11 @@
    			<groupId>io.micrometer</groupId>
    			<artifactId>micrometer-registry-prometheus</artifactId>
 		</dependency>
-
+		<dependency>
+    <groupId>org.sejda.imageio</groupId>
+    <artifactId>webp-imageio</artifactId>
+    <version>0.1.6</version> <!-- या लेटेस्ट स्टेबल वर्शन -->
+</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>

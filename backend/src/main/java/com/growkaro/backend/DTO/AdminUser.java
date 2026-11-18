@@ -44,7 +44,7 @@ public record AdminUser(
 
                 return new AdminUser(
                                 user.getId(),
-                                GENERAL.getCustomerId(user.getId()),
+                                user.hashCode() + "", // customerId is not stored in DB, so we generate it from hashcode
                                 user.getName(),
                                 user.getAadharNo(),
                                 user.getAddress(),
