@@ -12,7 +12,6 @@ import {
   enrollInPlan,
   getAllUserSchemeIds,
 } from "../../../services/grahakService";
-import { getAllPlans } from "@/api/generalApi";
 import { CheckIcon } from "./components/Icons";
 import { PlanCard } from "./components/PlanCard";
 import dynamic from "next/dynamic";

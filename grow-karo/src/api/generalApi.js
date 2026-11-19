@@ -4,8 +4,8 @@ import { apiRequest } from "./apiClient";
 export async function healthCheck() {
   return apiRequest("/health");
 }
-export async function getAllPlans() {
-  return await apiRequest(`/scheme/get?admin=${false}`);
+export async function getAllPlans(viewType) {
+  return await apiRequest(`/scheme/get?viewType=${viewType}`);
 }
 //for home page
 export const fetchHomeChartData = async () => {

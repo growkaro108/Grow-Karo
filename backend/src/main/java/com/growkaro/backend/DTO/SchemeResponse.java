@@ -63,12 +63,14 @@ public record SchemeResponse(
                 );
         }
 
-        public static SchemeResponse fromEntity(Scheme scheme, boolean wantJoinedUser) {
+        public static SchemeResponse fromEntity(Scheme scheme, String viewType) {
+                boolean isPublic = viewType.equalsIgnoreCase("public");
+                boolean isUserManagement = viewType.equalsIgnoreCase("userManagement");
                 return new SchemeResponse(
                                 scheme.getSchemeId(),
                                 scheme.getSchemeName(),
                                 scheme.getSchemeCategory(),
-                                scheme.getSchemeDetails(),
+                                isUserManagement ? scheme.getSchemeDetails() : null,
                                 scheme.getPayoutFrequency(),
                                 scheme.getTenure(),
                                 scheme.getStartDate(),
@@ -80,11 +82,11 @@ public record SchemeResponse(
                                 scheme.getMaxInvestorsAllowed(),
                                 scheme.getUpdatedAt(),
                                 scheme.getRiskLevel(),
-                                wantJoinedUser
+                                isPublic
                                                 ? scheme.getJoinedUsers().stream().map(UserScheme::getUserSchemeId)
                                                                 .toList()
                                                 : null,
-                                termsOf(scheme),
+                                isPublic ? termsOf(scheme) : null,
                                 scheme.getPlanType(),
                                 scheme.getTenureMonths(),
                                 scheme.getSipFrequency(),

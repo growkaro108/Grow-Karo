@@ -95,6 +95,7 @@ export default function BondCard({
       ? "DAILY"
       : "MONTHLY";
   const isDailySIP = bond.planType === "DAILY_DEPOSIT";
+  const isQuarterly = bond.planType == "FD" && bond.payoutCycle == "Quarterly";
   // console.log("sipFrequency", sipFrequency, "isDailySIP", isDailySIP);
   // Build and clean up the preview URL whenever the selected file changes
   useEffect(() => {
@@ -454,7 +455,7 @@ export default function BondCard({
             value={
               bondFormState.bondNumber ??
               bond.bondNumber ??
-              (isDailySIP ? "GKDDP00" : "GKFD")
+              (isDailySIP ? "GKDDP00" : isQuarterly ? "GKM0" : "GKFD")
             }
             onChange={(e) => onBondFormChange("bondNumber", e.target.value)}
             className={inputClass}

@@ -137,7 +137,7 @@ export const UserProvider = ({ children }) => {
         return;
       }
       showLoader("Getting best scheme for you...");
-      const response = await getAllPlans();
+      const response = await getAllPlans("public");
       // console.log("Api called")
       if (response.status === "success") {
         storage.setWithTTL("schemes", response.data, "session", 60);

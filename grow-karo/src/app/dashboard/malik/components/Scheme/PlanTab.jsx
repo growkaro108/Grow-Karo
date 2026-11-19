@@ -86,7 +86,8 @@ export default function PlansPage() {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const response = await getAllPlans(term ? { search: term } : undefined);
+      // const response = await getAllPlans(term ? { search: term } : undefined);
+      const response = await getAllPlans("public");
       // console.log(response);
       const data = response.data ?? [];
       // console.log(data);

@@ -16,9 +16,18 @@ import {
   Pencil,
 } from "lucide-react";
 import StatusPill from "./StatusPill";
-import SchemeManagementPanel from "./SchemeManagementPanel";
+// import SchemeManagementPanel from "./SchemeManagementPanel";
+const SchemeManagementPanel = dynamic(() => import("./SchemeManagementPanel"), {
+  loading: () => <div className="border border-gray-400 rounded-2xl border-dashed animate-pulse h-[90%] w-[90%] mx-auto" />,
+  ssr: false,
+});
 // import EnrolledSchemes from "./EnrolledSchemes";
-import AddUser from "./AddUser";
+// import AddUser from "./AddUser";
+//dynamic lazy load of add user form to avoid SSR issues with react-hook-form  with proper skeleton
+const AddUser = dynamic(() => import("./AddUser"), {
+  loading: () => <div className="fixed inset-0 z-50 h-[90vh] w-lg flex items-center justify-center bg-slate-900/70 px-4 backdrop-blur-sm animate-pulse"></div>,
+  ssr: false,
+});
 import {
   calculateMaturityDate,
   calculateMaturityDateInMonths,
@@ -47,11 +56,11 @@ import Toast from "../SchemeAproval/components/Toast";
 import { adminContext } from "@/context/AdminContext";
 
 const CertificateLightbox = dynamic(() => import("../Certificatelightbox"), {
-  loading: () => <p>Loading...</p>,
+  loading: () => <div className="fixed inset-0 z-60 mt-16 flex items-center justify-center p-4 sm:p-8 border border-gray-400 rounded-2xl border-dashed animate-pulse h-[70%] w-[90%] mx-auto" />,
   ssr: false,
 });
 const EnrolledSchemes = dynamic(() => import("./EnrolledSchemes"), {
-  loading: () => <TabLoader message="Loading enrolled schemes..." />,
+  loading: () => <div className="mb-3 flex items-center justify-between border border-gray-400 rounded-2xl border-dashed animate-pulse h-[90%] w-[90%] mx-auto" />,
   ssr: false,
 });
 /* ------------------------------------------------------------------ */
@@ -297,7 +306,7 @@ export default function UserDrawer({ user, onClose, onSaved }) {
   /* ---------------------------- data loading ---------------------------- */
   useEffect(() => {
     let cancelled = false;
-    getAllPlans()
+    getAllPlans("userManagement")
       .then((response) => {
         if (cancelled) return;
         const available = response?.data ?? [];

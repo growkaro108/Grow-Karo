@@ -226,16 +226,27 @@ public class AdminAPIService {
         }
     }
 
-    @Cacheable(value = "allSchemes", key = "'allSchemes'")
-    public List<SchemeResponse> getAllSchemes(boolean admin) {
-        return schemeRepository.findAll().stream()
-                .filter(scheme -> admin || Boolean.TRUE.equals(scheme.getStatus()))
-                // Sort by updated date descending, nulls last (to avoid
-                // NullPointerException)
+    // @Cacheable(value = "allSchemes", key = "#viewType")
+    public List<SchemeResponse> getAllSchemes(String viewType) {
+        try {
+            boolean admin = "admin".equalsIgnoreCase(viewType);
+            boolean userManagement = "userManagement".equalsIgnoreCase(viewType);
+            if(!"public".equalsIgnoreCase(viewType) && !"userManagement".equalsIgnoreCase(viewType) && !"admin".equalsIgnoreCase(viewType)){
+                log.error("Invalid viewType: {}", viewType);
+                return Collections.emptyList();
+            }
+            return schemeRepository.findAll().stream()
+                    .filter(scheme -> (admin) || Boolean.TRUE.equals(scheme.getStatus()))
+                    // Sort by updated date descending, nulls last (to avoid
+                    // NullPointerException)
 
-                .sorted(Comparator.comparing(Scheme::getUpdatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(SchemeResponse::fromEntity)
-                .toList();
+                    .sorted(Comparator.comparing(Scheme::getUpdatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                    .map(s -> SchemeResponse.fromEntity(s,viewType))
+                    .toList();
+        } catch (Exception e) {
+            log.error("Error fetching all schemes: {}", e.getMessage(), e);
+            return Collections.emptyList();
+        }
     }
 
     // Update the scheme
@@ -313,7 +324,7 @@ public class AdminAPIService {
             existingSchemeData.setUpdatedBy(general.adminName());
 
             schemeRepository.save(existingSchemeData);
-            return getAllSchemes(true);
+            return getAllSchemes("public");
         } catch (Exception e) {
             log.error("error in updating scheme", e.getMessage());
             return null;

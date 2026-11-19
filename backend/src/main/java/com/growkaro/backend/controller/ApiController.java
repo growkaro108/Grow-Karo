@@ -40,9 +40,9 @@ public class ApiController {
     }
 
     @GetMapping("/scheme/get")
-    public ResponseEntity<Map<String, Object>> getAllScheme() {
+    public ResponseEntity<Map<String, Object>> getAllScheme(@RequestParam String viewType) {
         try {
-            List<SchemeResponse> allScheme = adminAPIService.getAllSchemes(false);
+            List<SchemeResponse> allScheme = adminAPIService.getAllSchemes(viewType);
             if (allScheme == null)
                 return ResponseEntity.internalServerError().build();
             else

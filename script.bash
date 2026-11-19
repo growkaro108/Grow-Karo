@@ -31,14 +31,14 @@ echo "=========================================="
 echo "🚀 Building Frontend with API_BASE_URL=$API_BASE_URL (tag: $IMAGE_TAG)"
 echo "=========================================="
 
-docker build \
-  --build-arg NEXT_PUBLIC_API_BASE_URL="$API_BASE_URL" \
-  --build-arg NEXT_PUBLIC_ADMIN_EMAILS="$ADMIN_EMAILS" \
-  -t "growwkaro/frontend:$IMAGE_TAG" ./grow-karo
+# docker build \
+#   --build-arg NEXT_PUBLIC_API_BASE_URL="$API_BASE_URL" \
+#   --build-arg NEXT_PUBLIC_ADMIN_EMAILS="$ADMIN_EMAILS" \
+#   -t "growwkaro/frontend:$IMAGE_TAG" ./grow-karo
 
-echo "✅ Frontend image built successfully!"
-docker push "growwkaro/frontend:$IMAGE_TAG"
-echo "✅ Frontend image pushed successfully!"
+# echo "✅ Frontend image built successfully!"
+# docker push "growwkaro/frontend:$IMAGE_TAG"
+# echo "✅ Frontend image pushed successfully!"
 
 # ==========================================
 # Build & push backend
