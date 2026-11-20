@@ -5,6 +5,32 @@ export const currency = (n) =>
     maximumFractionDigits: 0,
   }).format(n);
 
+export const isValidDate = (value) => {
+  if (!value) return false;
+
+  // Handle YYYY-MM-DD strings strictly so JS doesn't roll over invalid dates
+  if (typeof value === "string") {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+    if (!match) return false;
+
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+
+    if (month < 1 || month > 12 || day < 1 || day > 31) return false;
+
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return (
+      date.getUTCFullYear() === year &&
+      date.getUTCMonth() === month - 1 &&
+      date.getUTCDate() === day
+    );
+  }
+
+  // Handle Date instances or valid timestamps
+  const date = value instanceof Date ? value : new Date(value);
+  return !Number.isNaN(date.getTime());
+}
 export const getSipPremium = (bond) => {
   if (String(bond?.sipFrequency || "").toUpperCase() === "DAILY") {
     return null;
@@ -136,10 +162,11 @@ export const buildSipSchedule = (startDate, scheme) => {
   const [year, month, day] = isoStartDate.split("-").map(Number);
   if (!year || !month || !day) return [];
 
-  const isDaily = String(scheme.sipFrequency || "MONTHLY").toUpperCase() === "DAILY";
+  const isDaily =
+    String(scheme.sipFrequency || "MONTHLY").toUpperCase() === "DAILY";
   const defaultAmount = isDaily
     ? "0"
-    : scheme.sipAmount ?? scheme.minimumAmount ?? "";
+    : (scheme.sipAmount ?? scheme.minimumAmount ?? "");
   const dateToString = (date) =>
     [
       date.getUTCFullYear(),

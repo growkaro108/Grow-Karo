@@ -99,8 +99,8 @@ function LedgerRows({ type, rows, onChange, onAdd, interestOnly = false }) {
           <input
             aria-label={`${label} amount`}
             type="number"
-            min={isProfit ? "100" : "0"}
-            step={"1"}
+            min="0"
+            step="0.01"
             placeholder={`${label[0].toUpperCase()}${label.slice(1)} amount`}
             value={entry[amount]}
             onChange={(event) => onChange(index, amount, event.target.value)}
@@ -205,7 +205,9 @@ function SipInstallmentRows({ rows, onChange, onAdd, onRemove, isDaily }) {
                   <input
                     aria-label={`Installment ${index + 1} paid date`}
                     type="date"
-                    value={row.paidDate=="" ? row.installmentDate : row.paidDate}
+                    value={
+                      row.paidDate == "" ? row.installmentDate : row.paidDate
+                    }
                     onChange={(e) =>
                       onChange(index, "paidDate", e.target.value)
                     }
@@ -250,15 +252,16 @@ function SipInstallmentRows({ rows, onChange, onAdd, onRemove, isDaily }) {
               )}
 
               {/* Remove Button */}
-             {isDaily && (
-              <button
-                type="button"
-                aria-label={`Remove installment ${index + 1}`}
-                onClick={() => onRemove(index)}
-                className="col-span-1 text-center text-sm font-bold text-rose-400 hover:text-rose-300"
-              >
-                ×
-              </button>)}
+              {isDaily && (
+                <button
+                  type="button"
+                  aria-label={`Remove installment ${index + 1}`}
+                  onClick={() => onRemove(index)}
+                  className="col-span-1 text-center text-sm font-bold text-rose-400 hover:text-rose-300"
+                >
+                  ×
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -513,7 +516,7 @@ export default function SchemeManagementPanel({
             ) : (
               <>
                 <label className="text-xs text-slate-400">
-                  Invested amount
+                  Invested amount {currency(form.paidAmount || 0)}
                   <input
                     name="paidAmount"
                     type="number"
@@ -531,6 +534,11 @@ export default function SchemeManagementPanel({
                       selectedScheme?.planType === "PENSION" ? "0.01" : "1000"
                     }
                     value={form.paidAmount}
+                    placeholder={
+                      selectedScheme?.planType === "PENSION"
+                        ? `Min: ${currency(selectedScheme.minimumAmount)}`
+                        : "Min: ₹10,000"
+                    }
                     onChange={updateForm}
                     required
                     className={`mt-1 ${inputClass}`}
@@ -621,7 +629,8 @@ export default function SchemeManagementPanel({
               <p className="text-xs text-slate-400">
                 {selectedScheme?.planType === "PENSION"
                   ? "Interest-only payouts and principal redemption"
-                  : selectedScheme?.planType !== "SIP" && "Profit and redemption entries"}
+                  : selectedScheme?.planType !== "SIP" &&
+                    "Profit and redemption entries"}
               </p>
               {selectedScheme?.planType === "PENSION" ? (
                 <p className="text-xs text-slate-400">
@@ -629,24 +638,38 @@ export default function SchemeManagementPanel({
                   and term when the bond is enrolled. Mark each installment as
                   paid from the bond history after payment.
                 </p>
-              ) : (selectedScheme?.planType === "SIP" ? null : (
-                <LedgerRows
-                  type="profit"
-                  rows={form.profitLedger}
-                  onChange={updateFormLedger("profit")}
-                  onAdd={addFormLedgerRow("profit")}
-                />)
+              ) : selectedScheme?.planType === "SIP" ? null : (
+                <>
+                  {selectedScheme?.planType === "FD" &&
+                    selectedScheme?.payoutFrequency?.toLowerCase() ===
+                      "quarterly" && (
+                      <p className="text-xs text-slate-400">
+                        Quarterly profit rows are calculated from the invested
+                        amount and scheduled every 3 months through maturity.
+                      </p>
+                    )}
+                  <LedgerRows
+                    type="profit"
+                    rows={form.profitLedger}
+                    onChange={updateFormLedger("profit")}
+                    onAdd={addFormLedgerRow("profit")}
+                  />
+                </>
               )}
-              {(selectedScheme?.planType !== "SIP" && selectedScheme?.planType !== "FD") && 
-                <><p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
-                  Redeem history
-                </p>
-                <LedgerRows
-                  type="redeem"
-                  rows={form.reedemLedger}
-                onChange={updateFormLedger("redeem")}
-                onAdd={addFormLedgerRow("redeem")}
-              /></>}
+              {selectedScheme?.planType !== "SIP" &&
+                selectedScheme?.planType !== "FD" && (
+                  <>
+                    <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
+                      Redeem history
+                    </p>
+                    <LedgerRows
+                      type="redeem"
+                      rows={form.reedemLedger}
+                      onChange={updateFormLedger("redeem")}
+                      onAdd={addFormLedgerRow("redeem")}
+                    />
+                  </>
+                )}
             </div>
           )}
 
