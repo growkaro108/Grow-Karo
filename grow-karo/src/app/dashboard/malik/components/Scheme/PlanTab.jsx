@@ -121,7 +121,7 @@ export default function PlansPage() {
       loadPlans(search.trim());
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(handle);
-  }, [search, loadPlans]);
+  }, [loadPlans]);
 
   // Client-side safety net: if the backend ignores the search param (or
   // returns more than expected), this keeps results consistent. Harmless

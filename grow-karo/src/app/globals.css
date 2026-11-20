@@ -74,6 +74,15 @@ body {
     animation: none !important;
   }
 }
+
+input:focus,
+textarea:focus,
+select:focus {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transform-origin: center;
+  transform: scale(1.05);
+}
+
 /* For Chrome, Safari, Edge, Opera */
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {

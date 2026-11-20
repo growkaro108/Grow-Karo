@@ -143,12 +143,12 @@ public class UserAPIService {
             // return u != null ? u.hashCode() : "User not found";
             taskScheduler.notifyForSchemeMatured();
             return "Test API executed successfully";
-        //    return Math.floorDiv(var, 30);
+            // return Math.floorDiv(var, 30);
         } catch (Exception e) {
             log.error("Failed to set user status active", e);
             return e.getMessage();
         }
-    } 
+    }
 
     public boolean isUserExists(String email) {
         return findAllUsersEmail().contains(email);
@@ -343,9 +343,9 @@ public class UserAPIService {
             // boolean isAdmin = adminPolicy.isAdminEmail(email);
             // System.out.println("isAdmin: " + isAdmin + " for email: " + email);
             // String role = isAdmin ? "ROLE_ADMIN" : "ROLE_GRAHAK";
-            boolean isAdmin = user.getRole().equals(Role.ADMIN);
+            boolean isAdmin = user.getRole() != null && user.getRole().equals(Role.ADMIN);
 
-            String role = user.getRole() != null && isAdmin ? "ROLE_ADMIN" : "ROLE_GRAHAK";
+            String role = isAdmin ? "ROLE_ADMIN" : "ROLE_GRAHAK";
             String token = jwtService.generateToken(user.getId(), user.getEmail(), role);
             UserProfile finalUser = UserProfile.fromEntity(user, token);
 
@@ -359,7 +359,8 @@ public class UserAPIService {
                 redisService.setValue("malikID", user.getId());
             }
             // notifyUser
-            crucialNotificationService.notifyUser(EssentialActionType.LOGIN, user, "", null);
+            if (user.getRole() != Role.ADMIN)   //un-wanted notification for admin login
+                crucialNotificationService.notifyUser(EssentialActionType.LOGIN, user, "", null);
             activityLogService.log(
                     isAdmin ? null : user.getId(), user.getName(), isAdmin ? "Admin" : "USER",
                     ActivityType.LOGIN,

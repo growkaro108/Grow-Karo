@@ -70,7 +70,7 @@ public record SchemeResponse(
                                 scheme.getSchemeId(),
                                 scheme.getSchemeName(),
                                 scheme.getSchemeCategory(),
-                                isUserManagement ? scheme.getSchemeDetails() : null,
+                                !isUserManagement ? null  : scheme.getSchemeDetails(),
                                 scheme.getPayoutFrequency(),
                                 scheme.getTenure(),
                                 scheme.getStartDate(),
@@ -82,7 +82,7 @@ public record SchemeResponse(
                                 scheme.getMaxInvestorsAllowed(),
                                 scheme.getUpdatedAt(),
                                 scheme.getRiskLevel(),
-                                isPublic
+                                !isUserManagement 
                                                 ? scheme.getJoinedUsers().stream().map(UserScheme::getUserSchemeId)
                                                                 .toList()
                                                 : null,

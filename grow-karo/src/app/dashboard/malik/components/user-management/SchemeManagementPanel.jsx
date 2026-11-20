@@ -637,7 +637,7 @@ export default function SchemeManagementPanel({
                   onAdd={addFormLedgerRow("profit")}
                 />)
               )}
-              {selectedScheme?.planType !== "SIP" && 
+              {(selectedScheme?.planType !== "SIP" && selectedScheme?.planType !== "FD") && 
                 <><p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
                   Redeem history
                 </p>

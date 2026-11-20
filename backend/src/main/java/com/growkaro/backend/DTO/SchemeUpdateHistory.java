@@ -21,7 +21,7 @@ public record SchemeUpdateHistory(
         RevisionType revisionType = revision.getMetadata().getRevisionType();
 
         return new SchemeUpdateHistory(
-                SchemeResponse.fromEntity(s, false),
+                SchemeResponse.fromEntity(s, "admin"),
                 revisionNumber,
                 mapRevisionType(revisionType),
                 s.getUpdatedBy(), // <-- straight off the entity snapshot

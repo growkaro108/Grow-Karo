@@ -111,7 +111,7 @@ public class AdminAPIController {
 
             boolean status = adminAPIService.createScheme(schemeData);
             if (status) {
-                List<SchemeResponse> schemes = adminAPIService.getAllSchemes(true);
+                List<SchemeResponse> schemes = adminAPIService.getAllSchemes("admin");
                 return ResponseEntity
                         .ok(general.response("success", schemeData.schemeName() + " saved successfully..", schemes));
             } else {
